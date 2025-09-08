@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Business\BusinessController;
+use App\Http\Controllers\Category\CategoryController;
 use App\Http\Controllers\Chat\ChatController;
 use App\Http\Controllers\Domiciliary\DomiciliaryController;
 use App\Http\Controllers\Order\OrderController;
@@ -42,8 +43,16 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('index', [ProductController::class, 'index']);
         Route::post('create', [ProductController::class, 'store']);
         Route::post('show', [ProductController::class, 'show']);
-        Route::put(' update', [ProductController::class, 'update']);
+        Route::put('update', [ProductController::class, 'update']);
         Route::post('top-products', [ProductController::class, 'topRated']);
+    });
+
+    Route::prefix('categories')->group(function () {
+        Route::get('/', [CategoryController::class, 'index']);          // Listar todas las categorías
+        Route::post('/create', [CategoryController::class, 'store']);         // Crear categoría
+        Route::get('/show', [CategoryController::class, 'show']); // Mostrar categoría específica
+        Route::put('/update', [CategoryController::class, 'update']); // Actualizar categoría
+        Route::delete('/delete', [CategoryController::class, 'destroy']); // Eliminar categoría
     });
 
     //Ordenes
@@ -89,6 +98,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/showDomiciliary', [DomiciliaryController::class, 'showDomiciliary']);      // Obtener uno
         Route::post('/updateDomiciliary', [DomiciliaryController::class, 'updateDomiciliary']);  // Actualizar
         Route::post('/deleteDomiciliary', [DomiciliaryController::class, 'deleteDomiciliary']);  // Eliminar
+        Route::post('/assignToBusiness', [DomiciliaryController::class, 'assignToBusiness']);  // Actualizar
+        Route::post('/listbussiness', [DomiciliaryController::class, 'listBusinessesByDomiciliary']);  // Eliminar    
     });
 
     //reviews

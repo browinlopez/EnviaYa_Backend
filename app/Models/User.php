@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Buyer\Buyer;
 use App\Models\Reviews\BusinessReview;
 use App\Models\Reviews\UserReview;
 use App\Models\User\UserAddress;

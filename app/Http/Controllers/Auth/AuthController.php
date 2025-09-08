@@ -3,37 +3,73 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\Buyer\Buyer;
+use App\Models\Buyer\BuyerComplex;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 
 class AuthController extends Controller
 {
-     // Registro
+    // Registro
     public function register(Request $request)
     {
         $validated = $request->validate([
-            'name'     => 'required|string|max:255',
-            'email'    => 'required|string|email|unique:user,email',
-            'password' => 'required|string|min:6',
+            'name'               => 'required|string|max:255',
+            'email'              => 'required|string|email|unique:user,email',
+            'password'           => 'required|string|min:6',
+            'belongs_to_complex' => 'required|boolean',
+            'complex_id'         => 'nullable|integer|exists:residential_complexes,complex_id',
         ]);
 
-        $user = User::create([
-            'name'     => $validated['name'],
-            'email'    => $validated['email'],
-            'password' => Hash::make($validated['password']),
-            'rol'      => 1,
-            'state'    => true,
-        ]);
+        try {
+            $result = DB::transaction(function () use ($validated) {
+                // Crear usuario
+                $user = User::create([
+                    'name'     => $validated['name'],
+                    'email'    => $validated['email'],
+                    'password' => Hash::make($validated['password']),
+                    'rol'      => 1, // rol de comprador
+                    'state'    => true,
+                ]);
 
-        $token = $user->createToken('auth_token')->plainTextToken;
+                // Crear perfil de buyer
+                $buyer = Buyer::create([
+                    'user_id' => $user->user_id,
+                    'qualification' => 0.00,
+                    'state' => true,
+                ]);
 
-        return response()->json([
-            'user'  => $user,
-            'token' => $token,
-        ], 201);
+                // Si pertenece a conjunto y se envió complex_id, crear relación con modelo
+                if ($validated['belongs_to_complex'] && !empty($validated['complex_id'])) {
+                    BuyerComplex::create([
+                        'buyer_id'   => $buyer->buyer_id,
+                        'complex_id' => $validated['complex_id'],
+                    ]);
+                }
+
+                // Crear token
+                $token = $user->createToken('auth_token')->plainTextToken;
+
+                return [
+                    'user'  => $user,
+                    'buyer' => $buyer,
+                    'token' => $token,
+                ];
+            });
+
+            return response()->json($result, 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error al registrar el usuario',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
+
+
 
     // Login
     public function login(Request $request)

@@ -39,4 +39,14 @@ class Product extends Audit
             'busines_id'
         );
     }
+
+    public function grocery()
+    {
+        return $this->hasOne(GroceryProduct::class, 'products_id', 'products_id');
+    }
+
+    public function pharmacy()
+    {
+        return $this->hasOne(PharmacyProduct::class, 'products_id', 'products_id');
+    }
 }

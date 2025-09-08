@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Product;
 
 use App\Http\Controllers\Controller;
+use App\Models\Business;
+use App\Models\Product\GroceryProduct;
+use App\Models\Product\PharmacyProduct;
 use App\Models\Product\Product;
 use App\Models\Product\ProductBusiness;
 use Illuminate\Http\Request;
@@ -17,25 +20,50 @@ class ProductController extends Controller
             'busines_id' => 'required|integer|exists:business,busines_id'
         ]);
 
-        $products = ProductBusiness::where('busines_id', $request->busines_id)
-            ->with('product')
-            ->get();
+        // Cargar productos con relaciones
+        $business = Business::with([
+            'products.category',   // categoría
+            'products.grocery',    // datos de grocery
+            'products.pharmacy'    // datos de farmacia
+        ])->findOrFail($request->busines_id);
 
-        $formattedProducts = $products->map(function ($item) {
+        $products = $business->products->map(function ($product) use ($business) {
+            $extraData = null;
+
+            if ($business->type == 1 && $product->grocery) { // Grocery
+                $extraData = [
+                    'brand'           => $product->grocery->brand,
+                    'size'            => $product->grocery->size,
+                    'expiration_date' => $product->grocery->expiration_date,
+                ];
+            } elseif ($business->type == 2 && $product->pharmacy) { // Pharmacy
+                $extraData = [
+                    'active_ingredient' => $product->pharmacy->active_ingredient,
+                    'dosage'            => $product->pharmacy->dosage,
+                    'presentation'      => $product->pharmacy->presentation,
+                    'expiration_date'   => $product->pharmacy->expiration_date,
+                ];
+            }
+
             return [
-                'product_id' => $item->product->products_id,
-                'name' => $item->product->name,
-                'description' => $item->product->description,
-                'category_id' => $item->product->category_id,
-                'image' => $item->product->image,
-                'state' => $item->product->state,
-                'price' => $item->price,
-                'amount' => $item->amount,
-                'qualification' => $item->qualification,
+                'product_id'    => $product->products_id,
+                'name'          => $product->name,
+                'description'   => $product->description,
+                'category'      => $product->category ? [
+                    'category_id' => $product->category->category_id,
+                    'name'        => $product->category->name,
+                ] : null,
+                'image'         => $product->image,
+                'state'         => $product->state,
+                'price'         => $product->pivot->price,
+                'amount'        => $product->pivot->amount,
+                'qualification' => $product->pivot->qualification,
+                'business_type' => $business->type,
+                'extra'         => $extraData, // datos extra según tipo
             ];
         });
 
-        return response()->json($formattedProducts);
+        return response()->json($products);
     }
 
 
@@ -47,14 +75,15 @@ class ProductController extends Controller
             'description' => 'nullable|string',
             'category_id' => 'required|integer',
             'price' => 'required|numeric',
-            'amount' => 'required|integer|min:0', // 👈 validamos cantidad
-            'business_id' => 'required|integer'
+            'amount' => 'required|integer|min:0',
+            'business_id' => 'required|integer|exists:business,busines_id'
         ]);
 
         DB::beginTransaction();
-
         try {
-            // Crear producto
+            $business = Business::findOrFail($request->business_id);
+
+            // Crear producto base
             $product = Product::create([
                 'name' => $request->name,
                 'description' => $request->description,
@@ -62,25 +91,43 @@ class ProductController extends Controller
                 'state' => true
             ]);
 
-            // Asociar producto al negocio con precio y cantidad
+            // Relación con el negocio
             ProductBusiness::create([
-                'busines_id' => $request->business_id,
+                'busines_id' => $business->busines_id,
                 'products_id' => $product->products_id,
                 'price' => $request->price,
                 'amount' => $request->amount,
-                'qualification' => 0 // 👈 opcional, si usas calificación por defecto
+                'qualification' => 0
             ]);
+
+            // Crear datos adicionales según el tipo de negocio
+            if ($business->type == 1) { // Grocery
+                GroceryProduct::create([
+                    'products_id'     => $product->products_id,
+                    'brand'           => $request->brand,
+                    'size'            => $request->size,
+                    'expiration_date' => $request->expiration_date
+                ]);
+            } elseif ($business->type == 2) { // Pharmacy
+                PharmacyProduct::create([
+                    'products_id'       => $product->products_id,
+                    'active_ingredient' => $request->active_ingredient,
+                    'dosage'            => $request->dosage,
+                    'presentation'      => $request->presentation,
+                    'expiration_date'   => $request->expiration_date
+                ]);
+            }
 
             DB::commit();
 
             return response()->json([
                 'message' => 'Producto creado correctamente',
-                'product' => $product
+                'product' => $product->load('grocery', 'pharmacy')
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
-                'message' => 'Error al crear el producto',
+                'message' => 'Error al crear producto',
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -93,33 +140,39 @@ class ProductController extends Controller
             'products_id' => 'required|integer|exists:products,products_id'
         ]);
 
-        $product = Product::with('businesses', 'category')
+        $product = Product::with(['businesses', 'category', 'grocery', 'pharmacy'])
             ->findOrFail($request->products_id);
 
+        $businessType = $product->businesses->first()->type ?? null;
+
         return response()->json([
-            'product_id' => $product->products_id,
-            'name' => $product->name,
-            'description' => $product->description,
-            'category' => $product->category ? [
+            'product_id'   => $product->products_id,
+            'name'         => $product->name,
+            'description'  => $product->description,
+            'category'     => $product->category ? [
                 'category_id' => $product->category->category_id,
-                'name' => $product->category->name,
+                'name'        => $product->category->name,
             ] : null,
-            'image' => $product->image,
-            'state' => $product->state,
-            'businesses' => $product->businesses->map(function ($business) {
+            'image'        => $product->image,
+            'state'        => $product->state,
+            'businesses'   => $product->businesses->map(function ($business) {
                 return [
-                    'business_id' => $business->busines_id,
-                    'name' => $business->name,
-                    'phone' => $business->phone,
-                    'address' => $business->address,
+                    'business_id'   => $business->busines_id,
+                    'name'          => $business->name,
+                    'phone'         => $business->phone,
+                    'address'       => $business->address,
                     'qualification' => $business->qualification,
-                    'razon_social' => $business->razonSocial_DCD,
-                    'NIT' => $business->NIT,
-                    'logo' => $business->logo,
-                    'city' => $business->city,
-                    'state' => $business->state,
+                    'razon_social'  => $business->razonSocial_DCD,
+                    'NIT'           => $business->NIT,
+                    'logo'          => $business->logo,
+                    'city'          => $business->city,
+                    'state'         => $business->state,
+                    'type'          => $business->type,
                 ];
             }),
+            'extra' => $businessType == 1
+                ? $product->grocery
+                : ($businessType == 2 ? $product->pharmacy : null)
         ]);
     }
 
@@ -127,20 +180,20 @@ class ProductController extends Controller
     public function update(Request $request)
     {
         $request->validate([
-            'products_id' => 'required|integer|exists:products,products_id',
-            'name' => 'nullable|string',
-            'description' => 'nullable|string',
-            'category_id' => 'nullable|integer',
-            'state' => 'nullable|boolean',
-            'price' => 'nullable|numeric',
-            'amount' => 'nullable|integer|min:0',
+            'products_id'   => 'required|integer|exists:products,products_id',
+            'name'          => 'nullable|string',
+            'description'   => 'nullable|string',
+            'category_id'   => 'nullable|integer',
+            'state'         => 'nullable|boolean',
+            'price'         => 'nullable|numeric',
+            'amount'        => 'nullable|integer|min:0',
             'qualification' => 'nullable|numeric|min:0|max:5'
         ]);
 
         DB::beginTransaction();
 
         try {
-            $product = Product::findOrFail($request->products_id);
+            $product = Product::with(['grocery', 'pharmacy'])->findOrFail($request->products_id);
 
             $product->update($request->only([
                 'name',
@@ -161,17 +214,35 @@ class ProductController extends Controller
                 ]));
             }
 
+            // Actualizar datos adicionales según tipo de negocio
+            $businessType = $pb ? $pb->business->type : null;
+
+            if ($businessType == 1 && $product->grocery) {
+                $product->grocery->update($request->only([
+                    'brand',
+                    'size',
+                    'expiration_date'
+                ]));
+            } elseif ($businessType == 2 && $product->pharmacy) {
+                $product->pharmacy->update($request->only([
+                    'active_ingredient',
+                    'dosage',
+                    'presentation',
+                    'expiration_date'
+                ]));
+            }
+
             DB::commit();
 
             return response()->json([
                 'message' => 'Producto actualizado correctamente',
-                'product' => $product->load('businesses', 'category')
+                'product' => $product->load('businesses', 'category', 'grocery', 'pharmacy')
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
                 'message' => 'Error al actualizar el producto',
-                'error' => $e->getMessage()
+                'error'   => $e->getMessage()
             ], 500);
         }
     }

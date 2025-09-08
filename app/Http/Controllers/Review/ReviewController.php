@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Review;
 
 use App\Http\Controllers\Controller;
 use App\Models\Business;
+use App\Models\Buyer\Buyer;
 use App\Models\Domiciliary;
 use App\Models\Reviews\BusinessReview;
 use App\Models\Reviews\DomiciliaryReview;
@@ -530,46 +531,54 @@ class ReviewController extends Controller
     public function createUserReview(Request $request)
     {
         $request->validate([
-            'user_id' => 'required|integer|exists:user,user_id',
+            'user_id'        => 'required|integer|exists:user,user_id',
             'domiciliary_id' => 'nullable|integer|exists:domiciliary,domiciliary_id',
-            'qualification' => 'required|numeric|min:0|max:5',
-            'comment' => 'nullable|string',
-            'state' => 'boolean'
+            'qualification'  => 'required|numeric|min:0|max:5',
+            'comment'        => 'nullable|string',
+            'state'          => 'boolean'
         ]);
 
         DB::beginTransaction();
 
         try {
-            // Crear la reseña
-            $review = UserReview::create($request->all());
+            // Obtener el buyer relacionado
+            $buyer = Buyer::where('user_id', $request->user_id)->firstOrFail();
 
-            // Recalcular el promedio de calificaciones activas
-            $average = UserReview::where('user_id', $request->user_id)
+            // Crear la reseña asociada al buyer
+            $review = UserReview::create([
+                'user_id'      => $buyer->user_id,
+                'domiciliary_id' => $request->domiciliary_id,
+                'qualification' => $request->qualification,
+                'comment'       => $request->comment,
+                'state'         => $request->state ?? true
+            ]);
+
+            // Recalcular el promedio de calificaciones activas del buyer
+            $average = UserReview::where('user_id', $buyer->buyer_id)
                 ->where('state', true)
                 ->avg('qualification');
 
-            // Asegurar que el promedio esté entre 1.00 y 5.00
             $average = max(1.00, min(round($average, 2), 5.00));
 
-            // Actualizar el campo qualification en la tabla user
-            User::where('user_id', $request->user_id)
-                ->update(['qualification' => $average]);
+            // Actualizar la calificación en buyer
+            $buyer->update(['qualification' => $average]);
 
             DB::commit();
 
             return response()->json([
-                'message' => 'Review creada y calificación actualizada',
-                'review' => $review,
-                'new_qualification' => $average
+                'message'           => 'Review creada y calificación del buyer actualizada',
+                'review'            => $review,
+                'buyer_qualification' => $average
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
                 'message' => 'Error al crear la reseña',
-                'error' => $e->getMessage()
+                'error'   => $e->getMessage()
             ], 500);
         }
     }
+
 
     public function updateUserReview(Request $request)
     {

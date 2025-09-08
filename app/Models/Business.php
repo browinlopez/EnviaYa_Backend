@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Audit\Audit;
+use App\Models\Maps\Municipality;
 use App\Models\Order\OrdersSales;
 use App\Models\Owner\Owner;
 use App\Models\Product\Product;
@@ -22,9 +23,11 @@ class Business extends Audit
         'address',
         'qualification',
         'razonSocial_DCD',
+        "municipality_id",
         'NIT',
         'logo',
         'city',
+        'type',
         'state'
     ];
 
@@ -38,11 +41,16 @@ class Business extends Audit
         )->withPivot('state');
     }
 
+    public function municipality()
+    {
+        return $this->belongsTo(Municipality::class, 'municipality_id', 'id'); // ajusta según tu pk de municipalities
+    }
+
     //relaciones
     public function products()
     {
         return $this->belongsToMany(Product::class, 'products_business', 'busines_id', 'products_id')
-            ->withPivot('price');
+            ->withPivot(['price', 'amount', 'qualification']);
     }
 
     public function orders()
@@ -58,5 +66,11 @@ class Business extends Audit
     public function productBusinesses()
     {
         return $this->hasMany(ProductBusiness::class, 'busines_id', 'busines_id');
+    }
+
+    public function domiciliaries()
+    {
+        return $this->belongsToMany(Domiciliary::class, 'business_domiciliary', 'busines_id', 'domiciliary_id')
+            ->withPivot('state');
     }
 }

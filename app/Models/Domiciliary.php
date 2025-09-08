@@ -28,4 +28,10 @@ class Domiciliary extends Audit
     {
         return $this->hasMany(OrderGeolocation::class, 'domiciliary_id', 'domiciliary_id');
     }
+
+    public function businesses()
+    {
+        return $this->belongsToMany(Business::class, 'business_domiciliary', 'domiciliary_id', 'busines_id')
+            ->withPivot('state');
+    }
 }
