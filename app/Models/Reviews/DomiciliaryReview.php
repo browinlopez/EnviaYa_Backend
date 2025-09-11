@@ -3,6 +3,7 @@
 namespace App\Models\Reviews;
 
 use App\Models\Audit\Audit;
+use App\Models\Buyer\Buyer;
 use App\Models\Domiciliary;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -28,6 +29,6 @@ class DomiciliaryReview extends Audit
 
     public function buyer()
     {
-        return $this->belongsTo(User::class, 'buyer_id', 'user_id');
+        return $this->belongsTo(Buyer::class, 'buyer_id', 'buyer_id');
     }
 }

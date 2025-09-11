@@ -268,7 +268,7 @@ class ReviewController extends Controller
     {
         $request->validate([
             'domiciliary_id' => 'required|integer|exists:domiciliary,domiciliary_id',
-            'buyer_id' => 'required|integer|exists:user,user_id',
+            'buyer_id' => 'required|integer|exists:buyer,buyer_id',
             'qualification' => 'required|numeric|min:0|max:5',
             'comment' => 'nullable|string',
             'state' => 'boolean'
