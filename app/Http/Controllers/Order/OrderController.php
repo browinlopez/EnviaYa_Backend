@@ -206,7 +206,7 @@ class OrderController extends Controller
 
         try {
             $order = OrdersSales::create([
-                'buyer_id' => $buyer->user_id,
+                'buyer_id' => $buyer->buyer_id,
                 'busines_id' => $business->busines_id,
                 'delivery_address' => $request->delivery_address,
                 'methods_id' => $request->methods_id,
