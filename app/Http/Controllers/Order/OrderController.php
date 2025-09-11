@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Order;
 
 use App\Http\Controllers\Controller;
 use App\Models\Business;
+use App\Models\Buyer\Buyer;
 use App\Models\Order\OrdersSales;
 use App\Models\Order\OrdersSalesDetail;
 use App\Models\Payment\PaymentForms;
@@ -191,7 +192,7 @@ class OrderController extends Controller
             'forms_id' => 'required|integer|exists:payment_forms,forms_id',
         ]);
 
-        $buyer = User::find($request->buyer_id);
+        $buyer = Buyer::find($request->buyer_id);
         if (!$buyer) {
             return response()->json(['message' => 'Usuario comprador no encontrado'], 404);
         }
