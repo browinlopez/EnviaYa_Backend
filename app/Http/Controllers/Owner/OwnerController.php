@@ -52,7 +52,7 @@ class OwnerController extends Controller
             'email' => 'required|email|unique:user,email',
             'password' => 'required|string|min:6',
             'profile_photo' => 'nullable|string',
-            'document_type' => 'nullable|string',
+            'document_type' => 'nullable|int',
             'document_number' => 'nullable|string',
             'birthdate' => 'nullable|date',
             'contact_secondary' => 'nullable|string',
