@@ -98,7 +98,6 @@ class ReviewController extends Controller
         $request->validate([
             'busines_id' => 'required|integer|exists:business,busines_id',
             'buyer_id' => 'required|integer|exists:buyer,buyer_id',
-            'user_id' => 'nullable|integer|exists:user,user_id',
             'qualification' => 'required|numeric|min:0|max:5',
             'comment' => 'nullable|string',
             'state' => 'boolean'

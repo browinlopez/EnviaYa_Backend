@@ -16,8 +16,9 @@ return new class extends Migration
 
             // foreign keys
             $table->unsignedInteger('busines_id'); // FK business
-            $table->unsignedBigInteger('buyer_id')->nullable(); // FK user (BIGINT porque user_id es BIGINT)
-            $table->unsignedBigInteger('user_id')->nullable(); // sin FK, si quieres puedes quitarlo
+            $table->unsignedInteger('buyer_id')->nullable(); // FK buyer (INT para que coincida)
+            // Elimina user_id si ya no se usa
+            // $table->unsignedBigInteger('user_id')->nullable();
 
             // demás columnas
             $table->decimal('qualification', 3, 2)->default(0.00);
@@ -31,8 +32,8 @@ return new class extends Migration
                 ->onDelete('cascade');
 
             $table->foreign('buyer_id', 'fk_business_reviews_buyer')
-                ->references('user_id')
-                ->on('user')
+                ->references('buyer_id')
+                ->on('buyer')
                 ->onDelete('set null');
         });
     }
