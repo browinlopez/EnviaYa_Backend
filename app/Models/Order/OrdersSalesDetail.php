@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class OrdersSalesDetail extends Audit
 {
-    protected $table = 'ordersSales_detail';
+    protected $table = 'orderssales_detail';
     protected $primaryKey = 'orderDet_id';
     public $timestamps = false;
 

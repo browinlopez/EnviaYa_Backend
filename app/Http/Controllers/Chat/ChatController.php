@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Chat;
 
+use App\Events\MessageSent;
 use App\Http\Controllers\Controller;
 use App\Models\Chat\Chat;
 use App\Models\Chat\ChatParticipant;
@@ -63,6 +64,9 @@ class ChatController extends Controller
                 'role_id' => $request->role_id,
                 'content' => $request->content,
             ]);
+
+            // Emitir evento de broadcast
+            broadcast(new MessageSent($message))->toOthers();
 
             return response()->json([
                 'message' => 'Mensaje enviado',

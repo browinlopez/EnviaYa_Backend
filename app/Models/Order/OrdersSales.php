@@ -16,7 +16,7 @@ class OrdersSales extends Audit
 {
      use HasFactory;
 
-    protected $table = 'ordersSales';
+    protected $table = 'orderssales';
     protected $primaryKey = 'orderSales_id';
     public $timestamps = false;
 
