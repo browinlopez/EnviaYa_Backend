@@ -8,9 +8,9 @@ class ResidentialComplex extends Model
 {
     protected $table = 'residential_complexes';
     protected $primaryKey = 'complex_id';
-    public $timestamps = true;
+    public $timestamps = false;
 
-    protected $fillable = ['name', 'state', 'people_count'];
+    protected $fillable = ['name', 'address', 'state', 'people_count'];
 
     public function buyers()
     {

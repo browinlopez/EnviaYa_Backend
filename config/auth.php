@@ -35,17 +35,22 @@ return [
     |
     */
 
-   'defaults' => [
-    'guard' => 'sanctum',
-    'passwords' => 'users',
-],
-
-'guards' => [
-    'sanctum' => [
-        'driver' => 'sanctum',
-        'provider' => 'users',
+    'defaults' => [
+        'guard' => 'web', // web es el guard por defecto para vistas
+        'passwords' => 'users',
     ],
-],
+
+    'guards' => [
+        'web' => [
+            'driver' => 'session',
+            'provider' => 'users',
+        ],
+
+        'api' => [
+            'driver' => 'sanctum', // usa sanctum para API tokens
+            'provider' => 'users',
+        ],
+    ],
 
     /*
     |--------------------------------------------------------------------------

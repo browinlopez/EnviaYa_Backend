@@ -57,7 +57,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/delete', [CategoryController::class, 'destroy']); // Eliminar categoría
     });
 
-
     Route::prefix('categories-business')->group(function () {
         Route::post('index', [CategoryBusinessController::class, 'index']);
         Route::post('store', [CategoryBusinessController::class, 'store']);

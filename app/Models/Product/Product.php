@@ -5,6 +5,7 @@ namespace App\Models\Product;
 use App\Models\Audit\Audit;
 use App\Models\Business;
 use App\Models\Order\OrdersSales;
+use App\Models\Order\OrdersSalesDetail;
 use Illuminate\Database\Eloquent\Model;
 
 class Product extends Audit
@@ -28,6 +29,11 @@ class Product extends Audit
     public function sales()
     {
         return $this->hasMany(OrdersSales::class, 'product_id', 'products_id');
+    }
+
+    public function salesDetails()
+    {
+        return $this->hasMany(OrdersSalesDetail::class, 'product_id', 'products_id');
     }
 
     public function businesses()
