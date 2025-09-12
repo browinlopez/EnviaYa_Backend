@@ -58,7 +58,6 @@ class Business extends Audit
         )->withPivot(['price', 'amount', 'qualification']);
     }
 
-
     public function orders()
     {
         return $this->hasMany(OrdersSales::class, 'busines_id', 'busines_id');

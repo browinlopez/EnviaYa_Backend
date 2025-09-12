@@ -15,6 +15,7 @@ class CategoryBusiness extends Model
     protected $fillable = [
         'name',
         'description',
+        "image"
     ];
 
     // Relación inversa con Business

@@ -1,0 +1,17 @@
+.custom-sidebar {
+    background-color: #000 !important;
+}
+
+.custom-sidebar .nav-link {
+    color: #ffffff;
+}
+
+.custom-sidebar .nav-link:hover {
+    background-color: #654321;
+}
+
+.chart-max-height {
+    max-height: 120px;   /* máximo 120px */
+    width: 100% !important; /* ancho completo del card */
+    height: auto !important; /* altura automática hasta el máximo */
+}

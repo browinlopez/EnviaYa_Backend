@@ -1,0 +1,52 @@
+/* Color principal */
+:root {
+  --primary: #1B1464; /* azul oscuro */
+  --secondary: #ffffff; /* blanco */
+}
+
+/* Cambiar brand (logo) */
+.main-header .navbar {
+  background-color: #1B1464 !important;
+  color: #ffffff !important;
+}
+
+/* Cambiar sidebar */
+.main-sidebar {
+  background-color: #1B1464 !important;
+  color: #ffffff !important;
+}
+
+.main-sidebar .nav-link,
+.main-sidebar .brand-link {
+  color: #ffffff !important;
+}
+
+.main-sidebar .nav-link.active {
+  background-color: #ffffff !important;
+  color: #1B1464 !important;
+}
+
+/* Cambiar color de textos */
+.navbar-nav .nav-link {
+  color: #ffffff !important;
+}
+
+.navbar-light .navbar-nav .nav-link {
+  color: #ffffff !important;
+}
+
+.bg-myprimary {
+  background-color: #1B1464 !important;
+  color: #ffffff !important;
+}
+
+.sidebar-myprimary {
+  background-color: #1B1464 !important;
+  color: #ffffff !important;
+}
+
+.navbar-myprimary {
+  background-color: #1B1464 !important;
+  color: #ffffff !important;
+}
+
