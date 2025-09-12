@@ -79,6 +79,73 @@ class BusinessController extends Controller
         ]);
     }
 
+    public function indexByQualification()
+    {
+        // Traemos también products y reviews, ordenados por mejor calificación primero
+        $businesses = Business::with(['owners', 'municipality', 'products', 'reviews'])
+            ->orderByDesc('qualification') // 👈 aquí ordena de mayor a menor
+            ->get();
+
+        $formatted = $businesses->map(function ($business) {
+            return [
+                'business_id'   => $business->busines_id,
+                'name'          => $business->name,
+                'phone'         => $business->phone,
+                'address'       => $business->address,
+                'qualification' => (float) $business->qualification,
+                'razon_social'  => $business->razonSocial_DCD,
+                'NIT'           => $business->NIT,
+                'logo'          => $business->logo ?? 'https://example.com/default-logo.png',
+                'state'         => (bool) $business->state,
+                'type'          => $business->type,
+                'municipality'  => $business->municipality ? [
+                    'id'   => $business->municipality->id,
+                    'name' => $business->municipality->name,
+                ] : null,
+                'owner_count'   => $business->owners->count(),
+                'owners'        => $business->owners->map(function ($owner) {
+                    return [
+                        'owner_id'          => $owner->owner_id,
+                        'user_id'           => $owner->user_id,
+                        'profile_photo'     => $owner->profile_photo ?? 'https://example.com/default-user.png',
+                        'document_type'     => $owner->document_type,
+                        'document_number'   => $owner->document_number,
+                        'birthdate'         => $owner->birthdate,
+                        'contact_secondary' => $owner->contact_secondary,
+                        'notes'             => $owner->notes,
+                        'state'             => (bool) $owner->state,
+                    ];
+                }),
+                // productos del negocio
+                'products' => $business->products->map(function ($product) {
+                    return [
+                        'product_id'  => $product->products_id,
+                        'name'        => $product->name,
+                        'description' => $product->description,
+                        'category_id' => $product->category_id,
+                        'image'       => $product->image,
+                        'state'       => (bool) $product->state,
+                        'price'       => $product->pivot->price ?? null,
+                    ];
+                }),
+                // reviews del negocio
+                'reviews' => $business->reviews->map(function ($review) {
+                    return [
+                        'review_id'  => $review->reviews_id ?? null,
+                        'buyer_id'   => $review->buyer_id,
+                        'rating'     => (float) $review->qualification ?? 0,
+                        'comment'    => $review->comment ?? '',
+                        'created_at' => $review->created_at ?? null,
+                    ];
+                }),
+            ];
+        });
+
+        return response()->json([
+            'businesses' => $formatted
+        ]);
+    }
+
 
     // Crear negocio con transacción
     public function store(Request $request)

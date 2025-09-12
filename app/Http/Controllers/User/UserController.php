@@ -176,7 +176,7 @@ class UserController extends Controller
         $request->validate([
             'user_id' => 'required|integer|exists:user,user_id',
             'address' => 'required|string|max:225',
-            'municipality_id' => 'required|integer|exists:municipalities,id',
+            //'municipality_id' => 'required|integer|exists:municipalities,id',
             'alias_id' => 'nullable|integer|exists:alias,alias_id',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric'
@@ -185,7 +185,7 @@ class UserController extends Controller
         $address = UserAddress::create([
             'user_id' => $request->user_id,
             'address' => $request->address,
-            'municipality_id' => $request->municipality_id,
+            //'municipality_id' => $request->municipality_id,
             'alias_id' => $request->alias_id,
             'latitude' => $request->latitude,
             'longitude' => $request->longitude,

@@ -78,6 +78,7 @@ Route::middleware('auth:sanctum')->group(function () {
     //Negocios
     Route::prefix('businesses')->group(function () {
         Route::get('index', [BusinessController::class, 'index']);
+        Route::get('top-businesses', [BusinessController::class, 'indexByQualification']);
         Route::post('store', [BusinessController::class, 'store']);
         Route::post('show', [BusinessController::class, 'show']);
         Route::put('update', [BusinessController::class, 'update']);
