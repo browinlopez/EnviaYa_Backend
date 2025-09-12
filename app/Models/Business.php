@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Audit\Audit;
+use App\Models\Business\CategoryBusiness;
 use App\Models\Maps\Municipality;
 use App\Models\Order\OrdersSales;
 use App\Models\Owner\Owner;
@@ -77,5 +78,10 @@ class Business extends Audit
     {
         return $this->belongsToMany(Domiciliary::class, 'business_domiciliary', 'busines_id', 'domiciliary_id')
             ->withPivot('state');
+    }
+
+    public function category()
+    {
+        return $this->belongsTo(CategoryBusiness::class, 'type', 'id');
     }
 }

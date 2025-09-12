@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Business\BusinessController;
+use App\Http\Controllers\Business\CategoryBusinessController;
 use App\Http\Controllers\Category\CategoryController;
 use App\Http\Controllers\Chat\ChatController;
 use App\Http\Controllers\Domiciliary\DomiciliaryController;
@@ -54,6 +55,17 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/update', [CategoryController::class, 'update']); // Actualizar categoría
         Route::delete('/delete', [CategoryController::class, 'destroy']); // Eliminar categoría
     });
+
+
+    Route::prefix('categories-business')->group(function () {
+        Route::post('index', [CategoryBusinessController::class, 'index']);
+        Route::post('store', [CategoryBusinessController::class, 'store']);
+        Route::post('show', [CategoryBusinessController::class, 'show']);
+        Route::post('update', [CategoryBusinessController::class, 'update']);
+        Route::post('destroy', [CategoryBusinessController::class, 'destroy']);
+    });
+
+
 
     //Ordenes
     Route::prefix('orders')->group(function () {
