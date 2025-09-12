@@ -12,7 +12,10 @@ class BusinessController extends Controller
     // Listar todos los negocios con dueños y municipio
     public function index()
     {
-        $businesses = Business::with(['owners', 'municipality'])->orderBy('name')->get();
+        // Traemos también products y reviews
+        $businesses = Business::with(['owners', 'municipality', 'products', 'reviews'])
+            ->orderBy('name')
+            ->get();
 
         $formatted = $businesses->map(function ($business) {
             return [
@@ -20,12 +23,12 @@ class BusinessController extends Controller
                 'name'          => $business->name,
                 'phone'         => $business->phone,
                 'address'       => $business->address,
-                'qualification' => (float) $business->qualification, // Convertimos a número
+                'qualification' => (float) $business->qualification,
                 'razon_social'  => $business->razonSocial_DCD,
                 'NIT'           => $business->NIT,
                 'logo'          => $business->logo ?? 'https://example.com/default-logo.png',
                 'state'         => (bool) $business->state,
-                'type'           => $business->type,
+                'type'          => $business->type,
                 'municipality'  => $business->municipality ? [
                     'id'   => $business->municipality->id,
                     'name' => $business->municipality->name,
@@ -44,6 +47,29 @@ class BusinessController extends Controller
                         'state'             => (bool) $owner->state,
                     ];
                 }),
+                // productos del negocio
+                'products' => $business->products->map(function ($product) {
+                    return [
+                        'product_id'  => $product->products_id,
+                        'name'        => $product->name,
+                        'description' => $product->description,
+                        'category_id' => $product->category_id,
+                        'image'       => $product->image,
+                        'state'       => (bool) $product->state,
+                        // pivot->price solo si la relación es belongsToMany
+                        'price'       => $product->pivot->price ?? null,
+                    ];
+                }),
+                // reviews del negocio
+                'reviews' => $business->reviews->map(function ($review) {
+                    return [
+                        'review_id'  => $review->id ?? null,
+                        'buyer_id'   => $review->buyer_id,
+                        'rating'     => (float) $review->rating ?? 0,
+                        'comment'    => $review->comment ?? '',
+                        'created_at' => $review->created_at ?? null,
+                    ];
+                }),
             ];
         });
 
@@ -52,6 +78,7 @@ class BusinessController extends Controller
             'businesses' => $formatted
         ]);
     }
+
 
     // Crear negocio con transacción
     public function store(Request $request)
@@ -64,7 +91,7 @@ class BusinessController extends Controller
             'NIT' => 'nullable|string',
             'razonSocial_DCD' => 'nullable|string',
             'logo' => 'nullable|string',
-            'type'=> 'required|integer',
+            'type' => 'required|integer',
         ]);
 
         DB::beginTransaction();
@@ -99,7 +126,7 @@ class BusinessController extends Controller
 
     // Mostrar negocio con relaciones
     public function show(Request $request)
-    { 
+    {
         $request->validate([
             'busines_id' => 'required|integer|exists:business,busines_id'
         ]);

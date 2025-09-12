@@ -49,9 +49,14 @@ class Business extends Audit
     //relaciones
     public function products()
     {
-        return $this->belongsToMany(Product::class, 'products_business', 'busines_id', 'products_id')
-            ->withPivot(['price', 'amount', 'qualification']);
+        return $this->belongsToMany(
+            Product::class,
+            'products_business',
+            'busines_id',
+            'products_id'
+        )->withPivot(['price', 'amount', 'qualification']);
     }
+
 
     public function orders()
     {
