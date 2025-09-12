@@ -252,7 +252,7 @@ class ReviewController extends Controller
                     ]
                 ],
                 'buyer' => [
-                    'user_id' => $review->buyer->user_id,
+                    'user_id' => $review->buyer->buyer_id,
                     'name' => $review->buyer->name,
                     'email' => $review->buyer->email,
                     'qualification' => $review->buyer->qualification,
@@ -425,7 +425,7 @@ class ReviewController extends Controller
                 'comment' => $review->comment,
                 'state' => $review->state,
                 'buyer' => [
-                    'user_id' => $review->buyer->user_id,
+                    'user_id' => $review->buyer->buyer_id,
                     'name' => $review->buyer->name,
                     'email' => $review->buyer->email,
                     'qualification' => $review->buyer->qualification,

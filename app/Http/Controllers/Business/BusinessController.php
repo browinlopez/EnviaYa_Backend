@@ -63,9 +63,9 @@ class BusinessController extends Controller
                 // reviews del negocio
                 'reviews' => $business->reviews->map(function ($review) {
                     return [
-                        'review_id'  => $review->id ?? null,
+                        'review_id'  => $review->reviews_id ?? null,
                         'buyer_id'   => $review->buyer_id,
-                        'rating'     => (float) $review->rating ?? 0,
+                        'rating'     => (float) $review->qualification ?? 0,
                         'comment'    => $review->comment ?? '',
                         'created_at' => $review->created_at ?? null,
                     ];
@@ -74,7 +74,7 @@ class BusinessController extends Controller
         });
 
         return response()->json([
-            'total' => $formatted->count(),
+            //'total' => $formatted->count(),
             'businesses' => $formatted
         ]);
     }
@@ -176,11 +176,11 @@ class BusinessController extends Controller
             }),
             'reviews' => $business->reviews->map(function ($review) {
                 return [
-                    'review_id'   => $review->id ?? null,
-                    'buyer_id'    => $review->buyer_id,
-                    'rating'      => (float) $review->rating ?? 0,
-                    'comment'     => $review->comment ?? '',
-                    'created_at'  => $review->created_at ?? null,
+                    'review_id'  => $review->reviews_id ?? null,
+                    'buyer_id'   => $review->buyer_id,
+                    'rating'     => (float) $review->qualification ?? 0,
+                    'comment'    => $review->comment ?? '',
+                    'created_at' => $review->created_at ?? null,
                 ];
             }),
         ]);
