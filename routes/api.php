@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Business\BusinessController;
 use App\Http\Controllers\Business\CategoryBusinessController;
+use App\Http\Controllers\Business\FavoriteController;
 use App\Http\Controllers\Category\CategoryController;
 use App\Http\Controllers\Chat\ChatController;
 use App\Http\Controllers\Domiciliary\DomiciliaryController;
@@ -65,8 +66,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('destroy', [CategoryBusinessController::class, 'destroy']);
     });
 
-
-
     //Ordenes
     Route::prefix('orders')->group(function () {
         Route::post('user', [OrderController::class, 'ordersUser']); // Usuario comprador
@@ -94,6 +93,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('store', [BusinessController::class, 'store']);
         Route::post('show', [BusinessController::class, 'show']);
         Route::put('update', [BusinessController::class, 'update']);
+    });
+
+    Route::prefix('favorites')->group(function () {
+        Route::post('toggle', [FavoriteController::class, 'toggleFavorite']);
+        Route::post('index', [FavoriteController::class, 'myFavorites']);
     });
 
     //Dueños

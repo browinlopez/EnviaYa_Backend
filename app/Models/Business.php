@@ -80,6 +80,11 @@ class Business extends Audit
             ->withPivot('state');
     }
 
+    public function usersWhoFavorite()
+    {
+        return $this->belongsToMany(User::class, 'business_user_favorites', 'busines_id', 'user_id');
+    }
+
     public function category()
     {
         return $this->belongsTo(CategoryBusiness::class, 'type', 'id');

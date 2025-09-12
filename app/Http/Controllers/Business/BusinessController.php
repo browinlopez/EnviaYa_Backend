@@ -146,7 +146,6 @@ class BusinessController extends Controller
         ]);
     }
 
-
     // Crear negocio con transacción
     public function store(Request $request)
     {
