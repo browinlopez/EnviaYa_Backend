@@ -43,7 +43,7 @@ class DashboardController extends Controller
             ->get();
 
         // Productos más vendidos (top 5)
-        $topProducts = Product::with(['business']) // 👈 aquí cargas el negocio
+        $topProducts = Product::with(['businesses']) // 👈 aquí cargas el negocio
             ->withSum('salesDetails as total_sold', 'amount')
             ->orderByDesc('total_sold')
             ->limit(5)
