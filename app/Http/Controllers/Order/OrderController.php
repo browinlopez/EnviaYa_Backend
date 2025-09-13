@@ -11,6 +11,7 @@ use App\Models\Payment\PaymentForms;
 use App\Models\Payment\PaymentMethods;
 use App\Models\Product\ProductBusiness;
 use App\Models\User;
+use App\Models\User\UserAddress;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -24,7 +25,6 @@ class OrderController extends Controller
             'user_id' => 'required|integer'
         ]);
 
-        // Buscamos el buyer relacionado al user_id
         $buyer = Buyer::where('user_id', $request->user_id)->first();
 
         if (!$buyer) {
@@ -33,15 +33,13 @@ class OrderController extends Controller
             ], 404);
         }
 
-        // Obtenemos las órdenes usando el buyer_id
         $orders = OrdersSales::where('buyer_id', $buyer->buyer_id)
-            ->with('details.product', 'business', 'promotions', 'payments')
+            ->with('details.product', 'business', 'promotions', 'payments', 'address.municipality.department.country', 'address.alias')
             ->get();
 
         $formattedOrders = $orders->map(function ($order) {
             return [
                 'order_id' => $order->orderSales_id,
-                'delivery_address' => $order->delivery_address,
                 'total' => $order->total,
                 'sale_date' => $order->sale_date,
                 'state' => $order->state,
@@ -56,6 +54,16 @@ class OrderController extends Controller
                     'city' => $order->business->city,
                     'state' => $order->business->state,
                 ],
+                'delivery_address' => $order->address ? [
+                    'address_id' => $order->address->address_id,
+                    'address' => $order->address->address,
+                    'alias' => $order->address->alias?->name,
+                    'municipality' => $order->address->municipality?->name,
+                    'department' => $order->address->department?->name,
+                    'country' => $order->address->country?->name,
+                    'latitude' => $order->address->latitude,
+                    'longitude' => $order->address->longitude,
+                ] : null,
                 'details' => $order->details->map(function ($detail) {
                     return [
                         'product_id' => $detail->product->products_id,
@@ -78,7 +86,6 @@ class OrderController extends Controller
         ]);
     }
 
-
     // Función para obtener todas las órdenes de un negocio (tendero)
     public function ordersBusiness(Request $request)
     {
@@ -95,13 +102,19 @@ class OrderController extends Controller
         }
 
         $orders = OrdersSales::where('busines_id', $business->busines_id)
-            ->with('details.product', 'buyer', 'promotions', 'payments')
+            ->with([
+                'details.product',
+                'buyer',
+                'promotions',
+                'payments',
+                'address.municipality.department.country',
+                'address.alias'
+            ])
             ->get();
 
         $formattedOrders = $orders->map(function ($order) {
             return [
                 'order_id' => $order->orderSales_id,
-                'delivery_address' => $order->delivery_address,
                 'total' => $order->total,
                 'sale_date' => $order->sale_date,
                 'state' => $order->state,
@@ -112,6 +125,16 @@ class OrderController extends Controller
                     'qualification' => $order->buyer->qualification,
                     'state' => $order->buyer->state,
                 ],
+                'delivery_address' => $order->address ? [
+                    'address_id' => $order->address->address_id,
+                    'address' => $order->address->address,
+                    'alias' => $order->address->alias?->name,
+                    'municipality' => $order->address->municipality?->name,
+                    'department' => $order->address->department?->name,
+                    'country' => $order->address->country?->name,
+                    'latitude' => $order->address->latitude,
+                    'longitude' => $order->address->longitude,
+                ] : null,
                 'details' => $order->details->map(function ($detail) {
                     return [
                         'product_id' => $detail->product->products_id,
@@ -133,6 +156,7 @@ class OrderController extends Controller
             'orders' => $formattedOrders
         ]);
     }
+
 
     public function weeklyIncomeBusiness(Request $request)
     {
@@ -186,7 +210,7 @@ class OrderController extends Controller
         $request->validate([
             'user_id' => 'required|integer',
             'busines_id' => 'required|integer',
-            'delivery_address' => 'required|string',
+            'address_id' => 'required|integer|exists:user_address,address_id',
             'products' => 'required|array',
             'products.*.product_id' => 'required|integer',
             'products.*.amount' => 'required|integer',
@@ -205,13 +229,18 @@ class OrderController extends Controller
             return response()->json(['message' => 'Negocio no encontrado'], 404);
         }
 
+        $address = UserAddress::find($request->address_id);
+        if (!$address) {
+            return response()->json(['message' => 'Dirección no encontrada'], 404);
+        }
+
         DB::beginTransaction();
 
         try {
             $order = OrdersSales::create([
                 'buyer_id' => $buyer->buyer_id,
                 'busines_id' => $business->busines_id,
-                'delivery_address' => $request->delivery_address,
+                'address_id' => $address->address_id, // Guardamos el address_id
                 'methods_id' => $request->methods_id,
                 'forms_id' => $request->forms_id,
                 'total' => collect($request->products)->sum(fn($p) => $p['amount'] * $p['unit_price']),
@@ -247,7 +276,7 @@ class OrderController extends Controller
 
             return response()->json([
                 'message' => 'Orden creada',
-                'order' => $order->load('details.product')
+                'order' => $order->load('details.product', 'address')
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -257,7 +286,6 @@ class OrderController extends Controller
             ], 400);
         }
     }
-
 
     // Obtener métodos de pago
     public function paymentMethods()

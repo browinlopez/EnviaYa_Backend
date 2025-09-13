@@ -9,12 +9,13 @@ use App\Models\Payment\Payment;
 use App\Models\Payment\PaymentForms;
 use App\Models\Payment\PaymentMethods;
 use App\Models\User;
+use App\Models\User\UserAddress;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class OrdersSales extends Audit
 {
-     use HasFactory;
+    use HasFactory;
 
     protected $table = 'orderssales';
     protected $primaryKey = 'orderSales_id';
@@ -24,7 +25,7 @@ class OrdersSales extends Audit
         'buyer_id',
         'busines_id',
         'domiciliary_id',
-        'delivery_address',
+        'address_id',
         'methods_id',
         'forms_id',
         'total',
@@ -62,7 +63,7 @@ class OrdersSales extends Audit
         return $this->hasMany(Payment::class, 'orderSales_id', 'orderSales_id');
     }
 
-     public function paymentMethod()
+    public function paymentMethod()
     {
         return $this->belongsTo(PaymentMethods::class, 'methods_id');
     }
@@ -70,5 +71,10 @@ class OrdersSales extends Audit
     public function paymentForm()
     {
         return $this->belongsTo(PaymentForms::class, 'forms_id');
+    }
+
+    public function address()
+    {
+        return $this->belongsTo(UserAddress::class, 'address_id', 'address_id');
     }
 }
