@@ -158,108 +158,115 @@
 @stop
 
 @section('adminlte_js')
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        const chartOptionsSmall = {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        boxWidth: 15,
-                        padding: 5
-                    }
-                },
-                tooltip: {
-                    mode: 'index',
-                    intersect: false
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        stepSize: 1,
-                        font: {
-                            size: 10
-                        }
-                    }
-                },
-                x: {
-                    grid: {
-                        display: false
-                    },
-                    ticks: {
-                        font: {
-                            size: 10
-                        }
-                    }
-                }
-            }
-        };
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-        // Usuarios - Doughnut
-        new Chart(document.getElementById('usersChart'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Domiciliarios', 'Compradores', 'Propietarios'],
-                datasets: [{
-                    data: [{{ $domiciliariesCount }}, {{ $buyersCount }}, {{ $ownersCount }}],
-                    backgroundColor: ['#17a2b8', '#28a745', '#dc3545'],
-                    borderColor: '#fff',
-                    borderWidth: 2
-                }]
-            },
-           options: {
-        ...chartOptionsSmall,   // <--- importante: dentro de { }
-        maintainAspectRatio: false
+@php
+    // Preparamos los arrays en PHP para evitar problemas de comas en JS
+    $labelsProducts = [];
+    $dataProducts = [];
+
+    foreach($productCategories as $catId => $total){
+        $labelsProducts[] = $categories[$catId] ?? 'Sin categoría';
+        $dataProducts[] = $total;
     }
-        });
+@endphp
 
-        // Negocios - Barras
-        new Chart(document.getElementById('businessChart'), {
-            type: 'bar',
-            data: {
-                labels: ['Tienda', 'Farmacia', 'Otro'],
-                datasets: [{
-                    label: 'Negocios',
-                    data: [
-                        {{ $businessTypes[1] ?? 0 }},
-                        {{ $businessTypes[2] ?? 0 }},
-                        {{ $businessTypes[3] ?? 0 }}
-                    ],
-                    backgroundColor: ['#007bff', '#ffc107', '#6c757d'],
-                    borderRadius: 3,
-                    barPercentage: 0.5
-                }]
+<script>
+    // Opciones reutilizables
+    const chartOptionsSmall = {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: {
+                    boxWidth: 15,
+                    padding: 5
+                }
             },
-            options: chartOptionsSmall
-        });
-
-        // Productos - Barras horizontales
-        new Chart(document.getElementById('productsChart'), {
-            type: 'bar',
-            data: {
-                labels: [
-                    @foreach ($productCategories as $catId => $total)
-                        '{{ $categories[$catId] }}',
-                    @endforeach
-                ],
-                datasets: [{
-                    label: 'Productos',
-                    data: [
-                        @foreach ($productCategories as $total)
-                            {{ $total }},
-                        @endforeach
-                    ],
-                    backgroundColor: '#6610f2',
-                    borderRadius: 3
-                }]
-            },
-            options: {
-                ...chartOptionsSmall,
-                indexAxis: 'y'
+            tooltip: {
+                mode: 'index',
+                intersect: false
             }
-        });
-    </script>
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1,
+                    font: {
+                        size: 10
+                    }
+                }
+            },
+            x: {
+                grid: {
+                    display: false
+                },
+                ticks: {
+                    font: {
+                        size: 10
+                    }
+                }
+            }
+        }
+    };
+
+    // Usuarios - Doughnut
+    new Chart(document.getElementById('usersChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Domiciliarios', 'Compradores', 'Propietarios'],
+            datasets: [{
+                data: [{{ $domiciliariesCount }}, {{ $buyersCount }}, {{ $ownersCount }}],
+                backgroundColor: ['#17a2b8', '#28a745', '#dc3545'],
+                borderColor: '#fff',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            ...chartOptionsSmall,
+            maintainAspectRatio: false
+        }
+    });
+
+    // Negocios - Barras
+    new Chart(document.getElementById('businessChart'), {
+        type: 'bar',
+        data: {
+            labels: ['Tienda', 'Farmacia', 'Otro'],
+            datasets: [{
+                label: 'Negocios',
+                data: [
+                    {{ $businessTypes[1] ?? 0 }},
+                    {{ $businessTypes[2] ?? 0 }},
+                    {{ $businessTypes[3] ?? 0 }}
+                ],
+                backgroundColor: ['#007bff', '#ffc107', '#6c757d'],
+                borderRadius: 3,
+                barPercentage: 0.5
+            }]
+        },
+        options: chartOptionsSmall
+    });
+
+    // Productos - Barras horizontales (ya corregido)
+    new Chart(document.getElementById('productsChart'), {
+        type: 'bar',
+        data: {
+            labels: {!! json_encode($labelsProducts) !!},
+            datasets: [{
+                label: 'Productos',
+                data: {!! json_encode($dataProducts) !!},
+                backgroundColor: '#6610f2',
+                borderRadius: 3
+            }]
+        },
+        options: {
+            ...chartOptionsSmall,
+            indexAxis: 'y'
+        }
+    });
+</script>
+@endsection
+
 @stop
