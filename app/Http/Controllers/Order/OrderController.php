@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Order;
 use App\Http\Controllers\Controller;
 use App\Models\Business;
 use App\Models\Buyer\Buyer;
+use App\Models\Domiciliary;
 use App\Models\Order\OrdersSales;
 use App\Models\Order\OrdersSalesDetail;
 use App\Models\Payment\PaymentForms;
@@ -50,8 +51,8 @@ class OrderController extends Controller
                     'name' => $order->business->name,
                     'address' => $order->business->address,
                     'address' => $order->business->address,
-                    'latitude' => $order->business->latitude,
-                    'longitude' => $order->business->longitude,
+                    'latitude' => $order->business->latitude !== null ? (float)$order->business->latitude : null,
+                    'longitude' => $order->business->longitude !== null ? (float)$order->business->longitude : null,
                     'phone' => $order->business->phone,
                     'city' => $order->business->city,
                     'state' => $order->business->state,
@@ -64,8 +65,8 @@ class OrderController extends Controller
                     'municipality' => $order->address->municipality?->name,
                     'department' => $order->address->department?->name,
                     'country' => $order->address->country?->name,
-                    'latitude' => $order->address->latitude,
-                    'longitude' => $order->address->longitude,
+                    'latitude' => $order->address->latitude !== null ? (float)$order->address->latitude : null,
+                    'longitude' => $order->address->longitude !== null ? (float)$order->address->longitude : null,
                 ] : null,
                 'details' => $order->details->map(function ($detail) {
                     return [
@@ -292,8 +293,8 @@ class OrderController extends Controller
                         'business_id' => $order->business->busines_id,
                         'name' => $order->business->name,
                         'address' => $order->business->address,
-                        'latitude' => $order->business->latitude,
-                        'longitude' => $order->business->longitude,
+                        'latitude' => $order->business->latitude !== null ? (float)$order->business->latitude : null,
+                        'longitude' => $order->business->longitude !== null ? (float)$order->business->longitude : null,
                         'phone' => $order->business->phone,
                         'city' => $order->business->city,
                         'state' => $order->business->state,
@@ -306,8 +307,8 @@ class OrderController extends Controller
                         'municipality' => $order->address->municipality?->name,
                         'department' => $order->address->department?->name,
                         'country' => $order->address->country?->name,
-                        'latitude' => $order->address->latitude,
-                        'longitude' => $order->address->longitude,
+                        'latitude' => $order->address->latitude !== null ? (float)$order->address->latitude : null,
+                        'longitude' => $order->address->longitude !== null ? (float)$order->address->longitude : null,
                     ] : null,
                     'details' => $order->details->map(function ($detail) {
                         return [
@@ -358,7 +359,8 @@ class OrderController extends Controller
     {
         $request->validate([
             'order_id' => 'required|integer',
-            'state' => 'required|integer|in:1,2,3'
+            'state' => 'required|integer|in:2,3,4',
+            'user_id' => 'nullable|integer|exists:user,user_id' // usado para buscar el domiciliario
         ]);
 
         $order = OrdersSales::find($request->order_id);
@@ -369,12 +371,43 @@ class OrderController extends Controller
             ], 404);
         }
 
-        $order->state = $request->state;
+        // Transición: Tienda acepta el pedido
+        if ($order->state == 1 && $request->state == 2) {
+            $order->state = 2;
+
+            // Transición: Domiciliario acepta el pedido
+        } elseif ($order->state == 2 && $request->state == 3) {
+            if (!$request->user_id) {
+                return response()->json([
+                    'message' => 'Se requiere el user_id del domiciliario para esta transición.'
+                ], 422);
+            }
+
+            $domiciliary = Domiciliary::where('user_id', $request->user_id)->first();
+            if (!$domiciliary) {
+                return response()->json([
+                    'message' => 'Domiciliario no encontrado'
+                ], 404);
+            }
+
+            $order->state = 3;
+            $order->domiciliary_id = $domiciliary->domiciliary_id;
+
+            // Transición: Pedido entregado
+        } elseif ($order->state == 3 && $request->state == 4) {
+            $order->state = 4;
+            $order->delivery_date = now();
+        } else {
+            return response()->json([
+                'message' => 'Transición de estado no permitida.'
+            ], 400);
+        }
+
         $order->save();
 
         return response()->json([
             'message' => 'Estado de la orden actualizado',
-            'order' => $order->load('details.product', 'buyer', 'business')
+            'order' => $order->load('details.product', 'buyer', 'business', 'address')
         ]);
     }
 }
