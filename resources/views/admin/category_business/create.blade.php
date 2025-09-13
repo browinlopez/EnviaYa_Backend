@@ -7,9 +7,8 @@
 @stop
 
 @section('content')
-<form action="{{ route('admin.category-business.store') }}" method="POST">
+<form action="{{ route('admin.category-business.store') }}" method="POST" enctype="multipart/form-data">
     @csrf
     @include('admin.category_business.partials.forms')
-    <button type="submit" class="btn btn-primary mt-3"><i class="fas fa-save"></i> Guardar</button>
 </form>
 @stop

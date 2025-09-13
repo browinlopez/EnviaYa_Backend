@@ -31,9 +31,18 @@ class Buyer extends Audit
         return $this->hasMany(DomiciliaryReview::class, 'buyer_id', 'buyer_id');
     }
 
-     public function complexes()
+    public function complexes()
     {
         return $this->hasMany(BuyerComplex::class, 'buyer_id', 'buyer_id');
     }
-    
+
+    public function residentialComplexes()
+    {
+        return $this->belongsToMany(
+            ResidentialComplex::class,
+            'buyer_complex',     // tabla pivote
+            'buyer_id',          // FK en pivote
+            'complex_id'         // FK en pivote
+        );
+    }
 }

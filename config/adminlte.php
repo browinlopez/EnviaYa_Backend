@@ -333,7 +333,17 @@ return [
         'icon' => 'fas fa-boxes',
     ],
 
-    ['header' => 'REPORTES'],
+   [
+    'text'    => 'Cerrar sesión',
+    'url'     => 'logout',
+    'icon'    => 'fas fa-sign-out-alt',
+    'method'  => 'post',
+    'classes' => 'text-danger logout-bottom', // clase custom
+],
+
+
+
+    /* ['header' => 'REPORTES'],
 
     [
         'text' => 'Financieros',
@@ -349,7 +359,7 @@ return [
         'text' => 'Operativos',
         'url'  => 'admin/reportes/operativos',
         'icon' => 'fas fa-cogs',
-    ],
+    ], */
 ],
 
 

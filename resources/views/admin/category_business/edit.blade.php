@@ -7,10 +7,9 @@
 @stop
 
 @section('content')
-<form action="{{ route('admin.category-business.update', $category->id) }}" method="POST">
+<form action="{{ route('admin.category-business.update', $category->id) }}" method="POST" enctype="multipart/form-data">
     @csrf
     @method('PUT')
     @include('admin.category_business.partials.forms')
-    <button type="submit" class="btn btn-primary mt-3"><i class="fas fa-save"></i> Actualizar</button>
 </form>
 @stop

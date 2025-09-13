@@ -1,3 +1,9 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.logout-bottom {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+}

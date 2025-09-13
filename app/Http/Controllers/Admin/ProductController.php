@@ -77,7 +77,6 @@ class ProductController extends Controller
         return redirect()->route('admin.products.index')->with('success', 'Producto creado correctamente.');
     }
 
-
     public function edit($id)
     {
         $product = Product::with('businesses', 'grocery', 'pharmacy')->findOrFail($id);
@@ -149,7 +148,6 @@ class ProductController extends Controller
 
         return redirect()->route('admin.products.index')->with('success', 'Producto actualizado correctamente.');
     }
-
 
     public function destroy($id)
     {

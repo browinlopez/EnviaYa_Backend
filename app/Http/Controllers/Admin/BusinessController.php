@@ -22,7 +22,8 @@ class BusinessController extends Controller
         $categories = CategoryBusiness::all();
         $products = Product::all();
         $domiciliaries = Domiciliary::all();
-        return view('admin.negocios.create', compact('categories','products','domiciliaries'));
+        $business = null;
+        return view('admin.negocios.create', compact('categories','products','domiciliaries', 'business'));
     }
 
     public function store(Request $request)
