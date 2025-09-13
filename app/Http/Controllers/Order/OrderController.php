@@ -49,6 +49,9 @@ class OrderController extends Controller
                     'business_id' => $order->business->busines_id,
                     'name' => $order->business->name,
                     'address' => $order->business->address,
+                    'address' => $order->business->address,
+                    'latitude' => $order->business->latitude,
+                    'longitude' => $order->business->longitude,
                     'phone' => $order->business->phone,
                     'city' => $order->business->city,
                     'state' => $order->business->state,
@@ -85,7 +88,6 @@ class OrderController extends Controller
             'orders' => $formattedOrders
         ]);
     }
-
 
     // Función para obtener todas las órdenes de un negocio (tendero)
     public function ordersBusiness(Request $request)
@@ -290,6 +292,8 @@ class OrderController extends Controller
                         'business_id' => $order->business->busines_id,
                         'name' => $order->business->name,
                         'address' => $order->business->address,
+                        'latitude' => $order->business->latitude,
+                        'longitude' => $order->business->longitude,
                         'phone' => $order->business->phone,
                         'city' => $order->business->city,
                         'state' => $order->business->state,
@@ -328,7 +332,6 @@ class OrderController extends Controller
             ], 400);
         }
     }
-
 
     // Obtener métodos de pago
     public function paymentMethods()

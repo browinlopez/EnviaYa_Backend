@@ -22,6 +22,8 @@ class Business extends Audit
         'name',
         'phone',
         'address',
+        'latitude',
+        'longitude',
         'qualification',
         'razonSocial_DCD',
         "municipality_id",
