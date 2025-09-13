@@ -34,25 +34,25 @@ class OrderController extends Controller
         }
 
         $orders = OrdersSales::where('buyer_id', $buyer->buyer_id)
-            ->with('details.product', 'business', 'promotions', 'payments', 'address.municipality.department.country', 'address.alias')
+            ->with('details.product.category', 'business', 'promotions', 'payments', 'address.municipality.department.country', 'address.alias')
             ->get();
 
         $formattedOrders = $orders->map(function ($order) {
             return [
                 'order_id' => $order->orderSales_id,
+                'buyer_id' => $order->buyer_id,
+                'busines_id' => $order->busines_id,
                 'total' => $order->total,
                 'sale_date' => $order->sale_date,
                 'state' => $order->state,
                 'business' => [
                     'business_id' => $order->business->busines_id,
                     'name' => $order->business->name,
-                    'phone' => $order->business->phone,
                     'address' => $order->business->address,
-                    'razon_social' => $order->business->razonSocial_DCD,
-                    'NIT' => $order->business->NIT,
-                    'logo' => $order->business->logo,
+                    'phone' => $order->business->phone,
                     'city' => $order->business->city,
                     'state' => $order->business->state,
+                    'logo' => $order->business->logo,
                 ],
                 'delivery_address' => $order->address ? [
                     'address_id' => $order->address->address_id,
@@ -69,7 +69,7 @@ class OrderController extends Controller
                         'product_id' => $detail->product->products_id,
                         'name' => $detail->product->name,
                         'description' => $detail->product->description,
-                        'category_id' => $detail->product->category_id,
+                        'category' => $detail->product->category?->name,
                         'image' => $detail->product->image,
                         'amount' => $detail->amount,
                         'unit_price' => $detail->unit_price,
@@ -85,6 +85,7 @@ class OrderController extends Controller
             'orders' => $formattedOrders
         ]);
     }
+
 
     // Función para obtener todas las órdenes de un negocio (tendero)
     public function ordersBusiness(Request $request)
@@ -156,7 +157,6 @@ class OrderController extends Controller
             'orders' => $formattedOrders
         ]);
     }
-
 
     public function weeklyIncomeBusiness(Request $request)
     {
@@ -240,7 +240,7 @@ class OrderController extends Controller
             $order = OrdersSales::create([
                 'buyer_id' => $buyer->buyer_id,
                 'busines_id' => $business->busines_id,
-                'address_id' => $address->address_id, // Guardamos el address_id
+                'address_id' => $address->address_id,
                 'methods_id' => $request->methods_id,
                 'forms_id' => $request->forms_id,
                 'total' => collect($request->products)->sum(fn($p) => $p['amount'] * $p['unit_price']),
@@ -274,9 +274,51 @@ class OrderController extends Controller
 
             DB::commit();
 
+            // Cargamos relaciones necesarias
+            $order->load('details.product.category', 'address.municipality.department.country', 'address.alias', 'business', 'promotions', 'payments');
+
             return response()->json([
                 'message' => 'Orden creada',
-                'order' => $order->load('details.product', 'address')
+                'order' => [
+                    'order_id' => $order->orderSales_id,
+                    'buyer_id' => $order->buyer_id,
+                    'busines_id' => $order->busines_id,
+                    'total' => $order->total,
+                    'sale_date' => $order->sale_date,
+                    'state' => $order->state,
+                    'business' => [
+                        'business_id' => $order->business->busines_id,
+                        'name' => $order->business->name,
+                        'address' => $order->business->address,
+                        'phone' => $order->business->phone,
+                        'city' => $order->business->city,
+                        'state' => $order->business->state,
+                        'logo' => $order->business->logo,
+                    ],
+                    'delivery_address' => $order->address ? [
+                        'address_id' => $order->address->address_id,
+                        'address' => $order->address->address,
+                        'alias' => $order->address->alias?->name,
+                        'municipality' => $order->address->municipality?->name,
+                        'department' => $order->address->department?->name,
+                        'country' => $order->address->country?->name,
+                        'latitude' => $order->address->latitude,
+                        'longitude' => $order->address->longitude,
+                    ] : null,
+                    'details' => $order->details->map(function ($detail) {
+                        return [
+                            'product_id' => $detail->product->products_id,
+                            'name' => $detail->product->name,
+                            'description' => $detail->product->description,
+                            'category' => $detail->product->category?->name,
+                            'image' => $detail->product->image,
+                            'amount' => $detail->amount,
+                            'unit_price' => $detail->unit_price,
+                        ];
+                    }),
+                    'promotions' => $order->promotions,
+                    'payments' => $order->payments,
+                ]
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -287,17 +329,24 @@ class OrderController extends Controller
         }
     }
 
+
     // Obtener métodos de pago
     public function paymentMethods()
     {
-        $methods = PaymentMethods::with('forms')->where('state', true)->get();
+        $methods = PaymentMethods::with('forms')
+            ->where('state', 1)
+            ->get();
+
         return response()->json($methods);
     }
 
     // Obtener formas de pago
     public function paymentForms()
     {
-        $forms = PaymentForms::with('methods')->where('state', true)->get();
+        $forms = PaymentForms::with('methods')
+            ->where('state', 1)
+            ->get();
+
         return response()->json($forms);
     }
 
