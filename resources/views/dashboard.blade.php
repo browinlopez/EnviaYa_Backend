@@ -249,7 +249,7 @@
         options: chartOptionsSmall
     });
 
-    // Productos - Barras horizontales (ya corregido)
+    // Productos - barras (horizontal)
     new Chart(document.getElementById('productsChart'), {
         type: 'bar',
         data: {
@@ -257,13 +257,18 @@
             datasets: [{
                 label: 'Productos',
                 data: {!! json_encode($dataProducts) !!},
-                backgroundColor: '#6610f2',
-                borderRadius: 3
+                backgroundColor: '#6610f2'
             }]
         },
         options: {
-            ...chartOptionsSmall,
-            indexAxis: 'y'
+            indexAxis: 'y',
+            responsive: true,
+            plugins: {
+                legend: {display:false}
+            },
+            scales: {
+                x: {beginAtZero:true}
+            }
         }
     });
 </script>
