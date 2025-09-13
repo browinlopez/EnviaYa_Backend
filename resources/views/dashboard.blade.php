@@ -146,7 +146,7 @@
                                     <div>
                                         <strong>{{ $product->name }}</strong><br>
                                         <small class="text-muted">
-                                            Negocio: {{ $product->businesses->name ?? 'Sin negocio' }}
+                                            Negocio: {{ $product->businesses->first()->name ?? 'Sin negocio' }}
                                         </small>
                                     </div>
                                     <span class="badge badge-success badge-pill">
