@@ -38,7 +38,7 @@
                         'text' => 'Propietarios',
                         'icon' => 'fas fa-user-tie',
                         'color' => 'danger',
-                        //'url' => 'admin/owners',
+                        'url' => '/',
                     ],
                     [
                         'count' => $complexCount,
