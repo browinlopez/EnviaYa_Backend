@@ -24,15 +24,17 @@ class OrderController extends Controller
             'user_id' => 'required|integer'
         ]);
 
-        $user = User::find($request->user_id);
+        // Buscamos el buyer relacionado al user_id
+        $buyer = Buyer::where('user_id', $request->user_id)->first();
 
-        if (!$user) {
+        if (!$buyer) {
             return response()->json([
-                'message' => 'Usuario no encontrado'
+                'message' => 'Usuario comprador no encontrado'
             ], 404);
         }
 
-        $orders = OrdersSales::where('buyer_id', $user->user_id)
+        // Obtenemos las órdenes usando el buyer_id
+        $orders = OrdersSales::where('buyer_id', $buyer->buyer_id)
             ->with('details.product', 'business', 'promotions', 'payments')
             ->get();
 
@@ -75,6 +77,7 @@ class OrderController extends Controller
             'orders' => $formattedOrders
         ]);
     }
+
 
     // Función para obtener todas las órdenes de un negocio (tendero)
     public function ordersBusiness(Request $request)
@@ -130,7 +133,7 @@ class OrderController extends Controller
             'orders' => $formattedOrders
         ]);
     }
-    
+
     public function weeklyIncomeBusiness(Request $request)
     {
         $request->validate([
@@ -181,7 +184,7 @@ class OrderController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'buyer_id' => 'required|integer',
+            'user_id' => 'required|integer',
             'busines_id' => 'required|integer',
             'delivery_address' => 'required|string',
             'products' => 'required|array',
@@ -189,10 +192,10 @@ class OrderController extends Controller
             'products.*.amount' => 'required|integer',
             'products.*.unit_price' => 'required|numeric',
             'methods_id' => 'required|integer|exists:payment_methods,methods_id',
-            'forms_id' => 'required|integer|exists:payment_forms,forms_id',
+            'forms_id' => 'nullable|integer|exists:payment_forms,forms_id',
         ]);
 
-        $buyer = Buyer::find($request->buyer_id);
+        $buyer = Buyer::where('user_id', $request->user_id)->first();
         if (!$buyer) {
             return response()->json(['message' => 'Usuario comprador no encontrado'], 404);
         }
@@ -254,6 +257,7 @@ class OrderController extends Controller
             ], 400);
         }
     }
+
 
     // Obtener métodos de pago
     public function paymentMethods()
