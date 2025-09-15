@@ -105,10 +105,11 @@ class OrderController extends Controller
             ], 404);
         }
 
+        // Precargamos relaciones necesarias
         $orders = OrdersSales::where('busines_id', $business->busines_id)
             ->with([
                 'details.product',
-                'buyer',
+                'buyer.user', // Buyer + User
                 'promotions',
                 'payments',
                 'address.municipality.department.country',
@@ -116,19 +117,41 @@ class OrderController extends Controller
             ])
             ->get();
 
-        $formattedOrders = $orders->map(function ($order) {
+        // Datos del business, solo una vez
+        $businessData = [
+            'business_id' => $business->busines_id,
+            'name' => $business->name,
+            'address' => $business->address,
+            'latitude' => $business->latitude !== null ? (float)$business->latitude : null,
+            'longitude' => $business->longitude !== null ? (float)$business->longitude : null,
+            'phone' => $business->phone,
+            'city' => $business->city,
+            'qualification' => $business->qualification,
+            'state' => $business->state,
+            'logo' => $business->logo,
+        ];
+
+        $formattedOrders = $orders->map(function ($order) use ($businessData) {
             return [
                 'order_id' => $order->orderSales_id,
                 'total' => $order->total,
                 'sale_date' => $order->sale_date,
                 'state' => $order->state,
-                'buyer' => [
-                    'user_id' => $order->buyer->user_id,
-                    'name' => $order->buyer->name,
-                    'email' => $order->buyer->email,
+
+                'buyer' => $order->buyer ? [
+                    'buyer_id' => $order->buyer->buyer_id,
                     'qualification' => $order->buyer->qualification,
                     'state' => $order->buyer->state,
-                ],
+                    'user' => $order->buyer->user ? [
+                        'user_id' => $order->buyer->user->user_id,
+                        'name' => $order->buyer->user->name,
+                        'email' => $order->buyer->user->email,
+                    ] : null,
+                ] : null,
+
+                /*             // Reutilizamos businessData
+            'business' => $businessData, */
+
                 'delivery_address' => $order->address ? [
                     'address_id' => $order->address->address_id,
                     'address' => $order->address->address,
@@ -139,6 +162,7 @@ class OrderController extends Controller
                     'latitude' => $order->address->latitude,
                     'longitude' => $order->address->longitude,
                 ] : null,
+
                 'details' => $order->details->map(function ($detail) {
                     return [
                         'product_id' => $detail->product->products_id,
@@ -150,6 +174,7 @@ class OrderController extends Controller
                         'unit_price' => $detail->unit_price,
                     ];
                 }),
+
                 'promotions' => $order->promotions,
                 'payments' => $order->payments,
             ];
@@ -157,9 +182,12 @@ class OrderController extends Controller
 
         return response()->json([
             'message' => 'Órdenes del negocio encontradas',
+            'business' => $businessData,  // incluimos business una sola vez
             'orders' => $formattedOrders
         ]);
     }
+
+
 
     public function weeklyIncomeBusiness(Request $request)
     {

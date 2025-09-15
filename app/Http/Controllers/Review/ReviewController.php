@@ -15,6 +15,81 @@ use Illuminate\Support\Facades\DB;
 
 class ReviewController extends Controller
 {
+
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|integer|exists:user,user_id',
+            // aquí los demás campos que necesites validar para la review
+        ]);
+
+        $user = User::select('user_id', 'rol') // solo columnas necesarias
+            ->where('user_id', $request->user_id)
+            ->firstOrFail();
+
+        switch ($user->rol) {
+            case 1: // Buyer hace review a business o domiciliario
+                $request->validate([
+                    'type' => 'required|in:business,domiciliary',
+                    'id' => 'required|integer', // id del negocio o domiciliario
+                    'qualification' => 'required|numeric|min:1|max:5',
+                    'comment' => 'nullable|string',
+                ]);
+
+                if ($request->type === 'business') {
+                    $review = BusinessReview::create([
+                        'busines_id'   => $request->id,
+                        'buyer_id'     => $user->buyer->buyer_id, // buyer_id desde relación
+                        'qualification' => $request->qualification,
+                        'comment'      => $request->comment,
+                        'state'        => 1,
+                    ]);
+                } else { // domiciliary
+                    $review = DomiciliaryReview::create([
+                        'domiciliary_id' => $request->id,
+                        'buyer_id'      => $user->buyer->buyer_id,
+                        'qualification' => $request->qualification,
+                        'comment'       => $request->comment,
+                        'state'         => 1,
+                    ]);
+                }
+                break;
+
+            case 3: // Domiciliario hace review a user
+                $request->validate([
+                    'user_id' => 'required|integer|exists:user,user_id',
+                    'qualification' => 'required|numeric|min:1|max:5',
+                    'comment' => 'nullable|string',
+                ]);
+
+                $review = UserReview::create([
+                    'user_id'       => $request->user_id,
+                    'domiciliary_id' => $user->domiciliary->domiciliary_id,
+                    'qualification' => $request->qualification,
+                    'comment'       => $request->comment,
+                    'state'         => 1,
+                ]);
+                break;
+
+            default:
+                return response()->json(['message' => 'Este rol no puede crear reviews'], 403);
+        }
+
+        if ($review instanceof BusinessReview) {
+            return response()->json($review->loadMissing(['business', 'buyer.user']));
+        }
+
+        if ($review instanceof DomiciliaryReview) {
+            return response()->json($review->loadMissing(['domiciliary', 'buyer.user']));
+        }
+
+        if ($review instanceof UserReview) {
+            return response()->json($review->loadMissing(['user', 'domiciliary']));
+        }
+    }
+
+
     // ----------------- BUSINESS REVIEWS -----------------
 
     public function listBusinessReviews()

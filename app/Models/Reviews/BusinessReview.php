@@ -17,7 +17,6 @@ class BusinessReview extends Audit
     protected $fillable = [
         'busines_id',
         'buyer_id',
-        'user_id',
         'qualification',
         'comment',
         'state'

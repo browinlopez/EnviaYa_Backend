@@ -120,6 +120,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     //reviews
     Route::prefix('reviews')->group(function () {
+ Route::post('store', [ReviewController::class, 'store']);
+        
         //Negocios
         Route::get('business', [ReviewController::class, 'listBusinessReviews']); // Listar todas
         Route::post('businessBy', [ReviewController::class, 'listReviewsByBusiness']); // Listar todas

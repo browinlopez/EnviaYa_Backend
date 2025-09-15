@@ -35,7 +35,8 @@ class OrdersSales extends Audit
 
     public function buyer()
     {
-        return $this->belongsTo(User::class, 'buyer_id', 'user_id');
+        // el buyer_id de orderssales apunta al buyer_id de la tabla buyer
+        return $this->belongsTo(\App\Models\Buyer\Buyer::class, 'buyer_id', 'buyer_id');
     }
 
     public function business()
