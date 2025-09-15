@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Buyer\Buyer;
+use App\Models\Owner\Owner;
 use App\Models\Reviews\BusinessReview;
 use App\Models\Reviews\UserReview;
 use App\Models\User\UserAddress;
@@ -50,6 +51,11 @@ class User extends Authenticatable implements Auditable
     public function buyer()
     {
         return $this->hasOne(Buyer::class, 'user_id', 'user_id');
+    }
+
+    public function owner()
+    {
+        return $this->hasOne(Owner::class, 'user_id', 'user_id');
     }
 
     public function reviewsWritten()

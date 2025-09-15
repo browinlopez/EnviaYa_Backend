@@ -85,11 +85,24 @@ class AuthController extends Controller
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
+        // Cargar la relación según el rol
+        if ($user->rol == 1) {
+            // Buyer
+            $user->load('buyer');
+        } elseif ($user->rol == 2) {
+            // Owner + sus negocios
+            $user->load(['owner.businesses']);
+        } elseif ($user->rol == 3) {
+            // Domiciliario + negocios (si aplica)
+            $user->load(['domiciliary.businesses']);
+        }
+
         return response()->json([
             'user'  => $user,
             'token' => $token,
         ]);
     }
+
 
     // Logout
     public function logout(Request $request)
