@@ -8,6 +8,7 @@ use App\Models\Buyer\Buyer;
 use App\Models\Domiciliary;
 use App\Models\Order\OrdersSales;
 use App\Models\Order\OrdersSalesDetail;
+use App\Models\Payment\Payment;
 use App\Models\Payment\PaymentForms;
 use App\Models\Payment\PaymentMethods;
 use App\Models\Product\ProductBusiness;
@@ -187,29 +188,40 @@ class OrderController extends Controller
         ]);
     }
 
-    public function weeklyIncomeBusiness(Request $request)
+    public function incomeBusiness(Request $request)
     {
         $request->validate([
             'business_id' => 'required|integer|exists:business,busines_id',
-            'week_start' => 'nullable|date' // opcional, lunes de la semana, por defecto la semana actual
+            'week_start' => 'nullable|date', // opcional, lunes de la semana
+            'month' => 'nullable|date' // opcional, primer día del mes
         ]);
 
         $business_id = $request->business_id;
+
+        // --- Fechas para semana ---
         $week_start = $request->week_start ? Carbon::parse($request->week_start)->startOfWeek() : Carbon::now()->startOfWeek();
         $week_end = (clone $week_start)->endOfWeek();
 
-        // Obtener ingresos agrupados por día
-        $income = OrdersSales::select(
-            DB::raw('DAYOFWEEK(sale_date) as weekday'),
+        // --- Fechas para mes ---
+        $month_start = $request->month ? Carbon::parse($request->month)->startOfMonth() : Carbon::now()->startOfMonth();
+        $month_end = (clone $month_start)->endOfMonth();
+
+        /**
+         * Ingresos semanales basados en payments asociados a las órdenes del negocio
+         */
+        $incomeWeek = Payment::select(
+            DB::raw('DAYOFWEEK(payment_date) as weekday'),
             DB::raw('SUM(total) as total_income')
         )
-            ->where('busines_id', $business_id)
-            ->whereBetween('sale_date', [$week_start->toDateString(), $week_end->toDateString()])
+            ->whereHas('order', function ($q) use ($business_id) {
+                $q->where('busines_id', $business_id);
+            })
+            ->whereBetween('payment_date', [$week_start->toDateString(), $week_end->toDateString()])
             ->groupBy('weekday')
             ->get()
             ->keyBy('weekday');
 
-        // Mapear a todos los días de la semana (1 = domingo, 2 = lunes, ... 7 = sábado)
+        // Mapear días de la semana
         $daysOfWeek = [
             2 => 'Lunes',
             3 => 'Martes',
@@ -222,14 +234,35 @@ class OrderController extends Controller
 
         $weeklyIncome = [];
         foreach ($daysOfWeek as $key => $day) {
-            $weeklyIncome[$day] = $income[$key]->total_income ?? 0;
+            $weeklyIncome[$day] = (float)($incomeWeek[$key]->total_income ?? 0);
         }
+
+        /**
+         * Ingresos mensuales (sumando todos los pagos del mes)
+         */
+        $incomeMonth = Payment::whereHas('order', function ($q) use ($business_id) {
+            $q->where('busines_id', $business_id);
+        })
+            ->whereBetween('payment_date', [$month_start->toDateString(), $month_end->toDateString()])
+            ->sum('subtotal');
+
+        /**
+         * Total histórico de ingresos del negocio (todas las fechas)
+         */
+        $incomeTotal = Payment::whereHas('order', function ($q) use ($business_id) {
+            $q->where('busines_id', $business_id);
+        })
+            ->sum('subtotal');
 
         return response()->json([
             'business_id' => $business_id,
             'week_start' => $week_start->toDateString(),
             'week_end' => $week_end->toDateString(),
-            'weekly_income' => $weeklyIncome
+            'weekly_income' => $weeklyIncome,   // por día de la semana
+            'month_start' => $month_start->toDateString(),
+            'month_end' => $month_end->toDateString(),
+            'monthly_income' => (float)$incomeMonth,
+            'total_income' => (float)$incomeTotal
         ]);
     }
 
@@ -266,13 +299,15 @@ class OrderController extends Controller
         DB::beginTransaction();
 
         try {
+            $total = collect($request->products)->sum(fn($p) => $p['amount'] * $p['unit_price']);
+
             $order = OrdersSales::create([
                 'buyer_id' => $buyer->buyer_id,
                 'busines_id' => $business->busines_id,
                 'address_id' => $address->address_id,
                 'methods_id' => $request->methods_id,
                 'forms_id' => $request->forms_id,
-                'total' => collect($request->products)->sum(fn($p) => $p['amount'] * $p['unit_price']),
+                'total' => $total,
                 'sale_date' => now(),
                 'state' => 1
             ]);
@@ -299,6 +334,31 @@ class OrderController extends Controller
 
                 $productBusiness->amount -= $product['amount'];
                 $productBusiness->save();
+            }
+
+            /**
+             * 👉 Aquí creamos automáticamente el pago
+             * Solo si methods_id != 1 (es decir, pago online u otro)
+             */
+            if ($order->methods_id != 1) {
+                $subtotal = $total; // si tienes otro cálculo, lo reemplazas
+                $domicilio = 2000; // aquí puedes calcular costo domicilio
+                $valorPromocion = 0; // si tienes promociones
+                $totalFinal = $subtotal + $domicilio - $valorPromocion;
+
+                Payment::create([
+                    'orderSales_id' => $order->orderSales_id,
+                    'methods_id' => $order->methods_id,
+                    'forms_id' => $order->forms_id,
+                    'amount' => $totalFinal,
+                    'subtotal' => $subtotal,
+                    'total' => $totalFinal,
+                    'domicilio' => $domicilio,
+                    'valor_promocion' => $valorPromocion,
+                    'payment_status' => 1, // por ejemplo 'pagado'
+                    'payment_date' => now(),
+                    'state' => 1 // activo
+                ]);
             }
 
             DB::commit();
@@ -359,7 +419,6 @@ class OrderController extends Controller
             ], 400);
         }
     }
-
     // Obtener métodos de pago
     public function paymentMethods()
     {
@@ -386,54 +445,71 @@ class OrderController extends Controller
         $request->validate([
             'order_id' => 'required|integer',
             'state' => 'required|integer|in:2,3,4',
-            'user_id' => 'nullable|integer|exists:user,user_id' // usado para buscar el domiciliario
+            'user_id' => 'nullable|integer|exists:user,user_id'
         ]);
 
-        $order = OrdersSales::find($request->order_id);
+        $order = OrdersSales::with('details')->find($request->order_id);
 
         if (!$order) {
-            return response()->json([
-                'message' => 'Orden no encontrada'
-            ], 404);
+            return response()->json(['message' => 'Orden no encontrada'], 404);
         }
 
-        // Transición: Tienda acepta el pedido
+        // Acepta pedido
         if ($order->state == 1 && $request->state == 2) {
             $order->state = 2;
 
-            // Transición: Domiciliario acepta el pedido
+            // Acepta domiciliario
         } elseif ($order->state == 2 && $request->state == 3) {
             if (!$request->user_id) {
-                return response()->json([
-                    'message' => 'Se requiere el user_id del domiciliario para esta transición.'
-                ], 422);
+                return response()->json(['message' => 'Se requiere el user_id del domiciliario para esta transición.'], 422);
             }
 
             $domiciliary = Domiciliary::where('user_id', $request->user_id)->first();
             if (!$domiciliary) {
-                return response()->json([
-                    'message' => 'Domiciliario no encontrado'
-                ], 404);
+                return response()->json(['message' => 'Domiciliario no encontrado'], 404);
             }
 
             $order->state = 3;
             $order->domiciliary_id = $domiciliary->domiciliary_id;
 
-            // Transición: Pedido entregado
+            // Pedido entregado
         } elseif ($order->state == 3 && $request->state == 4) {
             $order->state = 4;
             $order->delivery_date = now();
+
+            // si método de pago == 1, crear pago
+            if ($order->methods_id == 1) {
+                // calcular valores
+                $subtotal = $order->details->sum(function ($d) {
+                    return $d->amount * $d->unit_price;
+                });
+                $domicilio = 2000; // aquí pones tu cálculo del costo de domicilio
+                $valorPromocion = 0; // aquí aplicas descuentos/promociones
+                $total = $subtotal - $domicilio - $valorPromocion;
+
+                Payment::create([
+                    'orderSales_id' => $order->orderSales_id,
+                    'methods_id' => $order->methods_id,
+                    'forms_id' => $order->forms_id,
+                    'amount' => $total,
+                    'subtotal' => $subtotal,
+                    'total' => $total,
+                    'domicilio' => $domicilio,
+                    'valor_promocion' => $valorPromocion,
+                    'payment_status' => 1, // por ejemplo pagado
+                    'payment_date' => now(),
+                    'state' => 1 // activo
+                ]);
+            }
         } else {
-            return response()->json([
-                'message' => 'Transición de estado no permitida.'
-            ], 400);
+            return response()->json(['message' => 'Transición de estado no permitida.'], 400);
         }
 
         $order->save();
 
         return response()->json([
             'message' => 'Estado de la orden actualizado',
-            'order' => $order->load('details.product', 'buyer', 'business', 'address')
+            'order' => $order->load('details.product', 'buyer', 'business', 'address', 'payments')
         ]);
     }
 }

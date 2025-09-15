@@ -4,8 +4,11 @@ namespace App\Http\Controllers\Domiciliary;
 
 use App\Http\Controllers\Controller;
 use App\Models\Domiciliary;
+use App\Models\Payment\Payment;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class DomiciliaryController extends Controller
@@ -123,39 +126,120 @@ class DomiciliaryController extends Controller
     }
 
     // Listar negocios asignados a un domiciliario
-   public function listBusinessesByDomiciliary(Request $request)
-{
-    $request->validate([
-        'domiciliary_id' => 'required|integer|exists:domiciliary,domiciliary_id',
-    ]);
+    public function listBusinessesByDomiciliary(Request $request)
+    {
+        $request->validate([
+            'domiciliary_id' => 'required|integer|exists:domiciliary,domiciliary_id',
+        ]);
 
-    $domiciliary = Domiciliary::with(['user', 'businesses'])->findOrFail($request->domiciliary_id);
+        $domiciliary = Domiciliary::with(['user', 'businesses'])->findOrFail($request->domiciliary_id);
 
-    $formatted = [
-        'domiciliary' => [
-            'domiciliary_id' => $domiciliary->domiciliary_id,
-            'name'           => $domiciliary->user ? $domiciliary->user->name : null,
-            'email'          => $domiciliary->user ? $domiciliary->user->email : null,
-            'phone'          => $domiciliary->user ? $domiciliary->user->phone : null,
-            'state'          => $domiciliary->state,
-        ],
-        'businesses' => $domiciliary->businesses->map(function ($business) {
-            return [
-                'busines_id'      => $business->busines_id,
-                'name'            => $business->name,
-                'phone'           => $business->phone,
-                'address'         => $business->address,
-                'qualification'   => $business->qualification,
-                'razonSocial_DCD' => $business->razonSocial_DCD,
-                'NIT'             => $business->NIT,
-                'logo'            => $business->logo,
-                'municipality_id' => $business->municipality_id,
-                'state'           => $business->state,
-            ];
-        }),
-    ];
+        $formatted = [
+            'domiciliary' => [
+                'domiciliary_id' => $domiciliary->domiciliary_id,
+                'name'           => $domiciliary->user ? $domiciliary->user->name : null,
+                'email'          => $domiciliary->user ? $domiciliary->user->email : null,
+                'phone'          => $domiciliary->user ? $domiciliary->user->phone : null,
+                'state'          => $domiciliary->state,
+            ],
+            'businesses' => $domiciliary->businesses->map(function ($business) {
+                return [
+                    'busines_id'      => $business->busines_id,
+                    'name'            => $business->name,
+                    'phone'           => $business->phone,
+                    'address'         => $business->address,
+                    'qualification'   => $business->qualification,
+                    'razonSocial_DCD' => $business->razonSocial_DCD,
+                    'NIT'             => $business->NIT,
+                    'logo'            => $business->logo,
+                    'municipality_id' => $business->municipality_id,
+                    'state'           => $business->state,
+                ];
+            }),
+        ];
 
-    return response()->json($formatted);
-}
+        return response()->json($formatted);
+    }
 
+    public function incomeDomiciliary(Request $request)
+    {
+        $request->validate([
+            'domiciliary_id' => 'required|integer|exists:domiciliary,domiciliary_id',
+            'week_start' => 'nullable|date',
+            'month' => 'nullable|date'
+        ]);
+
+        $domiciliary_id = $request->domiciliary_id;
+
+        // Fechas semana
+        $week_start = $request->week_start
+            ? Carbon::parse($request->week_start)->startOfWeek()
+            : Carbon::now()->startOfWeek();
+        $week_end = (clone $week_start)->endOfWeek();
+
+        // Fechas mes
+        $month_start = $request->month
+            ? Carbon::parse($request->month)->startOfMonth()
+            : Carbon::now()->startOfMonth();
+        $month_end = (clone $month_start)->endOfMonth();
+
+        /**
+         * Ganancia semanal (sumar campo "domicilio" de payments)
+         */
+        $weekIncome = Payment::select(
+            DB::raw('DAYOFWEEK(payment_date) as weekday'),
+            DB::raw('SUM(domicilio) as total_income')
+        )
+            ->whereHas('order', function ($q) use ($domiciliary_id) {
+                $q->where('domiciliary_id', $domiciliary_id);
+            })
+            ->whereBetween('payment_date', [$week_start->toDateString(), $week_end->toDateString()])
+            ->groupBy('weekday')
+            ->get()
+            ->keyBy('weekday');
+
+        // Mapear días de la semana
+        $daysOfWeek = [
+            2 => 'Lunes',
+            3 => 'Martes',
+            4 => 'Miércoles',
+            5 => 'Jueves',
+            6 => 'Viernes',
+            7 => 'Sábado',
+            1 => 'Domingo',
+        ];
+
+        $weeklyIncome = [];
+        foreach ($daysOfWeek as $key => $day) {
+            $weeklyIncome[$day] = (float)($weekIncome[$key]->total_income ?? 0);
+        }
+
+        /**
+         * Ganancia mensual (sumar campo "domicilio" de payments del mes)
+         */
+        $monthIncome = Payment::whereHas('order', function ($q) use ($domiciliary_id) {
+            $q->where('domiciliary_id', $domiciliary_id);
+        })
+            ->whereBetween('payment_date', [$month_start->toDateString(), $month_end->toDateString()])
+            ->sum('domicilio');
+
+        /**
+         * Total histórico de ingresos del domiciliario
+         */
+        $totalIncome = Payment::whereHas('order', function ($q) use ($domiciliary_id) {
+            $q->where('domiciliary_id', $domiciliary_id);
+        })
+            ->sum('domicilio');
+
+        return response()->json([
+            'domiciliary_id' => $domiciliary_id,
+            'week_start' => $week_start->toDateString(),
+            'week_end' => $week_end->toDateString(),
+            'weekly_income' => $weeklyIncome,  // por día
+            'month_start' => $month_start->toDateString(),
+            'month_end' => $month_end->toDateString(),
+            'monthly_income' => (float)$monthIncome,
+            'total_income' => (float)$totalIncome
+        ]);
+    }
 }

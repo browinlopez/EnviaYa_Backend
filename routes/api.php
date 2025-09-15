@@ -70,7 +70,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('orders')->group(function () {
         Route::post('user', [OrderController::class, 'ordersUser']); // Usuario comprador
         Route::post('business', [OrderController::class, 'ordersBusiness']); // Tendero / negocio
-        Route::post('weeklyIncomeBusiness', [OrderController::class, 'weeklyIncomeBusiness']); // Tendero / negocio
+        Route::post('IncomeBusiness', [OrderController::class, 'incomeBusiness']); // Tendero / negocio
         Route::post('orders', [OrderController::class, 'store']); // Crear orden
         Route::put('update', [OrderController::class, 'updateStatus']); // Crear orden
     });
@@ -116,7 +116,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/updateDomiciliary', [DomiciliaryController::class, 'updateDomiciliary']);  // Actualizar
         Route::post('/deleteDomiciliary', [DomiciliaryController::class, 'deleteDomiciliary']);  // Eliminar
         Route::post('/assignToBusiness', [DomiciliaryController::class, 'assignToBusiness']);  // Actualizar
-        Route::post('/listbussiness', [DomiciliaryController::class, 'listBusinessesByDomiciliary']);  // Eliminar    
+        Route::post('/listbussiness', [DomiciliaryController::class, 'listBusinessesByDomiciliary']);  // Eliminar   
+        Route::post('/incomeDomiciliary', [DomiciliaryController::class, 'incomeDomiciliary']);
     });
 
     //reviews

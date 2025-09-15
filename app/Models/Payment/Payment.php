@@ -20,6 +20,10 @@ class Payment extends Audit
         'methods_id',
         'forms_id',
         'amount',
+        'subtotal',
+        'total',
+        'domicilio',
+        'valor_promocion',
         'payment_status',
         'payment_date',
         'state'
