@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Product;
 
 use App\Http\Controllers\Controller;
 use App\Models\Business;
+use App\Models\Order\OrdersSalesDetail;
 use App\Models\Product\GroceryProduct;
 use App\Models\Product\PharmacyProduct;
 use App\Models\Product\Product;
@@ -271,5 +272,42 @@ class ProductController extends Controller
         });
 
         return response()->json($formatted);
+    }
+
+    public function mostPopularProducts(Request $request)
+    {
+        $request->validate([
+            'business_id' => 'required|integer|exists:business,busines_id',
+            'limit' => 'nullable|integer|min:1|max:50', // opcional para top N
+        ]);
+
+        $limit = $request->get('limit', 10); // por defecto top 10
+
+        $products = OrdersSalesDetail::selectRaw('product_id, SUM(amount) as total_ordered')
+            ->whereHas('order', function ($query) use ($request) {
+                $query->where('busines_id', $request->business_id);
+            })
+            ->with('product') // para traer datos del producto
+            ->groupBy('product_id')
+            ->orderByDesc('total_ordered')
+            ->take($limit)
+            ->get();
+
+        $formatted = $products->map(function ($item) {
+            return [
+                'product_id' => $item->product->products_id,
+                'name' => $item->product->name,
+                'description' => $item->product->description,
+                'category_id' => $item->product->category_id,
+                'image' => $item->product->image,
+                'state' => $item->product->state,
+                'total_ordered' => (int) $item->total_ordered, // cantidad total pedida
+            ];
+        });
+
+        return response()->json([
+            'message' => 'Productos más populares del negocio',
+            'products' => $formatted
+        ]);
     }
 }

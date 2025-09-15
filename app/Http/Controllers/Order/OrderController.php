@@ -187,8 +187,6 @@ class OrderController extends Controller
         ]);
     }
 
-
-
     public function weeklyIncomeBusiness(Request $request)
     {
         $request->validate([

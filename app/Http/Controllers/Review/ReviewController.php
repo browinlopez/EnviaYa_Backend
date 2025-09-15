@@ -133,7 +133,7 @@ class ReviewController extends Controller
             'busines_id' => 'required|integer|exists:business,busines_id',
         ]);
 
-        $reviews = BusinessReview::with('business', 'user')
+        $reviews = BusinessReview::with('business', 'buyer.user') // <-- aquí el cambio
             ->where('busines_id', $request->busines_id)
             ->get();
 
@@ -143,14 +143,14 @@ class ReviewController extends Controller
                 'qualification' => $review->qualification,
                 'comment' => $review->comment,
                 'state' => $review->state,
-                'user' => [
-                    'user_id' => $review->user->user_id,
-                    'name' => $review->user->name,
-                    'email' => $review->user->email,
-                    'qualification' => $review->user->qualification,
-                    'state' => $review->user->state,
-                ],
-                'business' => [
+                'user' => $review->buyer && $review->buyer->user ? [ // accedemos a buyer->user
+                    'user_id' => $review->buyer->user->user_id,
+                    'name' => $review->buyer->user->name,
+                    'email' => $review->buyer->user->email,
+                    'qualification' => $review->buyer->qualification,
+                    'state' => $review->buyer->state,
+                ] : null,
+                'business' => $review->business ? [
                     'business_id' => $review->business->busines_id,
                     'name' => $review->business->name,
                     'phone' => $review->business->phone,
@@ -161,12 +161,13 @@ class ReviewController extends Controller
                     'logo' => $review->business->logo,
                     'city' => $review->business->city,
                     'state' => $review->business->state,
-                ]
+                ] : null,
             ];
         });
 
         return response()->json($formatted);
     }
+
 
     public function createBusinessReview(Request $request)
     {

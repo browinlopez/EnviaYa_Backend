@@ -47,6 +47,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('show', [ProductController::class, 'show']);
         Route::put('update', [ProductController::class, 'update']);
         Route::post('top-products', [ProductController::class, 'topRated']);
+        Route::post('topProductsBusiness', [ProductController::class, 'mostPopularProducts']);
     });
 
     Route::prefix('categories')->group(function () {
@@ -120,8 +121,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     //reviews
     Route::prefix('reviews')->group(function () {
- Route::post('store', [ReviewController::class, 'store']);
-        
+        Route::post('store', [ReviewController::class, 'store']);
+
         //Negocios
         Route::get('business', [ReviewController::class, 'listBusinessReviews']); // Listar todas
         Route::post('businessBy', [ReviewController::class, 'listReviewsByBusiness']); // Listar todas
