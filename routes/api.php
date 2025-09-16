@@ -133,7 +133,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         //Domiciliario
         Route::get('domiciliaries', [ReviewController::class, 'listDomiciliaryReviews']); // Listar todas
-        Route::get('domiciliary', [ReviewController::class, 'listReviewsByDomiciliary']); // Listar por domiciliario
+        Route::post('domiciliary', [ReviewController::class, 'listReviewsByDomiciliary']); // Listar por domiciliario
         Route::post('domiciliary/create', [ReviewController::class, 'createDomiciliaryReview']); // Crear
         Route::put('domiciliary/update', [ReviewController::class, 'updateDomiciliaryReview']); // Actualizar
         Route::delete('domiciliary', [ReviewController::class, 'deleteDomiciliaryReview']); // Eliminar

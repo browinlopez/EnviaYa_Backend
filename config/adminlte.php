@@ -265,7 +265,7 @@ return [
     'password_email_url' => 'password/email',
     'profile_url' => false,
     'disable_darkmode_routes' => false,
-    
+
 
     /*
     |--------------------------------------------------------------------------
@@ -300,67 +300,67 @@ return [
     */
 
     'menu' => [
-    ['header' => 'MENÚ PRINCIPAL'],
+        ['header' => 'MENÚ PRINCIPAL'],
 
-    [
-        'text' => 'Usuarios',
-        'url'  => 'admin/compradores', // ruta laravel
-        'icon' => 'fas fa-users',
-    ],
-    [
-        'text' => 'Negocios',
-        'url'  => 'admin/negocios',
-        'icon' => 'fas fa-store',
-    ],
-    [
-        'text' => 'Domiciliarios',
-        'url'  => 'admin/domiciliarios',
-        'icon' => 'fas fa-motorcycle',
-    ],
-    [
-        'text' => 'Categorías',
-       'url'  => 'admin/category-business',
-        'icon' => 'fas fa-tags',
-    ],
-    [
-        'text' => 'Conjuntos Residenciales',
-        'url'  => 'admin/conjuntos',
-        'icon' => 'fas fa-building',
-    ],
-    [
-        'text' => 'Productos',
-        'url'  => 'admin/productos',
-        'icon' => 'fas fa-boxes',
-    ],
+        [
+            'text' => 'Usuarios',
+            'url'  => 'admin/compradores', // ruta laravel
+            'icon' => 'fas fa-users',
+        ],
+        [
+            'text' => 'Negocios',
+            'url'  => 'admin/negocios',
+            'icon' => 'fas fa-store',
+        ],
+        [
+            'text' => 'Domiciliarios',
+            'url'  => 'admin/domiciliarios',
+            'icon' => 'fas fa-motorcycle',
+        ],
+        [
+            'text' => 'Categorías',
+            'url'  => 'admin/category-business',
+            'icon' => 'fas fa-tags',
+        ],
+        [
+            'text' => 'Conjuntos Residenciales',
+            'url'  => 'admin/conjuntos',
+            'icon' => 'fas fa-building',
+        ],
+        [
+            'text' => 'Productos',
+            'url'  => 'admin/productos',
+            'icon' => 'fas fa-boxes',
+        ],
 
-   [
-    'text'    => 'Cerrar sesión',
-    'url'     => 'logout',
-    'icon'    => 'fas fa-sign-out-alt',
-    'method'  => 'post',
-    'classes' => 'text-danger logout-bottom', // clase custom
-],
+        [
+            'text'    => 'Cerrar sesión',
+            'url'     => 'logout',
+            'icon'    => 'fas fa-sign-out-alt',
+            'method'  => 'post',
+            'classes' => 'text-danger logout-bottom', // clase custom
+        ],
 
 
 
-    /* ['header' => 'REPORTES'],
+        ['header' => 'REPORTES'],
 
-    [
-        'text' => 'Financieros',
-        'url'  => 'admin/reportes/financieros',
-        'icon' => 'fas fa-dollar-sign',
+        [
+            'text' => 'Financieros',
+            'url'  => 'admin/reportes/financieros', // coincide con la ruta GET
+            'icon' => 'fas fa-dollar-sign',
+        ],
+        [
+            'text' => 'Comerciales',
+            'url'  => 'admin/reportes/comerciales',
+            'icon' => 'fas fa-chart-line',
+        ],
+        [
+            'text' => 'Operativos',
+            'url'  => 'admin/reportes/operacional',
+            'icon' => 'fas fa-cogs',
+        ],
     ],
-    [
-        'text' => 'Comerciales',
-        'url'  => 'admin/reportes/comerciales',
-        'icon' => 'fas fa-chart-line',
-    ],
-    [
-        'text' => 'Operativos',
-        'url'  => 'admin/reportes/operativos',
-        'icon' => 'fas fa-cogs',
-    ], */
-],
 
 
     /*

@@ -4,6 +4,7 @@ namespace App\Models\Order;
 
 use App\Models\Audit\Audit;
 use App\Models\Business;
+use App\Models\Buyer\Buyer;
 use App\Models\Domiciliary;
 use App\Models\Payment\Payment;
 use App\Models\Payment\PaymentForms;
@@ -30,13 +31,14 @@ class OrdersSales extends Audit
         'forms_id',
         'total',
         'sale_date',
+        'delivery_date',
         'state'
     ];
 
     public function buyer()
     {
         // el buyer_id de orderssales apunta al buyer_id de la tabla buyer
-        return $this->belongsTo(\App\Models\Buyer\Buyer::class, 'buyer_id', 'buyer_id');
+        return $this->belongsTo(Buyer::class, 'buyer_id', 'buyer_id');
     }
 
     public function business()
@@ -61,7 +63,7 @@ class OrdersSales extends Audit
 
     public function payments()
     {
-        return $this->hasMany(Payment::class, 'orderSales_id', 'orderSales_id');
+        return $this->hasOne(Payment::class, 'orderSales_id', 'orderSales_id');
     }
 
     public function paymentMethod()

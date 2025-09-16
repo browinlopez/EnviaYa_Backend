@@ -1,11 +1,13 @@
 <?php
 
+use App\Exports\Comercials\ReportGeneralComercial;
 use App\Http\Controllers\Admin\BusinessController;
 use App\Http\Controllers\Admin\BuyerController;
 use App\Http\Controllers\Admin\CategoryBusinessController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DomiciliaryController;
 use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\ResidentialComplexController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -122,6 +124,21 @@ Route::middleware('auth')->group(function () {
         Route::get('productos/edit/{id}', [ProductController::class, 'edit'])->name('products.edit');
         Route::put('productos/update/{id}', [ProductController::class, 'update'])->name('products.update');
         Route::delete('productos/destroy/{id}', [ProductController::class, 'destroy'])->name('products.destroy');
+
+        Route::get('reportes/financieros', [ReportController::class, 'generalFinancial'])
+            ->name('report.general');
+        Route::get('reportes/financieros/export', [ReportController::class, 'exportFinancial'])->name('report.export');
+        
+
+        Route::get('/reportes/comerciales', [ReportController::class, 'generalCommercials'])
+            ->name('reportes.comerciales');
+
+        Route::get('/reportes/comerciales/export', [ReportController::class, 'exportComercial'])
+            ->name('reportes.comerciales.export');
+
+
+        Route::get('/reportes/operacional',[ReportController::class, 'OperationalCommercials'])
+            ->name('reportes.operacional');
     });
 });
 
