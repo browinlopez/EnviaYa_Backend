@@ -65,18 +65,46 @@ class DomiciliaryController extends Controller
     public function updateDomiciliary(Request $request)
     {
         $request->validate([
-            'domiciliary_id' => 'required|integer|exists:domiciliary,domiciliary_id',
-            'user_id' => 'integer|exists:user,user_id',
+            'user_id' => 'required|integer|exists:user,user_id',
+            // Campos del domiciliario
             'available' => 'boolean',
             'qualification' => 'numeric|min:0|max:5',
-            'state' => 'boolean'
+            'state' => 'boolean',
+            // Campos del usuario
+            'name' => 'string|max:255',
+            'email' => 'email|max:255',
+            'phone' => 'string|max:20',
+            'address' => 'string|max:255',
         ]);
 
-        $domiciliary = Domiciliary::find($request->domiciliary_id);
-        $domiciliary->update($request->all());
+        // Buscar usuario
+        $user = User::findOrFail($request->user_id);
 
-        return response()->json(['message' => 'Domiciliario actualizado', 'domiciliary' => $domiciliary]);
+        // Actualizar usuario
+        $user->update($request->only([
+            'name',
+            'email',
+            'phone',
+            'address',
+        ]));
+
+        // Obtener y actualizar domiciliario relacionado
+        $domiciliary = $user->domiciliary;
+        if ($domiciliary) {
+            $domiciliary->update($request->only([
+                'available',
+                'qualification',
+                'state'
+            ]));
+        }
+
+        return response()->json([
+            'message' => 'Información actualizada correctamente',
+            'user' => $user,
+            'domiciliary' => $domiciliary
+        ]);
     }
+
 
     // Eliminar un domiciliario
     public function deleteDomiciliary(Request $request)
