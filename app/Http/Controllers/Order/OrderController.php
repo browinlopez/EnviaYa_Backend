@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Order;
 
+use App\Events\DomiciliaryLocationUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Business;
 use App\Models\Buyer\Buyer;
 use App\Models\Domiciliary;
+use App\Models\Order\OrderGeolocation;
 use App\Models\Order\OrdersSales;
 use App\Models\Order\OrdersSalesDetail;
 use App\Models\Payment\Payment;
@@ -17,6 +19,7 @@ use App\Models\User\UserAddress;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 
 class OrderController extends Controller
 {
@@ -312,6 +315,8 @@ class OrderController extends Controller
                 'state' => 1
             ]);
 
+            $outOfStockProducts = [];
+
             foreach ($request->products as $product) {
                 $productBusiness = ProductBusiness::where('busines_id', $request->busines_id)
                     ->where('products_id', $product['product_id'])
@@ -321,19 +326,30 @@ class OrderController extends Controller
                     throw new \Exception("El producto ID {$product['product_id']} no pertenece al negocio");
                 }
 
+                $amountToRegister = $product['amount'];
+
+                // Si no hay suficiente stock
                 if ($productBusiness->amount < $product['amount']) {
-                    throw new \Exception("Cantidad insuficiente para el producto ID {$product['product_id']}. Disponible: {$productBusiness->amount}");
+                    $outOfStockProducts[] = [
+                        'name' => $productBusiness->product->name,
+                        'missing' => $product['amount'] - $productBusiness->amount
+                    ];
+                    // Registrar con cantidad negativa que indica falta
+                    $amountToRegister = $product['amount'] - $product['amount']; // o 0, depende cómo quieras mostrar
                 }
 
                 OrdersSalesDetail::create([
                     'orderSales_id' => $order->orderSales_id,
                     'product_id' => $product['product_id'],
-                    'amount' => $product['amount'],
+                    'amount' => $amountToRegister,
                     'unit_price' => $product['unit_price']
                 ]);
 
-                $productBusiness->amount -= $product['amount'];
-                $productBusiness->save();
+                // Reducir stock solo si hay disponible
+                if ($productBusiness->amount > 0) {
+                    $productBusiness->amount -= min($productBusiness->amount, $product['amount']);
+                    $productBusiness->save();
+                }
             }
 
             /**
@@ -510,6 +526,53 @@ class OrderController extends Controller
         return response()->json([
             'message' => 'Estado de la orden actualizado',
             'order' => $order->load('details.product', 'buyer', 'business', 'address', 'payments')
+        ]);
+    }
+
+    /* public function updateLocation(Request $request)
+    {
+        $data = $request->validate([
+            'domiciliary_id' => 'required|exists:domiciliary,domiciliary_id',
+            'orderSales_id'  => 'required|exists:orderssales,orderSales_id',
+            'latitude'       => 'required|numeric',
+            'longitude'      => 'required|numeric', // antes era 'length'
+            'state'          => 'nullable|integer'
+        ]);
+
+        $geo = OrderGeolocation::create($data);
+
+        // Enviar la ubicación al servidor Node.js
+        Http::post('http://192.168.20.29:3000/location', [
+            'order_id'       => $geo->orderSales_id,
+            'latitude'       => $geo->latitude,
+            'longitude'      => $geo->longitude, // ahora es 'longitude'
+            'domiciliary_id' => $geo->domiciliary_id,
+        ]);
+
+        return response()->json($geo);
+    } */
+
+    public function updateLocation(Request $request)
+    {
+        $data = $request->validate([
+            'domiciliary_id' => 'required|exists:domiciliary,domiciliary_id',
+            'orderSales_id'  => 'required|exists:orderssales,orderSales_id',
+            'latitude'       => 'required|numeric',
+            'longitude'      => 'required|numeric',
+            'state'          => 'nullable|integer'
+        ]);
+
+        // Emitimos directamente al servidor Node.js sin guardar en DB
+        Http::post('http://192.168.20.29:3000/location', [
+            'order_id'       => $data['orderSales_id'],
+            'latitude'       => $data['latitude'],
+            'longitude'      => $data['longitude'],
+            'domiciliary_id' => $data['domiciliary_id'],
+        ]);
+
+        return response()->json([
+            'message' => 'Ubicación enviada al socket exitosamente',
+            'data'    => $data
         ]);
     }
 }

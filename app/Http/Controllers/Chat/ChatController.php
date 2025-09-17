@@ -10,6 +10,7 @@ use App\Models\Chat\Message;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 
 class ChatController extends Controller
 {
@@ -43,37 +44,79 @@ class ChatController extends Controller
         });
     }
 
-    /**
-     * Enviar un mensaje en un chat
-     */
     public function sendMessage(Request $request)
     {
         $request->validate([
-            'chat_id' => 'required|exists:chats,chat_id',
             'user_id' => 'required|exists:user,user_id',
-            'role_id' => 'required|exists:rol,rol_id',
+            'recipient_id' => 'required|exists:user,user_id',
             'content' => 'required|string|max:1000',
         ]);
 
         return DB::transaction(function () use ($request) {
-            $chat = Chat::findOrFail($request->chat_id);
+            // Obtener usuarios
+            $sender = User::findOrFail($request->user_id);
+            $recipient = User::findOrFail($request->recipient_id);
 
+            // Revisar si ya existe un chat privado entre ambos
+            $chat = Chat::where('type', 'private')
+                ->whereHas('participants', fn($q) => $q->where('user_id', $sender->user_id))
+                ->whereHas('participants', fn($q) => $q->where('user_id', $recipient->user_id))
+                ->first();
+
+            // Si no existe, crear el chat
+            if (!$chat) {
+                $chat = Chat::create(['type' => 'private']); // siempre privado para chats 1 a 1
+
+                // Agregar participantes usando 'rol' de la tabla user
+                ChatParticipant::insert([
+                    [
+                        'chat_id' => $chat->chat_id,
+                        'user_id' => $sender->user_id,
+                        'role_id' => $sender->rol,
+                        'joined_at' => now(),
+                    ],
+                    [
+                        'chat_id' => $chat->chat_id,
+                        'user_id' => $recipient->user_id,
+                        'role_id' => $recipient->rol,
+                        'joined_at' => now(),
+                    ],
+                ]);
+            }
+
+            // Crear el mensaje
             $message = Message::create([
                 'chat_id' => $chat->chat_id,
-                'user_id' => $request->user_id,
-                'role_id' => $request->role_id,
+                'user_id' => $sender->user_id,
+                'role_id' => $sender->rol,
                 'content' => $request->content,
             ]);
 
-            // Emitir evento de broadcast
-            broadcast(new MessageSent($message))->toOthers();
+            // -----------------------------
+            // Enviar al servidor Node.js
+            // -----------------------------
+            try {
+                Http::post('http://192.168.20.29:3000/message', [
+                    'chat_id' => $chat->chat_id,
+                    'message_id' => $message->message_id,
+                    'user_id' => $sender->user_id,
+                    'role_id' => $sender->rol,
+                    'name' => $sender->name,
+                    'content' => $message->content,
+                ]);
+            } catch (\Exception $e) {
+                // Manejar error si Node.js no está disponible
+                \Log::error("Error enviando mensaje al websocket: " . $e->getMessage());
+            }
 
             return response()->json([
                 'message' => 'Mensaje enviado',
+                'chat_id' => $chat->chat_id,
                 'data' => $message->load('user')
             ], 201);
         });
     }
+
 
     public function getMessages(Request $request)
     {
@@ -81,8 +124,15 @@ class ChatController extends Controller
             'chat_id' => 'required|exists:chats,chat_id',
         ]);
 
-        $chat = Chat::with(['messages.user', 'participants.user'])
-            ->findOrFail($request->chat_id);
+        $chat = Chat::with(['messages.user', 'participants.user'])->find($request->chat_id);
+
+        if (!$chat) {
+            return response()->json([
+                'chat_id' => $request->chat_id,
+                'messages' => [],
+                'participants' => [],
+            ]);
+        }
 
         return response()->json([
             'chat_id' => $chat->chat_id,
@@ -92,10 +142,7 @@ class ChatController extends Controller
                 return [
                     'user_id' => $participant->user->user_id,
                     'name' => $participant->user->name,
-                    'email' => $participant->user->email,
                     'role_id' => $participant->role_id,
-                    'qualification' => $participant->user->qualification,
-                    'state' => $participant->user->state,
                     'joined_at' => $participant->joined_at,
                 ];
             }),
@@ -111,6 +158,7 @@ class ChatController extends Controller
             }),
         ]);
     }
+
 
 
     public function getUserChats(Request $request)

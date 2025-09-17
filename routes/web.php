@@ -141,7 +141,7 @@ Route::middleware('auth')->group(function () {
             ->name('reportes.operacional');
 
         Route::get('reportes/operacional/export', [ReportController::class, 'exportOperational'])
-            ->name('reportes.operacional.export');
+            ->name(' reportes.operacional.export');
     });
 });
 
