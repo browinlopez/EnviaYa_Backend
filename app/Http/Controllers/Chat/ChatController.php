@@ -96,7 +96,7 @@ class ChatController extends Controller
             // Enviar al servidor Node.js
             // -----------------------------
             try {
-                Http::post('http://192.168.20.29:3000/message', [
+                Http::post('https://enviaya-node-9giirq-3a39d2-69-62-97-121.traefik.me/message', [
                     'chat_id' => $chat->chat_id,
                     'message_id' => $message->message_id,
                     'user_id' => $sender->user_id,
