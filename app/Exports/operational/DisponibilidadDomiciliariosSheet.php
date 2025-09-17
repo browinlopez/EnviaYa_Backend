@@ -14,7 +14,7 @@ class DisponibilidadDomiciliariosSheet implements FromArray, WithTitle
     public function array(): array
     {
         // Domiciliarios conectados
-        $conectados = Domiciliary::where('is_online', true)->count();
+        $conectados = Domiciliary::where('available', true)->count();
 
         // Pedidos activos (en curso) en rango
         $pedidosActivos = OrdersSales::whereBetween('sale_date', [$this->start, $this->end])

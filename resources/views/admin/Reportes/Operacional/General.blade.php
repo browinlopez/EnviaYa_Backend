@@ -50,6 +50,12 @@
                 <div class="col-md-2 d-flex align-items-end">
                     <button type="submit" class="btn btn-primary w-100 mt-2">Filtrar</button>
                 </div>
+
+                <div class="col-md-2 d-flex align-items-end">
+                    <a href="{{ route('admin.reportes.operacional.export', ['start' => request('start'), 'end' => request('end')]) }}" class="btn btn-success btn-block">
+                        <i class="fas fa-file-excel"></i> Exportar Excel
+                    </a>
+                </div>
             </div>
         </form>
 
@@ -203,7 +209,7 @@
                                         <td>{{ $r->buyer->name ?? 'N/A' }}</td>
                                         <td>{{ $r->qualification }}</td>
                                         <td>{{ $r->comment }}</td>
-                                        <td>{{ $r->created_at->format('d/m/Y') }}</td>
+                                        <td>{{ $r->created_at }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -211,7 +217,7 @@
                     </div>
                     <div class="col-md-6">
                         <h6>Reseñas de Domiciliarios</h6>
-                       <table class="table table-hover table-striped table-bordered align-middle shadow-sm rounded">
+                        <table class="table table-hover table-striped table-bordered align-middle shadow-sm rounded">
                             <thead>
                                 <tr>
                                     <th>Domiciliario</th>
@@ -228,7 +234,7 @@
                                         <td>{{ $r->buyer?->user?->name ?? 'N/A' }}</td>
                                         <td>{{ $r->qualification }}</td>
                                         <td>{{ $r->comment }}</td>
-                                        <td>{{ $r->created_at->format('d/m/Y') }}</td>
+                                        <td>{{ $r->created_at }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>

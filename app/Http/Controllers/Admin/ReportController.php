@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Exports\Comercials\ReportGeneralComercial;
 use App\Exports\Financial\ReportGeneralExport;
+use App\Exports\operational\ReportesOperativosExport;
 use App\Http\Controllers\Controller;
 use App\Models\Business;
 use App\Models\Domiciliary;
@@ -385,5 +386,13 @@ class ReportController extends Controller
             'distBusiness',
             'distDomiciliary'
         ));
+    }
+
+    public function exportOperational(Request $request)
+    {
+        $start = $request->input('start');
+        $end   = $request->input('end');
+
+        return Excel::download(new ReportesOperativosExport($start, $end), 'reporte_operacional.xlsx');
     }
 }

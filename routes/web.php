@@ -128,7 +128,7 @@ Route::middleware('auth')->group(function () {
         Route::get('reportes/financieros', [ReportController::class, 'generalFinancial'])
             ->name('report.general');
         Route::get('reportes/financieros/export', [ReportController::class, 'exportFinancial'])->name('report.export');
-        
+
 
         Route::get('/reportes/comerciales', [ReportController::class, 'generalCommercials'])
             ->name('reportes.comerciales');
@@ -137,8 +137,11 @@ Route::middleware('auth')->group(function () {
             ->name('reportes.comerciales.export');
 
 
-        Route::get('/reportes/operacional',[ReportController::class, 'OperationalCommercials'])
+        Route::get('/reportes/operacional', [ReportController::class, 'OperationalCommercials'])
             ->name('reportes.operacional');
+
+        Route::get('reportes/operacional/export', [ReportController::class, 'exportOperational'])
+            ->name('reportes.operacional.export');
     });
 });
 
