@@ -11,7 +11,7 @@ class PaymentMethods extends Audit
     protected $primaryKey = 'methods_id';
     public $timestamps = false;
 
-    protected $fillable = ['name', 'state'];
+    protected $fillable = ['name', 'state', 'logo'];
 
      public function forms()
     {

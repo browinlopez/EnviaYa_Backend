@@ -193,24 +193,22 @@ class OrderController extends Controller
 
     public function incomeBusiness(Request $request)
     {
+        // Solo valida business_id
         $request->validate([
             'business_id' => 'required|integer|exists:business,busines_id',
-            'week_start' => 'nullable|date', // opcional, lunes de la semana
-            'month' => 'nullable|date' // opcional, primer día del mes
         ]);
 
         $business_id = $request->business_id;
 
-        // --- Fechas para semana ---
-        $week_start = $request->week_start ? Carbon::parse($request->week_start)->startOfWeek() : Carbon::now()->startOfWeek();
-        $week_end = (clone $week_start)->endOfWeek();
+        // --- Fechas actuales (sin parámetros) ---
+        $week_start = now()->startOfWeek();
+        $week_end   = (clone $week_start)->endOfWeek();
 
-        // --- Fechas para mes ---
-        $month_start = $request->month ? Carbon::parse($request->month)->startOfMonth() : Carbon::now()->startOfMonth();
-        $month_end = (clone $month_start)->endOfMonth();
+        $month_start = now()->startOfMonth();
+        $month_end   = (clone $month_start)->endOfMonth();
 
         /**
-         * Ingresos semanales basados en payments asociados a las órdenes del negocio
+         * Ingresos semanales
          */
         $incomeWeek = Payment::select(
             DB::raw('DAYOFWEEK(payment_date) as weekday'),
@@ -241,7 +239,7 @@ class OrderController extends Controller
         }
 
         /**
-         * Ingresos mensuales (sumando todos los pagos del mes)
+         * Ingresos mensuales
          */
         $incomeMonth = Payment::whereHas('order', function ($q) use ($business_id) {
             $q->where('busines_id', $business_id);
@@ -250,7 +248,7 @@ class OrderController extends Controller
             ->sum('subtotal');
 
         /**
-         * Total histórico de ingresos del negocio (todas las fechas)
+         * Total histórico
          */
         $incomeTotal = Payment::whereHas('order', function ($q) use ($business_id) {
             $q->where('busines_id', $business_id);
@@ -258,16 +256,17 @@ class OrderController extends Controller
             ->sum('subtotal');
 
         return response()->json([
-            'business_id' => $business_id,
-            'week_start' => $week_start->toDateString(),
-            'week_end' => $week_end->toDateString(),
-            'weekly_income' => $weeklyIncome,   // por día de la semana
-            'month_start' => $month_start->toDateString(),
-            'month_end' => $month_end->toDateString(),
-            'monthly_income' => (float)$incomeMonth,
-            'total_income' => (float)$incomeTotal
+            'business_id'     => $business_id,
+            'week_start'      => $week_start->toDateString(),
+            'week_end'        => $week_end->toDateString(),
+            'weekly_income'   => $weeklyIncome,
+            'month_start'     => $month_start->toDateString(),
+            'month_end'       => $month_end->toDateString(),
+            'monthly_income'  => (float)$incomeMonth,
+            'total_income'    => (float)$incomeTotal
         ]);
     }
+
 
     // Crear orden de venta
     public function store(Request $request)

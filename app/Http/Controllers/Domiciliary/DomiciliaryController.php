@@ -191,28 +191,22 @@ class DomiciliaryController extends Controller
 
     public function incomeDomiciliary(Request $request)
     {
+        // Solo validamos el ID del domiciliario
         $request->validate([
             'domiciliary_id' => 'required|integer|exists:domiciliary,domiciliary_id',
-            'week_start' => 'nullable|date',
-            'month' => 'nullable|date'
         ]);
 
         $domiciliary_id = $request->domiciliary_id;
 
-        // Fechas semana
-        $week_start = $request->week_start
-            ? Carbon::parse($request->week_start)->startOfWeek()
-            : Carbon::now()->startOfWeek();
-        $week_end = (clone $week_start)->endOfWeek();
+        // Fechas actuales (semana y mes)
+        $week_start = now()->startOfWeek();
+        $week_end   = (clone $week_start)->endOfWeek();
 
-        // Fechas mes
-        $month_start = $request->month
-            ? Carbon::parse($request->month)->startOfMonth()
-            : Carbon::now()->startOfMonth();
-        $month_end = (clone $month_start)->endOfMonth();
+        $month_start = now()->startOfMonth();
+        $month_end   = (clone $month_start)->endOfMonth();
 
         /**
-         * Ganancia semanal (sumar campo "domicilio" de payments)
+         * Ganancia semanal (sumar campo "domicilio")
          */
         $weekIncome = Payment::select(
             DB::raw('DAYOFWEEK(payment_date) as weekday'),
@@ -261,13 +255,13 @@ class DomiciliaryController extends Controller
 
         return response()->json([
             'domiciliary_id' => $domiciliary_id,
-            'week_start' => $week_start->toDateString(),
-            'week_end' => $week_end->toDateString(),
-            'weekly_income' => $weeklyIncome,  // por día
-            'month_start' => $month_start->toDateString(),
-            'month_end' => $month_end->toDateString(),
+            'week_start'     => $week_start->toDateString(),
+            'week_end'       => $week_end->toDateString(),
+            'weekly_income'  => $weeklyIncome,
+            'month_start'    => $month_start->toDateString(),
+            'month_end'      => $month_end->toDateString(),
             'monthly_income' => (float)$monthIncome,
-            'total_income' => (float)$totalIncome
+            'total_income'   => (float)$totalIncome
         ]);
     }
 }
