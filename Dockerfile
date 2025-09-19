@@ -1,7 +1,7 @@
 # Base PHP para Laravel
 FROM php:8.2-fpm
 
-# Instalar dependencias
+# Instalar dependencias del sistema
 RUN apt-get update && apt-get install -y \
     git curl libzip-dev unzip wget \
     supervisor \
@@ -18,12 +18,10 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 # Crear directorio de trabajo
 WORKDIR /var/www
 
-# Copiar Laravel y Reverb
-COPY ./laravel ./laravel
-COPY ./reverb ./reverb
+# Copiar todo el código del repo
+COPY . .
 
 # Instalar dependencias Laravel
-WORKDIR /var/www/laravel
 RUN composer install --optimize-autoloader --no-dev
 
 # Instalar dependencias Reverb
@@ -31,7 +29,7 @@ WORKDIR /var/www/reverb
 RUN npm install
 
 # Copiar archivo supervisor
-COPY ./supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Exponer puertos
 EXPOSE 80 443 8080 9000

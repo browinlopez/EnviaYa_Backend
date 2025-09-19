@@ -1,0 +1,39 @@
+version: "3.9"
+services:
+  traefik:
+    image: traefik:v2.12
+    command:
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.email=tu-email@correo.com"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./traefik/letsencrypt:/letsencrypt"
+      - "./traefik/dynamic.yml:/etc/traefik/dynamic/dynamic.yml"
+
+  enviaya-backendapi-wobzek:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /var/www/laravel
+    volumes:
+      - ./laravel:/var/www/laravel
+      - ./reverb:/var/www/reverb
+    labels:
+      - "traefik.enable=true"
+      # Laravel HTTP
+      - "traefik.http.routers.enviaya.rule=Host(`enviaya.com.co`)"
+      - "traefik.http.routers.enviaya.entrypoints=websecure"
+      - "traefik.http.routers.enviaya.tls.certresolver=letsencrypt"
+      - "traefik.http.services.enviaya.loadbalancer.server.port=9000"
+      # Reverb WSS
+      - "traefik.http.routers.reverb.rule=Host(`ws.enviaya.com.co`)"
+      - "traefik.http.routers.reverb.entrypoints=websecure"
+      - "traefik.http.routers.reverb.middlewares=websocket-headers@file"
+      - "traefik.http.services.reverb.loadbalancer.server.port=8080"
