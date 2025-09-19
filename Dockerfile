@@ -1,59 +1,40 @@
-# -----------------------------
-# 1. Imagen base
-# -----------------------------
+# Base PHP para Laravel
 FROM php:8.2-fpm
 
-# -----------------------------
-# 2. Variables de entorno
-# -----------------------------
-ENV APP_ENV=production
-ENV COMPOSER_ALLOW_SUPERUSER=1
-ENV COMPOSER_HOME=/composer
-
-# -----------------------------
-# 3. Instalar dependencias del sistema
-# -----------------------------
+# Instalar dependencias
 RUN apt-get update && apt-get install -y \
-    git \
-    unzip \
-    libpq-dev \
-    libzip-dev \
-    zip \
-    libonig-dev \
-    libxml2-dev \
-    curl \
-    && docker-php-ext-install pdo pdo_mysql bcmath zip mbstring xml \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    git curl libzip-dev unzip wget \
+    supervisor \
+    && docker-php-ext-install pdo pdo_mysql zip \
+    && apt-get clean
 
-# -----------------------------
-# 4. Instalar Composer
-# -----------------------------
+# Instalar Node.js (para Reverb)
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs
+
+# Instalar Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# -----------------------------
-# 5. Configurar directorio de trabajo
-# -----------------------------
+# Crear directorio de trabajo
 WORKDIR /var/www
 
-# -----------------------------
-# 6. Copiar solo archivos necesarios para composer (caching)
-# -----------------------------
-COPY composer.json composer.lock ./
-RUN composer install --no-dev --optimize-autoloader --prefer-dist
+# Copiar Laravel y Reverb
+COPY ./laravel ./laravel
+COPY ./reverb ./reverb
 
-# -----------------------------
-# 7. Copiar el resto del proyecto
-# -----------------------------
-COPY . .
+# Instalar dependencias Laravel
+WORKDIR /var/www/laravel
+RUN composer install --optimize-autoloader --no-dev
 
-# -----------------------------
-# 8. Dar permisos correctos
-# -----------------------------
-RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache \
-    && chmod -R 775 /var/www/storage /var/www/bootstrap/cache
+# Instalar dependencias Reverb
+WORKDIR /var/www/reverb
+RUN npm install
 
-# -----------------------------
-# 9. Exponer puerto y ejecutar php-fpm
-# -----------------------------
-EXPOSE 9000
-CMD ["php-fpm"]
+# Copiar archivo supervisor
+COPY ./supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Exponer puertos
+EXPOSE 80 443 8080 9000
+
+# Comando de inicio
+CMD ["/usr/bin/supervisord"]
