@@ -13,6 +13,7 @@ use App\Http\Controllers\Product\ProductController;
 use App\Http\Controllers\Review\ReviewController;
 use App\Http\Controllers\User\UserController;
 use App\Models\OrdersSales;
+use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/register', [AuthController::class, 'register']);
@@ -147,4 +148,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('user', [ReviewController::class, 'updateUserReview']); // Actualizar
         Route::delete('user', [ReviewController::class, 'deleteUserReview']); // Eliminar
     });
+    
 });
+
+
+

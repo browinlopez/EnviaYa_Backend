@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Chat;
 
 use App\Events\MessageSent;
+use App\Helper\ReverbClient;
 use App\Http\Controllers\Controller;
 use App\Models\Chat\Chat;
 use App\Models\Chat\ChatParticipant;
@@ -83,8 +84,6 @@ class ChatController extends Controller
                     ],
                 ]);
             }
-
-            // Crear el mensaje
             $message = Message::create([
                 'chat_id' => $chat->chat_id,
                 'user_id' => $sender->user_id,
@@ -93,21 +92,10 @@ class ChatController extends Controller
             ]);
 
             // -----------------------------
-            // Enviar al servidor Node.js
+            // Usar ReverbClient para enviar mensaje
             // -----------------------------
-            try {
-                Http::post('https://enviaya-node-9giirq-3a39d2-69-62-97-121.traefik.me/message', [
-                    'chat_id' => $chat->chat_id,
-                    'message_id' => $message->message_id,
-                    'user_id' => $sender->user_id,
-                    'role_id' => $sender->rol,
-                    'name' => $sender->name,
-                    'content' => $message->content,
-                ]);
-            } catch (\Exception $e) {
-                // Manejar error si Node.js no está disponible
-                \Log::error("Error enviando mensaje al websocket: " . $e->getMessage());
-            }
+            // Disparar evento para broadcasting
+            event(new MessageSent($message));
 
             return response()->json([
                 'message' => 'Mensaje enviado',
@@ -116,7 +104,6 @@ class ChatController extends Controller
             ], 201);
         });
     }
-
 
     public function getMessages(Request $request)
     {
