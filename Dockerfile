@@ -3,9 +3,10 @@ FROM php:8.2-fpm
 
 # Instalar dependencias del sistema
 RUN apt-get update && apt-get install -y \
-    git curl libzip-dev unzip wget \
+    git curl libzip-dev unzip wget libpng-dev libjpeg-dev libfreetype6-dev \
     supervisor \
-    && docker-php-ext-install pdo pdo_mysql zip \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install pdo pdo_mysql zip gd \
     && apt-get clean
 
 # Instalar Node.js (para Reverb)
