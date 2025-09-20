@@ -107,20 +107,63 @@ class ChatController extends Controller
 
     public function getMessages(Request $request)
     {
+        // si viene chat_id se comporta igual que antes
+        if ($request->filled('chat_id')) {
+            $request->validate([
+                'chat_id' => 'required|exists:chats,chat_id',
+            ]);
+
+            $chat = Chat::with(['messages.user', 'participants.user'])
+                ->find($request->chat_id);
+
+            if (!$chat) {
+                return response()->json([
+                    'chat_id' => $request->chat_id,
+                    'messages' => [],
+                    'participants' => [],
+                ]);
+            }
+
+            return $this->formatChatResponse($chat);
+        }
+
+        // 🔹 si NO viene chat_id, validar que lleguen dos user_id
         $request->validate([
-            'chat_id' => 'required|exists:chats,chat_id',
+            'user_id' => 'required|exists:users,user_id',
+            'recipient_id' => 'required|exists:users,user_id',
         ]);
 
-        $chat = Chat::with(['messages.user', 'participants.user'])->find($request->chat_id);
+        $userId = $request->input('user_id');
+        $recipientId = $request->input('recipient_id');
+
+        // buscar chat privado existente entre esos dos usuarios
+        $chat = Chat::where('type', 'private')
+            ->whereHas('participants', function ($q) use ($userId) {
+                $q->where('user_id', $userId);
+            })
+            ->whereHas('participants', function ($q) use ($recipientId) {
+                $q->where('user_id', $recipientId);
+            })
+            ->with(['messages.user', 'participants.user'])
+            ->first();
 
         if (!$chat) {
+            // no hay chat creado todavía, devolver vacío
             return response()->json([
-                'chat_id' => $request->chat_id,
+                'chat_id' => null,
                 'messages' => [],
                 'participants' => [],
             ]);
         }
 
+        return $this->formatChatResponse($chat);
+    }
+
+    /**
+     * Arma el JSON de salida para un chat dado
+     */
+    protected function formatChatResponse(Chat $chat)
+    {
         return response()->json([
             'chat_id' => $chat->chat_id,
             'type' => $chat->type,
@@ -145,7 +188,6 @@ class ChatController extends Controller
             }),
         ]);
     }
-
 
 
     public function getUserChats(Request $request)
