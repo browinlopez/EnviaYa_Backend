@@ -129,8 +129,8 @@ class ChatController extends Controller
 
         // 🔹 si NO viene chat_id, validar que lleguen dos user_id
         $request->validate([
-            'user_id' => 'required|exists:users,user_id',
-            'recipient_id' => 'required|exists:users,user_id',
+            'user_id' => 'required|exists:user,user_id',
+            'recipient_id' => 'required|exists:user,user_id',
         ]);
 
         $userId = $request->input('user_id');
