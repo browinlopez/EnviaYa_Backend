@@ -95,7 +95,7 @@ class ChatController extends Controller
             // Usar ReverbClient para enviar mensaje
             // -----------------------------
             // Disparar evento para broadcasting
-            event(new MessageSent($message));
+            /* event(new MessageSent($message)); */
 
             return response()->json([
                 'message' => 'Mensaje enviado',
