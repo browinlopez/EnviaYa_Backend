@@ -608,24 +608,24 @@ class OrderController extends Controller
 
     public function latest(Request $request)
     {
-        $request->validate([
-            'orderSales_id' => 'required|exists:orderssales,orderSales_id',
+        $data = $request->validate([
+            'domiciliary_id' => 'required|exists:domiciliary,domiciliary_id'
         ]);
 
-        $latest = OrderGeolocation::where('orderSales_id', $request->orderSales_id)
+        $last = OrderGeolocation::where('domiciliary_id', $data['domiciliary_id'])
             ->orderByDesc('created_at')
             ->first();
 
-        if (!$latest) {
+        if ($last) {
             return response()->json([
-                'success' => false,
-                'message' => 'No se encontró geolocalización para este pedido'
-            ], 404);
+                'latitude' => $last->latitude,
+                'longitude' => $last->longitude,
+                'orderSales_id' => $last->orderSales_id,
+                'state' => $last->state,
+                'created_at' => $last->created_at,
+            ]);
         }
 
-        return response()->json([
-            'success' => true,
-            'data' => $latest
-        ]);
+        return response()->json([]); // sin ubicación
     }
 }
