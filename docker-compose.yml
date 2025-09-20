@@ -17,52 +17,46 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - "./traefik/letsencrypt:/letsencrypt"
       - "./traefik/dynamic.yml:/etc/traefik/dynamic/dynamic.yml"
+    networks:
+      - enviaya_network
 
-  enviaya-backendapi-wobzek:
+  app:
     build:
       context: .
       dockerfile: Dockerfile
-    working_dir: /var/www/laravel
-    volumes:
-      - ./laravel:/var/www/laravel
-      - ./reverb:/var/www/reverb
-    labels:
-      - "traefik.enable=true"
-      # Laravel HTTP
-      - "traefik.http.routers.enviaya.rule=Host(`enviaya.com.co`)"
-      - "traefik.http.routers.enviaya.entrypoints=websecure"
-      - "traefik.http.routers.enviaya.tls.certresolver=letsencrypt"
-      - "traefik.http.services.enviaya.loadbalancer.server.port=9000"
-      # Reverb WSS
-      - "traefik.http.routers.reverb.rule=Host(`ws.enviaya.com.co`)"
-      - "traefik.http.routers.reverb.entrypoints=websecure"
-      - "traefik.http.routers.reverb.middlewares=websocket-headers@file"
-      - "traefik.http.services.reverb.loadbalancer.server.port=8080"
-
-  app:
-    build: .
     container_name: enviaya_app
     restart: unless-stopped
     working_dir: /var/www
+    environment:
+      - APP_ENV=production
+      - APP_KEY=${APP_KEY}
+      - DB_CONNECTION=mysql
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_DATABASE=${DB_DATABASE:-laravel}
+      - DB_USERNAME=${DB_USERNAME:-laravel}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - BROADCAST_DRIVER=reverb
+      - REVERB_APP_ID=${REVERB_APP_ID:-app-id}
+      - REVERB_APP_KEY=${REVERB_APP_KEY:-app-key}
+      - REVERB_APP_SECRET=${REVERB_APP_SECRET:-app-secret}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.enviaya.rule=Host(`enviaya.com.co`)"
+      - "traefik.http.routers.enviaya.entrypoints=websecure"
+      - "traefik.http.routers.enviaya.tls.certresolver=letsencrypt"
+      - "traefik.http.services.enviaya.loadbalancer.server.port=80"
+      - "traefik.http.routers.reverb.rule=Host(`ws.enviaya.com.co`)"
+      - "traefik.http.routers.reverb.entrypoints=websecure"
+      - "traefik.http.routers.reverb.tls.certresolver=letsencrypt"
+      - "traefik.http.services.reverb.loadbalancer.server.port=8080"
     networks:
       - enviaya_network
     depends_on:
       - db
       - redis
-
-  nginx:
-    image: nginx:alpine
-    container_name: enviaya_nginx
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "8080:8080"
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf
-    networks:
-      - enviaya_network
-    depends_on:
-      - app
 
   db:
     image: mysql:8.0
@@ -92,3 +86,5 @@ volumes:
 networks:
   enviaya_network:
     driver: bridge
+  db_data:
+    driver: local
