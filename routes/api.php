@@ -74,8 +74,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('IncomeBusiness', [OrderController::class, 'incomeBusiness']); // Tendero / negocio
         Route::post('orders', [OrderController::class, 'store']); // Crear orden
         Route::put('update', [OrderController::class, 'updateStatus']); // Crear orden
-        Route::post('geolocation', [OrderController::class, 'updateLocation']);
-
+        /* Route::post('geolocation', [OrderController::class, 'updateLocation']); */
+        Route::post('geolocation', [OrderController::class, 'storeGeolocation']);
+        Route::get('geolocation/latest', [OrderController::class, 'latest']);
     });
 
     Route::get('paymentMethods', [OrderController::class, 'paymentMethods']); // Listar metodos de pago
@@ -148,8 +149,4 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('user', [ReviewController::class, 'updateUserReview']); // Actualizar
         Route::delete('user', [ReviewController::class, 'deleteUserReview']); // Eliminar
     });
-    
 });
-
-
-

@@ -583,4 +583,49 @@ class OrderController extends Controller
             'data'    => $data
         ]);
     }
+
+    public function storeGeolocation(Request $request)
+    {
+        // Validar los datos recibidos
+        $data = $request->validate([
+            'domiciliary_id' => 'required|exists:domiciliary,domiciliary_id',
+            'orderSales_id'  => 'required|exists:orderssales,orderSales_id',
+            'latitude'       => 'required|numeric',
+            'longitude'      => 'required|numeric',
+            'state'          => 'nullable|integer',
+        ]);
+
+        // Crear registro en la base de datos
+        $geo = OrderGeolocation::create($data);
+
+        // Retornar respuesta JSON
+        return response()->json([
+            'success' => true,
+            'message' => 'Geolocalización guardada correctamente',
+            'data' => $geo
+        ], 201);
+    }
+
+    public function latest(Request $request)
+    {
+        $request->validate([
+            'orderSales_id' => 'required|exists:orderssales,orderSales_id',
+        ]);
+
+        $latest = OrderGeolocation::where('orderSales_id', $request->orderSales_id)
+            ->orderByDesc('created_at')
+            ->first();
+
+        if (!$latest) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se encontró geolocalización para este pedido'
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $latest
+        ]);
+    }
 }
