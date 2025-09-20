@@ -39,7 +39,7 @@ class OrderController extends Controller
         }
 
         $orders = OrdersSales::where('buyer_id', $buyer->buyer_id)
-            ->with('details.product.category', 'business', 'promotions', 'payments', 'address.municipality.department.country', 'address.alias')
+            ->with('details.product.category', 'business', 'promotions', 'payments', 'address.municipality.department.country', 'address.alias', 'domiciliary.user')
             ->get();
 
         $formattedOrders = $orders->map(function ($order) {
@@ -71,6 +71,16 @@ class OrderController extends Controller
                     'country' => $order->address->country?->name,
                     'latitude' => $order->address->latitude !== null ? (float)$order->address->latitude : null,
                     'longitude' => $order->address->longitude !== null ? (float)$order->address->longitude : null,
+                ] : null,
+                'domiciliary' => $order->domiciliary ? [
+                    'name' => $order->domiciliary->user->name,
+                    'email' => $order->domiciliary->user->email,
+                    'phone' => $order->domiciliary->user->phone,
+                    'domiciliary_id' => $order->domiciliary->domiciliary_id,
+                    'available' => $order->domiciliary->available,
+                    'qualification' => $order->domiciliary->qualification,
+                    'state' => $order->domiciliary->state,
+                    'user_id' => $order->domiciliary->user->user_id,
                 ] : null,
                 'details' => $order->details->map(function ($detail) {
                     return [
@@ -266,7 +276,6 @@ class OrderController extends Controller
             'total_income'    => (float)$incomeTotal
         ]);
     }
-
 
     // Crear orden de venta
     public function store(Request $request)
