@@ -25,15 +25,17 @@ COPY . .
 # Instalar dependencias Laravel
 RUN composer install --optimize-autoloader --no-dev
 
-# Instalar dependencias Reverb
-WORKDIR /var/www/reverb
+# Instalar dependencias Node.js (en el directorio raíz)
 RUN npm install
 
 # Copiar archivo supervisor
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
+# Dar permisos necesarios
+RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
+
 # Exponer puertos
 EXPOSE 80 443 8080 9000
 
 # Comando de inicio
-CMD ["/usr/bin/supervisord"]
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
