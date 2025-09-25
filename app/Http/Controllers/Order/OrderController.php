@@ -148,24 +148,23 @@ class OrderController extends Controller
         $formattedOrders = $orders->map(function ($order) use ($businessData) {
             return [
                 'order_id' => $order->orderSales_id,
+                'buyer_id' => $order->buyer_id,
+                'busines_id' => $order->busines_id,
                 'total' => $order->total,
                 'sale_date' => $order->sale_date,
                 'state' => $order->state,
-
-                'buyer' => $order->buyer ? [
-                    'buyer_id' => $order->buyer->buyer_id,
-                    'qualification' => $order->buyer->qualification,
-                    'state' => $order->buyer->state,
-                    'user' => $order->buyer->user ? [
-                        'user_id' => $order->buyer->user->user_id,
-                        'name' => $order->buyer->user->name,
-                        'email' => $order->buyer->user->email,
-                    ] : null,
-                ] : null,
-
-            /*             // Reutilizamos businessData */
-            'business' => $businessData, 
-
+                'business' => [
+                    'business_id' => $order->business->busines_id,
+                    'name' => $order->business->name,
+                    'address' => $order->business->address,
+                    'address' => $order->business->address,
+                    'latitude' => $order->business->latitude !== null ? (float)$order->business->latitude : null,
+                    'longitude' => $order->business->longitude !== null ? (float)$order->business->longitude : null,
+                    'phone' => $order->business->phone,
+                    'city' => $order->business->city,
+                    'state' => $order->business->state,
+                    'logo' => $order->business->logo,
+                ],
                 'delivery_address' => $order->address ? [
                     'address_id' => $order->address->address_id,
                     'address' => $order->address->address,
@@ -173,22 +172,30 @@ class OrderController extends Controller
                     'municipality' => $order->address->municipality?->name,
                     'department' => $order->address->department?->name,
                     'country' => $order->address->country?->name,
-                    'latitude' => $order->address->latitude,
-                    'longitude' => $order->address->longitude,
+                    'latitude' => $order->address->latitude !== null ? (float)$order->address->latitude : null,
+                    'longitude' => $order->address->longitude !== null ? (float)$order->address->longitude : null,
                 ] : null,
-
+                'domiciliary' => $order->domiciliary ? [
+                    'name' => $order->domiciliary->user->name,
+                    'email' => $order->domiciliary->user->email,
+                    'phone' => $order->domiciliary->user->phone,
+                    'domiciliary_id' => $order->domiciliary->domiciliary_id,
+                    'available' => $order->domiciliary->available,
+                    'qualification' => $order->domiciliary->qualification,
+                    'state' => $order->domiciliary->state,
+                    'user_id' => $order->domiciliary->user->user_id,
+                ] : null,
                 'details' => $order->details->map(function ($detail) {
                     return [
                         'product_id' => $detail->product->products_id,
                         'name' => $detail->product->name,
                         'description' => $detail->product->description,
-                        'category_id' => $detail->product->category_id,
+                        'category' => $detail->product->category?->name,
                         'image' => $detail->product->image,
                         'amount' => $detail->amount,
                         'unit_price' => $detail->unit_price,
                     ];
                 }),
-
                 'promotions' => $order->promotions,
                 'payments' => $order->payments,
             ];
