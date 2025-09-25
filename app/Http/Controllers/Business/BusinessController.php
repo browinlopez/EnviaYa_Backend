@@ -75,7 +75,7 @@ class BusinessController extends Controller
                         'image'       => $product->image,
                         'state'       => (bool) $product->state,
                         // solo muestra precio si afiliado
-                        'price'       => $isAffiliated ? ($product->pivot->price ?? null) : null,
+                        'price'       => $isAffiliated ? ($product->pivot->price ?? 0) : 0,
                     ];
                 }),
                 // reviews del negocio
@@ -157,7 +157,7 @@ class BusinessController extends Controller
                         'image'       => $product->image,
                         'state'       => (bool) $product->state,
                         // solo muestra precio si afiliado
-                        'price'       => $isAffiliated ? ($product->pivot->price ?? null) : null,
+                        'price'       => $isAffiliated ? ($product->pivot->price ?? 0) : 0,
                     ];
                 }),
                 // reviews del negocio
