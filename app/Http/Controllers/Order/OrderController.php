@@ -163,8 +163,8 @@ class OrderController extends Controller
                     ] : null,
                 ] : null,
 
-                /*             // Reutilizamos businessData
-            'business' => $businessData, */
+            /*             // Reutilizamos businessData */
+            'business' => $businessData, 
 
                 'delivery_address' => $order->address ? [
                     'address_id' => $order->address->address_id,
