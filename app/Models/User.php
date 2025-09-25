@@ -83,6 +83,16 @@ class User extends Authenticatable implements Auditable
         return $this->belongsToMany(Business::class, 'business_user_favorites', 'user_id', 'busines_id');
     }
 
+    public function affiliatedBusinesses()
+    {
+        return $this->belongsToMany(
+            Business::class,
+            'business_user_affiliations',
+            'user_id',
+            'busines_id'
+        );
+    }
+
     public function getTypeAttribute()
     {
         return $this->rolRelation?->name;

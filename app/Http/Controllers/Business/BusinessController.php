@@ -4,20 +4,38 @@ namespace App\Http\Controllers\Business;
 
 use App\Http\Controllers\Controller;
 use App\Models\Business;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class BusinessController extends Controller
 {
     // Listar todos los negocios con dueños y municipio
-    public function index()
+    public function index(Request $request)
     {
-        // Traemos también products y reviews
+        // Validamos que venga user_id
+        $validated = $request->validate([
+            'user_id' => 'required|integer|exists:user,user_id',
+        ]);
+
+        $userId = $validated['user_id'];
+        $user   = User::with('affiliatedBusinesses')->findOrFail($userId);
+
+        // ids de negocios a los que está afiliado
+        $affiliatedIds = $user->affiliatedBusinesses->pluck('busines_id')->toArray();
+
+        // Traemos negocios con sus relaciones
         $businesses = Business::with(['owners', 'municipality', 'products', 'reviews'])
+            ->when(count($affiliatedIds) > 0, function ($q) use ($affiliatedIds) {
+                // ordena afiliadas primero
+                $q->orderByRaw("FIELD(busines_id," . implode(',', $affiliatedIds) . ") DESC");
+            })
             ->orderBy('name')
             ->get();
 
-        $formatted = $businesses->map(function ($business) {
+        $formatted = $businesses->map(function ($business) use ($affiliatedIds) {
+            $isAffiliated = in_array($business->busines_id, $affiliatedIds);
+
             return [
                 'business_id'   => $business->busines_id,
                 'name'          => $business->name,
@@ -48,7 +66,7 @@ class BusinessController extends Controller
                     ];
                 }),
                 // productos del negocio
-                'products' => $business->products->map(function ($product) {
+                'products' => $business->products->map(function ($product) use ($isAffiliated) {
                     return [
                         'product_id'  => $product->products_id,
                         'name'        => $product->name,
@@ -56,8 +74,8 @@ class BusinessController extends Controller
                         'category_id' => $product->category_id,
                         'image'       => $product->image,
                         'state'       => (bool) $product->state,
-                        // pivot->price solo si la relación es belongsToMany
-                        'price'       => $product->pivot->price ?? null,
+                        // solo muestra precio si afiliado
+                        'price'       => $isAffiliated ? ($product->pivot->price ?? null) : null,
                     ];
                 }),
                 // reviews del negocio
@@ -70,11 +88,11 @@ class BusinessController extends Controller
                         'created_at' => $review->created_at ?? null,
                     ];
                 }),
+                'is_affiliated' => $isAffiliated,
             ];
         });
 
         return response()->json([
-            //'total' => $formatted->count(),
             'businesses' => $formatted
         ]);
     }

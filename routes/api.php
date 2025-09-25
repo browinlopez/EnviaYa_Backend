@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Business\AffiliationController;
 use App\Http\Controllers\Business\BusinessController;
+use App\Http\Controllers\Business\BusinessUserFavoriteController;
 use App\Http\Controllers\Business\CategoryBusinessController;
 use App\Http\Controllers\Business\FavoriteController;
 use App\Http\Controllers\Category\CategoryController;
@@ -97,6 +99,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('store', [BusinessController::class, 'store']);
         Route::post('show', [BusinessController::class, 'show']);
         Route::put('update', [BusinessController::class, 'update']);
+        Route::post('affiliation/toggle', [AffiliationController::class, 'toggle']);
+        Route::get('affiliation/users', [AffiliationController::class, 'listUsers']);
     });
 
     Route::prefix('favorites')->group(function () {
