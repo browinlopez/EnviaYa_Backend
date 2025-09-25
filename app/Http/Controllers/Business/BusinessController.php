@@ -97,14 +97,27 @@ class BusinessController extends Controller
         ]);
     }
 
-    public function indexByQualification()
+    public function indexByQualification(Request $request)
     {
-        // Traemos también products y reviews, ordenados por mejor calificación primero
+        // Validamos que venga user_id
+        $validated = $request->validate([
+            'user_id' => 'required|integer|exists:user,user_id',
+        ]);
+
+        $userId = $validated['user_id'];
+        $user   = User::with('affiliatedBusinesses')->findOrFail($userId);
+
+        // ids de negocios a los que está afiliado
+        $affiliatedIds = $user->affiliatedBusinesses->pluck('busines_id')->toArray();
+
+        // Traemos negocios con sus relaciones, ordenados por calificación
         $businesses = Business::with(['owners', 'municipality', 'products', 'reviews'])
-            ->orderByDesc('qualification') // 👈 aquí ordena de mayor a menor
+            ->orderByDesc('qualification')
             ->get();
 
-        $formatted = $businesses->map(function ($business) {
+        $formatted = $businesses->map(function ($business) use ($affiliatedIds) {
+            $isAffiliated = in_array($business->busines_id, $affiliatedIds);
+
             return [
                 'business_id'   => $business->busines_id,
                 'name'          => $business->name,
@@ -135,7 +148,7 @@ class BusinessController extends Controller
                     ];
                 }),
                 // productos del negocio
-                'products' => $business->products->map(function ($product) {
+                'products' => $business->products->map(function ($product) use ($isAffiliated) {
                     return [
                         'product_id'  => $product->products_id,
                         'name'        => $product->name,
@@ -143,7 +156,8 @@ class BusinessController extends Controller
                         'category_id' => $product->category_id,
                         'image'       => $product->image,
                         'state'       => (bool) $product->state,
-                        'price'       => $product->pivot->price ?? null,
+                        // solo muestra precio si afiliado
+                        'price'       => $isAffiliated ? ($product->pivot->price ?? null) : null,
                     ];
                 }),
                 // reviews del negocio
@@ -156,6 +170,7 @@ class BusinessController extends Controller
                         'created_at' => $review->created_at ?? null,
                     ];
                 }),
+                'is_affiliated' => $isAffiliated,
             ];
         });
 
@@ -163,6 +178,7 @@ class BusinessController extends Controller
             'businesses' => $formatted
         ]);
     }
+
 
     // Crear negocio con transacción
     public function store(Request $request)
