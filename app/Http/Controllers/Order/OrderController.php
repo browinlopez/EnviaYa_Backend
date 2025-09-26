@@ -153,6 +153,21 @@ class OrderController extends Controller
                 'total' => $order->total,
                 'sale_date' => $order->sale_date,
                 'state' => $order->state,
+                'buyer' => $order->buyer ? [
+                    'buyer_id' => $order->buyer->buyer_id,
+                    'qualification' => $order->buyer->qualification,
+                    'state' => (bool) $order->buyer->state,
+                    'user' => [
+                        'user_id' => $order->buyer->user->user_id,
+                        'name' => $order->buyer->user->name,
+                        'email' => $order->buyer->user->email,
+                        'phone' => $order->buyer->user->phone,
+                        'address' => $order->buyer->user->address,
+                        'rol' => $order->buyer->user->rol,
+                        'qualification' => $order->buyer->user->qualification,
+                        'state' => (bool) $order->buyer->user->state,
+                    ]
+                ] : null,
                 'business' => [
                     'business_id' => $order->business->busines_id,
                     'name' => $order->business->name,
