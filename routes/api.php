@@ -101,6 +101,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('update', [BusinessController::class, 'update']);
         Route::post('affiliation/toggle', [AffiliationController::class, 'toggle']);
         Route::get('affiliation/users', [AffiliationController::class, 'listUsers']);
+        Route::get('/affiliation/search', [AffiliationController::class, 'searchBuyerByPhone']);
     });
 
     Route::prefix('favorites')->group(function () {

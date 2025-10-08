@@ -189,7 +189,6 @@ class ChatController extends Controller
         ]);
     }
 
-
     public function getUserChats(Request $request)
     {
         $request->validate([

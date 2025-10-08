@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Business;
 
 use App\Http\Controllers\Controller;
 use App\Models\Business\BusinessUserAffiliation;
+use App\Models\User;
 use Illuminate\Http\Request;
 
 class AffiliationController extends Controller
@@ -49,5 +50,29 @@ class AffiliationController extends Controller
             ->get();
 
         return response()->json(['affiliations' => $users]);
+    }
+
+    // 🔍 Buscar comprador por número de teléfono
+    public function searchBuyerByPhone(Request $request)
+    {
+        $request->validate([
+            'phone' => 'required|string|min:7',
+        ]);
+
+        $phone = $request->phone;
+
+        $user = User::with(['buyer'])
+            ->where('phone', $phone)
+            ->whereHas('buyer') // Solo los que son compradores
+            ->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'No se encontró comprador con ese número'], 404);
+        }
+
+        return response()->json([
+            'user'  => $user,
+            'buyer' => $user->buyer,
+        ]);
     }
 }
