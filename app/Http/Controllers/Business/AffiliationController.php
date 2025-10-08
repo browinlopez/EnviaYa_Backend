@@ -99,8 +99,7 @@ class AffiliationController extends Controller
         ]);
     }
 
-
-    // 🔍 Buscar comprador por número de teléfono
+    // 🔍 Buscar comprador por número de teléfono y rol
     public function searchBuyerByPhone(Request $request)
     {
         $request->validate([
@@ -111,11 +110,12 @@ class AffiliationController extends Controller
 
         $user = User::with(['buyer'])
             ->where('phone', $phone)
-            ->whereHas('buyer') // Solo los que son compradores
+            ->where('role', 1) // Filtrar por rol igual a 1
+            ->whereHas('buyer') // Solo los que tienen relación con comprador
             ->first();
 
         if (!$user) {
-            return response()->json(['message' => 'No se encontró comprador con ese número'], 404);
+            return response()->json(['message' => 'No se encontró comprador con ese número y rol'], 404);
         }
 
         return response()->json([
