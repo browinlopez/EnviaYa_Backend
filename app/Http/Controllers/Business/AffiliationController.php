@@ -45,12 +45,60 @@ class AffiliationController extends Controller
 
         $businessId = $request->busines_id;
 
-        $users = BusinessUserAffiliation::where('busines_id', $businessId)
-            ->with('business')
+        // 🔹 Cargar afiliaciones con información del usuario + relaciones
+        $affiliations = BusinessUserAffiliation::where('busines_id', $businessId)
+            ->with([
+                'business:busines_id,name',
+                'user' => function ($query) {
+                    $query->select('user_id', 'name', 'email', 'phone', 'rol', 'qualification', 'state')
+                        ->with([
+                            'buyer:buyer_id,user_id,qualification,state,belongs_to_complex',
+                            'domiciliary:domiciliary_id,user_id,available,document,qualification,state',
+                            'rolRelation:rol_id,name'
+                        ]);
+                },
+            ])
             ->get();
 
-        return response()->json(['affiliations' => $users]);
+        // 🔹 Dar formato a la respuesta para que sea más clara
+        $formatted = $affiliations->map(function ($aff) {
+            return [
+                'affiliation_id' => $aff->id ?? null,
+                'business' => [
+                    'id' => $aff->business->busines_id ?? null,
+                    'name' => $aff->business->name ?? null,
+                ],
+                'user' => [
+                    'id' => $aff->user->user_id ?? null,
+                    'name' => $aff->user->name ?? null,
+                    'email' => $aff->user->email ?? null,
+                    'phone' => $aff->user->phone ?? null,
+                    'rol' => $aff->user->rolRelation->name ?? null,
+                    'qualification' => $aff->user->qualification ?? null,
+                    'state' => $aff->user->state ?? null,
+                    'buyer' => $aff->user->buyer ? [
+                        'buyer_id' => $aff->user->buyer->buyer_id,
+                        'qualification' => $aff->user->buyer->qualification,
+                        'belongs_to_complex' => $aff->user->buyer->belongs_to_complex,
+                        'state' => $aff->user->buyer->state,
+                    ] : null,
+                    'domiciliary' => $aff->user->domiciliary ? [
+                        'domiciliary_id' => $aff->user->domiciliary->domiciliary_id,
+                        'document' => $aff->user->domiciliary->document,
+                        'available' => $aff->user->domiciliary->available,
+                        'qualification' => $aff->user->domiciliary->qualification,
+                        'state' => $aff->user->domiciliary->state,
+                    ] : null,
+                ],
+            ];
+        });
+
+        return response()->json([
+            'affiliations' => $formatted,
+            'count' => $formatted->count(),
+        ]);
     }
+
 
     // 🔍 Buscar comprador por número de teléfono
     public function searchBuyerByPhone(Request $request)
