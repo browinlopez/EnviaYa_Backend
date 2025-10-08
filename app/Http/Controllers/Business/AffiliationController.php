@@ -110,7 +110,7 @@ class AffiliationController extends Controller
 
         $user = User::with(['buyer'])
             ->where('phone', $phone)
-            ->where('role', 1) // Filtrar por rol igual a 1
+            ->where('rol', 1) // Filtrar por rol igual a 1
             ->whereHas('buyer') // Solo los que tienen relación con comprador
             ->first();
 
