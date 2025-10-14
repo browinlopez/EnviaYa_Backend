@@ -129,8 +129,8 @@ class UserController extends Controller
 
         $user = User::where('email', $request->email)->firstOrFail();
 
-        if ($user->state === 1) {
-            $user->state = 0;
+        if ($user->state === true) {
+            $user->state = false;
             $user->save();
 
             return response()->json(['message' => 'Usuario desactivado correctamente']);
@@ -138,6 +138,7 @@ class UserController extends Controller
 
         return response()->json(['message' => 'El usuario ya está desactivado'], 200);
     }
+
 
 
     // Obtener direcciones del usuario con jerarquía completa
