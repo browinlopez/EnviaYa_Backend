@@ -121,17 +121,24 @@ class UserController extends Controller
     }
 
     // Eliminar usuario
-    public function destroy(Request $request)
+    public function desactivate(Request $request)
     {
         $request->validate([
-            'user_id' => 'required|integer|exists:user,user_id',
+            'email' => 'required|email|exists:users,email',
         ]);
 
-        $user = User::findOrFail($request->user_id);
-        $user->delete();
+        $user = User::where('email', $request->email)->firstOrFail();
 
-        return response()->json(['message' => 'Usuario eliminado correctamente']);
+        if ($user->state === 1) {
+            $user->state = 0;
+            $user->save();
+
+            return response()->json(['message' => 'Usuario desactivado correctamente']);
+        }
+
+        return response()->json(['message' => 'El usuario ya está desactivado'], 200);
     }
+
 
     // Obtener direcciones del usuario con jerarquía completa
     public function getAddresses(Request $request)

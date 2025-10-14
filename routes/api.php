@@ -35,7 +35,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Actualizar usuario
         Route::put('/update', [UserController::class, 'update']);
         // Eliminar usuario
-        Route::delete('/delete', [UserController::class, 'destroy']);
+        Route::delete('/delete', [UserController::class, 'desactivate']);
         // Direcciones
         Route::post('/addresses', [UserController::class, 'getAddresses']);
         Route::post('/addresses/add', [UserController::class, 'addAddress']);
