@@ -124,7 +124,7 @@ class UserController extends Controller
     public function desactivate(Request $request)
     {
         $request->validate([
-            'email' => 'required|email|exists:users,email',
+            'email' => 'required|email|exists:user,email',
         ]);
 
         $user = User::where('email', $request->email)->firstOrFail();
