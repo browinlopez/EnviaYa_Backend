@@ -22,6 +22,14 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/forgot-password', [AuthController::class, 'resetPassword']);
 
+//Negocios sin Auth
+Route::get('businesses/index', [BusinessController::class, 'index']);
+Route::get('businesses/top-businesses', [BusinessController::class, 'indexByQualification']);
+
+//Categoria sin Auth
+Route::post('categories-business/index', [CategoryBusinessController::class, 'index']);
+Route::get('categories/', [CategoryController::class, 'index']);          // Listar todas las categorías
+
 Route::middleware('auth:sanctum')->group(function () {
     //Auth
     Route::get('/profile', [AuthController::class, 'profile']);
@@ -54,7 +62,6 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::prefix('categories')->group(function () {
-        Route::get('/', [CategoryController::class, 'index']);          // Listar todas las categorías
         Route::post('/create', [CategoryController::class, 'store']);         // Crear categoría
         Route::get('/show', [CategoryController::class, 'show']); // Mostrar categoría específica
         Route::put('/update', [CategoryController::class, 'update']); // Actualizar categoría
@@ -62,7 +69,6 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::prefix('categories-business')->group(function () {
-        Route::post('index', [CategoryBusinessController::class, 'index']);
         Route::post('store', [CategoryBusinessController::class, 'store']);
         Route::post('show', [CategoryBusinessController::class, 'show']);
         Route::post('update', [CategoryBusinessController::class, 'update']);
@@ -94,8 +100,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     //Negocios
     Route::prefix('businesses')->group(function () {
-        Route::get('index', [BusinessController::class, 'index']);
-        Route::get('top-businesses', [BusinessController::class, 'indexByQualification']);
+        /* Route::get('index', [BusinessController::class, 'index']);
+        Route::get('top-businesses', [BusinessController::class, 'indexByQualification']); */
         Route::post('store', [BusinessController::class, 'store']);
         Route::post('show', [BusinessController::class, 'show']);
         Route::put('update', [BusinessController::class, 'update']);
