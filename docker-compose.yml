@@ -43,7 +43,7 @@ services:
       - "traefik.http.routers.enviaya.rule=Host(`enviaya.com.co`)"
       - "traefik.http.routers.enviaya.entrypoints=websecure"
       - "traefik.http.routers.enviaya.tls.certresolver=letsencrypt"
-      - "traefik.http.services.enviaya.loadbalancer.server.port=80"
+      - "traefik.http.services.enviaya.loadbalancer.server.port=9000"
     networks:
       - enviaya_network
     depends_on:
