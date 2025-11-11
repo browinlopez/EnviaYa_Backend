@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Product;
 use App\Http\Controllers\Controller;
 use App\Models\Business;
 use App\Models\Order\OrdersSalesDetail;
+use App\Models\Product\CarPartsProducts;
 use App\Models\Product\GroceryProduct;
 use App\Models\Product\PharmacyProduct;
 use App\Models\Product\Product;
 use App\Models\Product\ProductBusiness;
+use App\Models\Product\RestaurantProducts;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -71,12 +73,34 @@ class ProductController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|string',
-            'description' => 'nullable|string',
-            'category_id' => 'required|integer',
-            'price' => 'required|numeric',
-            'amount' => 'required|integer|min:0',
-            'business_id' => 'required|integer|exists:business,busines_id'
+            'name'          => 'required|string',
+            'description'   => 'nullable|string',
+            'category_id'   => 'required|integer',
+            'price'         => 'required|numeric',
+            'amount'        => 'required|integer|min:0',
+            'business_id'   => 'required|integer|exists:business,busines_id',
+
+            // Opcionales según tipo
+            'brand'             => 'nullable|string',
+            'size'              => 'nullable|string',
+            'expiration_date'   => 'nullable|date',
+
+            'active_ingredient' => 'nullable|string',
+            'dosage'            => 'nullable|string',
+            'presentation'      => 'nullable|string',
+
+            // Restaurant
+            'food_type'      => 'nullable|string',
+            'portion_size'   => 'nullable|string',
+            'is_vegan'       => 'nullable|boolean',
+            'is_gluten_free' => 'nullable|boolean',
+            'allergens'      => 'nullable|string',
+
+            // Car parts
+            'model'         => 'nullable|string',
+            'year'          => 'nullable|integer',
+            'oem_code'      => 'nullable|string',
+            'compatibility' => 'nullable|string'
         ]);
 
         DB::beginTransaction();
@@ -85,44 +109,71 @@ class ProductController extends Controller
 
             // Crear producto base
             $product = Product::create([
-                'name' => $request->name,
+                'name'        => $request->name,
                 'description' => $request->description,
                 'category_id' => $request->category_id,
-                'state' => true
+                'state'       => true
             ]);
 
             // Relación con el negocio
             ProductBusiness::create([
-                'busines_id' => $business->busines_id,
-                'products_id' => $product->products_id,
-                'price' => $request->price,
-                'amount' => $request->amount,
+                'busines_id'   => $business->busines_id,
+                'products_id'  => $product->products_id,
+                'price'        => $request->price,
+                'amount'       => $request->amount,
                 'qualification' => 0
             ]);
 
             // Crear datos adicionales según el tipo de negocio
-            if ($business->type == 1) { // Grocery
-                GroceryProduct::create([
-                    'products_id'     => $product->products_id,
-                    'brand'           => $request->brand,
-                    'size'            => $request->size,
-                    'expiration_date' => $request->expiration_date
-                ]);
-            } elseif ($business->type == 2) { // Pharmacy
-                PharmacyProduct::create([
-                    'products_id'       => $product->products_id,
-                    'active_ingredient' => $request->active_ingredient,
-                    'dosage'            => $request->dosage,
-                    'presentation'      => $request->presentation,
-                    'expiration_date'   => $request->expiration_date
-                ]);
+            switch ($business->type) {
+
+                case 1: // Grocery
+                    GroceryProduct::create([
+                        'products_id'     => $product->products_id,
+                        'brand'           => $request->brand,
+                        'size'            => $request->size,
+                        'expiration_date' => $request->expiration_date
+                    ]);
+                    break;
+
+                case 2: // Pharmacy
+                    PharmacyProduct::create([
+                        'products_id'       => $product->products_id,
+                        'active_ingredient' => $request->active_ingredient,
+                        'dosage'            => $request->dosage,
+                        'presentation'      => $request->presentation,
+                        'expiration_date'   => $request->expiration_date
+                    ]);
+                    break;
+
+                case 3: // Restaurant
+                    RestaurantProducts::create([
+                        'products_id'     => $product->products_id,
+                        'food_type'       => $request->food_type,
+                        'portion_size'    => $request->portion_size,
+                        'is_vegan'        => $request->is_vegan ?? false,
+                        'is_gluten_free'  => $request->is_gluten_free ?? false,
+                        'allergens'       => $request->allergens
+                    ]);
+                    break;
+
+                case 4: // Car Parts
+                    CarPartsProducts::create([
+                        'products_id'   => $product->products_id,
+                        'brand'         => $request->brand,
+                        'model'         => $request->model,
+                        'year'          => $request->year,
+                        'oem_code'      => $request->oem_code,
+                        'compatibility' => $request->compatibility
+                    ]);
+                    break;
             }
 
             DB::commit();
 
             return response()->json([
                 'message' => 'Producto creado correctamente',
-                'product' => $product->load('grocery', 'pharmacy')
+                'product' => $product->load('grocery', 'pharmacy', 'restaurant', 'carPart')
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -132,6 +183,7 @@ class ProductController extends Controller
             ], 500);
         }
     }
+
 
     // Mostrar producto individual
     public function show(Request $request)

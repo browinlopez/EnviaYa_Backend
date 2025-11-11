@@ -9,10 +9,6 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-install pdo pdo_mysql zip gd \
     && apt-get clean
 
-# Instalar Node.js (para Reverb)
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs
-
 # Instalar Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 

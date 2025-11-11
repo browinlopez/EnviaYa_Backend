@@ -55,4 +55,14 @@ class Product extends Audit
     {
         return $this->hasOne(PharmacyProduct::class, 'products_id', 'products_id');
     }
+
+     public function restaurant()
+    {
+        return $this->hasOne(RestaurantProducts::class, 'products_id', 'products_id');
+    }
+
+    public function carPart()
+    {
+        return $this->hasOne(CarPartsProducts::class, 'products_id', 'products_id');
+    }
 }
