@@ -21,9 +21,6 @@ COPY . .
 # Instalar dependencias Laravel
 RUN composer install --optimize-autoloader --no-dev
 
-# Instalar dependencias Node.js (en el directorio raíz)
-RUN npm install
-
 # Crear directorio de logs
 RUN mkdir -p /var/log/supervisor
 
