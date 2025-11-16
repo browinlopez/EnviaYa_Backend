@@ -1,7 +1,7 @@
 # Base PHP para Laravel
 FROM php:8.2-fpm
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y nginx supervisor \
     git curl libzip-dev unzip wget libpng-dev libjpeg-dev libfreetype6-dev \
     supervisor \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
@@ -23,5 +23,5 @@ RUN php artisan route:cache || true
 
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 
-EXPOSE 9000
+EXPOSE 80
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
