@@ -40,7 +40,7 @@
                         <tr>
                             <td>{{ $p->products_id }}</td>
                             <td>{{ $p->name }}</td>
-                            <td>{{ $p->category_id }}</td>
+                           <td>{{ $p->category->name ?? 'Sin categoría' }}</td>
                             <td>{{ $p->businesses->first()?->name }}</td>
                             <td>{{ $p->productBusinesses->first()?->price }}</td>
                             <td>{{ $p->productBusinesses->first()?->amount }}</td>

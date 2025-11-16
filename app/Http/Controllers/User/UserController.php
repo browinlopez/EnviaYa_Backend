@@ -139,8 +139,6 @@ class UserController extends Controller
         return response()->json(['message' => 'El usuario ya está desactivado'], 200);
     }
 
-
-
     // Obtener direcciones del usuario con jerarquía completa
     public function getAddresses(Request $request)
     {

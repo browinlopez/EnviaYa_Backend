@@ -10,7 +10,7 @@ class RolesAndPermissionsSeeder extends Seeder
 {
     public function run(): void
     {
-        // Crear permisos base (los que quieras en tu app)
+        // Crear permisos
         $permissions = [
             'create business',
             'edit business',
@@ -30,13 +30,13 @@ class RolesAndPermissionsSeeder extends Seeder
             Permission::firstOrCreate(['name' => $perm]);
         }
 
-        // Crear o actualizar el rol ADMIN (rol_id = 1)
-        $adminRole = Rol::updateOrCreate(
-            ['rol_id' => 1],  // 👈 forzamos que tenga rol_id 1
-            ['name' => 'admin']
+        // Crear rol ADMIN con rol_id = 1
+        $adminRole = Rol::firstOrCreate(
+            ['rol_id' => 4],
+            ['name' => 'admin', 'guard_name' => 'web']
         );
 
-        // Asignar TODOS los permisos al rol admin
+        // Asignar permisos
         $adminRole->syncPermissions(Permission::all());
     }
 }

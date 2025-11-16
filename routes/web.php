@@ -124,6 +124,15 @@ Route::middleware('auth')->group(function () {
         Route::get('productos/edit/{id}', [ProductController::class, 'edit'])->name('products.edit');
         Route::put('productos/update/{id}', [ProductController::class, 'update'])->name('products.update');
         Route::delete('productos/destroy/{id}', [ProductController::class, 'destroy'])->name('products.destroy');
+Route::post('/admin/products/import', [ProductController::class, 'import'])
+    ->name('admin.products.import');
+
+
+        Route::get('/admin/products/import/preview', [ProductController::class, 'importPreview'])
+            ->name('admin.products.importPreview');
+
+        Route::post('/admin/products/import/store', [ProductController::class, 'importStore'])
+            ->name('admin.products.importStore');
 
         Route::get('reportes/financieros', [ReportController::class, 'generalFinancial'])
             ->name('report.general');

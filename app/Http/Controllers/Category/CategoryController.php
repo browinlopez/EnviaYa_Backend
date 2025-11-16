@@ -11,10 +11,22 @@ class CategoryController extends Controller
     // Listar todas las categorías
     public function index(Request $request)
     {
-        $categories = Category::all(); // o ->get()
-        return response()->json($categories);
-    }
+        // Validar que venga el parámetro type
+        $request->validate([
+            'type' => 'required|integer|exists:category_business,id'
+        ]);
 
+        $businessType = $request->type;
+
+        // Filtrar categorías según el tipo de negocio
+        $categories = Category::where('business_category_id', $businessType)->get();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Categorías filtradas correctamente',
+            'data' => $categories
+        ]);
+    }
 
     // Crear nueva categoría
     public function store(Request $request)

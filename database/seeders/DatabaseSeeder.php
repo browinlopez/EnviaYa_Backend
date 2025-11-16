@@ -13,14 +13,19 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-/*         $this->call(RolesAndPermissionsSeeder::class);
-        $this->call(TenderoPermissionsSeeder::class); 
-         $this->call(CountrySeeder::class);
-          $this->call(DepartmentSeeder::class);
-           $this->call(MunicipalitySeeder::class); */
-$this->call(CategoryBusinessSeeder::class);
-           
-        $this->call(PaymentSeeder::class);
+        $this->call([
+            AliasSeeder::class,
+            RolesAndPermissionsSeeder::class,
+            TenderoPermissionsSeeder::class,
+            CountrySeeder::class,
+            DepartmentSeeder::class,
+            MunicipalitySeeder::class,
+            CategoryBusinessSeeder::class,
+            CategorySeeder::class,
+            PaymentSeeder::class,
+            DomiciliarioPermissionsSeeder::class,
+            CompradorPermissionsSeeder::class
+        ]);
         /* User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',

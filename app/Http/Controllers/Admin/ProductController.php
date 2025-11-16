@@ -3,14 +3,19 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Imports\ProductsImport;
+use App\Imports\ProductsPreviewImport;
 use App\Models\Business;
 use App\Models\Product\Category;
 use App\Models\Product\GroceryProduct;
 use App\Models\Product\PharmacyProduct;
 use App\Models\Product\Product;
 use App\Models\Product\ProductBusiness;
+use App\Models\temp\ImportedProductTemp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Maatwebsite\Excel\Excel;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class ProductController extends Controller
 {
@@ -22,9 +27,18 @@ class ProductController extends Controller
 
     public function create()
     {
+        $categories = Category::all();
         $businesses = Business::all();
-        $categories = Category::active()->get(); // Solo categorías activas
-        return view('admin.products.create', compact('businesses', 'categories'));
+
+        $importedProducts = ProductBusiness::with(['product', 'business', 'product.category'])
+            ->latest()
+            ->paginate(10);
+
+        return view('admin.products.create', compact(
+            'categories',
+            'businesses',
+            'importedProducts'
+        ));
     }
 
     public function store(Request $request)
@@ -156,4 +170,5 @@ class ProductController extends Controller
 
         return redirect()->route('admin.products.index')->with('success', 'Producto eliminado correctamente.');
     }
+
 }

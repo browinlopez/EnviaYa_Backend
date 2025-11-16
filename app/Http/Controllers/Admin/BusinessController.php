@@ -23,7 +23,7 @@ class BusinessController extends Controller
         $products = Product::all();
         $domiciliaries = Domiciliary::all();
         $business = null;
-        return view('admin.negocios.create', compact('categories','products','domiciliaries', 'business'));
+        return view('admin.negocios.create', compact('categories', 'products', 'domiciliaries', 'business'));
     }
 
     public function store(Request $request)
@@ -32,27 +32,33 @@ class BusinessController extends Controller
             'name' => 'required|string',
             'phone' => 'nullable|string',
             'address' => 'nullable|string',
-            //'municipality_id' => 'required|integer',
             'NIT' => 'nullable|string',
             'razonSocial_DCD' => 'nullable|string',
-            'type' => 'required|integer', // categoría
+            'type' => 'required|integer',
             'state' => 'nullable|string',
             'logo' => 'nullable|image'
         ]);
 
-        // subir logo si hay
-        if($request->hasFile('logo')){
-            $data['logo'] = $request->file('logo')->store('logos','public');
+        // SUBIR LOGO
+        if ($request->hasFile('logo')) {
+
+            // Guardar archivo: storage/app/Negocios
+            $path = $request->file('logo')->store('Negocios', 'public');
+
+            // URL completa que se guarda en DB
+            $data['logo'] = "https://enviaya.com.co/storage/" . $path;
         }
 
+        // Crear negocio
         $business = Business::create($data);
 
-        // relaciones
+        // Relaciones
         $business->products()->sync($request->input('products', []));
         $business->domiciliaries()->sync($request->input('domiciliaries', []));
 
-        return redirect()->route('admin.negocios.index')->with('success','Negocio creado');
+        return redirect()->route('admin.negocios.index')->with('success', 'Negocio creado');
     }
+
 
     public function edit(Business $business)
     {
@@ -61,9 +67,9 @@ class BusinessController extends Controller
         $domiciliaries = Domiciliary::all();
 
         // con relaciones
-        $business->load('products','domiciliaries','category');
+        $business->load('products', 'domiciliaries', 'category');
 
-        return view('admin.negocios.edit', compact('business','categories','products','domiciliaries'));
+        return view('admin.negocios.edit', compact('business', 'categories', 'products', 'domiciliaries'));
     }
 
     public function update(Request $request, Business $business)
@@ -80,20 +86,20 @@ class BusinessController extends Controller
             'logo' => 'nullable|image'
         ]);
 
-        if($request->hasFile('logo')){
-            $data['logo'] = $request->file('logo')->store('logos','public');
+        if ($request->hasFile('logo')) {
+            $data['logo'] = $request->file('logo')->store('logos', 'public');
         }
 
         $business->update($data);
         $business->products()->sync($request->input('products', []));
         $business->domiciliaries()->sync($request->input('domiciliaries', []));
 
-        return redirect()->route('admin.negocios.index')->with('success','Negocio actualizado');
+        return redirect()->route('admin.negocios.index')->with('success', 'Negocio actualizado');
     }
 
     public function destroy(Business $business)
     {
         $business->delete();
-        return back()->with('success','Negocio eliminado');
+        return back()->with('success', 'Negocio eliminado');
     }
 }
