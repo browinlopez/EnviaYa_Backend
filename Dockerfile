@@ -59,6 +59,9 @@ FROM php-base
 
 WORKDIR /var/www
 
+# Configurar directorio como seguro para Git (evita 'dubious ownership')
+RUN git config --global --add safe.directory /var/www
+
 # Copiar código, vendor y assets frontend
 COPY --chown=www-data:www-data . .
 COPY --from=composer-builder --chown=www-data:www-data /var/www/vendor ./vendor
@@ -73,8 +76,8 @@ RUN mkdir -p storage/framework/{sessions,views,cache} \
 # Instalar Composer para Octane
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-# Instalar Laravel Octane + Swoole
-RUN composer require laravel/octane \
+# Instalar Laravel Octane + Swoole con versión compatible
+RUN composer require laravel/octane:^2.1 --with-all-dependencies \
     && php artisan octane:install --server=swoole
 
 # Cache de configuraciones y rutas
