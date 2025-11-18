@@ -52,7 +52,7 @@ return [
     |
     */
 
-    'url' => env('APP_URL', 'https://enviaya.com.co'),
+    'url' => env('APP_URL', 'https://api.enviaya.com.co'),
 
     /*
     |--------------------------------------------------------------------------

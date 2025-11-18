@@ -46,7 +46,7 @@ class BusinessController extends Controller
             $path = $request->file('logo')->store('Negocios', 'public');
 
             // URL completa que se guarda en DB
-            $data['logo'] = "https://enviaya.com.co/storage/" . $path;
+            $data['logo'] = "https://api.enviaya.com.co/storage/" . $path;
         }
 
         // Crear negocio
