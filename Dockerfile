@@ -15,7 +15,8 @@ RUN npm run build
 # =========================
 # Stage 2: PHP base con extensiones
 # =========================
-FROM php:8.2-cli AS php-base
+# Usamos FPM para mejor compatibilidad con Swoole y extensiones PCNTL/POSIX
+FROM php:8.2-fpm-bullseye AS php-base
 
 # Instalar extensiones necesarias
 RUN apt-get update && apt-get install -y \
@@ -29,7 +30,7 @@ RUN apt-get update && apt-get install -y \
     libfreetype6-dev \
     libonig-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install pdo pdo_mysql zip gd mbstring \
+    && docker-php-ext-install pdo pdo_mysql zip gd mbstring pcntl posix \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
