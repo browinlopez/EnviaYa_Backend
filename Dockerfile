@@ -18,7 +18,7 @@ RUN npm run build
 # Usamos FPM para mejor compatibilidad con Swoole y extensiones PCNTL/POSIX
 FROM php:8.2-fpm-bullseye AS php-base
 
-# Instalar extensiones necesarias
+# Instalar extensiones necesarias y Swoole
 RUN apt-get update && apt-get install -y \
     git \
     curl \
@@ -29,8 +29,11 @@ RUN apt-get update && apt-get install -y \
     libjpeg-dev \
     libfreetype6-dev \
     libonig-dev \
+    libssl-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install pdo pdo_mysql zip gd mbstring pcntl posix \
+    && pecl install swoole \
+    && docker-php-ext-enable swoole \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
