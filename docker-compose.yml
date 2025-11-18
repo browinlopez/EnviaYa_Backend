@@ -18,10 +18,10 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
     ports:
-      - "9000:9000"
+      - "8000:8000" # Cambiado a 8000
     networks:
-      - enviaya_network
+      - dokploy-network # Usar la misma red overlay que Traefik
 
 networks:
-  enviaya_network:
-    driver: bridge
+  dokploy-network:
+    external: true
