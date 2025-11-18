@@ -1,14 +1,23 @@
+# =========================
 # Stage 1: Build frontend assets
+# =========================
 FROM node:20-alpine AS node-builder
 WORKDIR /app
+
+# Copiar y instalar dependencias de Node
 COPY package*.json ./
 RUN npm ci
+
+# Copiar el código y generar assets
 COPY . .
 RUN npm run build
 
-# Stage 2: PHP base WITH extensions (used for composer + final image)
+# =========================
+# Stage 2: PHP base con extensiones
+# =========================
 FROM php:8.2-cli AS php-base
 
+# Instalar extensiones necesarias
 RUN apt-get update && apt-get install -y \
     git \
     curl \
@@ -26,43 +35,55 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /var/www
 
-# Stage 3: Install Composer dependencies
+# =========================
+# Stage 3: Instalar dependencias Composer
+# =========================
 FROM php-base AS composer-builder
 
 COPY composer.json composer.lock ./
+
+# Instalar Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+# Instalar dependencias de Laravel
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 
+# Copiar el resto del código y optimizar autoload
 COPY . .
 RUN composer dump-autoload --optimize
 
-# Stage 4: Final production image with Octane + Swoole
+# =========================
+# Stage 4: Imagen final de producción
+# =========================
 FROM php-base
 
 WORKDIR /var/www
 
-# Copy app code, vendor and frontend assets
+# Copiar código, vendor y assets frontend
 COPY --chown=www-data:www-data . .
 COPY --from=composer-builder --chown=www-data:www-data /var/www/vendor ./vendor
 COPY --from=node-builder --chown=www-data:www-data /app/public/build ./public/build
 
-# Set permissions
+# Configurar permisos
 RUN mkdir -p storage/framework/{sessions,views,cache} \
     && mkdir -p bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
-# Install Laravel Octane & Swoole
+# Instalar Composer para Octane
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+# Instalar Laravel Octane + Swoole
 RUN composer require laravel/octane \
     && php artisan octane:install --server=swoole
 
-# Cache configs and routes
+# Cache de configuraciones y rutas
 RUN php artisan config:cache \
     && php artisan route:cache \
     && php artisan view:cache
 
-# Expose HTTP port
+# Puerto HTTP expuesto (Traefik se comunica aquí)
 EXPOSE 8000
 
-# Start Octane server
+# Iniciar servidor Octane con Swoole
 CMD ["php", "artisan", "octane:start", "--server=swoole", "--host=0.0.0.0", "--port=8000", "--workers=auto"]
