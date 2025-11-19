@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('residential_complexes', function (Blueprint $table) {
             $table->id('complex_id');
             $table->string('name', 150);
+            $table->string('address', 255)->nullable();
             $table->tinyInteger('state')->default(1);
             $table->integer('people_count')->default(0);
         });

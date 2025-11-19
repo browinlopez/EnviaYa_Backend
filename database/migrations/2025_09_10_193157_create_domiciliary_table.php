@@ -15,6 +15,7 @@ return new class extends Migration
             $table->increments('domiciliary_id'); // PK autoincremental
             $table->unsignedBigInteger('user_id')->nullable(); // FK hacia user
             $table->tinyInteger('available')->nullable();
+            $table->string('document')->nullable(); // <-- AGREGAR
             $table->decimal('qualification', 3, 2)->default(0.00);
             $table->tinyInteger('state')->nullable();
 

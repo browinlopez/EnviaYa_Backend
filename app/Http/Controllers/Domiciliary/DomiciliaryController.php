@@ -34,32 +34,48 @@ class DomiciliaryController extends Controller
             'state' => 'boolean'
         ]);
 
-        // Crear el usuario con rol 3 (Domiciliario)
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'phone' => $request->phone,
-            'address' => $request->address,
-            'rol' => 3,
-            'qualification' => $request->qualification ?? 0,
-            'state' => $request->state
-        ]);
+        try {
 
-        // Crear el domiciliario vinculado al usuario
-        $domiciliary = Domiciliary::create([
-            'user_id' => $user->user_id,
-            'available' => $request->available ?? false,
-            'qualification' => $user->qualification,
-            'state' => $user->state
-        ]);
+            DB::beginTransaction();
 
-        return response()->json([
-            'message' => 'Usuario y domiciliario creados correctamente',
-            'user' => $user,
-            'domiciliary' => $domiciliary
-        ]);
+            // Crear usuario
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+                'phone' => $request->phone,
+                'address' => $request->address,
+                'rol' => 3,
+                'qualification' => $request->qualification ?? 0,
+                'state' => $request->state
+            ]);
+
+            // Crear domiciliario asociado
+            $domiciliary = Domiciliary::create([
+                'user_id' => $user->user_id,
+                'available' => $request->available ?? false,
+                'qualification' => $user->qualification,
+                'state' => $user->state,
+                'document' => $request->document ?? null   // si tienes este campo
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Usuario y domiciliario creados correctamente',
+                'user' => $user,
+                'domiciliary' => $domiciliary
+            ]);
+        } catch (\Throwable $e) {
+
+            DB::rollBack();
+
+            return response()->json([
+                'error' => 'Error al crear el domiciliario: ' . $e->getMessage()
+            ], 500);
+        }
     }
+
 
     // Actualizar un domiciliario
     public function updateDomiciliary(Request $request)
