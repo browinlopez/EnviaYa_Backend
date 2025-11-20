@@ -97,19 +97,16 @@ class BusinessController extends Controller
         // Si sube una nueva imagen
         if ($request->hasFile('logo')) {
 
-            // Eliminar la imagen anterior si existe
+            // Eliminar la imagen anterior
             if ($business->logo) {
-                // Extraer solo el path interno
-                $oldPath = str_replace(url('storage') . '/', '', $business->logo);
-
-                Storage::disk('public')->delete($oldPath);
+                Storage::disk('public')->delete($business->logo);
             }
 
-            // Guardar nueva imagen en storage/app/public/logos
+            // Guardar nueva imagen -> solo path interno
             $path = $request->file('logo')->store('logos', 'public');
 
-            // Generar URL pública
-            $data['logo'] = url('storage/' . $path);
+            // Guardar solo el path interno en BD
+            $data['logo'] = $path;
         }
 
         // Actualizar datos

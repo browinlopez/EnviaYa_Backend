@@ -22,6 +22,9 @@ services:
     networks:
       - dokploy-network # Usar la misma red overlay que Traefik
 
+volumes:
+  storage_data:
+
 networks:
   dokploy-network:
     external: true
