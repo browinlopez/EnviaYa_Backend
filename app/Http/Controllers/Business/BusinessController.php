@@ -120,7 +120,7 @@ class BusinessController extends Controller
         }
 
         // Traemos negocios ordenados por calificación (de mayor a menor)
-        $businesses = Business::with(['owners', 'municipality', 'products', 'reviews'])
+        $businesses = Business::with(['owners', 'municipality', 'products.category', 'reviews'])
             ->orderByDesc('qualification')
             ->get();
 
@@ -163,7 +163,7 @@ class BusinessController extends Controller
                         'product_id'  => $product->products_id,
                         'name'        => $product->name,
                         'description' => $product->description,
-                        'category_id' => $product->category_id,
+                        'category'    => $product->category ? $product->category->name : null,
                         'image'       => $product->image,
                         'state'       => (bool) $product->state,
                         // Si no hay user_id → precio 0
