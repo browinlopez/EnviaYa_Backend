@@ -43,10 +43,12 @@ class BusinessController extends Controller
         // SUBIR LOGO
         if ($request->hasFile('logo')) {
             $filename = time() . '_' . $request->file('logo')->getClientOriginalName();
-            $path = $request->file('logo')->move(public_path('Negocios'), $filename);
+            $request->file('logo')->move(public_path('Negocios'), $filename);
 
-            $data['logo'] = 'Negocios/' . $filename; // solo la ruta
+            // URL completa
+            $data['logo'] = url('Negocios/' . $filename);
         }
+
 
 
         // Crear negocio
@@ -98,16 +100,18 @@ class BusinessController extends Controller
         // Si sube una nueva imagen
         if ($request->hasFile('logo')) {
 
-            // borrar archivo viejo si existe
-            if ($business->logo && file_exists(public_path($business->logo))) {
-                unlink(public_path($business->logo));
+            if ($business->logo) {
+                $oldPath = public_path(str_replace(url('/') . '/', '', $business->logo));
+                if (file_exists($oldPath)) unlink($oldPath);
             }
 
             $filename = time() . '_' . $request->file('logo')->getClientOriginalName();
             $request->file('logo')->move(public_path('Negocios'), $filename);
 
-            $data['logo'] = 'Negocios/' . $filename;
+            // Guardar URL completa
+            $data['logo'] = url('Negocios/' . $filename);
         }
+
 
 
         // Actualizar datos

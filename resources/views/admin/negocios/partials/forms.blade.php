@@ -73,7 +73,7 @@
                         style="width:100px;height:100px;border:1px solid #ddd;
             display:flex;align-items:center;justify-content:center;
             overflow:hidden;border-radius:8px;">
-                        <img src="{{ asset($business->logo) }}" style="width:100%;height:100%;object-fit:contain;">
+                        <img src="{{ $business->logo }}" style="width:100%;height:100%;object-fit:contain;">
                     </div>
                 @endif
             </div>
@@ -106,21 +106,20 @@
                             @foreach ($businessProducts as $prod)
                                 <tr>
                                     <td>
-                                        <input type="checkbox" name="products[]" value="{{ $prod->products_id }}" checked>
+                                        <input type="checkbox" name="products[]" value="{{ $prod->products_id }}"
+                                            checked>
                                     </td>
 
                                     <td>{{ $prod->name }}</td>
 
                                     <td>
                                         <input type="number" step="0.01" name="price[{{ $prod->products_id }}]"
-                                            value="{{ $prod->pivot->price }}"
-                                            class="form-control form-control-sm">
+                                            value="{{ $prod->pivot->price }}" class="form-control form-control-sm">
                                     </td>
 
                                     <td>
                                         <input type="number" name="amount[{{ $prod->products_id }}]"
-                                            value="{{ $prod->pivot->amount }}"
-                                            class="form-control form-control-sm">
+                                            value="{{ $prod->pivot->amount }}" class="form-control form-control-sm">
                                     </td>
 
                                     <td>
@@ -173,17 +172,16 @@
     </div>
 @endif
 <script>
-document.querySelector('input[name="logo"]').addEventListener('change', function(e) {
-    let file = e.target.files[0];
+    document.querySelector('input[name="logo"]').addEventListener('change', function(e) {
+        let file = e.target.files[0];
 
-    if (file) {
-        let reader = new FileReader();
-        reader.onload = (event) => {
-            document.getElementById('preview-container').style.display = 'flex';
-            document.getElementById('preview-img').src = event.target.result;
-        };
-        reader.readAsDataURL(file);
-    }
-});
+        if (file) {
+            let reader = new FileReader();
+            reader.onload = (event) => {
+                document.getElementById('preview-container').style.display = 'flex';
+                document.getElementById('preview-img').src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
 </script>
-
