@@ -45,9 +45,7 @@ class BusinessController extends Controller
 
             // Guarda en storage/app/public/Negocios
             $path = $request->file('logo')->store('Negocios', 'public');
-
-            // URL pública
-            $data['logo'] = url('storage/' . $path);
+            $data['logo'] = Storage::url($path);
         }
 
         // Crear negocio
@@ -81,8 +79,6 @@ class BusinessController extends Controller
             'allProducts'
         ));
     }
-
-
 
     public function update(Request $request, Business $business)
     {
