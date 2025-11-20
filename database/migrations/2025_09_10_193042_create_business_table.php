@@ -21,8 +21,12 @@ return new class extends Migration
             $table->string('NIT')->nullable();
             $table->string('logo')->nullable();
 
+            // 🔹 Campos de ubicación
+            $table->decimal('latitude', 10, 7)->nullable();
+            $table->decimal('longitude', 10, 7)->nullable();
+
             // FK hacia municipalities.id
-           $table->unsignedBigInteger('municipality_id')->nullable();
+            $table->unsignedBigInteger('municipality_id')->nullable();
 
             // otros campos
             $table->integer('type')->nullable();
@@ -44,6 +48,7 @@ return new class extends Migration
         Schema::table('business', function (Blueprint $table) {
             $table->dropForeign(['municipality_id']);
         });
+
         Schema::dropIfExists('business');
     }
 };

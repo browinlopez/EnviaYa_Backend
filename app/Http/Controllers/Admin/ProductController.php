@@ -6,11 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Imports\ProductsImport;
 use App\Imports\ProductsPreviewImport;
 use App\Models\Business;
+use App\Models\Product\CarPartsProducts;
 use App\Models\Product\Category;
 use App\Models\Product\GroceryProduct;
 use App\Models\Product\PharmacyProduct;
 use App\Models\Product\Product;
 use App\Models\Product\ProductBusiness;
+use App\Models\Product\RestaurantProducts;
 use App\Models\temp\ImportedProductTemp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -75,21 +77,56 @@ class ProductController extends Controller
 
         $business = Business::find($data['busines_id']);
 
-        if ($business->type == 1) {
-            // Grocery
-            $groceryData = $request->only(['brand', 'size', 'expiration_date']);
-            $groceryData['products_id'] = $product->products_id;
-            GroceryProduct::create($groceryData);
-        } elseif ($business->type == 2) {
-            // Pharmacy
-            $pharmaData = $request->only(['active_ingredient', 'dosage', 'presentation', 'expiration_date']);
-            $pharmaData['products_id'] = $product->products_id;
-            PharmacyProduct::create($pharmaData);
+        // 📌 Dependiendo del tipo del negocio guardar modelo correspondiente
+
+        switch ($business->type) {
+
+            case 1: // Grocery
+                GroceryProduct::create([
+                    'products_id' => $product->products_id,
+                    'brand' => $request->brand,
+                    'size' => $request->size,
+                    'expiration_date' => $request->expiration_date,
+                ]);
+                break;
+
+            case 2: // Pharmacy
+                PharmacyProduct::create([
+                    'products_id' => $product->products_id,
+                    'active_ingredient' => $request->active_ingredient,
+                    'dosage' => $request->dosage,
+                    'presentation' => $request->presentation,
+                    'expiration_date' => $request->expiration_date,
+                ]);
+                break;
+
+            case 3: // Restaurant
+                RestaurantProducts::create([
+                    'products_id' => $product->products_id,
+                    'food_type' => $request->food_type,
+                    'portion_size' => $request->portion_size,
+                    'is_vegan' => $request->is_vegan,
+                    'is_gluten_free' => $request->is_gluten_free,
+                    'allergens' => $request->allergens,
+                ]);
+                break;
+
+            case 4: // Car parts
+                CarPartsProducts::create([
+                    'products_id' => $product->products_id,
+                    'brand' => $request->car_brand,
+                    'model' => $request->car_model,
+                    'year' => $request->car_year,
+                    'oem_code' => $request->oem_code,
+                    'compatibility' => $request->compatibility,
+                ]);
+                break;
         }
 
-
-        return redirect()->route('admin.products.index')->with('success', 'Producto creado correctamente.');
+        return redirect()->route('admin.products.index')
+            ->with('success', 'Producto creado correctamente.');
     }
+
 
     public function edit($id)
     {
@@ -170,5 +207,4 @@ class ProductController extends Controller
 
         return redirect()->route('admin.products.index')->with('success', 'Producto eliminado correctamente.');
     }
-
 }

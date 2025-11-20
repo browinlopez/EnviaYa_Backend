@@ -28,7 +28,7 @@ Route::get('businesses/top-businesses', [BusinessController::class, 'indexByQual
 
 //Categoria sin Auth
 Route::post('categories-business/index', [CategoryBusinessController::class, 'index']);
-Route::get('categories/', [CategoryController::class, 'index']);          // Listar todas las categorías
+Route::get('categories/', [CategoryController::class, 'index']);
 
 Route::middleware('auth:sanctum')->group(function () {
     //Auth

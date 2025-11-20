@@ -90,6 +90,7 @@
                     <i class="fas fa-box me-2"></i>
                     <h5 class="mb-0 fw-bold">Productos Afiliados</h5>
                 </div>
+
                 <div class="card-body p-0" style="max-height:250px;overflow-y:auto;">
                     <table class="table table-sm table-bordered mb-0">
                         <thead class="table-light">
@@ -102,26 +103,32 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach ($products as $prod)
-                                @php
-                                    $pivot = $business->products->firstWhere('products_id', $prod->products_id)?->pivot;
-                                @endphp
+                            @foreach ($businessProducts as $prod)
                                 <tr>
                                     <td>
-                                        <input type="checkbox" name="products[]" value="{{ $prod->products_id }}"
-                                            @checked(in_array((string) $prod->products_id, $productsSelected))>
+                                        <input type="checkbox" name="products[]" value="{{ $prod->products_id }}" checked>
                                     </td>
+
                                     <td>{{ $prod->name }}</td>
-                                    <td><input type="number" step="0.01" name="price[{{ $prod->products_id }}]"
-                                            value="{{ old('price.' . $prod->products_id, $pivot->price ?? '') }}"
-                                            class="form-control form-control-sm"></td>
-                                    <td><input type="number" name="amount[{{ $prod->products_id }}]"
-                                            value="{{ old('amount.' . $prod->products_id, $pivot->amount ?? '') }}"
-                                            class="form-control form-control-sm"></td>
-                                    <td><input type="number" step="0.1"
+
+                                    <td>
+                                        <input type="number" step="0.01" name="price[{{ $prod->products_id }}]"
+                                            value="{{ $prod->pivot->price }}"
+                                            class="form-control form-control-sm">
+                                    </td>
+
+                                    <td>
+                                        <input type="number" name="amount[{{ $prod->products_id }}]"
+                                            value="{{ $prod->pivot->amount }}"
+                                            class="form-control form-control-sm">
+                                    </td>
+
+                                    <td>
+                                        <input type="number" step="0.1"
                                             name="qualification[{{ $prod->products_id }}]"
-                                            value="{{ old('qualification.' . $prod->products_id, $pivot->qualification ?? '') }}"
-                                            class="form-control form-control-sm"></td>
+                                            value="{{ $prod->pivot->qualification }}"
+                                            class="form-control form-control-sm">
+                                    </td>
                                 </tr>
                             @endforeach
                         </tbody>

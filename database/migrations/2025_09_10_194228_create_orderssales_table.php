@@ -16,7 +16,7 @@ return new class extends Migration
             $table->unsignedInteger('buyer_id')->nullable();
             $table->unsignedInteger('busines_id')->nullable();
             $table->unsignedInteger('domiciliary_id')->nullable();
-            $table->string('delivery_address', 255);
+            $table->unsignedBigInteger('address_id')->nullable();
             $table->unsignedInteger('methods_id')->nullable();
             $table->unsignedInteger('forms_id')->nullable();
             $table->decimal('total', 10, 2)->nullable();

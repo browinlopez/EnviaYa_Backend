@@ -8,6 +8,7 @@ use App\Models\Business\CategoryBusiness;
 use App\Models\Domiciliary;
 use App\Models\Product\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class BusinessController extends Controller
 {
@@ -42,11 +43,11 @@ class BusinessController extends Controller
         // SUBIR LOGO
         if ($request->hasFile('logo')) {
 
-            // Guardar archivo: storage/app/Negocios
+            // Guarda en storage/app/public/Negocios
             $path = $request->file('logo')->store('Negocios', 'public');
 
-            // URL completa que se guarda en DB
-            $data['logo'] = "https://api.enviaya.com.co/storage/" . $path;
+            // URL pública
+            $data['logo'] = url('storage/' . $path);
         }
 
         // Crear negocio
@@ -59,18 +60,29 @@ class BusinessController extends Controller
         return redirect()->route('admin.negocios.index')->with('success', 'Negocio creado');
     }
 
-
     public function edit(Business $business)
     {
         $categories = CategoryBusiness::all();
-        $products = Product::all();
         $domiciliaries = Domiciliary::all();
 
-        // con relaciones
-        $business->load('products', 'domiciliaries', 'category');
+        $business->load(['products', 'domiciliaries', 'category']);
 
-        return view('admin.negocios.edit', compact('business', 'categories', 'products', 'domiciliaries'));
+        // Solo productos afiliados
+        $businessProducts = $business->products;
+
+        // si los necesitas en otras partes de la vista
+        $allProducts = Product::all();
+
+        return view('admin.negocios.edit', compact(
+            'business',
+            'categories',
+            'domiciliaries',
+            'businessProducts',
+            'allProducts'
+        ));
     }
+
+
 
     public function update(Request $request, Business $business)
     {
@@ -86,15 +98,33 @@ class BusinessController extends Controller
             'logo' => 'nullable|image'
         ]);
 
+        // Si sube una nueva imagen
         if ($request->hasFile('logo')) {
-            $data['logo'] = $request->file('logo')->store('logos', 'public');
+
+            // Eliminar la imagen anterior si existe
+            if ($business->logo) {
+                // Extraer solo el path interno
+                $oldPath = str_replace(url('storage') . '/', '', $business->logo);
+
+                Storage::disk('public')->delete($oldPath);
+            }
+
+            // Guardar nueva imagen en storage/app/public/logos
+            $path = $request->file('logo')->store('logos', 'public');
+
+            // Generar URL pública
+            $data['logo'] = url('storage/' . $path);
         }
 
+        // Actualizar datos
         $business->update($data);
+
+        // Relaciones
         $business->products()->sync($request->input('products', []));
         $business->domiciliaries()->sync($request->input('domiciliaries', []));
 
-        return redirect()->route('admin.negocios.index')->with('success', 'Negocio actualizado');
+        return redirect()->route('admin.negocios.index')
+            ->with('success', 'Negocio actualizado');
     }
 
     public function destroy(Business $business)
