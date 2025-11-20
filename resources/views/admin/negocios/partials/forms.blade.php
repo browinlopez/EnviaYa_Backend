@@ -73,7 +73,7 @@
                         style="width:100px;height:100px;border:1px solid #ddd;
             display:flex;align-items:center;justify-content:center;
             overflow:hidden;border-radius:8px;">
-                        <img src="{{ $business->logo }}" style="width:100%;height:100%;object-fit:contain;">
+                        <img src="{{ asset($business->logo) }}" style="width:100%;height:100%;object-fit:contain;">
                     </div>
                 @endif
             </div>
