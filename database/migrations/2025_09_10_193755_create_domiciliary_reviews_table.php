@@ -18,6 +18,7 @@ return new class extends Migration
             $table->decimal('qualification', 3, 2)->default(0.00);
             $table->text('comment')->nullable();
             $table->tinyInteger('state')->nullable();
+            $table->timestamps(); // Agrega created_at y updated_at automáticamente
 
             // Índices
             $table->index('domiciliary_id', 'fk_domiciliary_reviews_domiciliary');

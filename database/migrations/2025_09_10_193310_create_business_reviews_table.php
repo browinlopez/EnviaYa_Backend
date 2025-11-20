@@ -25,6 +25,9 @@ return new class extends Migration
             $table->text('comment')->nullable();
             $table->tinyInteger('state')->nullable();
 
+             // timestamps
+            $table->timestamps(); // <-- crea created_at y updated_at
+
             // índices y claves foráneas
             $table->foreign('busines_id', 'fk_business_reviews_business')
                 ->references('busines_id')

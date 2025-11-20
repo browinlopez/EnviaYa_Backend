@@ -17,6 +17,9 @@ return new class extends Migration
             $table->unsignedInteger('methods_id')->nullable(); // FK a payment_methods
             $table->unsignedInteger('forms_id')->nullable(); // FK a payment_forms
             $table->decimal('amount', 10, 2);
+            $table->decimal('total', 10, 2)->default(0);       // Nuevo campo total
+            $table->decimal('domicilio', 10, 2)->default(0);   // Nuevo campo domicilio
+             $table->decimal('valor_promocion', 10, 2)->default(0);
             $table->integer('payment_status');
             $table->timestamp('payment_date')->nullable();
             $table->tinyInteger('state')->nullable();

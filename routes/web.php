@@ -150,7 +150,7 @@ Route::post('/admin/products/import', [ProductController::class, 'import'])
             ->name('reportes.operacional');
 
         Route::get('reportes/operacional/export', [ReportController::class, 'exportOperational'])
-            ->name(' reportes.operacional.export');
+            ->name('reportes.operacional.export');
     });
 });
 
