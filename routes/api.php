@@ -158,8 +158,8 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::prefix('affiliations')->group(function () {
-        Route::post('/Afiliation', [ReviewController::class, 'AfiliationUser']);
-        Route::post('/Desafiliation', [ReviewController::class, 'DesafiliationUser']);
+        Route::post('/Afiliation', [AffiliationController::class, 'AfiliationUser']);
+        Route::post('/Desafiliation', [AffiliationController::class, 'DesafiliationUser']);
     });
 
     Route::prefix('categories')->group(function () {
