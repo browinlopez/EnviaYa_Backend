@@ -25,6 +25,7 @@ Route::post('/forgot-password', [AuthController::class, 'resetPassword']);
 //Categoria sin Auth
 Route::post('categories-business/index', [CategoryBusinessController::class, 'index']);
 Route::get('categories/', [CategoryController::class, 'index']);
+ Route::get('top-businesses-free', [BusinessController::class, 'indexByQualification']);
 
 Route::middleware('auth:sanctum')->group(function () {
     //Auth
@@ -101,9 +102,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('store', [BusinessController::class, 'store']);
         Route::post('show', [BusinessController::class, 'show']);
         Route::put('update', [BusinessController::class, 'update']);
-        Route::post('affiliation/toggle', [AffiliationController::class, 'toggle']);
-        Route::get('affiliation/users', [AffiliationController::class, 'listUsers']);
-        Route::get('/affiliation/search', [AffiliationController::class, 'searchBuyerByPhone']);
+        Route::prefix('affiliations')->group(function () {
+            Route::post('/AfiliationUser', [AffiliationController::class, 'AfiliationUser']);
+            Route::post('/DesafiliationUser', [AffiliationController::class, 'DesafiliationUser']);
+            Route::post('toggleBusinesses', [AffiliationController::class, 'toggle']);
+            Route::get('usersBusinesses', [AffiliationController::class, 'listUsers']);
+            Route::get('searchBusinesses', [AffiliationController::class, 'searchBuyerByPhone']);
+        });
+       
     });
 
     Route::prefix('favorites')->group(function () {
@@ -157,10 +163,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('user', [ReviewController::class, 'deleteUserReview']); // Eliminar
     });
 
-    Route::prefix('affiliations')->group(function () {
-        Route::post('/Afiliation', [AffiliationController::class, 'AfiliationUser']);
-        Route::post('/Desafiliation', [AffiliationController::class, 'DesafiliationUser']);
-    });
+   
 
     Route::prefix('categories')->group(function () {
         Route::post('/create', [CategoryController::class, 'store']);         // Crear categoría
