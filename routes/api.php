@@ -156,4 +156,16 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('user', [ReviewController::class, 'updateUserReview']); // Actualizar
         Route::delete('user', [ReviewController::class, 'deleteUserReview']); // Eliminar
     });
+
+    Route::prefix('affiliations')->group(function () {
+        Route::post('/Afiliation', [ReviewController::class, 'AfiliationUser']);
+        Route::post('/Desafiliation', [ReviewController::class, 'DesafiliationUser']);
+    });
+
+    Route::prefix('categories')->group(function () {
+        Route::post('/create', [CategoryController::class, 'store']);         // Crear categoría
+        Route::get('/show', [CategoryController::class, 'show']); // Mostrar categoría específica
+        Route::put('/update', [CategoryController::class, 'update']); // Actualizar categoría
+        Route::delete('/delete', [CategoryController::class, 'destroy']); // Eliminar categoría
+    });
 });
