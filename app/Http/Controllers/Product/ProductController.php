@@ -28,7 +28,8 @@ class ProductController extends Controller
             'products.category',   // categoría
             'products.grocery',    // datos de grocery
             'products.pharmacy'    // datos de farmacia
-        ])->findOrFail($request->busines_id);
+        ])->findOrFail($request->business_id);
+
 
         $products = $business->products->map(function ($product) use ($business) {
             $extraData = null;
@@ -183,7 +184,6 @@ class ProductController extends Controller
             ], 500);
         }
     }
-
 
     // Mostrar producto individual
     public function show(Request $request)

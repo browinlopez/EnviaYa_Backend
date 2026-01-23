@@ -134,7 +134,7 @@ class ReviewController extends Controller
         ]);
 
         $reviews = BusinessReview::with('business', 'buyer.user') // <-- aquí el cambio
-            ->where('business_id', $request->busines_id)
+            ->where('business_id', $request->business_id)
             ->get();
 
         $formatted = $reviews->map(function ($review) {

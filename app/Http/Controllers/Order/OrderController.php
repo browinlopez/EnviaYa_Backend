@@ -122,6 +122,7 @@ class OrderController extends Controller
         // Precargamos relaciones necesarias
         $orders = OrdersSales::where('busines_id', $business->busines_id)
             ->with([
+                'business',
                 'details.product',
                 'buyer.user', // Buyer + User
                 'promotions',
@@ -171,7 +172,6 @@ class OrderController extends Controller
                 'business' => [
                     'business_id' => $order->business->busines_id,
                     'name' => $order->business->name,
-                    'address' => $order->business->address,
                     'address' => $order->business->address,
                     'latitude' => $order->business->latitude !== null ? (float)$order->business->latitude : null,
                     'longitude' => $order->business->longitude !== null ? (float)$order->business->longitude : null,
@@ -277,7 +277,7 @@ class OrderController extends Controller
             $q->where('busines_id', $business_id);
         })
             ->whereBetween('payment_date', [$month_start->toDateString(), $month_end->toDateString()])
-            ->sum('subtotal');
+            ->sum('total');
 
         /**
          * Total histórico
@@ -285,7 +285,7 @@ class OrderController extends Controller
         $incomeTotal = Payment::whereHas('order', function ($q) use ($business_id) {
             $q->where('busines_id', $business_id);
         })
-            ->sum('subtotal');
+            ->sum('total');
 
         return response()->json([
             'business_id'     => $business_id,
