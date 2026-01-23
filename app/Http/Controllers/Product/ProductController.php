@@ -20,7 +20,7 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $request->validate([
-            'busines_id' => 'required|integer|exists:business,busines_id'
+            'business_id' => 'required|integer|exists:business,busines_id'
         ]);
 
         // Cargar productos con relaciones
