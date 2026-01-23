@@ -66,7 +66,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::prefix('categories-business')->group(function () {
-        Route::get('index', [CategoryBusinessController::class, 'store']);
+        Route::get('index', [CategoryBusinessController::class, 'index']);
         Route::post('store', [CategoryBusinessController::class, 'store']);
         Route::post('show', [CategoryBusinessController::class, 'show']);
         Route::post('update', [CategoryBusinessController::class, 'update']);
