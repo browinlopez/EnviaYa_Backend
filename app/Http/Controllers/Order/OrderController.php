@@ -312,6 +312,9 @@ class OrderController extends Controller
             'products.*.unit_price' => 'required|numeric',
             'methods_id' => 'required|integer|exists:payment_methods,methods_id',
             'forms_id' => 'nullable|integer|exists:payment_forms,forms_id',
+            // 🆕 programación
+            'is_scheduled' => 'required|boolean',
+            'delivery_date' => 'required_if:is_scheduled,true|date|after:now',
         ]);
 
         $buyer = Buyer::where('user_id', $request->user_id)->first();
@@ -342,8 +345,13 @@ class OrderController extends Controller
                 'forms_id' => $request->forms_id,
                 'total' => $total,
                 'sale_date' => now(),
+                'delivery_date' => $request->is_scheduled
+                    ? $request->delivery_date
+                    : now(),
+                'is_scheduled' => $request->is_scheduled,
                 'state' => 1
             ]);
+
 
             $outOfStockProducts = [];
 
@@ -380,6 +388,17 @@ class OrderController extends Controller
                     $productBusiness->amount -= min($productBusiness->amount, $product['amount']);
                     $productBusiness->save();
                 }
+
+                /*// Reducir stock SOLO si NO es una orden programada
+                if (!$request->is_scheduled) {
+                    if ($productBusiness->amount > 0) {
+                        $productBusiness->amount -= min(
+                            $productBusiness->amount,
+                            $product['amount']
+                        );
+                        $productBusiness->save();
+                    }
+                } */
             }
 
             /**
@@ -419,6 +438,8 @@ class OrderController extends Controller
                     'buyer_id' => $order->buyer_id,
                     'busines_id' => $order->busines_id,
                     'total' => $order->total,
+                    'is_scheduled' => $order->is_scheduled,
+                    'delivery_date' => $order->delivery_date,
                     'sale_date' => $order->sale_date,
                     'state' => $order->state,
                     'business' => [

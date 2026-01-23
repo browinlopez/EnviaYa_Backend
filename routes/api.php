@@ -23,9 +23,9 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/forgot-password', [AuthController::class, 'resetPassword']);
 
 //Categoria sin Auth
-Route::post('categories-business/index', [CategoryBusinessController::class, 'index']);
-Route::get('categories/', [CategoryController::class, 'index']);
- Route::get('top-businesses-free', [BusinessController::class, 'indexByQualification']);
+Route::post('categories-business/indexFree', [CategoryBusinessController::class, 'index']);
+Route::get('categories-free/', [CategoryController::class, 'index']);
+Route::get('top-businesses-free', [BusinessController::class, 'indexByQualification']);
 
 Route::middleware('auth:sanctum')->group(function () {
     //Auth
@@ -66,6 +66,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::prefix('categories-business')->group(function () {
+        Route::get('index', [CategoryBusinessController::class, 'store']);
         Route::post('store', [CategoryBusinessController::class, 'store']);
         Route::post('show', [CategoryBusinessController::class, 'show']);
         Route::post('update', [CategoryBusinessController::class, 'update']);
@@ -161,14 +162,5 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('user', [ReviewController::class, 'createUserReview']); // Crear
         Route::put('user', [ReviewController::class, 'updateUserReview']); // Actualizar
         Route::delete('user', [ReviewController::class, 'deleteUserReview']); // Eliminar
-    });
-
-   
-
-    Route::prefix('categories')->group(function () {
-        Route::post('/create', [CategoryController::class, 'store']);         // Crear categoría
-        Route::get('/show', [CategoryController::class, 'show']); // Mostrar categoría específica
-        Route::put('/update', [CategoryController::class, 'update']); // Actualizar categoría
-        Route::delete('/delete', [CategoryController::class, 'destroy']); // Eliminar categoría
     });
 });

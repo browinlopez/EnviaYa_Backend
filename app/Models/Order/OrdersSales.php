@@ -32,8 +32,16 @@ class OrdersSales extends Audit
         'total',
         'sale_date',
         'delivery_date',
+        'is_scheduled',
         'state'
     ];
+
+    protected $casts = [
+        'is_scheduled' => 'boolean',
+        'sale_date' => 'datetime',
+        'delivery_date' => 'datetime',
+    ];
+
 
     public function buyer()
     {
