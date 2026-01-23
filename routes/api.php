@@ -23,7 +23,7 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/forgot-password', [AuthController::class, 'resetPassword']);
 
 //Categoria sin Auth
-Route::post('categories-business/indexFree', [CategoryBusinessController::class, 'index']);
+Route::get('categories-business/indexFree', [CategoryBusinessController::class, 'index']);
 Route::get('categories-free/', [CategoryController::class, 'index']);
 Route::get('top-businesses-free', [BusinessController::class, 'indexByQualification']);
 
