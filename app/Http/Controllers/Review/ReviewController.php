@@ -130,7 +130,7 @@ class ReviewController extends Controller
     public function listReviewsByBusiness(Request $request)
     {
         $request->validate([
-            'business_id' => 'required|integer|exists:business,business_id',
+            'busines_id' => 'required|integer|exists:business,busines_id'
         ]);
 
         $reviews = BusinessReview::with('business', 'buyer.user') // <-- aquí el cambio
