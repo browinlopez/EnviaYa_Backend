@@ -151,7 +151,7 @@ class ReviewController extends Controller
                     'state' => $review->buyer->state,
                 ] : null,
                 'business' => $review->business ? [
-                    'business_id' => $review->business->busines_id,
+                    'business_id' => $review->business->business_id,
                     'name' => $review->business->name,
                     'phone' => $review->business->phone,
                     'address' => $review->business->address,

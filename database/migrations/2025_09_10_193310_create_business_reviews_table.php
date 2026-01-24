@@ -15,7 +15,7 @@ return new class extends Migration
             $table->increments('reviews_id'); // PK auto_increment
 
             // foreign keys
-            $table->unsignedInteger('busines_id'); // FK business
+            $table->unsignedInteger('business_id'); // FK business
             $table->unsignedInteger('buyer_id')->nullable(); // FK buyer (INT para que coincida)
             // Elimina user_id si ya no se usa
             // $table->unsignedBigInteger('user_id')->nullable();
@@ -29,8 +29,8 @@ return new class extends Migration
             $table->timestamps(); // <-- crea created_at y updated_at
 
             // índices y claves foráneas
-            $table->foreign('busines_id', 'fk_business_reviews_business')
-                ->references('busines_id')
+            $table->foreign('business_id', 'fk_business_reviews_business')
+                ->references('business_id')
                 ->on('business')
                 ->onDelete('cascade');
 
