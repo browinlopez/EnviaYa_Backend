@@ -186,15 +186,16 @@ class ReviewController extends Controller
             $review = BusinessReview::create($request->all());
 
             // Recalcular el promedio de calificaciones activas
-            $average = BusinessReview::where('business_id', $request->busines_id)
+            $average = BusinessReview::where('business_id', $review->business_id)
                 ->where('state', true)
                 ->avg('qualification');
+
 
             // Limitar el promedio a máximo 5.00
             $average = min(round($average, 2), 5.00);
 
             // Actualizar el campo qualification en la tabla business
-            Business::where('business_id', $request->busines_id)
+            Business::where('busines_id', $review->business_id)
                 ->update(['qualification' => $average]);
 
             DB::commit();
