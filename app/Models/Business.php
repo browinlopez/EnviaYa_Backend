@@ -67,8 +67,9 @@ class Business extends Audit
 
     public function reviews()
     {
-        return $this->hasMany(BusinessReview::class, 'busines_id', 'business_id');
+        return $this->hasMany(BusinessReview::class, 'business_id', 'busines_id');
     }
+
 
     public function productBusinesses()
     {
