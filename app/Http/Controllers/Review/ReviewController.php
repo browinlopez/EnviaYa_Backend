@@ -130,7 +130,7 @@ class ReviewController extends Controller
     public function listReviewsByBusiness(Request $request)
     {
         $request->validate([
-            'business_id' => 'required|integer|exists:business,busines_id',
+            'business_id' => 'required|integer|exists:business,business_id',
         ]);
 
         $reviews = BusinessReview::with('business', 'buyer.user') // <-- aquí el cambio
@@ -172,7 +172,7 @@ class ReviewController extends Controller
     public function createBusinessReview(Request $request)
     {
         $request->validate([
-            'busines_id' => 'required|integer|exists:business,busines_id',
+            'business_id' => 'required|integer|exists:business,business_id',
             'buyer_id' => 'required|integer|exists:buyer,buyer_id',
             'qualification' => 'required|numeric|min:0|max:5',
             'comment' => 'nullable|string',
@@ -186,7 +186,7 @@ class ReviewController extends Controller
             $review = BusinessReview::create($request->all());
 
             // Recalcular el promedio de calificaciones activas
-            $average = BusinessReview::where('busines_id', $request->busines_id)
+            $average = BusinessReview::where('business_id', $request->busines_id)
                 ->where('state', true)
                 ->avg('qualification');
 
@@ -194,7 +194,7 @@ class ReviewController extends Controller
             $average = min(round($average, 2), 5.00);
 
             // Actualizar el campo qualification en la tabla business
-            Business::where('busines_id', $request->busines_id)
+            Business::where('business_id', $request->busines_id)
                 ->update(['qualification' => $average]);
 
             DB::commit();
@@ -233,13 +233,13 @@ class ReviewController extends Controller
             $review->update($request->only(['qualification', 'comment', 'state']));
 
             // Recalcular promedio de calificaciones activas
-            $average = BusinessReview::where('busines_id', $review->busines_id)
+            $average = BusinessReview::where('business_id', $review->busines_id)
                 ->where('state', true)
                 ->avg('qualification');
 
             $average = min(round($average, 2), 5.00);
 
-            Business::where('busines_id', $review->busines_id)
+            Business::where('business_id', $review->busines_id)
                 ->update(['qualification' => $average]);
 
             DB::commit();
@@ -278,13 +278,13 @@ class ReviewController extends Controller
             $review->delete();
 
             // Recalcular promedio después de eliminar
-            $average = BusinessReview::where('busines_id', $busines_id)
+            $average = BusinessReview::where('business_id', $busines_id)
                 ->where('state', true)
                 ->avg('qualification');
 
             $average = min(round($average, 2), 5.00);
 
-            Business::where('busines_id', $busines_id)
+            Business::where('business_id', $busines_id)
                 ->update(['qualification' => $average]);
 
             DB::commit();
