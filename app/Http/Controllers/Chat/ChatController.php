@@ -159,6 +159,24 @@ class ChatController extends Controller
         return $this->formatChatResponse($chat);
     }
 
+    public function updateMessage(Request $request)
+    {
+        $request->validate([
+            'message_id' => 'required|exists:messages,message_id',
+            'content' => 'required|array',
+        ]);
+
+        $message = Message::findOrFail($request->message_id);
+
+        $message->content = json_encode($request->content);
+        $message->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+        ]);
+    }
+
     /**
      * Arma el JSON de salida para un chat dado
      */

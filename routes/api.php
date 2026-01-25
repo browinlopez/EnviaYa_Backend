@@ -93,6 +93,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/create', [ChatController::class, 'createChat']);     // crear chat
         Route::post('/user-chats', [ChatController::class, 'getUserChats']); // listar chats de un user
         Route::post('/messages', [ChatController::class, 'getMessages']);   // listar mensajes
+        Route::post('/updateMessage', [ChatController::class, 'updateMessage']); // Actualizar mensaje estado
         Route::post('/send-message', [ChatController::class, 'sendMessage']); // enviar mensaje
     });
 
