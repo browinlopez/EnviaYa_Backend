@@ -25,7 +25,7 @@
                     <div class="services-style-two-item">
                         <div class="info">
                             <div class="thumb">
-                                <img src="{{ asset('landing/assets/img/800x800.png') }}" alt="Tiendas de barrio">
+                                <img src="{{ asset('landing/assets/img/blog/3-3.jpg') }}" alt="Tiendas de barrio">
                             </div>
                             <p>
                                 Compra productos de la tienda de tu barrio
@@ -43,7 +43,7 @@
                     <div class="services-style-two-item">
                         <div class="info">
                             <div class="thumb">
-                                <img src="{{ asset('landing/assets/img/800x800.png') }}" alt="Entrega rápida">
+                                <img src="{{ asset('landing/assets/img/service/d1.jpg') }}" alt="Entrega rápida">
                             </div>
                             <p>
                                 Entregas rápidas dentro del barrio,
@@ -61,7 +61,7 @@
                     <div class="services-style-two-item">
                         <div class="info">
                             <div class="thumb">
-                                <img src="{{ asset('landing/assets/img/800x800.png') }}" alt="Apoyo al tendero">
+                                <img src="{{ asset('landing/assets/img/service/d2.jpg') }}" alt="Apoyo al tendero">
                             </div>
                             <p>
                                 Cada pedido impulsa a los tenderos locales
@@ -79,7 +79,7 @@
                     <div class="services-style-two-item">
                         <div class="info">
                             <div class="thumb">
-                                <img src="{{ asset('landing/assets/img/800x800.png') }}" alt="Fácil de usar">
+                                <img src="{{ asset('landing/assets/img/service/d3.jpg') }}" alt="Fácil de usar">
                             </div>
                             <p>
                                 Pide desde tu celular o computador de forma
