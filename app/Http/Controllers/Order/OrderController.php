@@ -49,6 +49,8 @@ class OrderController extends Controller
                 'busines_id' => $order->busines_id,
                 'total' => $order->total,
                 'sale_date' => $order->sale_date,
+                'is_scheduled' => $order->is_scheduled,
+                'delivery_date' => $order->delivery_date,
                 'state' => $order->state,
                 'business' => [
                     'business_id' => $order->business->busines_id,
