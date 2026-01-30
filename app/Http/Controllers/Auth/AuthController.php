@@ -20,7 +20,8 @@ class AuthController extends Controller
             'name'               => 'required|string|max:255',
             'email'              => 'required|string|email|unique:user,email',
             'password'           => 'required|string|min:6',
-            'belongs_to_complex' => 'required|boolean',
+            'phone'              => 'string|max:20',
+            'belongs_to_complex' => 'boolean',
             'complex_id'         => 'nullable|integer|exists:residential_complexes,complex_id',
         ]);
 
@@ -31,7 +32,8 @@ class AuthController extends Controller
                     'name'     => $validated['name'],
                     'email'    => $validated['email'],
                     'password' => Hash::make($validated['password']),
-                    'rol'      => 1, // rol de comprador
+                    'phone'    => $validated['phone'],
+                    'rol'      => 1,
                     'state'    => true,
                 ]);
 
@@ -42,7 +44,7 @@ class AuthController extends Controller
                     'state' => true,
                 ]);
 
-                // Si pertenece a conjunto y se envió complex_id, crear relación con modelo
+                // Si pertenece a conjunto y se envió complex_id
                 if ($validated['belongs_to_complex'] && !empty($validated['complex_id'])) {
                     BuyerComplex::create([
                         'buyer_id'   => $buyer->buyer_id,
@@ -61,6 +63,18 @@ class AuthController extends Controller
             });
 
             return response()->json($result, 201);
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Capturamos error de correo duplicado
+            if ($e->errorInfo[1] == 1062) { // 1062 es código MySQL para duplicado
+                return response()->json([
+                    'message' => 'El correo ya está registrado'
+                ], 409);
+            }
+
+            return response()->json([
+                'message' => 'Error al registrar el usuario',
+                'error' => $e->getMessage()
+            ], 500);
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Error al registrar el usuario',
@@ -102,7 +116,6 @@ class AuthController extends Controller
             'token' => $token,
         ]);
     }
-
 
     // Logout
     public function logout(Request $request)
