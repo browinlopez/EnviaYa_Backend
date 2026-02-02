@@ -227,36 +227,44 @@ class OrderController extends Controller
 
     public function incomeBusiness(Request $request)
     {
-        // Solo valida business_id
         $request->validate([
             'business_id' => 'required|integer|exists:business,busines_id',
         ]);
 
         $business_id = $request->business_id;
 
-        // --- Fechas actuales (sin parámetros) ---
-        $week_start = now()->startOfWeek();
-        $week_end   = (clone $week_start)->endOfWeek();
-
-        $month_start = now()->startOfMonth();
-        $month_end   = (clone $month_start)->endOfMonth();
+        /**
+         * SEMANA ACTUAL
+         */
+        $currentWeekStart = now()->startOfWeek();
+        $currentWeekEnd   = (clone $currentWeekStart)->endOfWeek();
 
         /**
-         * Ingresos semanales
+         * SEMANA ANTERIOR
+         */
+        $previousWeekStart = (clone $currentWeekStart)->subWeek();
+        $previousWeekEnd   = (clone $previousWeekStart)->endOfWeek();
+
+        /**
+         * INGRESOS POR DÍA (SEMANA ACTUAL)
          */
         $incomeWeek = Payment::select(
             DB::raw('DAYOFWEEK(payment_date) as weekday'),
             DB::raw('SUM(total) as total_income')
         )
-            ->whereHas('order', function ($q) use ($business_id) {
-                $q->where('busines_id', $business_id);
-            })
-            ->whereBetween('payment_date', [$week_start->toDateString(), $week_end->toDateString()])
+            ->whereHas(
+                'order',
+                fn($q) =>
+                $q->where('busines_id', $business_id)
+            )
+            ->whereBetween(
+                'payment_date',
+                [$currentWeekStart->toDateString(), $currentWeekEnd->toDateString()]
+            )
             ->groupBy('weekday')
             ->get()
             ->keyBy('weekday');
 
-        // Mapear días de la semana
         $daysOfWeek = [
             2 => 'Lunes',
             3 => 'Martes',
@@ -273,33 +281,79 @@ class OrderController extends Controller
         }
 
         /**
-         * Ingresos mensuales
+         * TOTAL SEMANA ACTUAL
          */
-        $incomeMonth = Payment::whereHas('order', function ($q) use ($business_id) {
-            $q->where('busines_id', $business_id);
-        })
-            ->whereBetween('payment_date', [$month_start->toDateString(), $month_end->toDateString()])
+        $currentWeekTotal = array_sum($weeklyIncome);
+
+        /**
+         * TOTAL SEMANA ANTERIOR
+         */
+        $previousWeekTotal = Payment::whereHas(
+            'order',
+            fn($q) =>
+            $q->where('busines_id', $business_id)
+        )
+            ->whereBetween(
+                'payment_date',
+                [$previousWeekStart->toDateString(), $previousWeekEnd->toDateString()]
+            )
             ->sum('total');
 
         /**
-         * Total histórico
+         * DIFERENCIAS
          */
-        $incomeTotal = Payment::whereHas('order', function ($q) use ($business_id) {
-            $q->where('busines_id', $business_id);
-        })
+        $difference = $currentWeekTotal - $previousWeekTotal;
+        $percentageChange = $previousWeekTotal > 0
+            ? ($difference / $previousWeekTotal) * 100
+            : 100;
+
+        /**
+         * MES ACTUAL
+         */
+        $month_start = now()->startOfMonth();
+        $month_end   = (clone $month_start)->endOfMonth();
+
+        $monthlyIncome = Payment::whereHas(
+            'order',
+            fn($q) =>
+            $q->where('busines_id', $business_id)
+        )
+            ->whereBetween(
+                'payment_date',
+                [$month_start->toDateString(), $month_end->toDateString()]
+            )
             ->sum('total');
 
+        /**
+         * TOTAL HISTÓRICO
+         */
+        $totalIncome = Payment::whereHas(
+            'order',
+            fn($q) =>
+            $q->where('busines_id', $business_id)
+        )->sum('total');
+
         return response()->json([
-            'business_id'     => $business_id,
-            'week_start'      => $week_start->toDateString(),
-            'week_end'        => $week_end->toDateString(),
-            'weekly_income'   => $weeklyIncome,
-            'month_start'     => $month_start->toDateString(),
-            'month_end'       => $month_end->toDateString(),
-            'monthly_income'  => (float)$incomeMonth,
-            'total_income'    => (float)$incomeTotal
+            'business_id' => $business_id,
+
+            'week_start' => $currentWeekStart->toDateString(),
+            'week_end'   => $currentWeekEnd->toDateString(),
+
+            'weekly_income' => $weeklyIncome,
+
+            'current_week_income'  => (float)$currentWeekTotal,
+            'previous_week_income' => (float)$previousWeekTotal,
+            'difference'            => (float)$difference,
+            'percentage_change'     => round($percentageChange, 2),
+
+            'month_start'    => $month_start->toDateString(),
+            'month_end'      => $month_end->toDateString(),
+            'monthly_income' => (float)$monthlyIncome,
+
+            'total_income' => (float)$totalIncome,
         ]);
     }
+
 
     // Crear orden de venta
     public function store(Request $request)

@@ -176,7 +176,6 @@ class ChatController extends Controller
             'message' => $message,
         ]);
     }
-
     /**
      * Arma el JSON de salida para un chat dado
      */
