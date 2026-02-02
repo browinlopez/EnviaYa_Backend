@@ -20,6 +20,35 @@ class DomiciliaryController extends Controller
         return response()->json($domiciliaries);
     }
 
+    // Listar todos los domiciliarios de un negocio
+    public function listDomiciliariesByBusiness(Request $request)
+    {
+        $request->validate([
+            'busines_id' => 'required|integer|exists:business,busines_id',
+        ]);
+
+        $business = \App\Models\Business::with(['domiciliaries.user'])->findOrFail($request->busines_id);
+
+        $domiciliaries = $business->domiciliaries->map(function ($domiciliary) {
+            return [
+                'domiciliary_id' => $domiciliary->domiciliary_id,
+                'name'           => $domiciliary->user ? $domiciliary->user->name : null,
+                'email'          => $domiciliary->user ? $domiciliary->user->email : null,
+                'phone'          => $domiciliary->user ? $domiciliary->user->phone : null,
+                'available'      => $domiciliary->available,
+                'qualification'  => $domiciliary->qualification,
+                'state'          => $domiciliary->state,
+            ];
+        });
+
+        return response()->json([
+            'busines_id'    => $business->busines_id,
+            'business_name' => $business->name,
+            'domiciliaries' => $domiciliaries
+        ]);
+    }
+
+
     // Crear un domiciliario
     public function createDomiciliary(Request $request)
     {

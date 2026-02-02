@@ -130,6 +130,7 @@ Route::middleware('auth:sanctum')->group(function () {
     //Domiciliario
     Route::prefix('domiciliaries')->group(function () {
         Route::get('/listDomiciliary', [DomiciliaryController::class, 'listDomiciliary']);      // Listar todos
+        Route::get('/listDomiciliariesByBusiness', [DomiciliaryController::class, 'listDomiciliariesByBusiness']);      // Listar todos
         Route::post('/createDomiciliary', [DomiciliaryController::class, 'createDomiciliary']);  // Crear
         Route::post('/showDomiciliary', [DomiciliaryController::class, 'showDomiciliary']);      // Obtener uno
         Route::post('/updateDomiciliary', [DomiciliaryController::class, 'updateDomiciliary']);  // Actualizar
