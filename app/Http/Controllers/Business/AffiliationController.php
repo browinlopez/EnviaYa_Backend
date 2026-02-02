@@ -187,4 +187,60 @@ class AffiliationController extends Controller
             'message' => 'Usuario desafiliado correctamente'
         ]);
     }
+
+    // Listar todos los usuarios afiliados a un negocio
+    public function getAffiliatedUsers(Request $request)
+    {
+        $request->validate([
+            'busines_id' => 'required|integer|exists:business,busines_id',
+        ]);
+
+        $businessId = $request->busines_id;
+
+        $affiliations = BusinessUserAffiliation::where('busines_id', $businessId)
+            ->with([
+                'user' => function ($q) {
+                    $q->select('user_id', 'name', 'email', 'phone', 'rol', 'qualification', 'state')
+                        ->with([
+                            'buyer:buyer_id,user_id,qualification,state,belongs_to_complex',
+                            'domiciliary:domiciliary_id,user_id,available,document,qualification,state',
+                            'rolRelation:rol_id,name'
+                        ]);
+                }
+            ])
+            ->get();
+
+        $formatted = $affiliations->map(function ($aff) {
+            return [
+                'affiliation_id' => $aff->id,
+                'user' => [
+                    'user_id' => $aff->user->user_id,
+                    'name' => $aff->user->name,
+                    'email' => $aff->user->email,
+                    'phone' => $aff->user->phone,
+                    'rol' => $aff->user->rolRelation->name ?? null,
+                    'qualification' => $aff->user->qualification,
+                    'state' => $aff->user->state,
+                    'buyer' => $aff->user->buyer ? [
+                        'buyer_id' => $aff->user->buyer->buyer_id,
+                        'qualification' => $aff->user->buyer->qualification,
+                        'belongs_to_complex' => $aff->user->buyer->belongs_to_complex,
+                        'state' => $aff->user->buyer->state,
+                    ] : null,
+                    'domiciliary' => $aff->user->domiciliary ? [
+                        'domiciliary_id' => $aff->user->domiciliary->domiciliary_id,
+                        'document' => $aff->user->domiciliary->document,
+                        'available' => $aff->user->domiciliary->available,
+                        'qualification' => $aff->user->domiciliary->qualification,
+                        'state' => $aff->user->domiciliary->state,
+                    ] : null,
+                ],
+            ];
+        });
+
+        return response()->json([
+            'affiliations' => $formatted,
+            'count' => $formatted->count()
+        ]);
+    }
 }

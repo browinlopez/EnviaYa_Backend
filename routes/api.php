@@ -106,6 +106,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('update', [BusinessController::class, 'update']);
         Route::prefix('affiliations')->group(function () {
             Route::post('/AfiliationUser', [AffiliationController::class, 'AfiliationUser']);
+            Route::post('/getAffiliatedUsers', [AffiliationController::class, 'getAffiliatedUsers']);
             Route::post('/DesafiliationUser', [AffiliationController::class, 'DesafiliationUser']);
             Route::post('toggleBusinesses', [AffiliationController::class, 'toggle']);
             Route::get('usersBusinesses', [AffiliationController::class, 'listUsers']);
