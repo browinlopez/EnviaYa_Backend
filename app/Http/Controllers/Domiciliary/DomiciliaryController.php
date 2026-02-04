@@ -236,36 +236,12 @@ class DomiciliaryController extends Controller
 
     public function incomeDomiciliary(Request $request)
     {
-        // Solo validamos el ID del domiciliario
         $request->validate([
             'domiciliary_id' => 'required|integer|exists:domiciliary,domiciliary_id',
         ]);
 
         $domiciliary_id = $request->domiciliary_id;
 
-        // Fechas actuales (semana y mes)
-        $week_start = now()->startOfWeek();
-        $week_end   = (clone $week_start)->endOfWeek();
-
-        $month_start = now()->startOfMonth();
-        $month_end   = (clone $month_start)->endOfMonth();
-
-        /**
-         * Ganancia semanal (sumar campo "domicilio")
-         */
-        $weekIncome = Payment::select(
-            DB::raw('DAYOFWEEK(payment_date) as weekday'),
-            DB::raw('SUM(domicilio) as total_income')
-        )
-            ->whereHas('order', function ($q) use ($domiciliary_id) {
-                $q->where('domiciliary_id', $domiciliary_id);
-            })
-            ->whereBetween('payment_date', [$week_start->toDateString(), $week_end->toDateString()])
-            ->groupBy('weekday')
-            ->get()
-            ->keyBy('weekday');
-
-        // Mapear días de la semana
         $daysOfWeek = [
             2 => 'Lunes',
             3 => 'Martes',
@@ -276,37 +252,67 @@ class DomiciliaryController extends Controller
             1 => 'Domingo',
         ];
 
-        $weeklyIncome = [];
+        // =========================
+        // SEMANA ACTUAL
+        // =========================
+        $weekStart = now()->startOfWeek();
+        $weekEnd = now()->endOfWeek();
+
+        $currentWeek = Payment::select(
+            DB::raw('DAYOFWEEK(payment_date) as weekday'),
+            DB::raw('SUM(domicilio) as total')
+        )
+            ->whereHas(
+                'order',
+                fn($q) =>
+                $q->where('domiciliary_id', $domiciliary_id)
+            )
+            ->whereBetween('payment_date', [$weekStart, $weekEnd])
+            ->groupBy('weekday')
+            ->get()
+            ->keyBy('weekday');
+
+        // =========================
+        // SEMANA ANTERIOR
+        // =========================
+        $prevWeekStart = now()->subWeek()->startOfWeek();
+        $prevWeekEnd = now()->subWeek()->endOfWeek();
+
+        $previousWeek = Payment::select(
+            DB::raw('DAYOFWEEK(payment_date) as weekday'),
+            DB::raw('SUM(domicilio) as total')
+        )
+            ->whereHas(
+                'order',
+                fn($q) =>
+                $q->where('domiciliary_id', $domiciliary_id)
+            )
+            ->whereBetween('payment_date', [$prevWeekStart, $prevWeekEnd])
+            ->groupBy('weekday')
+            ->get()
+            ->keyBy('weekday');
+
+        // =========================
+        // MAPEO DE DÍAS
+        // =========================
+        $current = [];
+        $previous = [];
+
         foreach ($daysOfWeek as $key => $day) {
-            $weeklyIncome[$day] = (float)($weekIncome[$key]->total_income ?? 0);
+            $current[$day] = (float)($currentWeek[$key]->total ?? 0);
+            $previous[$day] = (float)($previousWeek[$key]->total ?? 0);
         }
 
-        /**
-         * Ganancia mensual (sumar campo "domicilio" de payments del mes)
-         */
-        $monthIncome = Payment::whereHas('order', function ($q) use ($domiciliary_id) {
-            $q->where('domiciliary_id', $domiciliary_id);
-        })
-            ->whereBetween('payment_date', [$month_start->toDateString(), $month_end->toDateString()])
-            ->sum('domicilio');
-
-        /**
-         * Total histórico de ingresos del domiciliario
-         */
-        $totalIncome = Payment::whereHas('order', function ($q) use ($domiciliary_id) {
-            $q->where('domiciliary_id', $domiciliary_id);
-        })
-            ->sum('domicilio');
+        $totalIncome = Payment::whereHas(
+            'order',
+            fn($q) =>
+            $q->where('domiciliary_id', $domiciliary_id)
+        )->sum('domicilio');
 
         return response()->json([
-            'domiciliary_id' => $domiciliary_id,
-            'week_start'     => $week_start->toDateString(),
-            'week_end'       => $week_end->toDateString(),
-            'weekly_income'  => $weeklyIncome,
-            'month_start'    => $month_start->toDateString(),
-            'month_end'      => $month_end->toDateString(),
-            'monthly_income' => (float)$monthIncome,
-            'total_income'   => (float)$totalIncome
+            'weekly_current' => $current,
+            'weekly_previous' => $previous,
+            'total_income' => (float)$totalIncome,
         ]);
     }
 }
