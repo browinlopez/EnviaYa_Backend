@@ -252,9 +252,9 @@ class DomiciliaryController extends Controller
             1 => 'Domingo',
         ];
 
-        // =========================
-        // SEMANA ACTUAL
-        // =========================
+        /* =========================
+       SEMANA ACTUAL
+    ========================== */
         $weekStart = now()->startOfWeek();
         $weekEnd = now()->endOfWeek();
 
@@ -272,9 +272,9 @@ class DomiciliaryController extends Controller
             ->get()
             ->keyBy('weekday');
 
-        // =========================
-        // SEMANA ANTERIOR
-        // =========================
+        /* =========================
+       SEMANA ANTERIOR
+    ========================== */
         $prevWeekStart = now()->subWeek()->startOfWeek();
         $prevWeekEnd = now()->subWeek()->endOfWeek();
 
@@ -292,17 +292,38 @@ class DomiciliaryController extends Controller
             ->get()
             ->keyBy('weekday');
 
-        // =========================
-        // MAPEO DE DÍAS
-        // =========================
+        /* =========================
+       MAPEO DE DÍAS
+    ========================== */
         $current = [];
         $previous = [];
+        $currentWeekTotal = 0;
+        $previousWeekTotal = 0;
 
         foreach ($daysOfWeek as $key => $day) {
-            $current[$day] = (float)($currentWeek[$key]->total ?? 0);
-            $previous[$day] = (float)($previousWeek[$key]->total ?? 0);
+            $currentValue = (float) ($currentWeek[$key]->total ?? 0);
+            $previousValue = (float) ($previousWeek[$key]->total ?? 0);
+
+            $current[$day] = $currentValue;
+            $previous[$day] = $previousValue;
+
+            $currentWeekTotal += $currentValue;
+            $previousWeekTotal += $previousValue;
         }
 
+        /* =========================
+       CRECIMIENTO %
+    ========================== */
+        if ($previousWeekTotal > 0) {
+            $weeklyGrowthPercent =
+                (($currentWeekTotal - $previousWeekTotal) / $previousWeekTotal) * 100;
+        } else {
+            $weeklyGrowthPercent = $currentWeekTotal > 0 ? 100 : 0;
+        }
+
+        /* =========================
+       TOTAL HISTÓRICO
+    ========================== */
         $totalIncome = Payment::whereHas(
             'order',
             fn($q) =>
@@ -312,7 +333,10 @@ class DomiciliaryController extends Controller
         return response()->json([
             'weekly_current' => $current,
             'weekly_previous' => $previous,
-            'total_income' => (float)$totalIncome,
+            'weekly_current_total' => $currentWeekTotal,
+            'weekly_previous_total' => $previousWeekTotal,
+            'weekly_growth_percent' => round($weeklyGrowthPercent, 2),
+            'total_income' => (float) $totalIncome,
         ]);
     }
 }

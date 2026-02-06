@@ -354,7 +354,6 @@ class OrderController extends Controller
         ]);
     }
 
-
     // Crear orden de venta
     public function store(Request $request)
     {
@@ -614,7 +613,7 @@ class OrderController extends Controller
                     'orderSales_id' => $order->orderSales_id,
                     'methods_id' => $order->methods_id,
                     'forms_id' => $order->forms_id,
-                    'amount' => $total,
+                    'amount' => /* $total */ 1,
                     'subtotal' => $subtotal,
                     'total' => $total,
                     'domicilio' => $domicilio,

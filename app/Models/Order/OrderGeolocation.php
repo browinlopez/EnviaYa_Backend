@@ -8,7 +8,7 @@ class OrderGeolocation extends Model
 {
     protected $table = 'order_geolocation';
     protected $primaryKey = 'geolocation_id';
-    public $timestamps = false;
+    public $timestamps = true;
 
     protected $fillable = [
         'domiciliary_id',
