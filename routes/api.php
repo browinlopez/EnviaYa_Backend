@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Http\Controllers\Business\AffiliationController;
 use App\Http\Controllers\Business\BusinessController;
 use App\Http\Controllers\Business\BusinessUserFavoriteController;
@@ -28,11 +29,10 @@ Route::get('categories-business/indexFree', [CategoryBusinessController::class, 
 Route::get('categories-free/', [CategoryController::class, 'index']);
 Route::get('top-businesses-free', [BusinessController::class, 'indexByQualification']);
 
-Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
-    $request->fulfill();
 
-    return redirect('https://vecipaya.com/verificado');
-})->middleware(['signed'])->name('verification.verify');
+Route::get('/email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
+    ->middleware(['signed'])
+    ->name('verification.verify');
 
 Route::middleware('auth:sanctum')->group(function () {
     //Auth
