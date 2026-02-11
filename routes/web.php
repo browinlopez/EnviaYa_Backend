@@ -19,7 +19,7 @@ Route::get('/', function () {
 
 Route::get('/test-mail', function () {
     try {
-        Mail::raw('Prueba SMTP VeciPaYa ojala sirva', function ($msg) {
+        Mail::raw('Prueba SMTP VeciPaYa ojala sirvas', function ($msg) {
             $msg->to('browin49@gmail.com')
                 ->subject('SMTP OK');
         });
