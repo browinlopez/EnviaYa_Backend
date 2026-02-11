@@ -10,10 +10,23 @@ use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\ResidentialComplexController;
 use App\Http\Controllers\ProfileController;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('home/index');
+});
+
+Route::get('/test-mail', function () {
+    try {
+        Mail::raw('Prueba SMTP VeciPaYa', function ($msg) {
+            $msg->to('browin49@gmail.com')
+                ->subject('SMTP OK');
+        });
+        return "Correo enviado correctamente ✅";
+    } catch (\Exception $e) {
+        return "Error al enviar correo: " . $e->getMessage();
+    }
 });
 
 /* Route::get('/dashboard', function () {
