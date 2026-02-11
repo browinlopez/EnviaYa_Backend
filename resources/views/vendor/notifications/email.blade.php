@@ -9,8 +9,7 @@
 
 # ¡Bienvenido a VeciPa’Ya! 🎉
 
-Hola **{{ $notifiable->name }}**,  
-gracias por registrarte en **VeciPa’Ya**, la plataforma que conecta a los vecinos con los negocios de su conjunto residencial.
+Gracias por registrarte en **VeciPa’Ya**, la plataforma que conecta a los vecinos con los negocios de su conjunto residencial.
 
 ---
 
