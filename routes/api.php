@@ -17,6 +17,7 @@ use App\Http\Controllers\User\UserController;
 use App\Models\OrdersSales;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Foundation\Auth\EmailVerificationRequest;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -26,6 +27,12 @@ Route::post('/forgot-password', [AuthController::class, 'resetPassword']);
 Route::get('categories-business/indexFree', [CategoryBusinessController::class, 'index']);
 Route::get('categories-free/', [CategoryController::class, 'index']);
 Route::get('top-businesses-free', [BusinessController::class, 'indexByQualification']);
+
+Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
+    $request->fulfill();
+
+    return redirect('https://vecipaya.com/verificado');
+})->middleware(['signed'])->name('verification.verify');
 
 Route::middleware('auth:sanctum')->group(function () {
     //Auth

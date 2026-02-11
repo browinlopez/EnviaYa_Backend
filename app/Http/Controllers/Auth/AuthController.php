@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Auth\Events\Registered;
 
 class AuthController extends Controller
 {
@@ -26,25 +27,23 @@ class AuthController extends Controller
         ]);
 
         try {
-            $result = DB::transaction(function () use ($validated) {
-                // Crear usuario
+            DB::transaction(function () use ($validated) {
+
                 $user = User::create([
                     'name'     => $validated['name'],
                     'email'    => $validated['email'],
                     'password' => Hash::make($validated['password']),
-                    'phone'    => $validated['phone'],
+                    'phone'    => $validated['phone'] ?? null,
                     'rol'      => 1,
                     'state'    => true,
                 ]);
 
-                // Crear perfil de buyer
                 $buyer = Buyer::create([
                     'user_id' => $user->user_id,
                     'qualification' => 0.00,
                     'state' => true,
                 ]);
 
-                // Si pertenece a conjunto y se envió complex_id
                 if ($validated['belongs_to_complex'] && !empty($validated['complex_id'])) {
                     BuyerComplex::create([
                         'buyer_id'   => $buyer->buyer_id,
@@ -52,30 +51,20 @@ class AuthController extends Controller
                     ]);
                 }
 
-                // Crear token
-                $token = $user->createToken('auth_token')->plainTextToken;
-
-                return [
-                    'user'  => $user,
-                    'buyer' => $buyer,
-                    'token' => $token,
-                ];
+                // 🔔 ENVÍA CORREO DE VERIFICACIÓN
+                event(new Registered($user));
             });
 
-            return response()->json($result, 201);
+            return response()->json([
+                'message' => 'Registro exitoso. Revisa tu correo para verificar tu cuenta.'
+            ], 201);
         } catch (\Illuminate\Database\QueryException $e) {
-            // Capturamos error de correo duplicado
-            if ($e->errorInfo[1] == 1062) { // 1062 es código MySQL para duplicado
+            if ($e->errorInfo[1] == 1062) {
                 return response()->json([
                     'message' => 'El correo ya está registrado'
                 ], 409);
             }
 
-            return response()->json([
-                'message' => 'Error al registrar el usuario',
-                'error' => $e->getMessage()
-            ], 500);
-        } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Error al registrar el usuario',
                 'error' => $e->getMessage()
@@ -97,17 +86,20 @@ class AuthController extends Controller
             return response()->json(['message' => 'Credenciales incorrectas'], 401);
         }
 
+        // ⛔ BLOQUEAR SI NO VERIFICÓ CORREO
+        if (!$user->hasVerifiedEmail()) {
+            return response()->json([
+                'message' => 'Debes verificar tu correo antes de iniciar sesión'
+            ], 403);
+        }
+
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        // Cargar la relación según el rol
         if ($user->rol == 1) {
-            // Buyer
             $user->load('buyer');
         } elseif ($user->rol == 2) {
-            // Owner + sus negocios
             $user->load(['owner.businesses']);
         } elseif ($user->rol == 3) {
-            // Domiciliario + negocios (si aplica)
             $user->load(['domiciliary.businesses']);
         }
 
@@ -116,6 +108,7 @@ class AuthController extends Controller
             'token' => $token,
         ]);
     }
+
 
     // Logout
     public function logout(Request $request)
