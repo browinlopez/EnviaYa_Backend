@@ -62,7 +62,7 @@ class AuthController extends Controller
             );
 
             // Enviar correo manualmente usando Mailable
-            \Mail::to($user->email)->send(new \App\Mail\VerifyEmail($user, $actionUrl));
+           $user->sendEmailVerificationNotification();
 
             // Opcional: disparar evento registrado
             event(new Registered($user));
