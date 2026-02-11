@@ -17,7 +17,7 @@ Route::get('/', function () {
     return view('home/index');
 });
 
-Route::get('/test-mail', function () {
+/* Route::get('/test-mail', function () {
     try {
         Mail::raw('Prueba SMTP VeciPaYa ojala sirvas 2', function ($msg) {
             $msg->to('browin49@gmail.com')
@@ -27,7 +27,7 @@ Route::get('/test-mail', function () {
     } catch (\Exception $e) {
         return "Error al enviar correo: " . $e->getMessage();
     }
-});
+}); */
 
 /* Route::get('/dashboard', function () {
     return view('dashboard');

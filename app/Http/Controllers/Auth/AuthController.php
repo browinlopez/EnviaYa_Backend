@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Auth\Events\Registered;
+use Illuminate\Support\Facades\URL;
 
 class AuthController extends Controller
 {
@@ -50,7 +51,21 @@ class AuthController extends Controller
                         'complex_id' => $validated['complex_id'],
                     ]);
                 }
-                  $user->sendEmailVerificationNotification();
+                  // 🔹 Generar URL de verificación correcta con prefijo /v1
+            $actionUrl = URL::temporarySignedRoute(
+                'verification.verify',            // Nombre de la ruta
+                now()->addMinutes(60),            // Expira en 60 min
+                [
+                    'id'   => $user->user_id,
+                    'hash' => sha1($user->email),
+                ]
+            );
+
+            // Enviar correo manualmente usando Mailable
+            \Mail::to($user->email)->send(new \App\Mail\VerifyEmail($user, $actionUrl));
+
+            // Opcional: disparar evento registrado
+            event(new Registered($user));
 
             });
 
