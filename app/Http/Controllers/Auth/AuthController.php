@@ -50,6 +50,7 @@ class AuthController extends Controller
                         'complex_id' => $validated['complex_id'],
                     ]);
                 }
+                  $user->sendEmailVerificationNotification();
 
                 // 🔔 ENVÍA CORREO DE VERIFICACIÓN
                 event(new Registered($user));
