@@ -29,10 +29,10 @@ Route::get('categories-business/indexFree', [CategoryBusinessController::class, 
 Route::get('categories-free/', [CategoryController::class, 'index']);
 Route::get('top-businesses-free', [BusinessController::class, 'indexByQualification']);
 
-
-Route::get('/email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
-    ->middleware(['signed'])
-    ->name('verification.verify');
+ // 🔹 ESTE ES EL IMPORTANTE
+    Route::get('/email/verify/{id}/{hash}', EmailVerificationController::class)
+        ->middleware(['signed'])
+        ->name('verification.verify');
 
 Route::middleware('auth:sanctum')->group(function () {
     //Auth
