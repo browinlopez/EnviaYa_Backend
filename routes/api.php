@@ -30,7 +30,6 @@ Route::get('categories-free/', [CategoryController::class, 'index']);
 Route::get('top-businesses-free', [BusinessController::class, 'indexByQualification']);
 
 // Envio de correos de verificación
-Route::post('/verify-email', [AuthController::class, 'verify']);
 Route::post(
     '/email/resend-verification',
     [AuthController::class, 'resendVerificationEmail']

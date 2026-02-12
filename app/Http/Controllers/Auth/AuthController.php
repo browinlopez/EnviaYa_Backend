@@ -87,17 +87,19 @@ class AuthController extends Controller
         $user = User::where('email_verification_token', $request->token)->first();
 
         if (!$user) {
-            return response()->json(['message' => 'Token inválido'], 400);
+            return view('auth.verify-error', [
+                'message' => 'Token inválido'
+            ]);
         }
 
         if ($user->email_verified_at) {
-            return response()->json(['message' => 'El correo ya fue verificado']);
+            return view('auth.verify-success');
         }
 
         if ($user->email_verification_expires_at < Carbon::now()) {
-            return response()->json([
+            return view('auth.verify-error', [
                 'message' => 'El enlace de verificación ha expirado'
-            ], 410);
+            ]);
         }
 
         $user->update([
@@ -106,10 +108,9 @@ class AuthController extends Controller
             'email_verification_expires_at' => null,
         ]);
 
-        return response()->json([
-            'message' => 'Correo verificado correctamente'
-        ]);
+        return view('auth.verify-success');
     }
+
 
     private function sendVerificationEmail(User $user)
     {

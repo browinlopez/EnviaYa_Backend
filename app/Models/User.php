@@ -31,7 +31,9 @@ class User extends Authenticatable implements Auditable, MustVerifyEmail
         'address',
         'rol',
         'qualification',
-        'state'
+        'state',
+        'email_verification_token',
+        'email_verified_at',
     ];
 
     protected $hidden = ['password', 'remember_token'];
