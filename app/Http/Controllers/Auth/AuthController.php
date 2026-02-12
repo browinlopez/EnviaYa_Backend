@@ -128,42 +128,43 @@ class AuthController extends Controller
     public function resendVerificationEmail(Request $request)
     {
         $request->validate([
-            'email' => 'required|email'
+            'email' => 'required|email',
         ]);
 
         $user = User::where('email', $request->email)->first();
 
-        // 🔒 Mensaje genérico (seguridad)
+        // 🔒 Respuesta genérica (evita enumeración de usuarios)
         if (!$user) {
             return response()->json([
                 'message' => 'Si el correo existe, se enviará un enlace de verificación.'
-            ]);
+            ], 200);
         }
 
+        // ✅ Ya verificado
         if ($user->email_verified_at) {
             return response()->json([
                 'message' => 'El correo ya está verificado.'
-            ]);
+            ], 200);
         }
 
-        // ⏳ Si no tiene token o expiró, regenerar
+        // ⏳ Generar nuevo token si no existe o expiró
         if (
             !$user->email_verification_token ||
             !$user->email_verification_expires_at ||
-            $user->email_verification_expires_at < Carbon::now()
+            $user->email_verification_expires_at->isPast()
         ) {
             $user->update([
                 'email_verification_token' => Str::random(60),
-                'email_verification_expires_at' => Carbon::now()->addMinutes(60),
+                'email_verification_expires_at' => now()->addMinutes(60),
             ]);
         }
 
-        // 📩 Reenviar correo
+        // 📩 Enviar correo
         $this->sendVerificationEmail($user);
 
         return response()->json([
             'message' => 'Si el correo existe, se ha enviado el enlace de verificación.'
-        ]);
+        ], 200);
     }
 
     // Login
