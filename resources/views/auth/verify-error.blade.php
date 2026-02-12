@@ -99,7 +99,7 @@
             {{ $message ?? 'El enlace de verificación no es válido o ha expirado.' }}
         </p>
 
-        <a href="https://vecipaya.com" class="button">
+        <a href="https://api.vecipaya.com" class="button">
             Volver a VeciPa’Ya
         </a>
 

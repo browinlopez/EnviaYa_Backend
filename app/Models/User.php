@@ -38,7 +38,12 @@ class User extends Authenticatable implements Auditable, MustVerifyEmail
 
     protected $hidden = ['password', 'remember_token'];
 
-    protected $casts = ['state' => 'boolean'];
+    protected $casts = [
+        'state' => 'boolean',
+        'email_verified_at' => 'datetime',
+        'email_verification_expires_at' => 'datetime',
+    ];
+
 
     // Relaciones
     public function rolRelation()

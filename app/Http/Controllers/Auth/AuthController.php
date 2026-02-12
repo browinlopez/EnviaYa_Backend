@@ -96,7 +96,10 @@ class AuthController extends Controller
             return view('auth.verify-success');
         }
 
-        if ($user->email_verification_expires_at < Carbon::now()) {
+        if (
+            !$user->email_verification_expires_at ||
+            $user->email_verification_expires_at->isPast()
+        ) {
             return view('auth.verify-error', [
                 'message' => 'El enlace de verificación ha expirado'
             ]);
@@ -110,7 +113,6 @@ class AuthController extends Controller
 
         return view('auth.verify-success');
     }
-
 
     private function sendVerificationEmail(User $user)
     {
