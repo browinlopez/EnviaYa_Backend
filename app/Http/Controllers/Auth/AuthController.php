@@ -20,9 +20,9 @@ class AuthController extends Controller
     {
         $validated = $request->validate([
             'name'               => 'required|string|max:255',
-            'email'              => 'required|string|email|unique:user,email',
+            'email'              => 'required|string|email|unique:users,email',
             'password'           => 'required|string|min:6',
-            'phone'              => 'string|max:20',
+            'phone'              => 'nullable|string|max:20',
             'belongs_to_complex' => 'boolean',
             'complex_id'         => 'nullable|integer|exists:residential_complexes,complex_id',
         ]);
@@ -30,6 +30,7 @@ class AuthController extends Controller
         try {
             DB::transaction(function () use ($validated) {
 
+                // 1️⃣ Crear usuario
                 $user = User::create([
                     'name'     => $validated['name'],
                     'email'    => $validated['email'],
@@ -39,34 +40,26 @@ class AuthController extends Controller
                     'state'    => true,
                 ]);
 
+                // 2️⃣ Crear buyer asociado
                 $buyer = Buyer::create([
-                    'user_id' => $user->user_id,
+                    'user_id'      => $user->user_id,
                     'qualification' => 0.00,
-                    'state' => true,
+                    'state'        => true,
                 ]);
 
+                // 3️⃣ Asignar a complejo si aplica
                 if ($validated['belongs_to_complex'] && !empty($validated['complex_id'])) {
                     BuyerComplex::create([
                         'buyer_id'   => $buyer->buyer_id,
                         'complex_id' => $validated['complex_id'],
                     ]);
                 }
-                  // 🔹 Generar URL de verificación correcta con prefijo /v1
-            $actionUrl = URL::temporarySignedRoute(
-                'verification.verify',            // Nombre de la ruta
-                now()->addMinutes(60),            // Expira en 60 min
-                [
-                    'id'   => $user->user_id,
-                    'hash' => sha1($user->email),
-                ]
-            );
 
-            // Enviar correo manualmente usando Mailable
-           $user->sendEmailVerificationNotification();
+                // 4️⃣ Enviar correo de verificación de Laravel
+                $user->sendEmailVerificationNotification();
 
-            // Opcional: disparar evento registrado
-            event(new Registered($user));
-
+                // 5️⃣ Disparar evento Registered (opcional)
+                event(new Registered($user));
             });
 
             return response()->json([
@@ -85,6 +78,7 @@ class AuthController extends Controller
             ], 500);
         }
     }
+
 
     // Login
     public function login(Request $request)
