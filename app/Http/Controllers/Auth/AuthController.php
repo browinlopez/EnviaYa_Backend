@@ -58,10 +58,6 @@ class AuthController extends Controller
                     ]);
                 }
 
-                $actionUrl = config('app.frontend_url')
-                    . '/verify-email?token='
-                    . $user->email_verification_token;
-
                 $this->sendVerificationEmail($user);
             });
 
@@ -115,10 +111,9 @@ class AuthController extends Controller
         ]);
     }
 
-
     private function sendVerificationEmail(User $user)
     {
-        $actionUrl = config('app.frontend_url')
+        $actionUrl = config('app.url') // 👈 BACKEND
             . '/verify-email?token='
             . $user->email_verification_token;
 
