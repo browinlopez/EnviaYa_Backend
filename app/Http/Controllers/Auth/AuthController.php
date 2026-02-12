@@ -6,12 +6,16 @@ use App\Http\Controllers\Controller;
 use App\Models\Buyer\Buyer;
 use App\Models\Buyer\BuyerComplex;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Auth\Events\Registered;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
+use App\Mail\VerifyEmailCustomMail;
 
 class AuthController extends Controller
 {
@@ -30,7 +34,6 @@ class AuthController extends Controller
         try {
             DB::transaction(function () use ($validated) {
 
-                // 1️⃣ Crear usuario
                 $user = User::create([
                     'name'     => $validated['name'],
                     'email'    => $validated['email'],
@@ -38,28 +41,28 @@ class AuthController extends Controller
                     'phone'    => $validated['phone'] ?? null,
                     'rol'      => 1,
                     'state'    => true,
+                    'email_verification_token' => Str::random(60),
+                    'email_verification_expires_at' => Carbon::now()->addMinutes(60),
                 ]);
 
-                // 2️⃣ Crear buyer asociado
                 $buyer = Buyer::create([
-                    'user_id'      => $user->user_id,
+                    'user_id' => $user->user_id,
                     'qualification' => 0.00,
-                    'state'        => true,
+                    'state' => true,
                 ]);
 
-                // 3️⃣ Asignar a complejo si aplica
                 if ($validated['belongs_to_complex'] && !empty($validated['complex_id'])) {
                     BuyerComplex::create([
-                        'buyer_id'   => $buyer->buyer_id,
+                        'buyer_id' => $buyer->buyer_id,
                         'complex_id' => $validated['complex_id'],
                     ]);
                 }
 
-                // 4️⃣ Enviar correo de verificación de Laravel
-                $user->sendEmailVerificationNotification();
+                $actionUrl = config('app.frontend_url')
+                    . '/verify-email?token='
+                    . $user->email_verification_token;
 
-                // 5️⃣ Disparar evento Registered (opcional)
-                event(new Registered($user));
+                $this->sendVerificationEmail($user);
             });
 
             return response()->json([
@@ -79,6 +82,91 @@ class AuthController extends Controller
         }
     }
 
+    public function verify(Request $request)
+    {
+        $request->validate([
+            'token' => 'required|string'
+        ]);
+
+        $user = User::where('email_verification_token', $request->token)->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'Token inválido'], 400);
+        }
+
+        if ($user->email_verified_at) {
+            return response()->json(['message' => 'El correo ya fue verificado']);
+        }
+
+        if ($user->email_verification_expires_at < Carbon::now()) {
+            return response()->json([
+                'message' => 'El enlace de verificación ha expirado'
+            ], 410);
+        }
+
+        $user->update([
+            'email_verified_at' => Carbon::now(),
+            'email_verification_token' => null,
+            'email_verification_expires_at' => null,
+        ]);
+
+        return response()->json([
+            'message' => 'Correo verificado correctamente'
+        ]);
+    }
+
+
+    private function sendVerificationEmail(User $user)
+    {
+        $actionUrl = config('app.frontend_url')
+            . '/verify-email?token='
+            . $user->email_verification_token;
+
+        Mail::to($user->email)->send(
+            new VerifyEmailCustomMail($actionUrl)
+        );
+    }
+
+    public function resendVerificationEmail(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email'
+        ]);
+
+        $user = User::where('email', $request->email)->first();
+
+        // 🔒 Mensaje genérico (seguridad)
+        if (!$user) {
+            return response()->json([
+                'message' => 'Si el correo existe, se enviará un enlace de verificación.'
+            ]);
+        }
+
+        if ($user->email_verified_at) {
+            return response()->json([
+                'message' => 'El correo ya está verificado.'
+            ]);
+        }
+
+        // ⏳ Si no tiene token o expiró, regenerar
+        if (
+            !$user->email_verification_token ||
+            !$user->email_verification_expires_at ||
+            $user->email_verification_expires_at < Carbon::now()
+        ) {
+            $user->update([
+                'email_verification_token' => Str::random(60),
+                'email_verification_expires_at' => Carbon::now()->addMinutes(60),
+            ]);
+        }
+
+        // 📩 Reenviar correo
+        $this->sendVerificationEmail($user);
+
+        return response()->json([
+            'message' => 'Si el correo existe, se ha enviado el enlace de verificación.'
+        ]);
+    }
 
     // Login
     public function login(Request $request)

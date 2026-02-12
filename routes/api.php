@@ -29,10 +29,12 @@ Route::get('categories-business/indexFree', [CategoryBusinessController::class, 
 Route::get('categories-free/', [CategoryController::class, 'index']);
 Route::get('top-businesses-free', [BusinessController::class, 'indexByQualification']);
 
- // 🔹 ESTE ES EL IMPORTANTE
-    Route::get('/email/verify/{id}/{hash}', EmailVerificationController::class)
-        ->middleware(['signed'])
-        ->name('verification.verify');
+// Envio de correos de verificación
+Route::post('/verify-email', [AuthController::class, 'verify']);
+Route::post(
+    '/email/resend-verification',
+    [AuthController::class, 'resendVerificationEmail']
+)->middleware('throttle:5,10');
 
 Route::middleware('auth:sanctum')->group(function () {
     //Auth
@@ -119,7 +121,6 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('usersBusinesses', [AffiliationController::class, 'listUsers']);
             Route::get('searchBusinesses', [AffiliationController::class, 'searchBuyerByPhone']);
         });
-       
     });
 
     Route::prefix('favorites')->group(function () {
