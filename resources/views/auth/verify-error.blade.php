@@ -88,7 +88,7 @@
 
     <div class="container">
         <div class="logo">
-            <img src="https://vecipaya.com/logo.png" alt="VeciPa’Ya">
+            <img src="{{ asset('landing/assets/img/logo.png') }}" alt="VeciPa’Ya">
         </div>
 
         <div class="error-icon">⚠️</div>

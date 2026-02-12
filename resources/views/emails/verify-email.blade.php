@@ -4,7 +4,7 @@
 
 @component('mail::message')
 <div style="text-align:center;margin-bottom:20px;">
-    <img src="https://api.vecipaya.com/logo.png" width="120" alt="VeciPa’Ya">
+    <img src="{{ asset('landing/assets/img/logo.png') }}"  width="120" alt="VeciPa’Ya">
 </div>
 
 # ¡Bienvenido a VeciPa’Ya! 🎉

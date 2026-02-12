@@ -76,7 +76,7 @@
 
     <div class="container">
         <div class="logo">
-            <img src="https://vecipaya.com/logo.png" alt="VeciPa’Ya">
+            <img src="{{ asset('landing/assets/img/logo.png') }}" alt="VeciPa’Ya">
         </div>
 
         <div class="success-icon">✅</div>
@@ -88,7 +88,7 @@
             Ya puedes disfrutar de todas las funcionalidades de <strong>VeciPa’Ya</strong>.
         </p>
 
-        <a href="https://vecipaya.com" class="button">
+        <a href="https://api.vecipaya.com" class="button">
             Ir a VeciPa’Ya
         </a>
 
