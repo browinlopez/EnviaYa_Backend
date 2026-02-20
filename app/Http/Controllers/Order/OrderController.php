@@ -363,13 +363,13 @@ class OrderController extends Controller
             'user_id' => 'required|integer',
             'busines_id' => 'required|integer',
             'address_id' => 'required|integer|exists:user_address,address_id',
-            'products' => 'required|array',
+            'products' => 'required|array|min:1',
             'products.*.product_id' => 'required|integer',
-            'products.*.amount' => 'required|integer',
-            'products.*.unit_price' => 'required|numeric',
+            'products.*.amount' => 'required|integer|min:1',
+            'products.*.unit_price' => 'required|numeric|min:0',
             'methods_id' => 'required|integer|exists:payment_methods,methods_id',
             'forms_id' => 'nullable|integer|exists:payment_forms,forms_id',
-            'domicilio' => 'required|numeric',
+            'domicilio' => 'required|numeric|min:0',
             'is_scheduled' => 'required|boolean',
             'delivery_date' => 'required_if:is_scheduled,true|date|after:now',
             // Campos necesarios para pago online (método 2)
@@ -426,13 +426,18 @@ class OrderController extends Controller
                 $productBusiness->save();
             }
 
+            // Inicializar variables para la respuesta
+            $bold_reference = null;
+            $intentCreated = null;
+            $paymentCreated = null;
+
             // --- MÉTODO 1: EFECTIVO / CONTRA ENTREGA ---
             if ($request->methods_id == 1) {
                 $subtotal = $order->details->sum(fn($d) => $d['amount'] * $d['unit_price']);
                 $domicilio = $request->domicilio;
                 $totalPayment = $subtotal + $domicilio;
 
-                Payment::create([
+                $paymentCreated = Payment::create([
                     'orderSales_id' => $order->orderSales_id,
                     'methods_id' => 1,
                     'provider' => 'cash',
@@ -451,26 +456,27 @@ class OrderController extends Controller
             }
 
             // --- MÉTODO 2: TARJETA / ONLINE ---
-            $bold_reference = null;
             if ($request->methods_id == 2) {
-
-                // 2️⃣ Crear intención de pago (PaymentIntent) en Bold
-                $intentRequest = [
-                    'orderSales_id' => $order->orderSales_id,
-                ];
-
-                $paymentController = new PaymentController();
-                $intentResponse = $paymentController->createIntent(new Request($intentRequest));
-                $intentData = $intentResponse->getData(true)['intent'] ?? null;
-
-                if (!$intentData) {
-                    throw new \Exception("Error al crear intención de pago en Bold");
+                $requiredCardFields = ['name', 'card_number', 'cardholder_name', 'expiration_month', 'expiration_year', 'cvc'];
+                foreach ($requiredCardFields as $field) {
+                    if (empty($request->payment_method[$field])) {
+                        throw new \Exception("Falta el campo payment_method.$field para procesar pago online");
+                    }
                 }
 
-                // ✅ Tomar la referencia real generada por createIntent
+                // 1️⃣ Crear PaymentIntent
+                $paymentController = new PaymentController();
+                $intentResponse = $paymentController->createIntent(new Request([
+                    'orderSales_id' => $order->orderSales_id
+                ]));
+
+                $intentData = $intentResponse->getData(true)['intent'] ?? null;
+                if (!$intentData) throw new \Exception("Error al crear intención de pago en Bold");
+
                 $bold_reference = $intentData['payload']['reference_id'] ?? $intentData['reference_id'] ?? null;
+                $intentCreated = PaymentIntent::where('orderSales_id', $order->orderSales_id)->latest()->first();
 
-
+                // 2️⃣ Ejecutar pago
                 $paymentRequest = [
                     'orderSales_id' => $order->orderSales_id,
                     'reference_id' => $bold_reference,
@@ -486,13 +492,15 @@ class OrderController extends Controller
                     ]
                 ];
 
-                // Llamada a makePayment de tu PaymentController
-                $boldController = new PaymentController();
-                $response = $boldController->makePayment(new Request($paymentRequest));
-
+                $response = $paymentController->makePayment(new Request($paymentRequest));
                 $boldData = $response->getData(true)['payment'] ?? null;
 
                 if ($boldData) {
+                    $paymentCreated = Payment::where('orderSales_id', $order->orderSales_id)
+                        ->where('provider', 'bold')
+                        ->latest()
+                        ->first();
+
                     $order->payment_state = strtoupper($boldData['status'] ?? '') === 'APPROVED' ? 'paid' : 'denied';
                     $order->save();
                 }
@@ -500,22 +508,7 @@ class OrderController extends Controller
 
             DB::commit();
 
-            // Después de procesar pago online
-            $paymentCreated = null;
-            $intentCreated = null;
-
-            if ($request->methods_id == 2) {
-                $paymentCreated = $boldData ? Payment::where('orderSales_id', $order->orderSales_id)
-                    ->where('provider', 'bold')
-                    ->latest()
-                    ->first() : null;
-
-                $intentCreated = PaymentIntent::where('orderSales_id', $order->orderSales_id)
-                    ->latest()
-                    ->first();
-            }
-
-            // Cargar relaciones necesarias
+            // Cargar relaciones
             $order->load('details.product.category', 'address.municipality.department.country', 'business', 'payments');
 
             return response()->json([
@@ -536,8 +529,8 @@ class OrderController extends Controller
                     'payments' => $order->payments,
                 ],
                 'bold_reference' => $bold_reference,
-                'payment_created' => $paymentCreated,       // <--- pago generado (si hubo)
-                'intent_created' => $intentCreated          // <--- intención de pago (si hubo)
+                'intent_created' => $intentCreated,
+                'payment_created' => $paymentCreated
             ], 201)
                 ->header('Location', url("/api/orders/{$order->orderSales_id}"));
         } catch (\Exception $e) {
