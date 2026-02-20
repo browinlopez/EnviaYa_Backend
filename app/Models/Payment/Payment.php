@@ -19,19 +19,32 @@ class Payment extends Audit
         'orderSales_id',
         'methods_id',
         'forms_id',
+        'provider',
+        'provider_payment_id',
         'amount',
         'subtotal',
         'total',
         'domicilio',
         'valor_promocion',
         'payment_status',
+        'status',
+        'provider_snapshot',
         'payment_date',
         'state'
     ];
 
+    protected $casts = [
+        'provider_snapshot' => 'array',
+    ];
+
     public function order()
     {
-        return $this->belongsTo(OrdersSales::class, 'orderSales_id', 'orderSales_id');
+        return $this->belongsTo(\App\Models\Order\OrdersSales::class, 'orderSales_id');
+    }
+
+    public function intent()
+    {
+        return $this->hasOne(PaymentIntent::class, 'orderSales_id', 'orderSales_id');
     }
 
     public function method()

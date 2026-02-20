@@ -367,6 +367,7 @@ class OrderController extends Controller
             'products.*.unit_price' => 'required|numeric',
             'methods_id' => 'required|integer|exists:payment_methods,methods_id',
             'forms_id' => 'nullable|integer|exists:payment_forms,forms_id',
+            'domicilio' => 'required|decimal:0,2',
             // 🆕 programación
             'is_scheduled' => 'required|boolean',
             'delivery_date' => 'required_if:is_scheduled,true|date|after:now',
@@ -400,13 +401,11 @@ class OrderController extends Controller
                 'forms_id' => $request->forms_id,
                 'total' => $total,
                 'sale_date' => now(),
-                'delivery_date' => $request->is_scheduled
-                    ? $request->delivery_date
-                    : now(),
+                'delivery_date' => $request->is_scheduled ? $request->delivery_date : now(),
                 'is_scheduled' => $request->is_scheduled,
-                'state' => 1
+                'state' => 1,
+                'payment_state' => $request->methods_id == 1 ? 'pending_cash' : 'pending_online'
             ]);
-
 
             $outOfStockProducts = [];
 
@@ -443,42 +442,38 @@ class OrderController extends Controller
                     $productBusiness->amount -= min($productBusiness->amount, $product['amount']);
                     $productBusiness->save();
                 }
-
-                /*// Reducir stock SOLO si NO es una orden programada
-                if (!$request->is_scheduled) {
-                    if ($productBusiness->amount > 0) {
-                        $productBusiness->amount -= min(
-                            $productBusiness->amount,
-                            $product['amount']
-                        );
-                        $productBusiness->save();
-                    }
-                } */
             }
 
-            /**
-             * 👉 Aquí creamos automáticamente el pago
-             * Solo si methods_id != 1 (es decir, pago online u otro)
-             */
-            if ($order->methods_id != 1) {
-                $subtotal = $total; // si tienes otro cálculo, lo reemplazas
-                $domicilio = 2000; // aquí puedes calcular costo domicilio
-                $valorPromocion = 0; // si tienes promociones
-                $totalFinal = $subtotal + $domicilio - $valorPromocion;
+            if ($order->state == 3 && $request->state == 4) {
+                $order->state = 4;
+                $order->delivery_date = now();
 
-                Payment::create([
-                    'orderSales_id' => $order->orderSales_id,
-                    'methods_id' => $order->methods_id,
-                    'forms_id' => $order->forms_id,
-                    'amount' => $totalFinal,
-                    'subtotal' => $subtotal,
-                    'total' => $totalFinal,
-                    'domicilio' => $domicilio,
-                    'valor_promocion' => $valorPromocion,
-                    'payment_status' => 1, // por ejemplo 'pagado'
-                    'payment_date' => now(),
-                    'state' => 1 // activo
-                ]);
+                // SOLO EFECTIVO
+                if ($order->methods_id == 1 && !$order->payments) {
+
+                    $subtotal = $order->details->sum(fn($d) => $d->amount * $d->unit_price);
+                    $domicilio = $request->domicilio; // aquí pones tu cálculo del costo de domicilio
+                    $valorPromocion = 0;
+                    $total = $subtotal + $domicilio - $valorPromocion;
+
+                    Payment::create([
+                        'orderSales_id' => $order->orderSales_id,
+                        'methods_id' => 1,
+                        'forms_id' => $order->forms_id,
+                        'provider' => 'cash',
+                        'amount' => $total,
+                        'subtotal' => $subtotal,
+                        'total' => $total,
+                        'domicilio' => $domicilio,
+                        'valor_promocion' => $valorPromocion,
+                        'payment_status' => 1,
+                        'status' => 'paid',
+                        'payment_date' => now(),
+                        'state' => 1
+                    ]);
+
+                    $order->payment_state = 'paid';
+                }
             }
 
             DB::commit();
@@ -634,29 +629,6 @@ class OrderController extends Controller
             'order' => $order->load('details.product', 'buyer', 'business', 'address', 'payments')
         ]);
     }
-
-    /* public function updateLocation(Request $request)
-    {
-        $data = $request->validate([
-            'domiciliary_id' => 'required|exists:domiciliary,domiciliary_id',
-            'orderSales_id'  => 'required|exists:orderssales,orderSales_id',
-            'latitude'       => 'required|numeric',
-            'longitude'      => 'required|numeric', // antes era 'length'
-            'state'          => 'nullable|integer'
-        ]);
-
-        $geo = OrderGeolocation::create($data);
-
-        // Enviar la ubicación al servidor Node.js
-        Http::post('http://192.168.20.29:3000/location', [
-            'order_id'       => $geo->orderSales_id,
-            'latitude'       => $geo->latitude,
-            'longitude'      => $geo->longitude, // ahora es 'longitude'
-            'domiciliary_id' => $geo->domiciliary_id,
-        ]);
-
-        return response()->json($geo);
-    } */
 
     public function updateLocation(Request $request)
     {

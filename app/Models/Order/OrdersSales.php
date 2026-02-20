@@ -8,7 +8,9 @@ use App\Models\Buyer\Buyer;
 use App\Models\Domiciliary;
 use App\Models\Payment\Payment;
 use App\Models\Payment\PaymentForms;
+use App\Models\Payment\PaymentIntent;
 use App\Models\Payment\PaymentMethods;
+use App\Models\Payment\PaymentTransaction;
 use App\Models\User;
 use App\Models\User\UserAddress;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -41,6 +43,21 @@ class OrdersSales extends Audit
         'sale_date' => 'datetime',
         'delivery_date' => 'datetime',
     ];
+
+    public function paymentIntents()
+    {
+        return $this->hasMany(\App\Models\Payment\PaymentIntent::class, 'orderSales_id');
+    }
+
+    public function paymentTransactions()
+    {
+        return $this->hasManyThrough(
+            PaymentTransaction::class,
+            PaymentIntent::class,
+            'orderSales_id',
+            'payment_intent_id'
+        );
+    }
 
 
     public function buyer()

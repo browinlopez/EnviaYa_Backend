@@ -12,6 +12,7 @@ use App\Http\Controllers\Chat\ChatController;
 use App\Http\Controllers\Domiciliary\DomiciliaryController;
 use App\Http\Controllers\Order\OrderController;
 use App\Http\Controllers\Owner\OwnerController;
+use App\Http\Controllers\Payment\PaymentController;
 use App\Http\Controllers\Product\ProductController;
 use App\Http\Controllers\Review\ReviewController;
 use App\Http\Controllers\User\UserController;
@@ -97,6 +98,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('paymentMethods', [OrderController::class, 'paymentMethods']); // Listar metodos de pago
     Route::get('paymentForms', [OrderController::class, 'paymentForms']); // Listar formas de pago
 
+    //Bold
+    Route::prefix('bold')->group(function () {
+        Route::post('/payment-link', [PaymentController::class, 'createPaymentLink']);
+        Route::get('/payment-link-status', [PaymentController::class, 'checkPaymentLinkStatus']);
+    });
+    
     //Chat
     Route::prefix('chats')->group(function () {
         Route::post('/create', [ChatController::class, 'createChat']);     // crear chat
