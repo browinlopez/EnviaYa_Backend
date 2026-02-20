@@ -25,6 +25,9 @@ return new class extends Migration
             $table->timestamp('payment_date')->nullable();
             $table->tinyInteger('state')->nullable();
 
+              // timestamps de Laravel
+            $table->timestamps();
+
             $table->index('orderSales_id', 'fk_payments_orderSales');
             $table->index('methods_id', 'fk_payments_methods');
             $table->index('forms_id', 'fk_payments_forms');

@@ -13,7 +13,7 @@ class Payment extends Audit
 
     protected $table = 'payments';
     protected $primaryKey = 'payments_id';
-    public $timestamps = false;
+    public $timestamps = true;
 
     protected $fillable = [
         'orderSales_id',

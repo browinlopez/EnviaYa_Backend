@@ -23,6 +23,9 @@ return new class extends Migration
             $table->dateTime('sale_date')->nullable();
             $table->tinyInteger('state')->nullable();
 
+            // timestamps de Laravel
+            $table->timestamps();
+
             // índices + FKs
             $table->index('buyer_id', 'fk_orderssales_buyer');
             $table->index('busines_id', 'fk_orderssales_business');

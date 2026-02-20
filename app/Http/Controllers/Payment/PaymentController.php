@@ -99,50 +99,67 @@ class PaymentController extends Controller
             'payer'                => 'required|array',
             'payment_method'       => 'required|array',
             'payment_method.name'  => 'required|string',
+            'products'             => 'required|array|min:1',
         ]);
 
         $order = OrdersSales::findOrFail($request->orderSales_id);
 
-        // Metadata como objeto (no arreglo)
+        // Metadata como objeto
         $metadata = $request->metadata ?? [
             'key'   => 'order_id',
             'value' => (string) $request->orderSales_id
         ];
 
-        // Construir payer
+        // Normalizar payer
         $payer = [
             'person_type'     => $request->payer['person_type'],
             'name'            => $request->payer['name'],
             'phone'           => $request->payer['phone'],
             'email'           => $request->payer['email'],
             'document_type'   => $request->payer['document_type'],
-            'document_number' => $request->payer['document_number'],
-            'billing_address' => $request->payer['billing_address'],
+            'document_number' => strval($request->payer['document_number']), // convertir a string
+            'billing_address' => [
+                'street1'  => $request->payer['billing_address']['street1'] ?? 'Sin dirección',
+                'street2'  => $request->payer['billing_address']['street2'] ?? '',
+                'city'     => $request->payer['billing_address']['city'] ?? 'Barranquilla',
+                'zip_code' => str_pad($request->payer['billing_address']['zip_code'] ?? '08001', 5, '0', STR_PAD_LEFT),
+                'province' => $request->payer['billing_address']['province'] ?? 'Atlántico',
+                'country'  => $request->payer['billing_address']['country'] ?? 'CO',
+                'phone'    => $request->payer['billing_address']['phone'] ?? $request->payer['phone'],
+            ],
         ];
 
-        // payment_method
+        // Normalizar productos
+        $products = array_map(function ($item) {
+            return [
+                'product_id' => $item['product_id'],
+                'amount'     => intval($item['amount']),
+                'unit_price' => floatval($item['unit_price']), // convertir a número
+            ];
+        }, $request->products);
+
+        // Payment method
         $paymentMethod = [
             'name'         => $request->payment_method['name'],
             'installments' => intval($request->payment_method['installments'] ?? 1),
         ];
 
-        // Si vienen datos de tarjeta (requiere PCI DSS)
         if (!empty($request->payment_method['card_number'])) {
-            $request->validate([
-                'payment_method.card_number'      => 'required|string',
-                'payment_method.cardholder_name'  => 'required|string',
-                'payment_method.expiration_month' => 'required|string',
-                'payment_method.expiration_year'  => 'required|string',
-                'payment_method.cvc'              => 'required|string',
-            ]);
+            $cardNumber = preg_replace('/\D/', '', $request->payment_method['card_number']); // quitar caracteres no numéricos
+            if (strlen($cardNumber) !== 16) {
+                return response()->json([
+                    'message' => 'El número de tarjeta debe tener 16 dígitos'
+                ], 422);
+            }
 
-            $paymentMethod['card_number']      = $request->payment_method['card_number'];
-            $paymentMethod['cardholder_name']  = $request->payment_method['cardholder_name'];
-            $paymentMethod['expiration_month'] = $request->payment_method['expiration_month'];
-            $paymentMethod['expiration_year']  = $request->payment_method['expiration_year'];
-            $paymentMethod['cvc']              = $request->payment_method['cvc'];
+            $paymentMethod = array_merge($paymentMethod, [
+                'card_number'      => $cardNumber,
+                'cardholder_name'  => $request->payment_method['cardholder_name'],
+                'expiration_month' => $request->payment_method['expiration_month'],
+                'expiration_year'  => $request->payment_method['expiration_year'],
+                'cvc'              => $request->payment_method['cvc'],
+            ]);
         } elseif (!empty($request->payment_method['token'])) {
-            // Si usas token desde frontend
             $paymentMethod['token'] = $request->payment_method['token'];
         }
 
@@ -161,14 +178,17 @@ class PaymentController extends Controller
             'time_zone_offset' => now()->offsetHours() * -60,
         ];
 
+        // Body final para Bold
         $body = [
             'reference_id'       => $request->reference_id,
-            'metadata'           => $metadata,  // aquí se queda como objeto
+            'metadata'           => $metadata,
             'payer'              => $payer,
+            'products'           => $products,
             'payment_method'     => $paymentMethod,
             'device_fingerprint' => $deviceFingerprint,
         ];
 
+        // Enviar a Bold
         $response = Http::withHeaders($this->boldHeaders())
             ->post("{$this->boldApiUrl}/v1/payment", $body);
 
@@ -181,6 +201,7 @@ class PaymentController extends Controller
 
         $data = $response->json()['payload'] ?? $response->json();
 
+        // Crear registro de pago
         $payment = Payment::create([
             'orderSales_id'       => $order->orderSales_id,
             'methods_id'          => 2,
@@ -197,9 +218,7 @@ class PaymentController extends Controller
         ]);
 
         if (!empty($data['status']) && strtoupper($data['status']) === 'APPROVED') {
-            $order->update([
-                'payment_state' => 'paid',
-            ]);
+            $order->update(['payment_state' => 'paid']);
         }
 
         return response()->json([

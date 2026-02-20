@@ -22,7 +22,7 @@ class OrdersSales extends Audit
 
     protected $table = 'orderssales';
     protected $primaryKey = 'orderSales_id';
-    public $timestamps = false;
+    public $timestamps = true;
 
     protected $fillable = [
         'buyer_id',
