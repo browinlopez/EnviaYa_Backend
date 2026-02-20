@@ -92,65 +92,97 @@ class PaymentController extends Controller
      * Ejecutar pago con Bold (POST /v1/payment)
      */
     public function makePayment(Request $request)
-{
-    $request->validate([
-        'orderSales_id'        => 'required|integer|exists:orderssales,orderSales_id',
-        'reference_id'         => 'required|string',
-        'payer'                => 'required|array',
-        'payment_method'       => 'required|array',
-        'payment_method.name'  => 'required|string',
-    ]);
+    {
+        $request->validate([
+            'orderSales_id'        => 'required|integer|exists:orderssales,orderSales_id',
+            'reference_id'         => 'required|string',
+            'payer'                => 'required|array',
+            'payment_method'       => 'required|array',
+            'payment_method.name'  => 'required|string',
+        ]);
 
-    $order = OrdersSales::findOrFail($request->orderSales_id);
+        $order = OrdersSales::findOrFail($request->orderSales_id);
 
-    // Body EXACTO que espera Bold
-    $body = [
-        'reference_id'   => $request->reference_id,
-        'payer'          => $request->payer,
-        'payment_method' => $request->payment_method,
-    ];
+        // Body EXACTO que espera Bold
+        $body = [
+            'reference_id'     => $request->reference_id,
+            'metadata'         => $request->metadata ?? [
+                'key' => 'order_id',
+                'value' => (string) $request->orderSales_id
+            ],
+            'payer'            => [
+                'person_type'     => $request->payer['person_type'],
+                'name'            => $request->payer['name'],
+                'phone'           => $request->payer['phone'],
+                'email'           => $request->payer['email'],
+                'document_type'   => $request->payer['document_type'],
+                'document_number' => $request->payer['document_number'],
+                'billing_address' => $request->payer['billing_address']
+            ],
+            'payment_method'   => [
+                'name'             => $request->payment_method['name'],
+                'card_number'      => $request->payment_method['card_number'],
+                'cardholder_name'  => $request->payment_method['cardholder_name'],
+                'expiration_month' => $request->payment_method['expiration_month'],
+                'expiration_year'  => $request->payment_method['expiration_year'],
+                'installments'     => intval($request->payment_method['installments']),
+                'cvc'              => $request->payment_method['cvc']
+            ],
+            'device_fingerprint' => $request->device_fingerprint ?? [
+                'device_type'        => 'WEB',
+                'os'                 => '',
+                'model'              => '',
+                'browser'            => '',
+                'java_enabled'       => false,
+                'language'           => 'es',
+                'color_depth'        => 24,
+                'screen_height'      => 1080,
+                'screen_width'       => 1920,
+                'time_zone_offset'   => 0
+            ]
+        ];
 
-    $response = Http::withHeaders($this->boldHeaders())
-        ->post("{$this->boldApiUrl}/v1/payment", $body);
+        $response = Http::withHeaders($this->boldHeaders())
+            ->post("{$this->boldApiUrl}/v1/payment", $body);
 
-    if ($response->failed()) {
+        if ($response->failed()) {
+            return response()->json([
+                'message' => 'Error al intentar el pago en Bold',
+                'error'   => $response->json()
+            ], 422);
+        }
+
+        $data = $response->json();
+
+        // Guardar intento de pago (SIEMPRE)
+        $payment = Payment::create([
+            'orderSales_id'       => $order->orderSales_id,
+            'methods_id'          => 2,
+            'provider'            => 'bold',
+            'provider_payment_id' => $data['transaction_id'] ?? null,
+            'amount'              => $order->total,
+            'subtotal'            => $order->total,
+            'total'               => $order->total,
+            'payment_status'      => $data['status'] === 'APPROVED' ? 1 : 0,
+            'status'              => strtolower($data['status'] ?? 'unknown'),
+            'provider_snapshot'   => $data,
+            'payment_date'        => now(),
+            'state'               => 1,
+        ]);
+
+        // ✅ SOLO si Bold aprobó
+        if (!empty($data['status']) && $data['status'] === 'APPROVED') {
+            $order->update([
+                'payment_state' => 'paid',
+            ]);
+        }
+
         return response()->json([
-            'message' => 'Error al intentar el pago en Bold',
-            'error'   => $response->json()
-        ], 422);
-    }
-
-    $data = $response->json();
-
-    // Guardar intento de pago (SIEMPRE)
-    $payment = Payment::create([
-        'orderSales_id'       => $order->orderSales_id,
-        'methods_id'          => 2,
-        'provider'            => 'bold',
-        'provider_payment_id' => $data['transaction_id'] ?? null,
-        'amount'              => $order->total,
-        'subtotal'            => $order->total,
-        'total'               => $order->total,
-        'payment_status'      => $data['status'] === 'APPROVED' ? 1 : 0,
-        'status'              => strtolower($data['status'] ?? 'unknown'),
-        'provider_snapshot'   => $data,
-        'payment_date'        => now(),
-        'state'               => 1,
-    ]);
-
-    // ✅ SOLO si Bold aprobó
-    if (!empty($data['status']) && $data['status'] === 'APPROVED') {
-        $order->update([
-            'payment_state' => 'paid',
+            'message' => 'Pago procesado con Bold',
+            'payment' => $payment,
+            'bold_response' => $data
         ]);
     }
-
-    return response()->json([
-        'message' => 'Pago procesado con Bold',
-        'payment' => $payment,
-        'bold_response' => $data
-    ]);
-}
 
     /**
      * Consultar estado del pago (GET /v1/payment/{reference_id})
