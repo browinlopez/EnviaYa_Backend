@@ -467,7 +467,7 @@ class OrderController extends Controller
                 }
 
                 // ✅ Tomar la referencia real generada por createIntent
-$bold_reference = $intentData['payload']['reference_id'] ?? $intentData['reference_id'] ?? null;
+                $bold_reference = $intentData['payload']['reference_id'] ?? $intentData['reference_id'] ?? null;
 
 
                 $paymentRequest = [
@@ -502,25 +502,26 @@ $bold_reference = $intentData['payload']['reference_id'] ?? $intentData['referen
             // Cargar relaciones necesarias
             $order->load('details.product.category', 'address.municipality.department.country', 'business', 'payments');
 
-            return response()->json([
-                'message' => 'Orden creada',
-                'order' => [
-                    'order_id' => $order->orderSales_id,
-                    'buyer_id' => $order->buyer_id,
-                    'busines_id' => $order->busines_id,
-                    'total' => $order->total,
-                    'is_scheduled' => $order->is_scheduled,
-                    'delivery_date' => $order->delivery_date,
-                    'sale_date' => $order->sale_date,
-                    'state' => $order->state,
-                    'payment_state' => $order->payment_state,
-                    'business' => $order->business,
-                    'delivery_address' => $order->address,
-                    'details' => $order->details,
-                    'payments' => $order->payments,
-                ],
-                'bold_reference' => $bold_reference // 🔑 devuelvo la referencia para frontend
-            ]);
+           return response()->json([
+    'message' => 'Orden creada',
+    'order' => [
+        'order_id' => $order->orderSales_id,
+        'buyer_id' => $order->buyer_id,
+        'busines_id' => $order->busines_id,
+        'total' => $order->total,
+        'is_scheduled' => $order->is_scheduled,
+        'delivery_date' => $order->delivery_date,
+        'sale_date' => $order->sale_date,
+        'state' => $order->state,
+        'payment_state' => $order->payment_state,
+        'business' => $order->business,
+        'delivery_address' => $order->address,
+        'details' => $order->details,
+        'payments' => $order->payments,
+    ],
+    'bold_reference' => $bold_reference
+], 201) // <- Cambiado a 201 Created
+->header('Location', url("/api/orders/{$order->orderSales_id}"));
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
