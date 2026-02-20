@@ -452,8 +452,6 @@ class OrderController extends Controller
             // --- MÉTODO 2: TARJETA / ONLINE ---
             $bold_reference = null;
             if ($request->methods_id == 2) {
-                // Generar referencia para Bold
-                $bold_reference = 'ORD-' . $order->orderSales_id . '-' . time();
 
                 // 2️⃣ Crear intención de pago (PaymentIntent) en Bold
                 $intentRequest = [
@@ -467,6 +465,9 @@ class OrderController extends Controller
                 if (!$intentData) {
                     throw new \Exception("Error al crear intención de pago en Bold");
                 }
+
+                // ✅ Tomar la referencia real generada por createIntent
+$bold_reference = $intentData['payload']['reference_id'] ?? $intentData['reference_id'] ?? null;
 
 
                 $paymentRequest = [
