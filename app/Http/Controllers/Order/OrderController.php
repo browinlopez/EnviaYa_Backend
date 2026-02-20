@@ -13,6 +13,7 @@ use App\Models\Order\OrdersSales;
 use App\Models\Order\OrdersSalesDetail;
 use App\Models\Payment\Payment;
 use App\Models\Payment\PaymentForms;
+use App\Models\Payment\PaymentIntent;
 use App\Models\Payment\PaymentMethods;
 use App\Models\Product\ProductBusiness;
 use App\Models\User;
@@ -499,29 +500,46 @@ class OrderController extends Controller
 
             DB::commit();
 
+            // Después de procesar pago online
+            $paymentCreated = null;
+            $intentCreated = null;
+
+            if ($request->methods_id == 2) {
+                $paymentCreated = $boldData ? Payment::where('orderSales_id', $order->orderSales_id)
+                    ->where('provider', 'bold')
+                    ->latest()
+                    ->first() : null;
+
+                $intentCreated = PaymentIntent::where('orderSales_id', $order->orderSales_id)
+                    ->latest()
+                    ->first();
+            }
+
             // Cargar relaciones necesarias
             $order->load('details.product.category', 'address.municipality.department.country', 'business', 'payments');
 
-           return response()->json([
-    'message' => 'Orden creada',
-    'order' => [
-        'order_id' => $order->orderSales_id,
-        'buyer_id' => $order->buyer_id,
-        'busines_id' => $order->busines_id,
-        'total' => $order->total,
-        'is_scheduled' => $order->is_scheduled,
-        'delivery_date' => $order->delivery_date,
-        'sale_date' => $order->sale_date,
-        'state' => $order->state,
-        'payment_state' => $order->payment_state,
-        'business' => $order->business,
-        'delivery_address' => $order->address,
-        'details' => $order->details,
-        'payments' => $order->payments,
-    ],
-    'bold_reference' => $bold_reference
-], 201) // <- Cambiado a 201 Created
-->header('Location', url("/api/orders/{$order->orderSales_id}"));
+            return response()->json([
+                'message' => 'Orden creada',
+                'order' => [
+                    'order_id' => $order->orderSales_id,
+                    'buyer_id' => $order->buyer_id,
+                    'busines_id' => $order->busines_id,
+                    'total' => $order->total,
+                    'is_scheduled' => $order->is_scheduled,
+                    'delivery_date' => $order->delivery_date,
+                    'sale_date' => $order->sale_date,
+                    'state' => $order->state,
+                    'payment_state' => $order->payment_state,
+                    'business' => $order->business,
+                    'delivery_address' => $order->address,
+                    'details' => $order->details,
+                    'payments' => $order->payments,
+                ],
+                'bold_reference' => $bold_reference,
+                'payment_created' => $paymentCreated,       // <--- pago generado (si hubo)
+                'intent_created' => $intentCreated          // <--- intención de pago (si hubo)
+            ], 201)
+                ->header('Location', url("/api/orders/{$order->orderSales_id}"));
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
