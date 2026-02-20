@@ -103,21 +103,13 @@ class PaymentController extends Controller
 
         $order = OrdersSales::findOrFail($request->orderSales_id);
 
-        // Construir metadata como arreglo (no objeto)
+        // Metadata como objeto (no arreglo)
         $metadata = $request->metadata ?? [
-            [
-                'key'   => 'order_id',
-                'value' => (string) $request->orderSales_id
-            ]
+            'key'   => 'order_id',
+            'value' => (string) $request->orderSales_id
         ];
-        if (!is_array($metadata) || array_keys($metadata) !== range(0, count($metadata) - 1)) {
-            // Si viene como objeto, convertir automáticamente a arreglo
-            $metadata = [
-                $metadata
-            ];
-        }
 
-        // Construir objeto de payer
+        // Construir payer
         $payer = [
             'person_type'     => $request->payer['person_type'],
             'name'            => $request->payer['name'],
@@ -128,17 +120,14 @@ class PaymentController extends Controller
             'billing_address' => $request->payer['billing_address'],
         ];
 
-        // Construir payment_method dinámicamente
+        // payment_method
         $paymentMethod = [
             'name'         => $request->payment_method['name'],
             'installments' => intval($request->payment_method['installments'] ?? 1),
         ];
 
-        // Si viene token, usarlo
-        if (!empty($request->payment_method['token'])) {
-            $paymentMethod['token'] = $request->payment_method['token'];
-        } else {
-            // Si no hay token, validar presencia de campos de tarjeta
+        // Si vienen datos de tarjeta (requiere PCI DSS)
+        if (!empty($request->payment_method['card_number'])) {
             $request->validate([
                 'payment_method.card_number'      => 'required|string',
                 'payment_method.cardholder_name'  => 'required|string',
@@ -152,33 +141,34 @@ class PaymentController extends Controller
             $paymentMethod['expiration_month'] = $request->payment_method['expiration_month'];
             $paymentMethod['expiration_year']  = $request->payment_method['expiration_year'];
             $paymentMethod['cvc']              = $request->payment_method['cvc'];
+        } elseif (!empty($request->payment_method['token'])) {
+            // Si usas token desde frontend
+            $paymentMethod['token'] = $request->payment_method['token'];
         }
 
-        // Device fingerprint (USD requerido por Bold)
+        // Device fingerprint
         $deviceFingerprint = $request->device_fingerprint ?? [
-            'ip'                => $request->ip(),
-            'device_type'       => 'WEB',
-            'os'                => '',
-            'model'             => '',
-            'browser'           => '',
-            'java_enabled'      => false,
-            'language'          => 'es',
-            'color_depth'       => 24,
-            'screen_height'     => 1080,
-            'screen_width'      => 1920,
-            'time_zone_offset'  => now()->offsetHours() * -60,
+            'ip'               => $request->ip(),
+            'device_type'      => 'WEB',
+            'os'               => '',
+            'model'            => '',
+            'browser'          => '',
+            'java_enabled'     => false,
+            'language'         => 'es',
+            'color_depth'      => 24,
+            'screen_height'    => 1080,
+            'screen_width'     => 1920,
+            'time_zone_offset' => now()->offsetHours() * -60,
         ];
 
-        // Body EXACTO que espera la API de Bold
         $body = [
             'reference_id'       => $request->reference_id,
-            'metadata'           => $metadata,
+            'metadata'           => $metadata,  // aquí se queda como objeto
             'payer'              => $payer,
             'payment_method'     => $paymentMethod,
             'device_fingerprint' => $deviceFingerprint,
         ];
 
-        // Llamada a Bold Payments
         $response = Http::withHeaders($this->boldHeaders())
             ->post("{$this->boldApiUrl}/v1/payment", $body);
 
@@ -191,7 +181,6 @@ class PaymentController extends Controller
 
         $data = $response->json()['payload'] ?? $response->json();
 
-        // Guardar intento de pago
         $payment = Payment::create([
             'orderSales_id'       => $order->orderSales_id,
             'methods_id'          => 2,
@@ -207,7 +196,6 @@ class PaymentController extends Controller
             'state'               => 1,
         ]);
 
-        // Si el pago fue aprobado, actualizar estado de orden
         if (!empty($data['status']) && strtoupper($data['status']) === 'APPROVED') {
             $order->update([
                 'payment_state' => 'paid',
