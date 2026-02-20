@@ -70,13 +70,15 @@ class PaymentController extends Controller
 
         $data = $response->json();
 
+        $status = $data['payload']['status'] ?? ($data['status'] ?? null);
+
         $intent = PaymentIntent::create([
             'orderSales_id'     => $order->orderSales_id,
             'provider'          => 'bold',
             'bold_reference_id' => $reference,
             'amount'            => $order->total,
             'currency'          => 'COP',
-            'status'            => $data['status'] ?? null,
+            'status'            => $status,
             'response'          => $data,
         ]);
 
