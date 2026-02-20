@@ -10,7 +10,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
-
 class PaymentController extends Controller
 {
     private $boldApiUrl;
@@ -18,140 +17,156 @@ class PaymentController extends Controller
 
     public function __construct()
     {
-        $this->boldApiUrl = config('services.bold.base_url'); // ejemplo: https://integrations.api.bold.co
-        $this->boldApiKey = config('services.bold.api_key');  // tu API Key de Bold
+        $this->boldApiUrl = config('services.bold.base_url');
+        $this->boldApiKey  = config('services.bold.api_key');
     }
 
     private function boldHeaders()
     {
         return [
-            'Content-Type' => 'application/json',
             'Authorization' => 'x-api-key ' . $this->boldApiKey,
+            'Content-Type'  => 'application/json',
+            'Accept'        => 'application/json',
         ];
     }
 
     /**
-     * Genera un link de pago en Bold para la orden.
+     * Crear intención de pago con Bold (POST /v1/payment-intent)
      */
-    public function createPaymentLink(Request $request)
+    public function createIntent(Request $request)
     {
-        $data = $request->validate([
-            'orderSales_id' => 'required|exists:orderssales,orderSales_id',
-            'description' => 'nullable|string|max:100',
-            'expiration_minutes' => 'nullable|integer',
+        $request->validate([
+            'orderSales_id' => 'required|exists:orderssales,orderSales_id'
         ]);
 
-        $order = OrdersSales::findOrFail($data['orderSales_id']);
+        $order = OrdersSales::findOrFail($request->orderSales_id);
 
         if ($order->methods_id == 1) {
             return response()->json([
-                'message' => 'Este pedido es de pago en efectivo y no requiere un link de pago.'
+                'message' => 'Pago en efectivo no requiere intención'
             ], 422);
         }
 
-        // Generar referencia única para este pago
-        $reference = 'VPY-LNK-' . Str::uuid();
+        $reference = 'ORD-' . $order->orderSales_id . '-' . Str::upper(Str::random(8));
 
-        // Construir el body para Bold
         $body = [
-            'amount_type' => 'CLOSE',
-            'amount' => [
-                'currency' => 'COP',
-                'total_amount' => $order->total,
+            "reference_id" => $reference,
+            "amount" => [
+                "currency" => "COP",
+                "total_amount" => $order->total
             ],
-            'reference' => $reference,
-            'description' => $data['description'] ?? "Pago orden #{$order->orderSales_id}",
+            "description" => "Pago orden #{$order->orderSales_id}"
         ];
 
-        // Si se pasó expiración, se calcula nanosegundos
-        if (!empty($data['expiration_minutes'])) {
-            $body['expiration_date'] = intval(now()->addMinutes($data['expiration_minutes'])->timestamp * 1e9);
-        }
-
-        // Llamada a la API de Bold para crear link
         $response = Http::withHeaders($this->boldHeaders())
-            ->post("{$this->boldApiUrl}/online/link/v1", $body);
+            ->post("{$this->boldApiUrl}/v1/payment-intent", $body);
 
         if ($response->failed()) {
             return response()->json([
-                'message' => 'Error al crear link de pago en Bold',
-                'error' => $response->body()
+                'message' => 'Error al crear intención de pago',
+                'error'   => $response->body()
             ], 500);
         }
 
-        $responseData = $response->json();
+        $data = $response->json();
 
-        // Guardamos payment_intent con info mínima (opcional)
         $intent = PaymentIntent::create([
-            'orderSales_id' => $order->orderSales_id,
-            'provider' => 'bold',
+            'orderSales_id'     => $order->orderSales_id,
+            'provider'          => 'bold',
             'bold_reference_id' => $reference,
-            'amount' => $order->total,
-            'currency' => 'COP',
-            'status' => 'link_created',
-            'response' => $responseData,
+            'amount'            => $order->total,
+            'currency'          => 'COP',
+            'status'            => $data['status'] ?? null,
+            'response'          => $data,
         ]);
 
         return response()->json([
-            'message' => 'Link de pago generado',
-            'payment_link' => $responseData['payload']['payment_link'] ?? null,
-            'url' => $responseData['payload']['url'] ?? null,
-            'reference' => $reference,
+            'message' => 'Intención creada',
+            'intent'  => $data,
         ]);
     }
 
     /**
-     * Consulta el estado del link de pago.
+     * Ejecutar pago con Bold (POST /v1/payment)
      */
-    public function checkPaymentLinkStatus(Request $request)
+    public function makePayment(Request $request)
     {
-        $data = $request->validate([
-            'payment_link' => 'required|string'
+        $request->validate([
+            'reference_id'          => 'required|string',
+            'payment_method_data'   => 'required|array'
         ]);
 
+        $body = array_merge([
+            "reference_id" => $request->reference_id,
+        ], $request->payment_method_data);
+
         $response = Http::withHeaders($this->boldHeaders())
-            ->get("{$this->boldApiUrl}/online/link/v1/{$data['payment_link']}");
+            ->post("{$this->boldApiUrl}/v1/payment", $body);
 
         if ($response->failed()) {
             return response()->json([
-                'message' => 'Error consultando estado del link',
-                'error' => $response->body()
-            ], 500);
+                'message' => 'Error al intentar el pago en Bold',
+                'error'   => $response->body()
+            ], 422);
         }
 
-        $linkData = $response->json();
+        $data = $response->json();
 
-        // Guardar eventos o actualizar la orden si está pagado
-        if (!empty($linkData['status']) && strtoupper($linkData['status']) === 'PAID') {
+        // Guardar pago final si fue aprobado
+        if (!empty($data['status']) && strtoupper($data['status']) === 'APPROVED') {
 
-            // Actualizar orden si no tiene pago
-            $order = OrdersSales::where('orderSales_id', $linkData['reference'])->first();
+            $orderSalesId = OrdersSales::where('orderSales_id', $request->orderSales_id)
+                ->value('orderSales_id');
 
-            if ($order) {
-                $order->update(['payment_state' => 'paid']);
+            $payment = Payment::create([
+                'orderSales_id'       => $orderSalesId,
+                'methods_id'          => 2, // ajustar según tu método online
+                'provider'            => 'bold',
+                'provider_payment_id' => $data['id'] ?? null,
+                'amount'              => $data['amount']['total_amount'] ?? 0,
+                'subtotal'            => $data['amount']['total_amount'] ?? 0,
+                'total'               => $data['amount']['total_amount'] ?? 0,
+                'payment_status'      => 1,
+                'status'              => strtolower($data['status']),
+                'provider_snapshot'   => $data,
+                'payment_date'        => now(),
+                'state'               => 1,
+            ]);
 
-                // Crear payment si no existe
-                Payment::firstOrCreate([
-                    'orderSales_id' => $order->orderSales_id,
-                    'provider_payment_id' => $linkData['transaction_id'] ?? null,
-                ], [
-                    'methods_id' => $order->methods_id,
-                    'provider' => 'bold',
-                    'amount' => $linkData['total'] ?? $order->total,
-                    'subtotal' => $linkData['subtotal'] ?? $order->total,
-                    'total' => $linkData['total'] ?? $order->total,
-                    'payment_status' => 1,
-                    'status' => 'paid',
-                    'provider_snapshot' => $linkData,
-                    'payment_date' => now(),
-                    'state' => 1
-                ]);
-            }
+            // actualizar orden
+            OrdersSales::find($orderSalesId)->update([
+                'payment_state' => 'paid',
+            ]);
+
+            return response()->json([
+                'message' => 'Pago aprobado',
+                'payment' => $payment,
+                'bold_response' => $data
+            ]);
         }
 
         return response()->json([
-            'link_status' => $linkData['status'] ?? null,
-            'details' => $linkData,
-        ]);
+            'message' => 'Pago no aprobado',
+            'status'  => $data['status'] ?? null,
+            'data'    => $data
+        ], 422);
+    }
+
+    /**
+     * Consultar estado del pago (GET /v1/payment/{reference_id})
+     */
+    public function checkStatus($reference)
+    {
+        $response = Http::withHeaders($this->boldHeaders())
+            ->get("{$this->boldApiUrl}/v1/payment/{$reference}");
+
+        if ($response->failed()) {
+            return response()->json([
+                'message' => 'Error consultando estado del pago',
+                'error'   => $response->body()
+            ], 500);
+        }
+
+        return response()->json($response->json());
     }
 }

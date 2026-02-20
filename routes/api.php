@@ -100,10 +100,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     //Bold
     Route::prefix('bold')->group(function () {
-        Route::post('/payment-link', [PaymentController::class, 'createPaymentLink']);
-        Route::get('/payment-link-status', [PaymentController::class, 'checkPaymentLinkStatus']);
+        Route::post('/intent',[PaymentController::class, 'createIntent']);
+        Route::post('/payment', [PaymentController::class, 'makePayment']);
+        Route::get('/status/{ref}',[PaymentController::class, 'checkStatus']);
     });
-    
+
     //Chat
     Route::prefix('chats')->group(function () {
         Route::post('/create', [ChatController::class, 'createChat']);     // crear chat
