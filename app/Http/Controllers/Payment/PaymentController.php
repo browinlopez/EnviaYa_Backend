@@ -93,16 +93,27 @@ class PaymentController extends Controller
      */
     public function makePayment(Request $request)
     {
+        // Validamos solo lo mínimo necesario
         $request->validate([
-            'orderSales_id'        => 'required|integer|exists:orderssales,orderSales_id',
-            'reference_id'         => 'required|string',
-            'payment_method_data'  => 'required|array'
+            'orderSales_id'     => 'required|integer|exists:orderssales,orderSales_id',
+            'reference_id'      => 'required|string',
+            'payer'             => 'required|array',
+            'payment_method'    => 'required|array',
         ]);
 
-        $body = array_merge([
+        // Construimos el body EXACTAMENTE según la API de Bold
+        $body = [
             "reference_id" => $request->reference_id,
-        ], $request->payment_method_data);
+            "payer"        => $request->payer,
+            "payment_method" => $request->payment_method,
+        ];
 
+        // Agregamos device_fingerprint si viene
+        if ($request->filled('device_fingerprint')) {
+            $body["device_fingerprint"] = $request->input('device_fingerprint');
+        }
+
+        // Llamada a la API de Bold
         $response = Http::withHeaders($this->boldHeaders())
             ->post("{$this->boldApiUrl}/v1/payment", $body);
 
@@ -115,39 +126,11 @@ class PaymentController extends Controller
 
         $data = $response->json();
 
-        if (!empty($data['status']) && strtoupper($data['status']) === 'APPROVED') {
-
-            $payment = Payment::create([
-                'orderSales_id'       => $request->orderSales_id,
-                'methods_id'          => $request->methods_id ?? null,
-                'provider'            => 'bold',
-                'provider_payment_id' => $data['id'] ?? null,
-                'amount'              => $data['amount']['total_amount'] ?? 0,
-                'subtotal'            => $data['amount']['total_amount'] ?? 0,
-                'total'               => $data['amount']['total_amount'] ?? 0,
-                'payment_status'      => 1,
-                'status'              => strtolower($data['status']),
-                'provider_snapshot'   => $data,
-                'payment_date'        => now(),
-                'state'               => 1,
-            ]);
-
-            OrdersSales::find($request->orderSales_id)->update([
-                'payment_state' => 'paid',
-            ]);
-
-            return response()->json([
-                'message' => 'Pago aprobado',
-                'payment' => $payment,
-                'bold_response' => $data
-            ]);
-        }
-
+        // Si Bold devuelve status APPROVED o RUNNING u otro
         return response()->json([
-            'message' => 'Pago no aprobado',
-            'status'  => $data['status'] ?? null,
-            'data'    => $data
-        ], 422);
+            'message' => 'Respuesta de la pasarela de pagos',
+            'bold_response' => $data
+        ]);
     }
 
     /**
