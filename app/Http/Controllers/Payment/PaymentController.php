@@ -211,6 +211,7 @@ class PaymentController extends Controller
 
     /**
      * Consultar estado del pago (GET /v1/payment/{reference_id})
+     * Aquí se genera el Payment y se actualiza la orden solo si el status es APPROVED
      */
     public function checkStatus($reference)
     {
@@ -224,6 +225,54 @@ class PaymentController extends Controller
             ], 500);
         }
 
-        return response()->json($response->json());
+        $data = $response->json()['payload'] ?? $response->json();
+        $status = strtoupper($data['status'] ?? '');
+
+        // Buscar la orden asociada a este reference_id
+        $paymentIntent = PaymentIntent::where('bold_reference_id', $reference)->first();
+
+        if (!$paymentIntent) {
+            return response()->json([
+                'message' => 'No se encontró PaymentIntent para esta referencia',
+            ], 404);
+        }
+
+        $order = OrdersSales::find($paymentIntent->orderSales_id);
+
+        // ✅ Si el pago fue aprobado y aún no hemos generado el Payment
+        if ($status === 'APPROVED') {
+
+            // Evitar duplicar el registro de Payment
+            if (!Payment::where('orderSales_id', $order->orderSales_id)
+                ->where('provider_payment_id', $data['transaction_id'] ?? '')
+                ->exists()) {
+
+                $payment = Payment::create([
+                    'orderSales_id'       => $order->orderSales_id,
+                    'methods_id'          => 2,
+                    'provider'            => 'bold',
+                    'provider_payment_id' => $data['transaction_id'] ?? null,
+                    'amount'              => $order->total,
+                    'subtotal'            => $order->total,
+                    'total'               => $order->total,
+                    'payment_status'      => 1,
+                    'status'              => strtolower($status),
+                    'provider_snapshot'   => $data,
+                    'payment_date'        => now(),
+                    'state'               => 1,
+                ]);
+
+                // Actualizar el estado de pago en OrdersSales
+                $order->update([
+                    'payment_state' => 'approved',
+                ]);
+            }
+        }
+
+        return response()->json([
+            'payment_status' => $status,
+            'data' => $data,
+            'order_payment_state' => $order->payment_state ?? null,
+        ]);
     }
 }

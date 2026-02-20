@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Order;
 
 use App\Events\DomiciliaryLocationUpdated;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Payment\PaymentController;
 use App\Models\Business;
 use App\Models\Buyer\Buyer;
 use App\Models\Domiciliary;
@@ -367,26 +368,22 @@ class OrderController extends Controller
             'products.*.unit_price' => 'required|numeric',
             'methods_id' => 'required|integer|exists:payment_methods,methods_id',
             'forms_id' => 'nullable|integer|exists:payment_forms,forms_id',
-            'domicilio' => 'required|decimal:0,2',
-            // 🆕 programación
+            'domicilio' => 'required|numeric',
             'is_scheduled' => 'required|boolean',
             'delivery_date' => 'required_if:is_scheduled,true|date|after:now',
+            // Campos necesarios para pago online (método 2)
+            'payer' => 'required_if:methods_id,2|array',
+            'payment_method' => 'required_if:methods_id,2|array'
         ]);
 
         $buyer = Buyer::where('user_id', $request->user_id)->first();
-        if (!$buyer) {
-            return response()->json(['message' => 'Usuario comprador no encontrado'], 404);
-        }
+        if (!$buyer) return response()->json(['message' => 'Usuario comprador no encontrado'], 404);
 
         $business = Business::find($request->busines_id);
-        if (!$business) {
-            return response()->json(['message' => 'Negocio no encontrado'], 404);
-        }
+        if (!$business) return response()->json(['message' => 'Negocio no encontrado'], 404);
 
         $address = UserAddress::find($request->address_id);
-        if (!$address) {
-            return response()->json(['message' => 'Dirección no encontrada'], 404);
-        }
+        if (!$address) return response()->json(['message' => 'Dirección no encontrada'], 404);
 
         DB::beginTransaction();
 
@@ -407,28 +404,15 @@ class OrderController extends Controller
                 'payment_state' => $request->methods_id == 1 ? 'pending_cash' : 'pending_online'
             ]);
 
-            $outOfStockProducts = [];
-
+            // Registrar detalles de productos
             foreach ($request->products as $product) {
                 $productBusiness = ProductBusiness::where('busines_id', $request->busines_id)
                     ->where('products_id', $product['product_id'])
                     ->first();
 
-                if (!$productBusiness) {
-                    throw new \Exception("El producto ID {$product['product_id']} no pertenece al negocio");
-                }
+                if (!$productBusiness) throw new \Exception("El producto ID {$product['product_id']} no pertenece al negocio");
 
-                $amountToRegister = $product['amount'];
-
-                // Si no hay suficiente stock
-                if ($productBusiness->amount < $product['amount']) {
-                    $outOfStockProducts[] = [
-                        'name' => $productBusiness->product->name,
-                        'missing' => $product['amount'] - $productBusiness->amount
-                    ];
-                    // Registrar con cantidad negativa que indica falta
-                    $amountToRegister = $product['amount'] - $product['amount']; // o 0, depende cómo quieras mostrar
-                }
+                $amountToRegister = min($product['amount'], $productBusiness->amount);
 
                 OrdersSalesDetail::create([
                     'orderSales_id' => $order->orderSales_id,
@@ -437,49 +421,85 @@ class OrderController extends Controller
                     'unit_price' => $product['unit_price']
                 ]);
 
-                // Reducir stock solo si hay disponible
-                if ($productBusiness->amount > 0) {
-                    $productBusiness->amount -= min($productBusiness->amount, $product['amount']);
-                    $productBusiness->save();
-                }
+                $productBusiness->amount -= $amountToRegister;
+                $productBusiness->save();
             }
 
-            if ($order->state == 3 && $request->state == 4) {
-                $order->state = 4;
-                $order->delivery_date = now();
+            // --- MÉTODO 1: EFECTIVO / CONTRA ENTREGA ---
+            if ($request->methods_id == 1) {
+                $subtotal = $order->details->sum(fn($d) => $d['amount'] * $d['unit_price']);
+                $domicilio = $request->domicilio;
+                $totalPayment = $subtotal + $domicilio;
 
-                // SOLO EFECTIVO
-                if ($order->methods_id == 1 && !$order->payments) {
+                Payment::create([
+                    'orderSales_id' => $order->orderSales_id,
+                    'methods_id' => 1,
+                    'provider' => 'cash',
+                    'amount' => $totalPayment,
+                    'subtotal' => $subtotal,
+                    'total' => $totalPayment,
+                    'domicilio' => $domicilio,
+                    'payment_status' => 1,
+                    'status' => 'paid',
+                    'payment_date' => now(),
+                    'state' => 1,
+                ]);
 
-                    $subtotal = $order->details->sum(fn($d) => $d->amount * $d->unit_price);
-                    $domicilio = $request->domicilio; // aquí pones tu cálculo del costo de domicilio
-                    $valorPromocion = 0;
-                    $total = $subtotal + $domicilio - $valorPromocion;
+                $order->payment_state = 'paid';
+                $order->save();
+            }
 
-                    Payment::create([
-                        'orderSales_id' => $order->orderSales_id,
-                        'methods_id' => 1,
-                        'forms_id' => $order->forms_id,
-                        'provider' => 'cash',
-                        'amount' => $total,
-                        'subtotal' => $subtotal,
-                        'total' => $total,
-                        'domicilio' => $domicilio,
-                        'valor_promocion' => $valorPromocion,
-                        'payment_status' => 1,
-                        'status' => 'paid',
-                        'payment_date' => now(),
-                        'state' => 1
-                    ]);
+            // --- MÉTODO 2: TARJETA / ONLINE ---
+            $bold_reference = null;
+            if ($request->methods_id == 2) {
+                // Generar referencia para Bold
+                $bold_reference = 'ORD-' . $order->orderSales_id . '-' . time();
 
-                    $order->payment_state = 'paid';
+                // 2️⃣ Crear intención de pago (PaymentIntent) en Bold
+                $intentRequest = [
+                    'orderSales_id' => $order->orderSales_id,
+                ];
+
+                $paymentController = new PaymentController();
+                $intentResponse = $paymentController->createIntent(new Request($intentRequest));
+                $intentData = $intentResponse->getData(true)['intent'] ?? null;
+
+                if (!$intentData) {
+                    throw new \Exception("Error al crear intención de pago en Bold");
+                }
+
+
+                $paymentRequest = [
+                    'orderSales_id' => $order->orderSales_id,
+                    'reference_id' => $bold_reference,
+                    'payer' => $request->payer,
+                    'payment_method' => $request->payment_method,
+                    'device_fingerprint' => $request->device_fingerprint ?? [
+                        'ip' => $request->ip(),
+                        'device_type' => 'WEB'
+                    ],
+                    'metadata' => $request->metadata ?? [
+                        'key' => 'order_id',
+                        'value' => (string)$order->orderSales_id
+                    ]
+                ];
+
+                // Llamada a makePayment de tu PaymentController
+                $boldController = new PaymentController();
+                $response = $boldController->makePayment(new Request($paymentRequest));
+
+                $boldData = $response->getData(true)['payment'] ?? null;
+
+                if ($boldData) {
+                    $order->payment_state = strtoupper($boldData['status'] ?? '') === 'APPROVED' ? 'paid' : 'denied';
+                    $order->save();
                 }
             }
 
             DB::commit();
 
-            // Cargamos relaciones necesarias
-            $order->load('details.product.category', 'address.municipality.department.country', 'address.alias', 'business', 'promotions', 'payments');
+            // Cargar relaciones necesarias
+            $order->load('details.product.category', 'address.municipality.department.country', 'business', 'payments');
 
             return response()->json([
                 'message' => 'Orden creada',
@@ -492,41 +512,13 @@ class OrderController extends Controller
                     'delivery_date' => $order->delivery_date,
                     'sale_date' => $order->sale_date,
                     'state' => $order->state,
-                    'business' => [
-                        'business_id' => $order->business->busines_id,
-                        'name' => $order->business->name,
-                        'address' => $order->business->address,
-                        'latitude' => $order->business->latitude !== null ? (float)$order->business->latitude : null,
-                        'longitude' => $order->business->longitude !== null ? (float)$order->business->longitude : null,
-                        'phone' => $order->business->phone,
-                        'city' => $order->business->city,
-                        'state' => $order->business->state,
-                        'logo' => $order->business->logo,
-                    ],
-                    'delivery_address' => $order->address ? [
-                        'address_id' => $order->address->address_id,
-                        'address' => $order->address->address,
-                        'alias' => $order->address->alias?->name,
-                        'municipality' => $order->address->municipality?->name,
-                        'department' => $order->address->department?->name,
-                        'country' => $order->address->country?->name,
-                        'latitude' => $order->address->latitude !== null ? (float)$order->address->latitude : null,
-                        'longitude' => $order->address->longitude !== null ? (float)$order->address->longitude : null,
-                    ] : null,
-                    'details' => $order->details->map(function ($detail) {
-                        return [
-                            'product_id' => $detail->product->products_id,
-                            'name' => $detail->product->name,
-                            'description' => $detail->product->description,
-                            'category' => $detail->product->category?->name,
-                            'image' => $detail->product->image,
-                            'amount' => $detail->amount,
-                            'unit_price' => $detail->unit_price,
-                        ];
-                    }),
-                    'promotions' => $order->promotions,
+                    'payment_state' => $order->payment_state,
+                    'business' => $order->business,
+                    'delivery_address' => $order->address,
+                    'details' => $order->details,
                     'payments' => $order->payments,
-                ]
+                ],
+                'bold_reference' => $bold_reference // 🔑 devuelvo la referencia para frontend
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -536,6 +528,7 @@ class OrderController extends Controller
             ], 400);
         }
     }
+
     // Obtener métodos de pago
     public function paymentMethods()
     {
