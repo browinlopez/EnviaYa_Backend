@@ -92,46 +92,65 @@ class PaymentController extends Controller
      * Ejecutar pago con Bold (POST /v1/payment)
      */
     public function makePayment(Request $request)
-    {
-        // Validamos solo lo mínimo necesario
-        $request->validate([
-            'orderSales_id'     => 'required|integer|exists:orderssales,orderSales_id',
-            'reference_id'      => 'required|string',
-            'payer'             => 'required|array',
-            'payment_method'    => 'required|array',
-        ]);
+{
+    $request->validate([
+        'orderSales_id'        => 'required|integer|exists:orderssales,orderSales_id',
+        'reference_id'         => 'required|string',
+        'payer'                => 'required|array',
+        'payment_method'       => 'required|array',
+        'payment_method.name'  => 'required|string',
+    ]);
 
-        // Construimos el body EXACTAMENTE según la API de Bold
-        $body = [
-            "reference_id" => $request->reference_id,
-            "payer"        => $request->payer,
-            "payment_method" => $request->payment_method,
-        ];
+    $order = OrdersSales::findOrFail($request->orderSales_id);
 
-        // Agregamos device_fingerprint si viene
-        if ($request->filled('device_fingerprint')) {
-            $body["device_fingerprint"] = $request->input('device_fingerprint');
-        }
+    // Body EXACTO que espera Bold
+    $body = [
+        'reference_id'   => $request->reference_id,
+        'payer'          => $request->payer,
+        'payment_method' => $request->payment_method,
+    ];
 
-        // Llamada a la API de Bold
-        $response = Http::withHeaders($this->boldHeaders())
-            ->post("{$this->boldApiUrl}/v1/payment", $body);
+    $response = Http::withHeaders($this->boldHeaders())
+        ->post("{$this->boldApiUrl}/v1/payment", $body);
 
-        if ($response->failed()) {
-            return response()->json([
-                'message' => 'Error al intentar el pago en Bold',
-                'error'   => $response->body()
-            ], 422);
-        }
-
-        $data = $response->json();
-
-        // Si Bold devuelve status APPROVED o RUNNING u otro
+    if ($response->failed()) {
         return response()->json([
-            'message' => 'Respuesta de la pasarela de pagos',
-            'bold_response' => $data
+            'message' => 'Error al intentar el pago en Bold',
+            'error'   => $response->json()
+        ], 422);
+    }
+
+    $data = $response->json();
+
+    // Guardar intento de pago (SIEMPRE)
+    $payment = Payment::create([
+        'orderSales_id'       => $order->orderSales_id,
+        'methods_id'          => 2,
+        'provider'            => 'bold',
+        'provider_payment_id' => $data['transaction_id'] ?? null,
+        'amount'              => $order->total,
+        'subtotal'            => $order->total,
+        'total'               => $order->total,
+        'payment_status'      => $data['status'] === 'APPROVED' ? 1 : 0,
+        'status'              => strtolower($data['status'] ?? 'unknown'),
+        'provider_snapshot'   => $data,
+        'payment_date'        => now(),
+        'state'               => 1,
+    ]);
+
+    // ✅ SOLO si Bold aprobó
+    if (!empty($data['status']) && $data['status'] === 'APPROVED') {
+        $order->update([
+            'payment_state' => 'paid',
         ]);
     }
+
+    return response()->json([
+        'message' => 'Pago procesado con Bold',
+        'payment' => $payment,
+        'bold_response' => $data
+    ]);
+}
 
     /**
      * Consultar estado del pago (GET /v1/payment/{reference_id})
