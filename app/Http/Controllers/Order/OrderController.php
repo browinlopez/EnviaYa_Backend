@@ -358,196 +358,194 @@ class OrderController extends Controller
 
     // Crear orden de venta
     public function store(Request $request)
-    {
-        $request->validate([
-            'user_id' => 'required|integer',
-            'busines_id' => 'required|integer',
-            'address_id' => 'required|integer|exists:user_address,address_id',
-            'products' => 'required|array|min:1',
-            'products.*.product_id' => 'required|integer',
-            'products.*.amount' => 'required|integer|min:1',
-            'products.*.unit_price' => 'required|numeric|min:0',
-            'methods_id' => 'required|integer|exists:payment_methods,methods_id',
-            'forms_id' => 'nullable|integer|exists:payment_forms,forms_id',
-            'domicilio' => 'required|numeric|min:0',
-            'is_scheduled' => 'required|boolean',
-            'delivery_date' => 'required_if:is_scheduled,true|date|after:now',
-            'payer' => 'required_if:methods_id,2|array',
-            'payment_method' => 'required_if:methods_id,2|array'
+{
+    $request->validate([
+        'user_id' => 'required|integer',
+        'busines_id' => 'required|integer',
+        'address_id' => 'required|integer|exists:user_address,address_id',
+        'products' => 'required|array|min:1',
+        'products.*.product_id' => 'required|integer',
+        'products.*.amount' => 'required|integer|min:1',
+        'products.*.unit_price' => 'required|numeric|min:0',
+        'methods_id' => 'required|integer|exists:payment_methods,methods_id',
+        'forms_id' => 'nullable|integer|exists:payment_forms,forms_id',
+        'domicilio' => 'required|numeric|min:0',
+        'is_scheduled' => 'required|boolean',
+        'delivery_date' => 'required_if:is_scheduled,true|date|after:now',
+        'payer' => 'required_if:methods_id,2|array',
+        'payment_method' => 'required_if:methods_id,2|array'
+    ]);
+
+    $buyer = Buyer::where('user_id', $request->user_id)->first();
+    if (!$buyer) return response()->json(['message' => 'Usuario comprador no encontrado'], 404);
+
+    $business = Business::find($request->busines_id);
+    if (!$business) return response()->json(['message' => 'Negocio no encontrado'], 404);
+
+    $address = UserAddress::find($request->address_id);
+    if (!$address) return response()->json(['message' => 'Dirección no encontrada'], 404);
+
+    DB::beginTransaction();
+
+    try {
+        $total = collect($request->products)->sum(fn($p) => $p['amount'] * $p['unit_price']);
+
+        $order = OrdersSales::create([
+            'buyer_id' => $buyer->buyer_id,
+            'busines_id' => $business->busines_id,
+            'address_id' => $address->address_id,
+            'methods_id' => $request->methods_id,
+            'forms_id' => $request->forms_id,
+            'total' => $total,
+            'sale_date' => now(),
+            'delivery_date' => $request->is_scheduled ? $request->delivery_date : now(),
+            'is_scheduled' => $request->is_scheduled,
+            'state' => 1,
+            'payment_state' => $request->methods_id == 1 ? 'pending_cash' : 'pending_online'
         ]);
 
-        $buyer = Buyer::where('user_id', $request->user_id)->first();
-        if (!$buyer) return response()->json(['message' => 'Usuario comprador no encontrado'], 404);
+        // Registrar detalles de productos
+        foreach ($request->products as $product) {
+            $productBusiness = ProductBusiness::where('busines_id', $request->busines_id)
+                ->where('products_id', $product['product_id'])
+                ->first();
 
-        $business = Business::find($request->busines_id);
-        if (!$business) return response()->json(['message' => 'Negocio no encontrado'], 404);
+            if (!$productBusiness) throw new \Exception("El producto ID {$product['product_id']} no pertenece al negocio");
 
-        $address = UserAddress::find($request->address_id);
-        if (!$address) return response()->json(['message' => 'Dirección no encontrada'], 404);
+            $amountToRegister = min($product['amount'], $productBusiness->amount);
 
-        DB::beginTransaction();
-
-        try {
-            $total = collect($request->products)->sum(fn($p) => $p['amount'] * $p['unit_price']);
-
-            $order = OrdersSales::create([
-                'buyer_id' => $buyer->buyer_id,
-                'busines_id' => $business->busines_id,
-                'address_id' => $address->address_id,
-                'methods_id' => $request->methods_id,
-                'forms_id' => $request->forms_id,
-                'total' => $total,
-                'sale_date' => now(),
-                'delivery_date' => $request->is_scheduled ? $request->delivery_date : now(),
-                'is_scheduled' => $request->is_scheduled,
-                'state' => 1,
-                'payment_state' => $request->methods_id == 1 ? 'pending_cash' : 'pending_online'
+            OrdersSalesDetail::create([
+                'orderSales_id' => $order->orderSales_id,
+                'product_id' => $product['product_id'],
+                'amount' => $amountToRegister,
+                'unit_price' => $product['unit_price']
             ]);
 
-            // Registrar detalles de productos
-            foreach ($request->products as $product) {
-                $productBusiness = ProductBusiness::where('busines_id', $request->busines_id)
-                    ->where('products_id', $product['product_id'])
+            $productBusiness->amount -= $amountToRegister;
+            $productBusiness->save();
+        }
+
+        $bold_reference = null;
+        $intentCreated = null;
+        $paymentCreated = null;
+
+        $paymentController = new PaymentController();
+
+        // MÉTODO 1: EFECTIVO / CONTRA ENTREGA
+        if ($request->methods_id == 1) {
+            $subtotal = $order->details->sum(fn($d) => $d['amount'] * $d['unit_price']);
+            $domicilio = $request->domicilio;
+            $totalPayment = $subtotal + $domicilio;
+
+            $paymentCreated = Payment::create([
+                'orderSales_id' => $order->orderSales_id,
+                'methods_id' => 1,
+                'provider' => 'cash',
+                'amount' => $totalPayment,
+                'subtotal' => $subtotal,
+                'total' => $totalPayment,
+                'domicilio' => $domicilio,
+                'payment_status' => 1,
+                'status' => 'paid',
+                'payment_date' => now(),
+                'state' => 1,
+            ]);
+
+            $order->payment_state = 'paid';
+            $order->save();
+        }
+
+        // MÉTODO 2: TARJETA / ONLINE
+        if ($request->methods_id == 2) {
+            // Crear intención
+            $intentResponse = $paymentController->createIntent(new Request([
+                'orderSales_id' => $order->orderSales_id
+            ]));
+
+            $data = $intentResponse->getData(true);
+
+            // Soportar ambos formatos: 'intent' o 'intent_created'
+            $intentData = $data['intent'] ?? $data['intent_created'] ?? null;
+
+            if (!$intentData) throw new \Exception("Error al crear intención de pago en Bold");
+
+            $bold_reference = $intentData['payload']['reference_id'] ?? $intentData['bold_reference_id'] ?? null;
+            $intentCreated = PaymentIntent::where('orderSales_id', $order->orderSales_id)->latest()->first();
+
+            // Preparar productos para Bold
+            $productsForBold = array_map(fn($p) => [
+                'product_id' => $p['product_id'],
+                'amount' => intval($p['amount']),
+                'unit_price' => floatval($p['unit_price'])
+            ], $request->products);
+
+            // Preparar request de pago
+            $paymentRequest = [
+                'orderSales_id' => $order->orderSales_id,
+                'reference_id' => $bold_reference,
+                'payer' => $request->payer,
+                'payment_method' => $request->payment_method,
+                'products' => $productsForBold,
+                'device_fingerprint' => $request->device_fingerprint ?? [
+                    'ip' => $request->ip(),
+                    'device_type' => 'WEB'
+                ],
+                'metadata' => $request->metadata ?? [
+                    'key' => 'order_id',
+                    'value' => (string)$order->orderSales_id
+                ]
+            ];
+
+            // Ejecutar makePayment solo si hay intención
+            $response = $paymentController->makePayment(new Request($paymentRequest));
+            $boldData = $response->getData(true)['payment'] ?? null;
+
+            if ($boldData) {
+                $paymentCreated = Payment::where('orderSales_id', $order->orderSales_id)
+                    ->where('provider', 'bold')
+                    ->latest()
                     ->first();
 
-                if (!$productBusiness) throw new \Exception("El producto ID {$product['product_id']} no pertenece al negocio");
-
-                $amountToRegister = min($product['amount'], $productBusiness->amount);
-
-                OrdersSalesDetail::create([
-                    'orderSales_id' => $order->orderSales_id,
-                    'product_id' => $product['product_id'],
-                    'amount' => $amountToRegister,
-                    'unit_price' => $product['unit_price']
-                ]);
-
-                $productBusiness->amount -= $amountToRegister;
-                $productBusiness->save();
-            }
-
-            $bold_reference = null;
-            $intentCreated = null;
-            $paymentCreated = null;
-
-            // MÉTODO 1: EFECTIVO / CONTRA ENTREGA
-            if ($request->methods_id == 1) {
-                $subtotal = $order->details->sum(fn($d) => $d['amount'] * $d['unit_price']);
-                $domicilio = $request->domicilio;
-                $totalPayment = $subtotal + $domicilio;
-
-                $paymentCreated = Payment::create([
-                    'orderSales_id' => $order->orderSales_id,
-                    'methods_id' => 1,
-                    'provider' => 'cash',
-                    'amount' => $totalPayment,
-                    'subtotal' => $subtotal,
-                    'total' => $totalPayment,
-                    'domicilio' => $domicilio,
-                    'payment_status' => 1,
-                    'status' => 'paid',
-                    'payment_date' => now(),
-                    'state' => 1,
-                ]);
-
-                $order->payment_state = 'paid';
+                $order->payment_state = strtoupper($boldData['status'] ?? '') === 'APPROVED' ? 'paid' : 'denied';
                 $order->save();
             }
-
-            // MÉTODO 2: TARJETA / ONLINE
-            if ($request->methods_id == 2) {
-                $requiredCardFields = ['name', 'card_number', 'cardholder_name', 'expiration_month', 'expiration_year', 'cvc'];
-                foreach ($requiredCardFields as $field) {
-                    if (empty($request->payment_method[$field])) {
-                        throw new \Exception("Falta el campo payment_method.$field para procesar pago online");
-                    }
-                }
-
-                $paymentController = new PaymentController();
-                $intentResponse = $paymentController->createIntent(new Request([
-                    'orderSales_id' => $order->orderSales_id
-                ]));
-
-                $data = $intentResponse->getData(true);
-                $intentData = $data['intent'] ?? $data['intent_created'] ?? null;
-
-                if (!$intentData) {
-                    throw new \Exception("Error al crear intención de pago en Bold");
-                }
-
-                $bold_reference = $intentData['payload']['reference_id'] ?? $intentData['reference_id'] ?? null;
-                $intentCreated = PaymentIntent::where('orderSales_id', $order->orderSales_id)->latest()->first();
-
-                // Preparar productos para Bold
-                $productsForBold = array_map(fn($p) => [
-                    'product_id' => $p['product_id'],
-                    'amount' => intval($p['amount']),
-                    'unit_price' => floatval($p['unit_price'])
-                ], $request->products);
-
-                $paymentRequest = [
-                    'orderSales_id' => $order->orderSales_id,
-                    'reference_id' => $bold_reference,
-                    'payer' => $request->payer,
-                    'payment_method' => $request->payment_method,
-                    'products' => $productsForBold, // <--- obligatorio
-                    'device_fingerprint' => $request->device_fingerprint ?? [
-                        'ip' => $request->ip(),
-                        'device_type' => 'WEB'
-                    ],
-                    'metadata' => $request->metadata ?? [
-                        'key' => 'order_id',
-                        'value' => (string)$order->orderSales_id
-                    ]
-                ];
-
-                $response = $paymentController->makePayment(new Request($paymentRequest));
-                $boldData = $response->getData(true)['payment'] ?? null;
-
-                if ($boldData) {
-                    $paymentCreated = Payment::where('orderSales_id', $order->orderSales_id)
-                        ->where('provider', 'bold')
-                        ->latest()
-                        ->first();
-
-                    $order->payment_state = strtoupper($boldData['status'] ?? '') === 'APPROVED' ? 'paid' : 'denied';
-                    $order->save();
-                }
-            }
-
-            DB::commit();
-
-            $order->load('details.product.category', 'address.municipality.department.country', 'business', 'payments');
-
-            return response()->json([
-                'message' => 'Orden creada',
-                'order' => [
-                    'order_id' => $order->orderSales_id,
-                    'buyer_id' => $order->buyer_id,
-                    'busines_id' => $order->busines_id,
-                    'total' => $order->total,
-                    'is_scheduled' => $order->is_scheduled,
-                    'delivery_date' => $order->delivery_date,
-                    'sale_date' => $order->sale_date,
-                    'state' => $order->state,
-                    'payment_state' => $order->payment_state,
-                    'business' => $order->business,
-                    'delivery_address' => $order->address,
-                    'details' => $order->details,
-                    'payments' => $order->payments,
-                ],
-                'bold_reference' => $bold_reference,
-                'intent_created' => $intentCreated,
-                'payment_created' => $paymentCreated
-            ], 201)
-                ->header('Location', url("/api/orders/{$order->orderSales_id}"));
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'message' => 'Error al crear la orden',
-                'error' => $e->getMessage()
-            ], 400);
         }
+
+        DB::commit();
+
+        $order->load('details.product.category', 'address.municipality.department.country', 'business', 'payments');
+
+        return response()->json([
+            'message' => 'Orden creada',
+            'order' => [
+                'order_id' => $order->orderSales_id,
+                'buyer_id' => $order->buyer_id,
+                'busines_id' => $order->busines_id,
+                'total' => $order->total,
+                'is_scheduled' => $order->is_scheduled,
+                'delivery_date' => $order->delivery_date,
+                'sale_date' => $order->sale_date,
+                'state' => $order->state,
+                'payment_state' => $order->payment_state,
+                'business' => $order->business,
+                'delivery_address' => $order->address,
+                'details' => $order->details,
+                'payments' => $order->payments,
+            ],
+            'bold_reference' => $bold_reference,
+            'intent_created' => $intentCreated,
+            'payment_created' => $paymentCreated
+        ], 201)
+        ->header('Location', url("/api/orders/{$order->orderSales_id}"));
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return response()->json([
+            'message' => 'Error al crear la orden',
+            'error' => $e->getMessage()
+        ], 400);
     }
+}
 
     // Obtener métodos de pago
     public function paymentMethods()
