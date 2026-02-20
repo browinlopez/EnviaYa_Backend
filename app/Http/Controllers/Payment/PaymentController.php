@@ -92,8 +92,9 @@ class PaymentController extends Controller
     public function makePayment(Request $request)
     {
         $request->validate([
-            'reference_id'          => 'required|string',
-            'payment_method_data'   => 'required|array'
+            'orderSales_id'        => 'required|integer|exists:orderssales,orderSales_id',
+            'reference_id'         => 'required|string',
+            'payment_method_data'  => 'required|array'
         ]);
 
         $body = array_merge([
@@ -112,15 +113,11 @@ class PaymentController extends Controller
 
         $data = $response->json();
 
-        // Guardar pago final si fue aprobado
         if (!empty($data['status']) && strtoupper($data['status']) === 'APPROVED') {
 
-            $orderSalesId = OrdersSales::where('orderSales_id', $request->orderSales_id)
-                ->value('orderSales_id');
-
             $payment = Payment::create([
-                'orderSales_id'       => $orderSalesId,
-                'methods_id'          => 2, // ajustar según tu método online
+                'orderSales_id'       => $request->orderSales_id,
+                'methods_id'          => $request->methods_id ?? null,
                 'provider'            => 'bold',
                 'provider_payment_id' => $data['id'] ?? null,
                 'amount'              => $data['amount']['total_amount'] ?? 0,
@@ -133,8 +130,7 @@ class PaymentController extends Controller
                 'state'               => 1,
             ]);
 
-            // actualizar orden
-            OrdersSales::find($orderSalesId)->update([
+            OrdersSales::find($request->orderSales_id)->update([
                 'payment_state' => 'paid',
             ]);
 

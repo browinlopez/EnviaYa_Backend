@@ -37,6 +37,13 @@ Route::post(
     [AuthController::class, 'resendVerificationEmail']
 )->middleware('throttle:5,10');
 
+//Bold
+    Route::prefix('bold')->group(function () {
+        Route::post('/intent',[PaymentController::class, 'createIntent']);
+        Route::post('/payment', [PaymentController::class, 'makePayment']);
+        Route::get('/status/{ref}',[PaymentController::class, 'checkStatus']);
+    });
+
 Route::middleware('auth:sanctum')->group(function () {
     //Auth
     Route::get('/profile', [AuthController::class, 'profile']);
@@ -97,13 +104,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('paymentMethods', [OrderController::class, 'paymentMethods']); // Listar metodos de pago
     Route::get('paymentForms', [OrderController::class, 'paymentForms']); // Listar formas de pago
-
-    //Bold
-    Route::prefix('bold')->group(function () {
-        Route::post('/intent',[PaymentController::class, 'createIntent']);
-        Route::post('/payment', [PaymentController::class, 'makePayment']);
-        Route::get('/status/{ref}',[PaymentController::class, 'checkStatus']);
-    });
 
     //Chat
     Route::prefix('chats')->group(function () {
