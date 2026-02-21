@@ -6,19 +6,38 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function up()
+    public function up(): void
     {
         Schema::table('payments', function (Blueprint $table) {
-            $table->string('redirect_url')->nullable()->after('provider_snapshot');
-            $table->text('qr_payload')->nullable()->after('redirect_url');
-            $table->timestamp('qr_expires_at')->nullable()->after('qr_payload');
+
+            if (!Schema::hasColumn('payments', 'redirect_url')) {
+                $table->string('redirect_url')
+                    ->nullable()
+                    ->before('state');
+            }
+
+            if (!Schema::hasColumn('payments', 'qr_payload')) {
+                $table->text('qr_payload')
+                    ->nullable()
+                    ->after('redirect_url');
+            }
+
+            if (!Schema::hasColumn('payments', 'qr_expires_at')) {
+                $table->timestamp('qr_expires_at')
+                    ->nullable()
+                    ->after('qr_payload');
+            }
         });
     }
 
-    public function down()
+    public function down(): void
     {
         Schema::table('payments', function (Blueprint $table) {
-            $table->dropColumn(['redirect_url', 'qr_payload', 'qr_expires_at']);
+            $table->dropColumn([
+                'redirect_url',
+                'qr_payload',
+                'qr_expires_at',
+            ]);
         });
     }
 };
