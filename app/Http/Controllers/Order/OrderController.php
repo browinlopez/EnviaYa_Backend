@@ -369,7 +369,7 @@ class OrderController extends Controller
         'products.*.amount' => 'required|integer|min:1',
         'products.*.unit_price' => 'required|numeric|min:0',
         'methods_id' => 'required|integer|exists:payment_methods,methods_id',
-        'forms_id' => 'nullable|integer|exists:payment_forms,forms_id',
+        /* 'forms_id' => 'nullable|integer|exists:payment_forms,forms_id', */
         'domicilio' => 'required|numeric|min:0',
         'is_scheduled' => 'required|boolean',
         'delivery_date' => 'required_if:is_scheduled,true|date|after:now',
