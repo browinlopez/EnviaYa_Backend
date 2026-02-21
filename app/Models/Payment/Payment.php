@@ -30,6 +30,9 @@ class Payment extends Audit
         'status',
         'provider_snapshot',
         'payment_date',
+        'redirect_url',
+        'qr_payload',
+        'qr_expires_at',
         'state'
     ];
 

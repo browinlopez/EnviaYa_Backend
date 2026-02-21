@@ -22,6 +22,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 
 class OrderController extends Controller
 {
@@ -457,14 +458,11 @@ class OrderController extends Controller
 
         // MÉTODO 2: TARJETA / ONLINE
         if ($request->methods_id == 2) {
-            // Crear intención
             $intentResponse = $paymentController->createIntent(new Request([
                 'orderSales_id' => $order->orderSales_id
             ]));
 
             $data = $intentResponse->getData(true);
-
-            // Soportar ambos formatos: 'intent' o 'intent_created'
             $intentData = $data['intent'] ?? $data['intent_created'] ?? null;
 
             if (!$intentData) throw new \Exception("Error al crear intención de pago en Bold");
@@ -472,14 +470,12 @@ class OrderController extends Controller
             $bold_reference = $intentData['payload']['reference_id'] ?? $intentData['bold_reference_id'] ?? null;
             $intentCreated = PaymentIntent::where('orderSales_id', $order->orderSales_id)->latest()->first();
 
-            // Preparar productos para Bold
             $productsForBold = array_map(fn($p) => [
                 'product_id' => $p['product_id'],
                 'amount' => intval($p['amount']),
                 'unit_price' => floatval($p['unit_price'])
             ], $request->products);
 
-            // Preparar request de pago
             $paymentRequest = [
                 'orderSales_id' => $order->orderSales_id,
                 'reference_id' => $bold_reference,
@@ -496,7 +492,6 @@ class OrderController extends Controller
                 ]
             ];
 
-            // Ejecutar makePayment solo si hay intención
             $response = $paymentController->makePayment(new Request($paymentRequest));
             $boldData = $response->getData(true)['payment'] ?? null;
 
@@ -509,6 +504,65 @@ class OrderController extends Controller
                 $order->payment_state = strtoupper($boldData['status'] ?? '') === 'APPROVED' ? 'paid' : 'denied';
                 $order->save();
             }
+        }
+
+        // MÉTODO 5: QR
+        if ($request->methods_id == 5) {
+            $request->merge([
+                'forms_id' => 5,
+                'payment_method' => ['name' => 'QR']
+            ]);
+
+            $paymentRequest = [
+                'orderSales_id' => $order->orderSales_id,
+                'reference_id' => 'ORD-' . $order->orderSales_id . '-' . strtoupper(Str::random(8)),
+                'payer' => $request->payer,
+                'payment_method' => $request->payment_method,
+                'products' => array_map(fn($p) => [
+                    'product_id' => $p['product_id'],
+                    'amount' => intval($p['amount']),
+                    'unit_price' => floatval($p['unit_price']),
+                ], $request->products),
+                'device_fingerprint' => $request->device_fingerprint ?? [
+                    'ip' => $request->ip(),
+                    'device_type' => 'WEB'
+                ],
+                'metadata' => $request->metadata ?? [
+                    'key' => 'order_id',
+                    'value' => (string)$order->orderSales_id
+                ]
+            ];
+
+            $response = $paymentController->makePayment(new Request($paymentRequest));
+            $boldData = $response->getData(true)['payment'] ?? null;
+
+            if (!$boldData || empty($boldData['qr_payload'])) {
+                throw new \Exception("No se pudo generar el QR de pago");
+            }
+
+            $bold_reference = $boldData['provider_payment_id'] ?? $paymentRequest['reference_id'];
+
+            $paymentCreated = Payment::create([
+                'orderSales_id' => $order->orderSales_id,
+                'methods_id' => 5,
+                'provider' => 'bold',
+                'provider_payment_id' => $bold_reference,
+                'amount' => $order->total,
+                'subtotal' => $order->total,
+                'total' => $order->total,
+                'payment_status' => 0,
+                'status' => 'pending',
+                'provider_snapshot' => $boldData,
+                'qr_payload' => $boldData['qr_payload'],
+                'qr_expires_at' => isset($boldData['next_actions']['expires_at'])
+                    ? \Carbon\Carbon::createFromTimestampMs($boldData['next_actions']['expires_at'] / 1000000)
+                    : null,
+                'payment_date' => now(),
+                'state' => 1,
+            ]);
+
+            $order->payment_state = 'pending_online';
+            $order->save();
         }
 
         DB::commit();
@@ -536,8 +590,7 @@ class OrderController extends Controller
             'intent_created' => $intentCreated,
             'payment_created' => $paymentCreated
         ], 201)
-        ->header('Location', url("/api/orders/{$order->orderSales_id}"));
-
+            ->header('Location', url("/api/orders/{$order->orderSales_id}"));
     } catch (\Exception $e) {
         DB::rollBack();
         return response()->json([

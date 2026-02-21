@@ -94,137 +94,93 @@ class PaymentController extends Controller
     public function makePayment(Request $request)
     {
         $request->validate([
-            'orderSales_id'        => 'required|integer|exists:orderssales,orderSales_id',
-            'reference_id'         => 'required|string',
-            'payer'                => 'required|array',
-            'payment_method'       => 'required|array',
-            'payment_method.name'  => 'required|string',
-            'products'             => 'required|array|min:1',
+            'orderSales_id' => 'required|integer|exists:orderssales,orderSales_id',
+            'reference_id' => 'required|string',
+            'payer' => 'required|array',
+            'payment_method' => 'required|array',
+            'payment_method.name' => 'required|string',
+            'products' => 'required|array|min:1',
         ]);
 
         $order = OrdersSales::findOrFail($request->orderSales_id);
 
-        // Metadata como objeto
-        $metadata = $request->metadata ?? [
-            'key'   => 'order_id',
-            'value' => (string) $request->orderSales_id
-        ];
-
-        // Normalizar payer
-        $payer = [
-            'person_type'     => $request->payer['person_type'],
-            'name'            => $request->payer['name'],
-            'phone'           => $request->payer['phone'],
-            'email'           => $request->payer['email'],
-            'document_type'   => $request->payer['document_type'],
-            'document_number' => strval($request->payer['document_number']), // convertir a string
-            'billing_address' => [
-                'street1'  => $request->payer['billing_address']['street1'] ?? 'Sin dirección',
-                'street2'  => $request->payer['billing_address']['street2'] ?? '',
-                'city'     => $request->payer['billing_address']['city'] ?? 'Barranquilla',
-                'zip_code' => str_pad($request->payer['billing_address']['zip_code'] ?? '08001', 5, '0', STR_PAD_LEFT),
-                'province' => $request->payer['billing_address']['province'] ?? 'Atlántico',
-                'country'  => $request->payer['billing_address']['country'] ?? 'CO',
-                'phone'    => $request->payer['billing_address']['phone'] ?? $request->payer['phone'],
-            ],
-        ];
-
-        // Normalizar productos
+        // Normalizar payer y productos
+        $payer = $request->payer;
         $products = array_map(function ($item) {
             return [
                 'product_id' => $item['product_id'],
-                'amount'     => intval($item['amount']),
-                'unit_price' => floatval($item['unit_price']), // convertir a número
+                'amount' => intval($item['amount']),
+                'unit_price' => floatval($item['unit_price']),
             ];
         }, $request->products);
 
         // Payment method
         $paymentMethod = [
-            'name'         => $request->payment_method['name'],
+            'name' => $request->payment_method['name'],
             'installments' => intval($request->payment_method['installments'] ?? 1),
         ];
 
-        if (!empty($request->payment_method['card_number'])) {
-            $cardNumber = preg_replace('/\D/', '', $request->payment_method['card_number']); // quitar caracteres no numéricos
-            if (strlen($cardNumber) !== 16) {
-                return response()->json([
-                    'message' => 'El número de tarjeta debe tener 16 dígitos'
-                ], 422);
-            }
-
+        if ($paymentMethod['name'] === 'CREDIT_CARD') {
             $paymentMethod = array_merge($paymentMethod, [
-                'card_number'      => $cardNumber,
-                'cardholder_name'  => $request->payment_method['cardholder_name'],
+                'card_number' => preg_replace('/\D/', '', $request->payment_method['card_number']),
+                'cardholder_name' => $request->payment_method['cardholder_name'],
                 'expiration_month' => $request->payment_method['expiration_month'],
-                'expiration_year'  => $request->payment_method['expiration_year'],
-                'cvc'              => $request->payment_method['cvc'],
+                'expiration_year' => $request->payment_method['expiration_year'],
+                'cvc' => $request->payment_method['cvc'],
             ]);
-        } elseif (!empty($request->payment_method['token'])) {
-            $paymentMethod['token'] = $request->payment_method['token'];
         }
 
-        // Device fingerprint
         $deviceFingerprint = $request->device_fingerprint ?? [
-            'ip'               => $request->ip(),
-            'device_type'      => 'WEB',
-            'os'               => '',
-            'model'            => '',
-            'browser'          => '',
-            'java_enabled'     => false,
-            'language'         => 'es',
-            'color_depth'      => 24,
-            'screen_height'    => 1080,
-            'screen_width'     => 1920,
-            'time_zone_offset' => now()->offsetHours() * -60,
+            'device_type' => 'WEB',
+            'ip' => $request->ip(),
         ];
 
-        // Body final para Bold
         $body = [
-            'reference_id'       => $request->reference_id,
-            'metadata'           => $metadata,
-            'payer'              => $payer,
-            'products'           => $products,
-            'payment_method'     => $paymentMethod,
+            'reference_id' => $request->reference_id,
+            'metadata' => $request->metadata ?? ['key' => 'order_id', 'value' => (string)$order->orderSales_id],
+            'payer' => $payer,
+            'products' => $products,
+            'payment_method' => $paymentMethod,
             'device_fingerprint' => $deviceFingerprint,
         ];
 
-        // Enviar a Bold
         $response = Http::withHeaders($this->boldHeaders())
             ->post("{$this->boldApiUrl}/v1/payment", $body);
 
         if ($response->failed()) {
             return response()->json([
                 'message' => 'Error al intentar el pago en Bold',
-                'error'   => $response->json()
+                'error' => $response->json()
             ], 422);
         }
 
         $data = $response->json()['payload'] ?? $response->json();
 
-        // Crear registro de pago
+        // Guardar Payment con PSE o QR
         $payment = Payment::create([
-            'orderSales_id'       => $order->orderSales_id,
-            'methods_id'          => 2,
-            'provider'            => 'bold',
+            'orderSales_id' => $order->orderSales_id,
+            'methods_id' => $request->methods_id,
+            'provider' => 'bold',
             'provider_payment_id' => $data['transaction_id'] ?? null,
-            'amount'              => $order->total,
-            'subtotal'            => $order->total,
-            'total'               => $order->total,
-            'payment_status'      => strtoupper($data['status'] ?? '') === 'APPROVED' ? 1 : 0,
-            'status'              => strtolower($data['status'] ?? 'unknown'),
-            'provider_snapshot'   => $data,
-            'payment_date'        => now(),
-            'state'               => 1,
+            'amount' => $order->total,
+            'subtotal' => $order->total,
+            'total' => $order->total,
+            'payment_status' => strtoupper($data['status'] ?? '') === 'APPROVED' ? 1 : 0,
+            'status' => strtolower($data['status'] ?? 'unknown'),
+            'provider_snapshot' => $data,
+            'redirect_url' => $data['next_actions']['redirect_url'] ?? null,
+            'qr_payload' => $data['next_actions']['qr_payload'] ?? null,
+            'qr_expires_at' => isset($data['next_actions']['expires_at'])
+                ? \Carbon\Carbon::createFromTimestampMs($data['next_actions']['expires_at'] / 1000000)
+                : null,
+            'payment_date' => now(),
+            'state' => 1,
         ]);
 
-        if (!empty($data['status']) && strtoupper($data['status']) === 'APPROVED') {
-            $order->update(['payment_state' => 'paid']);
-        }
-
         return response()->json([
-            'message'       => 'Pago procesado con Bold',
-            'payment'       => $payment,
-            'bold_response' => $data
+            'message' => 'Pago procesado con Bold',
+            'payment' => $payment,
+            'bold_response' => $data,
         ]);
     }
 
