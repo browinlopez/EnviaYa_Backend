@@ -9,28 +9,9 @@ use App\Models\Payment\PaymentIntent;
 use App\Services\BoldService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
-use Carbon\Carbon;
 
 class PaymentController extends Controller
 {
-    private function parseBoldTimestamp(?int $timestamp): ?Carbon
-    {
-        if (!$timestamp) {
-            return null;
-        }
-
-        // Nanosegundos → milisegundos
-        if ($timestamp > 9999999999999) {
-            $timestamp = (int) ($timestamp / 1_000_000);
-        }
-
-        // Milisegundos → segundos
-        if ($timestamp > 9999999999) {
-            $timestamp = (int) ($timestamp / 1000);
-        }
-
-        return Carbon::createFromTimestamp($timestamp);
-    }
     /**
      * Crear intención de pago
      */
@@ -75,32 +56,38 @@ class PaymentController extends Controller
 
         $body = [
             "reference_id" => $intent->bold_reference_id,
-
-            // 🔥 PAYER COMPLETO (OBLIGATORIO EN API PREVIA)
             "payer" => $payer,
-
             "payment_method" => $paymentMethod,
             "products" => $products,
-
             "metadata" => [
                 "key" => "order_id",
                 "value" => (string) $order->orderSales_id
             ],
-
             "device_fingerprint" => [
                 "device_type" => "WEB",
                 "ip" => $request->ip()
             ]
         ];
 
-        // 🔍 Útil para debug
-        // \Log::info('BOLD PAYMENT BODY', $body);
-
         $boldResponse = $bold->makePayment($body);
 
-        $expiresAt = $this->parseBoldTimestamp(
-            $boldResponse['next_actions']['expires_at'] ?? null
-        );
+        /*
+        |--------------------------------------------------------------------------
+        | MANEJO CORRECTO DEL QR (API PREVIA BOLD)
+        |--------------------------------------------------------------------------
+        */
+        $qrPayload = null;
+        $qrExpiresAt = null;
+
+        if (isset($boldResponse['next_actions']['qr'])) {
+            $qrPayload = $boldResponse['next_actions']['qr']['payload'] ?? null;
+
+            if (isset($boldResponse['next_actions']['qr']['expires_in'])) {
+                $qrExpiresAt = now()->addSeconds(
+                    (int) $boldResponse['next_actions']['qr']['expires_in']
+                );
+            }
+        }
 
         return Payment::create([
             'orderSales_id' => $order->orderSales_id,
@@ -111,15 +98,17 @@ class PaymentController extends Controller
             'subtotal' => $order->total,
             'total' => $order->total,
             'status' => strtolower($boldResponse['status'] ?? 'pending'),
-            'payment_status' => strtoupper($boldResponse['status'] ?? '') === 'APPROVED' ? 1 : 0,
+            'payment_status' =>
+            strtoupper($boldResponse['status'] ?? '') === 'APPROVED' ? 1 : 0,
             'provider_snapshot' => $boldResponse,
             'redirect_url' => $boldResponse['next_actions']['redirect_url'] ?? null,
-            'qr_payload' => $boldResponse['next_actions']['qr_payload'] ?? null,
-            'qr_expires_at' => $expiresAt,
+            'qr_payload' => $qrPayload,
+            'qr_expires_at' => $qrExpiresAt,
             'payment_date' => now(),
             'state' => 1,
         ]);
     }
+
     /**
      * Consultar estado del pago
      */
