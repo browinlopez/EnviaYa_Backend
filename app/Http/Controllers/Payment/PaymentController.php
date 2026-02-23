@@ -20,14 +20,16 @@ class PaymentController extends Controller
     {
         $reference = 'ORD-' . $order->orderSales_id . '-' . Str::upper(Str::random(8));
 
-        $response = $bold->createIntent([
-            'reference_id' => $reference,
-            'amount' => [
-                'currency' => 'COP',
-                'total_amount' => $order->total
+        $body = [
+            "reference_id" => $reference,
+            "amount" => [
+                "currency" => "COP",
+                "total_amount" => $order->total
             ],
-            'description' => "Pago orden #{$order->orderSales_id}"
-        ]);
+            "description" => "Pago orden #{$order->orderSales_id}"
+        ];
+
+        $response = $bold->createIntent($body);
 
         return PaymentIntent::create([
             'orderSales_id'     => $order->orderSales_id,
@@ -53,20 +55,30 @@ class PaymentController extends Controller
         BoldService $bold
     ): Payment {
 
-        $boldResponse = $bold->makePayment([
-            'reference_id' => $intent->bold_reference_id,
-            'payer' => $payer,
-            'payment_method' => $paymentMethod,
-            'products' => $products,
-            'metadata' => [
-                'key' => 'order_id',
-                'value' => (string) $order->orderSales_id
+        $body = [
+            "reference_id" => $intent->bold_reference_id,
+
+            // 🔥 PAYER COMPLETO (OBLIGATORIO EN API PREVIA)
+            "payer" => $payer,
+
+            "payment_method" => $paymentMethod,
+            "products" => $products,
+
+            "metadata" => [
+                "key" => "order_id",
+                "value" => (string) $order->orderSales_id
             ],
-            'device_fingerprint' => [
-                'device_type' => 'WEB',
-                'ip' => $request->ip()
+
+            "device_fingerprint" => [
+                "device_type" => "WEB",
+                "ip" => $request->ip()
             ]
-        ]);
+        ];
+
+        // 🔍 Útil para debug
+        // \Log::info('BOLD PAYMENT BODY', $body);
+
+        $boldResponse = $bold->makePayment($body);
 
         return Payment::create([
             'orderSales_id' => $order->orderSales_id,
@@ -88,7 +100,6 @@ class PaymentController extends Controller
             'state' => 1,
         ]);
     }
-
     /**
      * Consultar estado del pago
      */

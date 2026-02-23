@@ -427,26 +427,27 @@ class OrderController extends Controller
 
             if (in_array($request->methods_id, [2, 5])) {
 
-                $paymentController = app(\App\Http\Controllers\Payment\PaymentController::class);
+                $paymentController = app(PaymentController::class);
 
+                // 1️⃣ Crear intent
                 $intent = $paymentController->createIntent($order, $bold);
 
-                $payer = [
-                    'name' => $request->payer['name'],
-                    'email' => $request->payer['email'],
-                    'phone' => $request->payer['phone'],
-                ];
+                // 2️⃣ PAYER COMPLETO (NO NORMALIZAR)
+                $payer = $request->payer;
 
+                // 3️⃣ Método de pago
                 $paymentMethod = $request->methods_id == 2
                     ? array_merge(['name' => 'CREDIT_CARD'], $request->payment_method)
                     : ['name' => 'QR'];
 
+                // 4️⃣ Productos
                 $products = collect($request->products)->map(fn($p) => [
                     'product_id' => $p['product_id'],
                     'amount' => (int) $p['amount'],
                     'unit_price' => (float) $p['unit_price'],
                 ])->toArray();
 
+                // 5️⃣ Ejecutar pago
                 $payment = $paymentController->createPayment(
                     $order,
                     $intent,
@@ -457,6 +458,7 @@ class OrderController extends Controller
                     $bold
                 );
 
+                // 6️⃣ Estado
                 $order->payment_state = $payment->payment_status
                     ? 'paid'
                     : 'pending_online';
