@@ -6,47 +6,18 @@ use App\Http\Controllers\Controller;
 use App\Models\Order\OrdersSales;
 use App\Models\Payment\Payment;
 use App\Models\Payment\PaymentIntent;
+use App\Services\BoldService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Carbon\Carbon;
 
 class PaymentController extends Controller
 {
-    private $boldApiUrl;
-    private $boldApiKey;
-
-    public function __construct()
-    {
-        $this->boldApiUrl = config('services.bold.base_url');
-        $this->boldApiKey  = config('services.bold.api_key');
-    }
-
-    private function boldHeaders()
-    {
-        return [
-            'Authorization' => 'x-api-key ' . $this->boldApiKey,
-            'Content-Type'  => 'application/json',
-            'Accept'        => 'application/json',
-        ];
-    }
-
     /**
-     * Crear intención de pago con Bold (POST /v1/payment-intent)
+     * Crear intención de pago
      */
-    public function createIntent(Request $request)
+    public function createIntent(OrdersSales $order, BoldService $bold): PaymentIntent
     {
-        $request->validate([
-            'orderSales_id' => 'required|exists:orderssales,orderSales_id'
-        ]);
-
-        $order = OrdersSales::findOrFail($request->orderSales_id);
-
-        if ($order->methods_id == 1) {
-            return response()->json([
-                'message' => 'Pago en efectivo no requiere intención'
-            ], 422);
-        }
-
         $reference = 'ORD-' . $order->orderSales_id . '-' . Str::upper(Str::random(8));
 
         $body = [
@@ -58,196 +29,108 @@ class PaymentController extends Controller
             "description" => "Pago orden #{$order->orderSales_id}"
         ];
 
-        $response = Http::withHeaders($this->boldHeaders())
-            ->post("{$this->boldApiUrl}/v1/payment-intent", $body);
+        $response = $bold->createIntent($body);
 
-        if ($response->failed()) {
-            return response()->json([
-                'message' => 'Error al crear intención de pago',
-                'error'   => $response->body()
-            ], 500);
-        }
-
-        $data = $response->json();
-
-        $status = $data['payload']['status'] ?? ($data['status'] ?? null);
-
-        $intent = PaymentIntent::create([
+        return PaymentIntent::create([
             'orderSales_id'     => $order->orderSales_id,
             'provider'          => 'bold',
             'bold_reference_id' => $reference,
             'amount'            => $order->total,
             'currency'          => 'COP',
-            'status'            => $status,
-            'response'          => $data,
-        ]);
-
-        return response()->json([
-            'message' => 'Intención creada',
-            'intent'  => $data,
+            'status'            => $response['payload']['status'] ?? null,
+            'response'          => $response,
         ]);
     }
 
     /**
-     * Ejecutar pago con Bold (POST /v1/payment)
+     * Crear pago (TARJETA / QR)
      */
-    public function makePayment(Request $request)
-    {
-        $request->validate([
-            'orderSales_id' => 'required|integer|exists:orderssales,orderSales_id',
-            'reference_id' => 'required|string',
-            'payer' => 'required|array',
-            'payment_method' => 'required|array',
-            'payment_method.name' => 'required|string',
-            'products' => 'required|array|min:1',
-        ]);
-
-        $order = OrdersSales::findOrFail($request->orderSales_id);
-
-        // Normalizar payer y productos
-        $payer = $request->payer;
-        $products = array_map(function ($item) {
-            return [
-                'product_id' => $item['product_id'],
-                'amount' => intval($item['amount']),
-                'unit_price' => floatval($item['unit_price']),
-            ];
-        }, $request->products);
-
-        // Payment method
-        $paymentMethod = [
-            'name' => $request->payment_method['name'],
-            'installments' => intval($request->payment_method['installments'] ?? 1),
-        ];
-
-        if ($paymentMethod['name'] === 'CREDIT_CARD') {
-            $paymentMethod = array_merge($paymentMethod, [
-                'card_number' => preg_replace('/\D/', '', $request->payment_method['card_number']),
-                'cardholder_name' => $request->payment_method['cardholder_name'],
-                'expiration_month' => $request->payment_method['expiration_month'],
-                'expiration_year' => $request->payment_method['expiration_year'],
-                'cvc' => $request->payment_method['cvc'],
-            ]);
-        }
-
-        $deviceFingerprint = $request->device_fingerprint ?? [
-            'device_type' => 'WEB',
-            'ip' => $request->ip(),
-        ];
+    public function createPayment(
+        OrdersSales $order,
+        PaymentIntent $intent,
+        array $payer,
+        array $paymentMethod,
+        array $products,
+        Request $request,
+        BoldService $bold
+    ): Payment {
 
         $body = [
-            'reference_id' => $request->reference_id,
-            'metadata' => $request->metadata ?? ['key' => 'order_id', 'value' => (string)$order->orderSales_id],
-            'payer' => $payer,
-            'products' => $products,
-            'payment_method' => $paymentMethod,
-            'device_fingerprint' => $deviceFingerprint,
+            "reference_id" => $intent->bold_reference_id,
+            "payer" => $payer,
+            "payment_method" => $paymentMethod,
+            "products" => $products,
+            "metadata" => [
+                "key" => "order_id",
+                "value" => (string)$order->orderSales_id
+            ],
+            "device_fingerprint" => [
+                "device_type" => "WEB",
+                "ip" => $request->ip()
+            ]
         ];
 
-        $response = Http::withHeaders($this->boldHeaders())
-            ->post("{$this->boldApiUrl}/v1/payment", $body);
+        $boldResponse = $bold->makePayment($body);
 
-        if ($response->failed()) {
-            return response()->json([
-                'message' => 'Error al intentar el pago en Bold',
-                'error' => $response->json()
-            ], 422);
-        }
-
-        $data = $response->json()['payload'] ?? $response->json();
-
-        // Guardar Payment con PSE o QR
-        $payment = Payment::create([
+        return Payment::create([
             'orderSales_id' => $order->orderSales_id,
-            'methods_id' => $request->methods_id,
+            'methods_id' => $order->methods_id,
             'provider' => 'bold',
-            'provider_payment_id' => $data['transaction_id'] ?? null,
+            'provider_payment_id' => $boldResponse['transaction_id'] ?? null,
             'amount' => $order->total,
             'subtotal' => $order->total,
             'total' => $order->total,
-            'payment_status' => strtoupper($data['status'] ?? '') === 'APPROVED' ? 1 : 0,
-            'status' => strtolower($data['status'] ?? 'unknown'),
-            'provider_snapshot' => $data,
-            'redirect_url' => $data['next_actions']['redirect_url'] ?? null,
-            'qr_payload' => $data['next_actions']['qr_payload'] ?? null,
-            'qr_expires_at' => isset($data['next_actions']['expires_at'])
-                ? \Carbon\Carbon::createFromTimestampMs($data['next_actions']['expires_at'] / 1000000)
+            'status' => strtolower($boldResponse['status'] ?? 'pending'),
+            'payment_status' => strtoupper($boldResponse['status'] ?? '') === 'APPROVED' ? 1 : 0,
+            'provider_snapshot' => $boldResponse,
+            'redirect_url' => $boldResponse['next_actions']['redirect_url'] ?? null,
+            'qr_payload' => $boldResponse['next_actions']['qr_payload'] ?? null,
+            'qr_expires_at' => isset($boldResponse['next_actions']['expires_at'])
+                ? Carbon::createFromTimestampMs($boldResponse['next_actions']['expires_at'])
                 : null,
             'payment_date' => now(),
             'state' => 1,
         ]);
-
-        return response()->json([
-            'message' => 'Pago procesado con Bold',
-            'payment' => $payment,
-            'bold_response' => $data,
-        ]);
     }
 
     /**
-     * Consultar estado del pago (GET /v1/payment/{reference_id})
-     * Aquí se genera el Payment y se actualiza la orden solo si el status es APPROVED
+     * Consultar estado del pago
      */
-    public function checkStatus($reference)
+    public function checkStatus(string $reference, BoldService $bold)
     {
-        $response = Http::withHeaders($this->boldHeaders())
-            ->get("{$this->boldApiUrl}/v1/payment/{$reference}");
-
-        if ($response->failed()) {
-            return response()->json([
-                'message' => 'Error consultando estado del pago',
-                'error'   => $response->body()
-            ], 500);
-        }
-
-        $data = $response->json()['payload'] ?? $response->json();
+        $data = $bold->checkPayment($reference);
         $status = strtoupper($data['status'] ?? '');
 
-        // Buscar la orden asociada a este reference_id
-        $paymentIntent = PaymentIntent::where('bold_reference_id', $reference)->first();
+        $intent = PaymentIntent::where('bold_reference_id', $reference)->firstOrFail();
+        $order  = OrdersSales::findOrFail($intent->orderSales_id);
 
-        if (!$paymentIntent) {
-            return response()->json([
-                'message' => 'No se encontró PaymentIntent para esta referencia',
-            ], 404);
-        }
-
-        $order = OrdersSales::find($paymentIntent->orderSales_id);
-
-        // ✅ Si el pago fue aprobado y aún no hemos generado el Payment
         if ($status === 'APPROVED') {
-
-            // Evitar duplicar el registro de Payment
-            if (!Payment::where('orderSales_id', $order->orderSales_id)
-                ->where('provider_payment_id', $data['transaction_id'] ?? '')
-                ->exists()) {
-
-                $payment = Payment::create([
-                    'orderSales_id'       => $order->orderSales_id,
-                    'methods_id'          => 2,
-                    'provider'            => 'bold',
+            Payment::firstOrCreate(
+                [
+                    'orderSales_id' => $order->orderSales_id,
                     'provider_payment_id' => $data['transaction_id'] ?? null,
-                    'amount'              => $order->total,
-                    'subtotal'            => $order->total,
-                    'total'               => $order->total,
-                    'payment_status'      => 1,
-                    'status'              => strtolower($status),
-                    'provider_snapshot'   => $data,
-                    'payment_date'        => now(),
-                    'state'               => 1,
-                ]);
+                ],
+                [
+                    'methods_id' => $order->methods_id,
+                    'provider' => 'bold',
+                    'amount' => $order->total,
+                    'subtotal' => $order->total,
+                    'total' => $order->total,
+                    'payment_status' => 1,
+                    'status' => 'approved',
+                    'provider_snapshot' => $data,
+                    'payment_date' => now(),
+                    'state' => 1,
+                ]
+            );
 
-                // Actualizar el estado de pago en OrdersSales
-                $order->update([
-                    'payment_state' => 'approved',
-                ]);
-            }
+            $order->update(['payment_state' => 'paid']);
         }
 
         return response()->json([
             'payment_status' => $status,
-            'data' => $data,
-            'order_payment_state' => $order->payment_state ?? null,
+            'order_payment_state' => $order->payment_state,
+            'data' => $data
         ]);
     }
 }
