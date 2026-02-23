@@ -359,7 +359,6 @@ class OrderController extends Controller
     }
 
     // Crear orden de venta
-
     public function store(Request $request, BoldService $bold)
     {
         $request->validate([
@@ -375,24 +374,44 @@ class OrderController extends Controller
             'payment_method' => 'required_if:methods_id,2|array',
         ]);
 
+        /* ========= VALIDACIONES REALES ========= */
+
+        $buyer = Buyer::where('user_id', $request->user_id)->first();
+        if (!$buyer) {
+            return response()->json(['message' => 'Usuario comprador no encontrado'], 404);
+        }
+
+        $business = Business::find($request->busines_id);
+        if (!$business) {
+            return response()->json(['message' => 'Negocio no encontrado'], 404);
+        }
+
+        $address = UserAddress::find($request->address_id);
+        if (!$address) {
+            return response()->json(['message' => 'Dirección no encontrada'], 404);
+        }
+
         DB::beginTransaction();
 
         try {
             /* ========= ORDEN ========= */
+
             $total = collect($request->products)
                 ->sum(fn($p) => $p['amount'] * $p['unit_price']);
 
             $order = OrdersSales::create([
-                'buyer_id' => $request->user_id,
-                'busines_id' => $request->busines_id,
-                'address_id' => $request->address_id,
+                'buyer_id' => $buyer->buyer_id,
+                'busines_id' => $business->busines_id,
+                'address_id' => $address->address_id,
                 'methods_id' => $request->methods_id,
                 'total' => $total,
                 'sale_date' => now(),
                 'delivery_date' => now(),
                 'is_scheduled' => false,
                 'state' => 1,
-                'payment_state' => 'pending_online'
+                'payment_state' => in_array($request->methods_id, [2, 5])
+                    ? 'pending_online'
+                    : 'pending_cash'
             ]);
 
             foreach ($request->products as $p) {
@@ -405,33 +424,29 @@ class OrderController extends Controller
             }
 
             /* ========= PAGO ONLINE ========= */
+
             if (in_array($request->methods_id, [2, 5])) {
 
-                $paymentController = app(PaymentController::class);
+                $paymentController = app(\App\Http\Controllers\Payment\PaymentController::class);
 
-                // 1️⃣ Intent
                 $intent = $paymentController->createIntent($order, $bold);
 
-                // 2️⃣ Payer
                 $payer = [
-                    "name" => $request->payer['name'],
-                    "email" => $request->payer['email'],
-                    "phone" => $request->payer['phone'],
+                    'name' => $request->payer['name'],
+                    'email' => $request->payer['email'],
+                    'phone' => $request->payer['phone'],
                 ];
 
-                // 3️⃣ Payment method
                 $paymentMethod = $request->methods_id == 2
                     ? array_merge(['name' => 'CREDIT_CARD'], $request->payment_method)
                     : ['name' => 'QR'];
 
-                // 4️⃣ Products
                 $products = collect($request->products)->map(fn($p) => [
-                    "product_id" => $p['product_id'],
-                    "amount" => (int)$p['amount'],
-                    "unit_price" => (float)$p['unit_price']
+                    'product_id' => $p['product_id'],
+                    'amount' => (int) $p['amount'],
+                    'unit_price' => (float) $p['unit_price'],
                 ])->toArray();
 
-                // 5️⃣ Crear pago
                 $payment = $paymentController->createPayment(
                     $order,
                     $intent,
@@ -442,7 +457,10 @@ class OrderController extends Controller
                     $bold
                 );
 
-                $order->payment_state = $payment->payment_status ? 'paid' : 'pending_online';
+                $order->payment_state = $payment->payment_status
+                    ? 'paid'
+                    : 'pending_online';
+
                 $order->save();
             }
 

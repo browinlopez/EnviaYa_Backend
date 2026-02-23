@@ -20,16 +20,14 @@ class PaymentController extends Controller
     {
         $reference = 'ORD-' . $order->orderSales_id . '-' . Str::upper(Str::random(8));
 
-        $body = [
-            "reference_id" => $reference,
-            "amount" => [
-                "currency" => "COP",
-                "total_amount" => $order->total
+        $response = $bold->createIntent([
+            'reference_id' => $reference,
+            'amount' => [
+                'currency' => 'COP',
+                'total_amount' => $order->total
             ],
-            "description" => "Pago orden #{$order->orderSales_id}"
-        ];
-
-        $response = $bold->createIntent($body);
+            'description' => "Pago orden #{$order->orderSales_id}"
+        ]);
 
         return PaymentIntent::create([
             'orderSales_id'     => $order->orderSales_id,
@@ -55,22 +53,20 @@ class PaymentController extends Controller
         BoldService $bold
     ): Payment {
 
-        $body = [
-            "reference_id" => $intent->bold_reference_id,
-            "payer" => $payer,
-            "payment_method" => $paymentMethod,
-            "products" => $products,
-            "metadata" => [
-                "key" => "order_id",
-                "value" => (string)$order->orderSales_id
+        $boldResponse = $bold->makePayment([
+            'reference_id' => $intent->bold_reference_id,
+            'payer' => $payer,
+            'payment_method' => $paymentMethod,
+            'products' => $products,
+            'metadata' => [
+                'key' => 'order_id',
+                'value' => (string) $order->orderSales_id
             ],
-            "device_fingerprint" => [
-                "device_type" => "WEB",
-                "ip" => $request->ip()
+            'device_fingerprint' => [
+                'device_type' => 'WEB',
+                'ip' => $request->ip()
             ]
-        ];
-
-        $boldResponse = $bold->makePayment($body);
+        ]);
 
         return Payment::create([
             'orderSales_id' => $order->orderSales_id,
