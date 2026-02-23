@@ -13,6 +13,24 @@ use Carbon\Carbon;
 
 class PaymentController extends Controller
 {
+    private function parseBoldTimestamp(?int $timestamp): ?Carbon
+    {
+        if (!$timestamp) {
+            return null;
+        }
+
+        // Nanosegundos → milisegundos
+        if ($timestamp > 9999999999999) {
+            $timestamp = (int) ($timestamp / 1_000_000);
+        }
+
+        // Milisegundos → segundos
+        if ($timestamp > 9999999999) {
+            $timestamp = (int) ($timestamp / 1000);
+        }
+
+        return Carbon::createFromTimestamp($timestamp);
+    }
     /**
      * Crear intención de pago
      */
@@ -80,6 +98,10 @@ class PaymentController extends Controller
 
         $boldResponse = $bold->makePayment($body);
 
+        $expiresAt = $this->parseBoldTimestamp(
+            $boldResponse['next_actions']['expires_at'] ?? null
+        );
+
         return Payment::create([
             'orderSales_id' => $order->orderSales_id,
             'methods_id' => $order->methods_id,
@@ -93,9 +115,7 @@ class PaymentController extends Controller
             'provider_snapshot' => $boldResponse,
             'redirect_url' => $boldResponse['next_actions']['redirect_url'] ?? null,
             'qr_payload' => $boldResponse['next_actions']['qr_payload'] ?? null,
-            'qr_expires_at' => isset($boldResponse['next_actions']['expires_at'])
-                ? Carbon::createFromTimestampMs($boldResponse['next_actions']['expires_at'])
-                : null,
+            'qr_expires_at' => $expiresAt,
             'payment_date' => now(),
             'state' => 1,
         ]);
