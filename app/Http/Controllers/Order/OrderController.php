@@ -470,7 +470,7 @@ class OrderController extends Controller
 
             return response()->json([
                 'message' => 'Orden creada',
-                'order' => $order->load('details', 'payments'),
+                'order' => $order->load('details.product.category', 'business', 'address', 'promotions', 'payments')->toApi(),
                 'bold_reference_id' => $intent->bold_reference_id ?? null,
             ], 201);
         } catch (\Exception $e) {

@@ -105,4 +105,53 @@ class OrdersSales extends Audit
     {
         return $this->belongsTo(UserAddress::class, 'address_id', 'address_id');
     }
+
+    /**
+     * Transformar la orden para API frontend
+     */
+    public function toApi(): array
+    {
+        return [
+            'order_id' => $this->orderSales_id,
+            'buyer_id' => $this->buyer_id,
+            'busines_id' => $this->busines_id,
+            'total' => $this->total,
+            'sale_date' => $this->sale_date,
+            'delivery_date' => $this->delivery_date,
+            'state' => $this->state,
+            'is_scheduled' => $this->is_scheduled,
+            'business' => [
+                'business_id' => $this->business->busines_id ?? null,
+                'name' => $this->business->name ?? null,
+                'address' => $this->business->address ?? null,
+                'latitude' => $this->business->latitude ? (float) $this->business->latitude : null,
+                'longitude' => $this->business->longitude ? (float) $this->business->longitude : null,
+                'phone' => $this->business->phone ?? null,
+                'city' => $this->business->city ?? null,
+                'state' => $this->business->state ?? null,
+                'logo' => $this->business->logo ?? null,
+            ],
+            'delivery_address' => $this->address ? [
+                'address_id' => $this->address->address_id,
+                'address' => $this->address->address ?? null,
+                'alias' => $this->address->alias?->name,
+                'municipality' => $this->address->municipality?->name,
+                'department' => $this->address->department?->name,
+                'country' => $this->address->country?->name,
+                'latitude' => $this->address->latitude ? (float) $this->address->latitude : null,
+                'longitude' => $this->address->longitude ? (float) $this->address->longitude : null,
+            ] : null,
+            'details' => $this->details->map(fn($d) => [
+                'product_id' => $d->product->products_id ?? null,
+                'name' => $d->product->name ?? null,
+                'description' => $d->product->description ?? null,
+                'category' => $d->product->category?->name ?? null,
+                'image' => $d->product->image ?? null,
+                'amount' => $d->amount,
+                'unit_price' => $d->unit_price,
+            ])->toArray(),
+            'promotions' => $this->promotions ?? [],
+            'payments' => $this->payments ?? null,
+        ];
+    }
 }
