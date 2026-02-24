@@ -40,7 +40,6 @@ class PaymentController extends Controller
             'response'          => $response,
         ]);
     }
-
     /**
      * Crear pago (TARJETA / QR)
      */
@@ -71,11 +70,7 @@ class PaymentController extends Controller
 
         $boldResponse = $bold->makePayment($body);
 
-        /*
-        |--------------------------------------------------------------------------
-        | MANEJO CORRECTO DEL QR (API PREVIA BOLD)
-        |--------------------------------------------------------------------------
-        */
+        // Manejo del QR
         $qrPayload = null;
         $qrExpiresAt = null;
 
@@ -89,6 +84,7 @@ class PaymentController extends Controller
             }
         }
 
+        // Guardamos el intento de pago como "running"
         return Payment::create([
             'orderSales_id' => $order->orderSales_id,
             'methods_id' => $order->methods_id,
@@ -97,9 +93,8 @@ class PaymentController extends Controller
             'amount' => $order->total,
             'subtotal' => $order->total,
             'total' => $order->total,
-            'status' => strtolower($boldResponse['status'] ?? 'pending'),
-            'payment_status' =>
-            strtoupper($boldResponse['status'] ?? '') === 'APPROVED' ? 1 : 0,
+            'status' => 'running', // estado inicial mientras Bold procesa
+            'payment_status' => 0, // aún no aprobado
             'provider_snapshot' => $boldResponse,
             'redirect_url' => $boldResponse['next_actions']['redirect_url'] ?? null,
             'qr_payload' => $qrPayload,
@@ -120,27 +115,26 @@ class PaymentController extends Controller
         $intent = PaymentIntent::where('bold_reference_id', $reference)->firstOrFail();
         $order  = OrdersSales::findOrFail($intent->orderSales_id);
 
-        if ($status === 'APPROVED') {
-            Payment::firstOrCreate(
-                [
-                    'orderSales_id' => $order->orderSales_id,
-                    'provider_payment_id' => $data['transaction_id'] ?? null,
-                ],
-                [
-                    'methods_id' => $order->methods_id,
-                    'provider' => 'bold',
-                    'amount' => $order->total,
-                    'subtotal' => $order->total,
-                    'total' => $order->total,
-                    'payment_status' => 1,
-                    'status' => 'approved',
+        // Buscamos el pago existente
+        $payment = Payment::where('orderSales_id', $order->orderSales_id)
+            ->where('provider_payment_id', $data['transaction_id'] ?? null)
+            ->first();
+
+        if ($payment) {
+            // Solo actualizamos si estaba en 'running'
+            if ($payment->status === 'running') {
+                $payment->update([
+                    'payment_status' => $status === 'APPROVED' ? 1 : 0,
+                    'status' => strtolower($status),
                     'provider_snapshot' => $data,
                     'payment_date' => now(),
-                    'state' => 1,
-                ]
-            );
+                ]);
 
-            $order->update(['payment_state' => 'paid']);
+                // Actualizamos estado de la orden si se aprobó
+                if ($status === 'APPROVED') {
+                    $order->update(['payment_state' => 'paid']);
+                }
+            }
         }
 
         return response()->json([
