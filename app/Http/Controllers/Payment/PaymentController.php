@@ -73,6 +73,7 @@ class PaymentController extends Controller
         // Manejo del QR
         $qrPayload = null;
         $qrExpiresAt = null;
+        $redirectUrl = $boldResponse['next_actions']['redirect_url'] ?? null;
 
         if (isset($boldResponse['next_actions']['qr'])) {
             $qrPayload = $boldResponse['next_actions']['qr']['payload'] ?? null;
@@ -84,7 +85,7 @@ class PaymentController extends Controller
             }
         }
 
-        // Guardamos el intento de pago como "running"
+        // Guardamos el intento de pago como "running" / pending
         return Payment::create([
             'orderSales_id' => $order->orderSales_id,
             'methods_id' => $order->methods_id,
@@ -93,10 +94,10 @@ class PaymentController extends Controller
             'amount' => $order->total,
             'subtotal' => $order->total,
             'total' => $order->total,
-            'status' => 'running', // estado inicial mientras Bold procesa
-            'payment_status' => 0, // aún no aprobado
+            'status' => 'running', // estado inicial
+            'payment_status' => 0,  // aún no aprobado
             'provider_snapshot' => $boldResponse,
-            'redirect_url' => $boldResponse['next_actions']['redirect_url'] ?? null,
+            'redirect_url' => $redirectUrl,
             'qr_payload' => $qrPayload,
             'qr_expires_at' => $qrExpiresAt,
             'payment_date' => now(),
@@ -108,39 +109,48 @@ class PaymentController extends Controller
      * Consultar estado del pago
      */
     public function checkStatus(string $reference, BoldService $bold)
-    {
-        $data = $bold->checkPayment($reference);
-        $status = strtoupper($data['status'] ?? '');
+{
+    $data = $bold->checkPayment($reference);
+    $status = strtoupper($data['status'] ?? '');
 
-        $intent = PaymentIntent::where('bold_reference_id', $reference)->firstOrFail();
-        $order  = OrdersSales::findOrFail($intent->orderSales_id);
+    $intent = PaymentIntent::where('bold_reference_id', $reference)->firstOrFail();
+    $order  = OrdersSales::findOrFail($intent->orderSales_id);
 
-        // Buscamos el pago existente
-        $payment = Payment::where('orderSales_id', $order->orderSales_id)
-            ->where('provider_payment_id', $data['transaction_id'] ?? null)
-            ->first();
+    // Buscamos el pago existente
+    $payment = Payment::where('orderSales_id', $order->orderSales_id)
+        ->where('provider_payment_id', $data['transaction_id'] ?? null)
+        ->first();
 
-        if ($payment) {
-            // Solo actualizamos si estaba en 'running'
-            if ($payment->status === 'running') {
-                $payment->update([
-                    'payment_status' => $status === 'APPROVED' ? 1 : 0,
-                    'status' => strtolower($status),
-                    'provider_snapshot' => $data,
-                    'payment_date' => now(),
-                ]);
+    if ($payment) {
+        // Solo actualizamos si estaba en 'running'
+        if ($payment->status === 'running') {
+            $redirectUrl = $data['next_actions']['redirect_url'] ?? null;
+            $qrPayload = $data['next_actions']['qr']['payload'] ?? null;
+            $qrExpiresAt = isset($data['next_actions']['qr']['expires_in'])
+                ? now()->addSeconds((int) $data['next_actions']['qr']['expires_in'])
+                : null;
 
-                // Actualizamos estado de la orden si se aprobó
-                if ($status === 'APPROVED') {
-                    $order->update(['payment_state' => 'paid']);
-                }
-            }
+            $payment->update([
+                'payment_status' => $status === 'APPROVED' ? 1 : 0,
+                'status' => strtolower($status),
+                'provider_snapshot' => $data,
+                'redirect_url' => $redirectUrl,
+                'qr_payload' => $qrPayload,
+                'qr_expires_at' => $qrExpiresAt,
+                'payment_date' => now(),
+            ]);
+
+            // Actualizamos el estado de la orden según resultado
+            $order->update([
+                'payment_state' => $status === 'APPROVED' ? 'paid' : 'pending_online'
+            ]);
         }
-
-        return response()->json([
-            'payment_status' => $status,
-            'order_payment_state' => $order->payment_state,
-            'data' => $data
-        ]);
     }
+
+    return response()->json([
+        'payment_status' => $status,
+        'order_payment_state' => $order->payment_state,
+        'data' => $data
+    ]);
+}
 }
