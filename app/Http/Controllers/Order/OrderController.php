@@ -471,6 +471,7 @@ class OrderController extends Controller
             return response()->json([
                 'message' => 'Orden creada',
                 'order' => $order->load('details', 'payments'),
+                'bold_reference_id' => $intent->bold_reference_id ?? null,
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
