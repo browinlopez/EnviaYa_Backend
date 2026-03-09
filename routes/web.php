@@ -10,6 +10,9 @@ use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\ResidentialComplexController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Auth\EmailVerificationPromptController;
+use App\Http\Controllers\Auth\VerifyEmailController;
+use App\Http\Controllers\Admin\Owner\OwnerController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
@@ -17,30 +20,21 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('home/index');
 });
-
+// --- Ruta de verificación para la app móvil (token personalizado) ---
 Route::get('/verify-email', [AuthController::class, 'verify'])
     ->name('verify.email');
 
-/* Route::get('/test-mail', function () {
-    try {
-        Mail::raw('Prueba SMTP VeciPaYa ojala sirvas 2', function ($msg) {
-            $msg->to('browin49@gmail.com')
-                ->subject('SMTP OK');
-        });
-        return "Correo enviado correctamente ✅";
-    } catch (\Exception $e) {
-        return "Error al enviar correo: " . $e->getMessage();
-    }
-}); */
+Route::get('/clear-session', function () {
+    auth()->logout(); // cerrar sesión
+    session()->flush(); // borrar toda la sesión
+    return redirect('/'); // redirige a inicio
+});
 
-/* Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard'); */
-
-//dashboard
+// --- Dashboard protegido con middleware verified de Laravel ---
 Route::get('/dashboard', [DashboardController::class, 'index'])
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth'])
     ->name('dashboard');
+
 
 Route::middleware('auth')->group(function () {
 
@@ -48,126 +42,96 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    Route::prefix('admin')->name('admin.')->group(function () {
+    // --- Rutas nativas de Laravel para email verification (solo web) ---
+    Route::get('laravel-verify-email', EmailVerificationPromptController::class)
+        ->name('verification.notice');
 
-        //compradores
+    Route::get('laravel-verify-email/{id}/{hash}', VerifyEmailController::class)
+        ->middleware(['signed', 'throttle:6,1'])
+        ->name('verification.verify');
+
+    Route::post('email/verification-notification', [AuthController::class, 'resendVerificationEmail'])
+        ->middleware('throttle:6,1')
+        ->name('verification.send');
+
+    Route::prefix('admin')->name('admin.')->group(function () {
+        // Aquí van todas tus rutas de admin como ya las tenías
+        // Compradores
         Route::resource('compradores', BuyerController::class);
 
-        //negocios
-        // Listar todos los negocios
-        Route::get('negocios', [BusinessController::class, 'index'])->name('negocios.index');
+        // Negocios
+        Route::prefix('negocios')->group(function () {
+            Route::get('/', [BusinessController::class, 'index'])->name('negocios.index');
+            Route::get('create', [BusinessController::class, 'create'])->name('negocios.create');
+            Route::post('/', [BusinessController::class, 'store'])->name('negocios.store');
+            Route::get('/{business}', [BusinessController::class, 'show'])->name('negocios.show');
+            Route::get('/{business}/edit', [BusinessController::class, 'edit'])->name('negocios.edit');
+            Route::put('/{business}', [BusinessController::class, 'update'])->name('negocios.update');
+            Route::delete('/{business}', [BusinessController::class, 'destroy'])->name('negocios.destroy');
+        });
 
-        // Mostrar formulario para crear un negocio
-        Route::get('negocios/create', [BusinessController::class, 'create'])->name('negocios.create');
-
-        // Guardar un negocio nuevo
-        Route::post('negocios', [BusinessController::class, 'store'])->name('negocios.store');
-
-        // Mostrar un negocio específico
-        Route::get('negocios/{business}', [BusinessController::class, 'show'])->name('negocios.show');
-
-        // Mostrar formulario para editar un negocio
-        Route::get('negocios/{business}/edit', [BusinessController::class, 'edit'])->name('negocios.edit');
-
-        // Actualizar un negocio
-        Route::put('negocios/{business}', [BusinessController::class, 'update'])->name('negocios.update');
-
-        // Eliminar un negocio
-        Route::delete('negocios/{business}', [BusinessController::class, 'destroy'])->name('negocios.destroy');
-
-        // domicialiarios
-        Route::get('domiciliarios', [DomiciliaryController::class, 'index'])
-            ->name('domiciliarios.index');
-
-        Route::get('domiciliarios/create', [DomiciliaryController::class, 'create'])
-            ->name('domiciliarios.create');
-        Route::post('domiciliarios', [DomiciliaryController::class, 'store'])
-            ->name('domiciliarios.store');
-
-        Route::get('domiciliarios/{id}/edit', [DomiciliaryController::class, 'edit'])
-            ->name('domiciliarios.edit');
-        Route::put('domiciliarios/{id}', [DomiciliaryController::class, 'update'])
-            ->name('domiciliarios.update');
-
-        Route::delete('domiciliarios/{id}', [DomiciliaryController::class, 'destroy'])
-            ->name('domiciliarios.destroy');
-
-        Route::get('domiciliarios/{id}', [DomiciliaryController::class, 'show'])
-            ->name('domiciliarios.show');
-
+        // Domiciliarios
+        Route::prefix('domiciliarios')->group(function () {
+            Route::get('/', [DomiciliaryController::class, 'index'])->name('domiciliarios.index');
+            Route::get('/create', [DomiciliaryController::class, 'create'])->name('domiciliarios.create');
+            Route::post('/', [DomiciliaryController::class, 'store'])->name('domiciliarios.store');
+            Route::get('/{id}', [DomiciliaryController::class, 'show'])->name('domiciliarios.show');
+            Route::get('/{id}/edit', [DomiciliaryController::class, 'edit'])->name('domiciliarios.edit');
+            Route::put('/{id}', [DomiciliaryController::class, 'update'])->name('domiciliarios.update');
+            Route::delete('/{id}', [DomiciliaryController::class, 'destroy'])->name('domiciliarios.destroy');
+        });
         // Categorías de negocio
-        Route::get('category-business', [CategoryBusinessController::class, 'index'])
-            ->name('category-business.index');
-
-        Route::get('category-business/create', [CategoryBusinessController::class, 'create'])
-            ->name('category-business.create');
-
-        Route::post('category-business', [CategoryBusinessController::class, 'store'])
-            ->name('category-business.store');
-
-        Route::get('category-business/{id}/edit', [CategoryBusinessController::class, 'edit'])
-            ->name('category-business.edit');
-
-        Route::put('category-business/{id}', [CategoryBusinessController::class, 'update'])
-            ->name('category-business.update');
-
-        Route::delete('category-business/{id}', [CategoryBusinessController::class, 'destroy'])
-            ->name('category-business.destroy');
-
-
-        // Listar todos los conjuntos
-        Route::get('conjuntos', [ResidentialComplexController::class, 'index'])
-            ->name('conjuntos.index');
-
-        // Crear conjunto
-        Route::get('conjuntos/create', [ResidentialComplexController::class, 'create'])
-            ->name('conjuntos.create');
-        Route::post('conjuntos', [ResidentialComplexController::class, 'store'])
-            ->name('conjuntos.store');
-
-        // Editar conjunto
-        Route::get('conjuntos/{id}/edit', [ResidentialComplexController::class, 'edit'])
-            ->name('conjuntos.edit');
-        Route::put('conjuntos/{id}', [ResidentialComplexController::class, 'update'])
-            ->name('conjuntos.update');
-
-        // Eliminar conjunto
-        Route::delete('conjuntos/{id}', [ResidentialComplexController::class, 'destroy'])
-            ->name('conjuntos.destroy');
-
-        Route::get('productos', [ProductController::class, 'index'])->name('products.index');
-        Route::get('productos/create', [ProductController::class, 'create'])->name('products.create');
-        Route::post('productos/store', [ProductController::class, 'store'])->name('products.store');
-        Route::get('productos/edit/{id}', [ProductController::class, 'edit'])->name('products.edit');
-        Route::put('productos/update/{id}', [ProductController::class, 'update'])->name('products.update');
-        Route::delete('productos/destroy/{id}', [ProductController::class, 'destroy'])->name('products.destroy');
-Route::post('/admin/products/import', [ProductController::class, 'import'])
-    ->name('admin.products.import');
-
-
-        Route::get('/admin/products/import/preview', [ProductController::class, 'importPreview'])
-            ->name('admin.products.importPreview');
-
-        Route::post('/admin/products/import/store', [ProductController::class, 'importStore'])
-            ->name('admin.products.importStore');
-
-        Route::get('reportes/financieros', [ReportController::class, 'generalFinancial'])
-            ->name('report.general');
-        Route::get('reportes/financieros/export', [ReportController::class, 'exportFinancial'])->name('report.export');
-
-
-        Route::get('/reportes/comerciales', [ReportController::class, 'generalCommercials'])
-            ->name('reportes.comerciales');
-
-        Route::get('/reportes/comerciales/export', [ReportController::class, 'exportComercial'])
-            ->name('reportes.comerciales.export');
-
-
-        Route::get('/reportes/operacional', [ReportController::class, 'OperationalCommercials'])
-            ->name('reportes.operacional');
-
-        Route::get('reportes/operacional/export', [ReportController::class, 'exportOperational'])
-            ->name('reportes.operacional.export');
+        Route::prefix('category-business')->group(function () {
+            Route::get('/', [CategoryBusinessController::class, 'index'])->name('category-business.index');
+            Route::get('/create', [CategoryBusinessController::class, 'create'])->name('category-business.create');
+            Route::post('/', [CategoryBusinessController::class, 'store'])->name('category-business.store');
+            Route::get('/{id}/edit', [CategoryBusinessController::class, 'edit'])->name('category-business.edit');
+            Route::put('/{id}', [CategoryBusinessController::class, 'update'])->name('category-business.update');
+            Route::delete('/{id}', [CategoryBusinessController::class, 'destroy'])->name('category-business.destroy');
+        });
+        // Conjuntos residenciales
+        Route::prefix('conjuntos')->group(function () {
+            Route::get('/', [ResidentialComplexController::class, 'index'])->name('conjuntos.index');
+            Route::get('/create', [ResidentialComplexController::class, 'create'])->name('conjuntos.create');
+            Route::post('/', [ResidentialComplexController::class, 'store'])->name('conjuntos.store');
+            Route::get('/{id}/edit', [ResidentialComplexController::class, 'edit'])->name('conjuntos.edit');
+            Route::put('/{id}', [ResidentialComplexController::class, 'update'])->name('conjuntos.update');
+            Route::delete('/{id}', [ResidentialComplexController::class, 'destroy'])->name('conjuntos.destroy');
+        });
+        // Productos
+        Route::prefix('productos')->group(function () {
+            Route::get('/', [ProductController::class, 'index'])->name('products.index');
+            Route::get('/ajax', [ProductController::class, 'indexAjax'])->name('product.ajax');
+            Route::get('/create', [ProductController::class, 'create'])->name('products.create');
+            Route::post('/store', [ProductController::class, 'store'])->name('products.store');
+            Route::get('/edit/{id}', [ProductController::class, 'edit'])->name('products.edit');
+            Route::put('/update/{id}', [ProductController::class, 'update'])->name('products.update');
+            Route::delete('/destroy/{id}', [ProductController::class, 'destroy'])->name('products.destroy');
+        });
+        // Importación productos
+        Route::prefix('admin/products')->group(function () {
+            Route::post('/import', [ProductController::class, 'import'])->name('admin.products.import');
+            Route::get('/import/preview', [ProductController::class, 'importPreview'])->name('admin.products.importPreview');
+            Route::post('/import/store', [ProductController::class, 'importStore'])->name('admin.products.importStore');
+        });
+        // Relación propietarios - negocios
+        Route::prefix('owners')->group(function () {
+            Route::get('/', [OwnerController::class, 'index'])->name('owners.index');
+            Route::get('/create', [OwnerController::class, 'create'])->name('owners.create');
+            Route::post('/', [OwnerController::class, 'store'])->name('owners.store');
+            Route::get('/{owner}/edit', [OwnerController::class, 'edit'])->name('owners.edit');
+            Route::put('/{owner}', [OwnerController::class, 'update'])->name('owners.update');
+            Route::post('/{owner}/businesses', [OwnerController::class, 'syncBusinesses'])->name('admin.owners.businesses.sync');
+        });
+        // Reportes
+        Route::prefix('reportes')->group(function () {
+            Route::get('/financieros', [ReportController::class, 'generalFinancial'])->name('report.general');
+            Route::get('/financieros/export', [ReportController::class, 'exportFinancial'])->name('report.export');
+            Route::get('/comerciales', [ReportController::class, 'generalCommercials'])->name('reportes.comerciales');
+            Route::get('/comerciales/export', [ReportController::class, 'exportComercial'])->name('reportes.comerciales.export');
+            Route::get('/operacional', [ReportController::class, 'OperationalCommercials'])->name('reportes.operacional');
+            Route::get('/operacional/export', [ReportController::class, 'exportOperational'])->name('reportes.operacional.export');
+        });
     });
 });
 

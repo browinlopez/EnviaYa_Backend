@@ -2,243 +2,249 @@
 
 @section('title', 'Crear Producto')
 
-@section('content_header')
-    <h1 class="mb-3">Crear Producto</h1>
-@stop
-
 @section('content')
-    <div class="container-fluid">
+
+    <br>
+
+    <div class="owner-create-card">
+
+        {{-- HEADER --}}
+        <div class="page-header">
+            <div class="page-header-left">
+                <div class="page-icon">
+                    <i class="fas fa-box"></i>
+                </div>
+
+                <div>
+                    <h1>Nuevo Producto</h1>
+                    <p>Registrar un nuevo producto en el sistema</p>
+                </div>
+            </div>
+
+            <a href="{{ route('admin.products.index') }}" class="btn-back">
+                <i class="fas fa-arrow-left"></i>
+                Volver
+            </a>
+        </div>
+
+        {{-- FORM --}}
         <form action="{{ route('admin.products.store') }}" method="POST" id="product-form">
             @csrf
 
-            {{-- Datos generales --}}
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">Información General</h4>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
+            <div class="owner-grid">
+
+                {{-- CARD IZQUIERDA --}}
+                <div class="owner-card">
+                    <h3 class="card-title">Información general</h3>
+
+                    <div class="card-content">
+
+                        <div class="row-2">
                             <div class="form-group">
-                                <label>Nombre</label>
-                                <input type="text" name="name" class="form-control" value="{{ old('name') }}"
-                                    required>
+                                <label>Nombre *</label>
+                                <input name="name" required value="{{ old('name') }}">
+                                <small class="error-msg"></small>
                             </div>
-                        </div>
-                        <div class="col-md-6">
+
                             <div class="form-group">
-                                <label>Categoría</label>
-                                <select name="category_id" class="form-control" required>
-                                    <option value="">Seleccione una categoría</option>
+                                <label>Categoría *</label>
+                                <select name="category_id" required>
+                                    <option value="">Seleccione</option>
                                     @foreach ($categories as $cat)
                                         <option value="{{ $cat->category_id }}" @selected(old('category_id') == $cat->category_id)>
                                             {{ $cat->name }}
                                         </option>
                                     @endforeach
                                 </select>
+                                <small class="error-msg"></small>
                             </div>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Descripción</label>
-                        <textarea name="description" class="form-control">{{ old('description') }}</textarea>
-                    </div>
 
-                    <div class="row">
-                        <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Descripción</label>
+                            <textarea name="description" rows="3">{{ old('description') }}</textarea>
+                        </div>
+
+                        <div class="row-2">
                             <div class="form-group">
                                 <label>Estado</label>
-                                <select name="state" class="form-control">
-                                    <option value="1" selected>Activo</option>
+                                <select name="state">
+                                    <option value="1">Activo</option>
                                     <option value="0">Inactivo</option>
                                 </select>
                             </div>
-                        </div>
-                        <div class="col-md-6">
+
                             <div class="form-group">
-                                <label>Negocio</label>
-                                <select name="busines_id" class="form-control" id="business-select" required>
-                                    <option value="">Seleccione un negocio</option>
+                                <label>Negocio *</label>
+                                <select name="busines_id" id="business-select" required>
+                                    <option value="">Seleccione</option>
                                     @foreach ($businesses as $b)
                                         <option value="{{ $b->busines_id }}" data-type="{{ $b->type }}">
                                             {{ $b->name }}
                                         </option>
                                     @endforeach
                                 </select>
+                                <small class="error-msg"></small>
                             </div>
                         </div>
+
+                        <div class="row-2">
+                            <div class="form-group">
+                                <label>Precio *</label>
+                                <input name="price" required value="{{ old('price') }}">
+                                <small class="error-msg"></small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Cantidad *</label>
+                                <input type="number" name="amount" required value="{{ old('amount') }}">
+                                <small class="error-msg"></small>
+                            </div>
+                        </div>
+
                     </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label>Precio</label>
-                                <input type="text" name="price" id="price" class="form-control"
-                                    value="{{ old('price') }}" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label>Cantidad</label>
-                                <input type="number" name="amount" class="form-control" value="{{ old('amount') }}"
-                                    required>
-                            </div>
-                        </div>
+                </div>
+
+                {{-- CARD DERECHA --}}
+                <div class="owner-card">
+                    <h3 class="card-title">Datos específicos</h3>
+
+                    <div class="photo-box">
+                        <img id="photoPreview" src="https://ui-avatars.com/api/?name=Producto&background=1B1464&color=fff"
+                            alt="Producto">
+
+                        <input type="file" name="product_image" id="productImage" accept="image/*">
                     </div>
 
-                </div>
-            </div>
-
-            {{-- Datos de Tienda --}}
-            <div class="card shadow-sm mb-4" id="grocery-fields" style="display:none;">
-                <div class="card-header bg-info text-white">
-                    <h4 class="mb-0">Datos de Tienda</h4>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
+                    {{-- TIENDA --}}
+                    <div id="grocery-fields" style="display:none">
+                        <div class="row-2">
                             <div class="form-group">
                                 <label>Marca</label>
-                                <input type="text" name="brand" class="form-control" value="{{ old('brand') }}">
+                                <input name="brand">
                             </div>
-                        </div>
-                        <div class="col-md-6">
+
                             <div class="form-group">
                                 <label>Tamaño</label>
-                                <input type="text" name="size" class="form-control" value="{{ old('size') }}">
+                                <input name="size">
                             </div>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Fecha de expiración</label>
-                        <input type="date" name="expiration_date" class="form-control"
-                            value="{{ old('expiration_date') }}">
-                    </div>
-                </div>
-            </div>
 
-            {{-- Datos de Farmacia --}}
-            <div class="card shadow-sm mb-4" id="pharmacy-fields" style="display:none;">
-                <div class="card-header bg-info text-white">
-                    <h4 class="mb-0">Datos de Farmacia</h4>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-3">
+                        <div class="form-group">
+                            <label>Fecha de expiración</label>
+                            <input type="date" name="expiration_date">
+                        </div>
+                    </div>
+
+                    {{-- FARMACIA --}}
+                    <div id="pharmacy-fields" style="display:none">
+                        <div class="row-3">
                             <div class="form-group">
                                 <label>Ingrediente activo</label>
-                                <input type="text" name="active_ingredient" class="form-control"
-                                    value="{{ old('active_ingredient') }}">
+                                <input name="active_ingredient">
                             </div>
-                        </div>
-                        <div class="col-md-3">
                             <div class="form-group">
                                 <label>Dosificación</label>
-                                <input type="text" name="dosage" class="form-control" value="{{ old('dosage') }}">
+                                <input name="dosage">
                             </div>
-                        </div>
-                        <div class="col-md-3">
                             <div class="form-group">
                                 <label>Presentación</label>
-                                <input type="text" name="presentation" class="form-control"
-                                    value="{{ old('presentation') }}">
+                                <input name="presentation">
                             </div>
                         </div>
-                        <div class="col-md-3">
+
+                        <div class="form-group">
+                            <label>Fecha de expiración</label>
+                            <input type="date" name="expiration_date">
+                        </div>
+                    </div>
+
+                    {{-- RESTAURANTE --}}
+                    <div id="restaurant-fields" style="display:none">
+                        <div class="row-2">
                             <div class="form-group">
-                                <label>Fecha de expiración</label>
-                                <input type="date" name="expiration_date" class="form-control"
-                                    value="{{ old('expiration_date') }}">
+                                <label>Tipo de comida</label>
+                                <input name="food_type">
+                            </div>
+                            <div class="form-group">
+                                <label>Tamaño porción</label>
+                                <input name="portion_size">
+                            </div>
+                        </div>
+
+                        <div class="row-2">
+                            <div class="form-group">
+                                <label>Vegano</label>
+                                <select name="is_vegan">
+                                    <option value="0">No</option>
+                                    <option value="1">Sí</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Sin gluten</label>
+                                <select name="is_gluten_free">
+                                    <option value="0">No</option>
+                                    <option value="1">Sí</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Alérgenos</label>
+                            <input name="allergens">
+                        </div>
+                    </div>
+
+                    {{-- AUTOPARTES --}}
+                    <div id="carparts-fields" style="display:none">
+                        <div class="row-3">
+                            <div class="form-group">
+                                <label>Marca</label>
+                                <input name="car_brand">
+                            </div>
+                            <div class="form-group">
+                                <label>Modelo</label>
+                                <input name="car_model">
+                            </div>
+                            <div class="form-group">
+                                <label>Año</label>
+                                <input type="number" name="car_year">
+                            </div>
+                        </div>
+
+                        <div class="row-2">
+                            <div class="form-group">
+                                <label>OEM Code</label>
+                                <input name="oem_code">
+                            </div>
+                            <div class="form-group">
+                                <label>Compatibilidad</label>
+                                <input name="compatibility">
                             </div>
                         </div>
                     </div>
+
                 </div>
+
             </div>
 
-            {{-- Datos de Restaurante --}}
-            <div class="card shadow-sm mb-4" id="restaurant-fields" style="display:none;">
-                <div class="card-header bg-info text-white">
-                    <h4 class="mb-0">Datos de Restaurante</h4>
-                </div>
-                <div class="card-body">
-
-                    <div class="row">
-                        <div class="col-md-4">
-                            <label>Tipo de comida</label>
-                            <input type="text" name="food_type" class="form-control">
-                        </div>
-
-                        <div class="col-md-4">
-                            <label>Tamaño porción</label>
-                            <input type="text" name="portion_size" class="form-control">
-                        </div>
-
-                        <div class="col-md-2">
-                            <label>Vegano</label>
-                            <select name="is_vegan" class="form-control">
-                                <option value="0">No</option>
-                                <option value="1">Sí</option>
-                            </select>
-                        </div>
-
-                        <div class="col-md-2">
-                            <label>Sin gluten</label>
-                            <select name="is_gluten_free" class="form-control">
-                                <option value="0">No</option>
-                                <option value="1">Sí</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="mt-2">
-                        <label>Alérgenos</label>
-                        <input type="text" name="allergens" class="form-control">
-                    </div>
-
-                </div>
+            {{-- FOOTER --}}
+            <div class="form-footer">
+                <button class="btn-save" type="submit">
+                    Guardar Producto
+                </button>
             </div>
 
-             {{-- Datos de Autopartes --}}
-            <div class="card shadow-sm mb-4" id="carparts-fields" style="display:none;">
-                <div class="card-header bg-info text-white">
-                    <h4 class="mb-0">Datos de Autopartes</h4>
-                </div>
-                <div class="card-body">
-
-                    <div class="row">
-                        <div class="col-md-4">
-                            <label>Marca</label>
-                            <input type="text" name="car_brand" class="form-control">
-                        </div>
-                        <div class="col-md-4">
-                            <label>Modelo</label>
-                            <input type="text" name="car_model" class="form-control">
-                        </div>
-                        <div class="col-md-4">
-                            <label>Año</label>
-                            <input type="number" name="car_year" class="form-control">
-                        </div>
-                    </div>
-
-                    <div class="row mt-2">
-                        <div class="col-md-6">
-                            <label>OEM Code</label>
-                            <input type="text" name="oem_code" class="form-control">
-                        </div>
-                        <div class="col-md-6">
-                            <label>Compatibilidad</label>
-                            <input type="text" name="compatibility" class="form-control">
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-
-            <button type="submit" class="btn btn-primary btn-lg px-4"><i class="fas fa-save"></i> Crear
-                Producto</button>
         </form>
     </div>
+
 @stop
 
-@section('adminlte_js')
+@section('css')
+    <link rel="stylesheet" href="{{ asset('css/dashboard.css') }}">
+@stop
+
+@section('js')
     @include('admin.products.scripts')
 @stop

@@ -2,50 +2,98 @@
 
 @section('title', 'Editar Conjunto Residencial')
 
-@section('content_header')
-<h1>Editar Conjunto Residencial</h1>
-@stop
-
 @section('content')
-<form action="{{ route('admin.conjuntos.update', $complex->complex_id) }}" method="POST">
-    @csrf
-    @method('PUT')
 
-    <div class="card shadow-sm">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">
-                <i class="fas fa-edit"></i> Editar Datos del Conjunto
-            </h5>
-        </div>
-        <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label">Nombre <span class="text-danger">*</span></label>
-                    <input type="text" name="name" class="form-control" value="{{ $complex->name }}" required>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Dirección</label>
-                    <input type="text" name="address" class="form-control" value="{{ $complex->address }}">
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Estado</label>
-                    <select name="state" class="form-control">
-                        <option value="1" @if($complex->state) selected @endif>Activo</option>
-                        <option value="0" @if(!$complex->state) selected @endif>Inactivo</option>
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Personas</label>
-                    <input type="number" name="people_count" class="form-control" value="{{ $complex->people_count }}" min="0">
-                </div>
+<br>
+
+<div class="owner-create-card">
+
+    {{-- HEADER --}}
+    <div class="page-header">
+        <div class="page-header-left">
+            <div class="page-icon">
+                <i class="fas fa-building"></i>
+            </div>
+            <div>
+                <h1>Editar Conjunto Residencial</h1>
+                <p>Actualizar información del conjunto</p>
             </div>
         </div>
+
+        <a href="{{ route('admin.conjuntos.index') }}" class="btn-back">
+            <i class="fas fa-arrow-left"></i>
+            Volver
+        </a>
     </div>
 
-    <div class="d-flex justify-content-end mt-3">
-        <button type="submit" class="btn btn-primary">
-            <i class="fas fa-save"></i> Actualizar
-        </button>
-    </div>
-</form>
+    {{-- FORM --}}
+    <form action="{{ route('admin.conjuntos.update', $complex->complex_id) }}"
+          method="POST"
+          id="complex-form">
+        @csrf
+        @method('PUT')
+
+        <div class="owner-grid">
+
+            {{-- CARD IZQUIERDA --}}
+            <div class="owner-card">
+                <h3 class="card-title">Información general</h3>
+
+                <div class="card-content">
+
+                    <div class="row-2">
+                        <div class="form-group">
+                            <label>Nombre <span class="text-danger">*</span></label>
+                            <input type="text" name="name" required value="{{ $complex->name }}">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Dirección</label>
+                            <input type="text" name="address" value="{{ $complex->address }}">
+                        </div>
+                    </div>
+
+                    <div class="row-2">
+                        <div class="form-group">
+                            <label>Estado</label>
+                            <select name="state">
+                                <option value="1" @selected($complex->state)>Activo</option>
+                                <option value="0" @selected(!$complex->state)>Inactivo</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Personas</label>
+                            <input type="number" name="people_count" min="0" value="{{ $complex->people_count }}">
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            {{-- CARD DERECHA --}}
+            <div class="owner-card">
+                <h3 class="card-title">Opciones adicionales</h3>
+                <div class="card-content">
+                    {{-- Aquí puedes agregar campos extra si necesitas, por ejemplo notas, códigos o imágenes --}}
+                    <p class="text-muted">No hay datos adicionales por editar.</p>
+                </div>
+            </div>
+
+        </div>
+
+        {{-- FOOTER --}}
+        <div class="form-footer">
+            <button class="btn-save" type="submit">
+                Actualizar Conjunto
+            </button>
+        </div>
+
+    </form>
+</div>
+
+@stop
+
+@section('css')
+<link rel="stylesheet" href="{{ asset('css/dashboard.css') }}">
 @stop

@@ -3,118 +3,237 @@
 @section('title', 'Productos')
 
 @section('content_header')
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1 class="m-0">Productos</h1>
-        <a href="{{ route('admin.products.create') }}" class="btn btn-lg btn-primary shadow-sm"
-            style="transition: transform 0.2s, background-color 0.2s;"
-            onmouseover="this.style.backgroundColor='#0062cc'; this.style.transform='scale(1.05)';"
-            onmouseout="this.style.backgroundColor='#0d6efd'; this.style.transform='scale(1)';">
-            <i class="fas fa-plus me-1"></i> Nuevo Producto
+    <div class="owners-header">
+        <div class="owners-title">
+            <span class="owners-badge"><i class="fas fa-box"></i></span>
+            <div>
+                <h1>Productos</h1>
+                <p>Gestión y control de productos registrados</p>
+            </div>
+        </div>
+
+        <a href="{{ route('admin.products.create') }}" class="btn-create-owner">
+            <i class="fas fa-plus"></i> Nuevo Producto
         </a>
     </div>
 @stop
 
 @section('content')
-    <div class="card shadow-sm">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">Lista de Productos</h5>
+
+    <div class="modern-card">
+
+        <div class="mb-3 d-flex gap-3">
+
+            {{-- SEARCH --}}
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="Buscar producto..." onkeyup="loadProducts(1)">
+            </div>
+
+            {{-- FILTER BUSINESS --}}
+            <div class="search-box">
+                <i class="fas fa-store"></i>
+                <select id="businessFilter" onchange="loadProducts(1)">
+                    <option value="">Todos los negocios</option>
+                    @foreach (\App\Models\Business::select('busines_id', 'name')->get() as $b)
+                        <option value="{{ $b->busines_id }}">{{ $b->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+
         </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table id="products-table" class="table table-hover table-striped table-bordered align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th>ID</th>
-                            <th>Nombre</th>
-                            <th>Categoría</th>
-                            <th>Negocio</th>
-                            <th>Precio</th>
-                            <th>Cantidad</th>
-                            <th>Estado</th>
-                            <th class="text-center">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($products as $p)
-                            <tr>
-                                <td>{{ $p->products_id }}</td>
-                                <td>{{ $p->name }}</td>
-                                <td>{{ $p->category->name ?? 'Sin categoría' }}</td>
-                                <td>{{ $p->businesses->first()?->name }}</td>
-                                <td>{{ $p->productBusinesses->first()?->price }}</td>
-                                <td>{{ $p->productBusinesses->first()?->amount }}</td>
-                                <td>
-                                    <span class="badge {{ $p->state ? 'bg-success' : 'bg-secondary' }}">
-                                        {{ $p->state ? 'Activo' : 'Inactivo' }}
-                                    </span>
-                                </td>
-                                <td class="text-center">
-                                    <a href="{{ route('admin.products.edit', $p->products_id) }}"
-                                        class="btn btn-sm btn-warning me-1 mb-1">
-                                        <i class="fas fa-edit"></i> Editar
-                                    </a>
-                                    <form action="{{ route('admin.products.destroy', $p->products_id) }}" method="POST"
-                                        style="display:inline;">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-danger mb-1"
-                                            onclick="return confirm('¿Eliminar producto?')">
-                                            <i class="fas fa-trash"></i> Eliminar
-                                        </button>
-                                    </form>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+
+        {{-- LOADER --}}
+        <div id="tableLoader" class="text-center my-4 d-none">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
             </div>
         </div>
+
+        {{-- TABLA --}}
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Producto</th>
+                    <th>Categoría</th>
+                    <th>Negocio</th>
+                    <th>Precio</th>
+                    <th>Cantidad</th>
+                    <th>Estado</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="productsTable"></tbody>
+        </table>
+
+        {{-- PAGINACIÓN --}}
+        <div id="pagination" class="d-flex justify-content-center mt-4 gap-2"></div>
     </div>
 @stop
 
+{{-- ================= JS ================= --}}
 @section('adminlte_js')
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-        $(document).ready(function() {
-            $('#products-table').DataTable({
-                dom: 'Bfrtip',
-                buttons: [{
-                        extend: 'excelHtml5',
-                        className: 'btn btn-success btn-sm me-1',
-                        text: '<i class="fas fa-file-excel"></i> Excel'
-                    },
-                    {
-                        extend: 'csvHtml5',
-                        className: 'btn btn-info btn-sm',
-                        text: '<i class="fas fa-file-csv"></i> CSV'
+        let currentPage = 1;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadProducts();
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            @if (session('success'))
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: @json(session('success')),
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true,
+                    didOpen: (toast) => {
+                        toast.addEventListener('mouseenter', Swal.stopTimer)
+                        toast.addEventListener('mouseleave', Swal.resumeTimer)
                     }
-                ],
-                order: [
-                    [0, 'asc']
-                ],
-                responsive: true,
-                pageLength: 10, // ← MÍNIMO Y POR DEFECTO 10 PRODUCTOS
-                lengthMenu: [10, 25, 50, 100], // ← QUITAMOS 5
-                language: {
-                    search: "_INPUT_",
-                    searchPlaceholder: "Buscar...",
-                    lengthMenu: "Mostrar _MENU_ registros",
-                    info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
-                    infoEmpty: "No hay registros",
-                    zeroRecords: "No se encontraron coincidencias",
-                    paginate: {
-                        first: "Primero",
-                        last: "Último",
-                        next: "Siguiente",
-                        previous: "Anterior"
+                });
+            @endif
+        });
+
+        function showLoader() {
+            document.getElementById('tableLoader').classList.remove('d-none');
+        }
+
+        function hideLoader() {
+            document.getElementById('tableLoader').classList.add('d-none');
+        }
+
+        function loadProducts(page = 1) {
+            currentPage = page;
+
+            const business = document.getElementById('businessFilter').value;
+            const search = document.getElementById('searchInput').value.trim();
+
+            showLoader();
+
+            const url = `{{ route('admin.product.ajax') }}` +
+                `?page=${page}` +
+                `&busines_id=${business}` +
+                `&search=${encodeURIComponent(search)}`;
+
+            fetch(url, {
+                    headers: {
+                        'Accept': 'application/json'
                     }
+                })
+                .then(res => {
+                    if (!res.ok) throw new Error('Error HTTP');
+                    return res.json();
+                })
+                .then(res => {
+                    renderProducts(res.data);
+                    renderPagination(res.current_page, res.last_page);
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert('Error cargando productos');
+                })
+                .finally(() => {
+                    hideLoader();
+                });
+        }
+
+        function renderProducts(products) {
+            const tbody = document.getElementById('productsTable');
+            tbody.innerHTML = '';
+
+            if (!products.length) {
+                tbody.innerHTML = `
+            <tr>
+                <td colspan="8" class="text-center text-muted py-4">
+                    No se encontraron productos
+                </td>
+            </tr>
+        `;
+                return;
+            }
+
+            products.forEach(p => {
+                const pb = p.product_businesses?.[0] ?? {};
+                const business = p.businesses?.[0]?.name ?? '—';
+
+                tbody.innerHTML += `
+        <tr>
+            <td>${p.products_id}</td>
+            <td><strong>${p.name}</strong></td>
+            <td>${p.category?.name ?? 'Sin categoría'}</td>
+            <td>${business}</td>
+            <td>$${Number(pb.price ?? 0).toLocaleString()}</td>
+            <td>${pb.amount ?? 0}</td>
+            <td>
+                <span class="${p.state ? 'badge-active' : 'badge-inactive'}">
+                    ${p.state ? 'Activo' : 'Inactivo'}
+                </span>
+            </td>
+            <td class="text-end">
+                <a href="/admin/productos/edit/${p.products_id}"
+                   class="action-btn me-1"
+                   title="Editar">
+                    <i class="fas fa-edit"></i>
+                </a>
+
+                <form method="POST"
+                    action="/admin/productos/destroy/${p.products_id}"
+                    class="d-inline delete-form">
+                    @csrf
+                    @method('DELETE')
+                    <button type="button"
+                            class="action-btn text-danger"
+                            onclick="confirmDelete(this)">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </form>
+            </td>
+        </tr>`;
+            });
+        }
+
+        function renderPagination(current, last) {
+            const container = document.getElementById('pagination');
+            container.innerHTML = '';
+
+            for (let i = 1; i <= last; i++) {
+                container.innerHTML += `
+        <button
+            class="pagination-btn ${i === current ? 'active' : ''}"
+            onclick="loadProducts(${i})">
+            ${i}
+        </button>`;
+            }
+        }
+
+        function confirmDelete(button) {
+            const form = button.closest('form');
+
+            Swal.fire({
+                title: '¿Eliminar producto?',
+                text: 'Esta acción no se puede deshacer',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    form.submit();
                 }
             });
-        });
+        }
     </script>
+@stop
+
+{{-- ================= CSS ================= --}}
+@section('css')
+    <link rel="stylesheet" href="{{ asset('css/dashboardIndex.css') }}">
 @stop

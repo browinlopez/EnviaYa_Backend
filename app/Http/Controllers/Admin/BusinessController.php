@@ -48,9 +48,6 @@ class BusinessController extends Controller
             // URL completa
             $data['logo'] = url('Negocios/' . $filename);
         }
-
-
-
         // Crear negocio
         $business = Business::create($data);
 

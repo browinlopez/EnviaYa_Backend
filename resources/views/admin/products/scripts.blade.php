@@ -1,44 +1,37 @@
+@section('adminlte_js')
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const businessSelect = document.getElementById('business-select');
+document.addEventListener('DOMContentLoaded', () => {
 
-    const groceryFields = document.getElementById('grocery-fields');      // type 1
-    const restaurantFields = document.getElementById('restaurant-fields'); // type 2
-    const pharmacyFields = document.getElementById('pharmacy-fields');    // type 3
-    const carpartsFields = document.getElementById('carparts-fields');    // type 4
-
-    const priceInput = document.getElementById('price');
-    const form = document.getElementById('product-form');
+    const business = document.getElementById('business-select');
+    const grocery = document.getElementById('grocery-fields');
+    const pharmacy = document.getElementById('pharmacy-fields');
+    const price = document.getElementById('price');
+    const imgInput = document.getElementById('productImage');
+    const preview = document.getElementById('photoPreview');
 
     function toggleFields() {
-        const type = Number(businessSelect.selectedOptions[0]?.dataset.type);
-
-        // Ocultar todas las secciones
-        groceryFields.style.display = 'none';
-        restaurantFields.style.display = 'none';
-        pharmacyFields.style.display = 'none';
-        carpartsFields.style.display = 'none';
-
-        // Activar por tipo
-        if (type === 1) groceryFields.style.display = 'block';
-        if (type === 3) restaurantFields.style.display = 'block';
-        if (type === 2) pharmacyFields.style.display = 'block';
-        if (type === 4) carpartsFields.style.display = 'block';
+        const type = business?.selectedOptions[0]?.dataset.type;
+        grocery.style.display = type == 1 ? 'block' : 'none';
+        pharmacy && (pharmacy.style.display = type == 2 ? 'block' : 'none');
     }
 
-    businessSelect.addEventListener('change', toggleFields);
+    business?.addEventListener('change', toggleFields);
     toggleFields();
 
-    // ➤ Formateo de precio
-    priceInput.addEventListener('input', function() {
-        let value = this.value.replace(/\D/g, '');
-        if (value) value = Number(value).toLocaleString('es-CO');
-        this.value = value;
+    imgInput?.addEventListener('change', e => {
+        if (e.target.files[0]) {
+            preview.src = URL.createObjectURL(e.target.files[0]);
+        }
     });
 
-    // ➤ Limpiar formato al enviar
-    form.addEventListener('submit', function() {
-        priceInput.value = priceInput.value.replace(/\./g, '').replace(/,/g, '.');
+    price?.addEventListener('input', function () {
+        let v = this.value.replace(/\D/g, '');
+        this.value = v ? Number(v).toLocaleString('es-CO') : '';
+    });
+
+    document.getElementById('product-form')?.addEventListener('submit', () => {
+        price.value = price.value.replace(/\./g, '');
     });
 });
 </script>
+@stop

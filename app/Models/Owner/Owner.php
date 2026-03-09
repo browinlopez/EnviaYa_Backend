@@ -3,12 +3,14 @@
 namespace App\Models\Owner;
 
 use App\Models\Business;
+use App\Models\DocumentType;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens;
 use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
 use OwenIt\Auditing\Auditable;
+use Illuminate\Support\Facades\Storage;
 
 class Owner extends Authenticatable implements AuditableContract
 {
@@ -48,5 +50,19 @@ class Owner extends Authenticatable implements AuditableContract
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id', 'user_id');
+    }
+
+    public function documentType()
+    {
+        return $this->belongsTo(DocumentType::class);
+    }
+
+    public function getProfilePhotoUrlAttribute(): string
+    {
+        if ($this->profile_photo && Storage::disk('public')->exists('owner/' . $this->profile_photo)) {
+            return Storage::url('owner/' . $this->profile_photo);
+        }
+
+        return asset('img/default-user.png');
     }
 }

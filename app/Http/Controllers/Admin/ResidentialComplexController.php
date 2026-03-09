@@ -5,13 +5,41 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Buyer\ResidentialComplex;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ResidentialComplexController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $complexes = ResidentialComplex::all(); // para DataTables client-side
-        return view('admin.conjuntos.index', compact('complexes'));
+        // Si la petición es JSON (AJAX desde tu tabla moderna)
+        if ($request->wantsJson()) {
+
+            $perPage = 10;
+
+            // Construimos la query
+            $query = DB::table('residential_complexes')
+                ->select('complex_id','name','address','state','people_count');
+
+            // Filtro de búsqueda por nombre
+            if ($request->filled('search')) {
+                $query->where('name', 'like', $request->search.'%');
+            }
+
+            // Filtro de estado (Activo/Inactivo)
+            if ($request->filled('state') && in_array($request->state, ['0','1'])) {
+                $query->where('state', $request->state);
+            }
+
+            // Orden y paginación
+            $complexes = $query->orderBy('complex_id')
+                               ->paginate($perPage);
+
+            // Retornamos JSON compatible con tu JS
+            return response()->json($complexes);
+        }
+
+        // Vista normal para Blade (carga inicial de la página)
+        return view('admin.conjuntos.index');
     }
 
     public function create()
@@ -28,12 +56,12 @@ class ResidentialComplexController extends Controller
             'people_count' => 'nullable|integer',
         ]);
 
-        // Si no se envía people_count, asignamos 0
         $data['people_count'] = $data['people_count'] ?? 0;
 
         ResidentialComplex::create($data);
 
-        return redirect()->route('admin.conjuntos.index')->with('success', 'Conjunto residencial creado correctamente.');
+        return redirect()->route('admin.conjuntos.index')
+                         ->with('success', 'Conjunto residencial creado correctamente.');
     }
 
     public function edit($id)
@@ -55,7 +83,8 @@ class ResidentialComplexController extends Controller
 
         $complex->update($data);
 
-        return redirect()->route('admin.conjuntos.index')->with('success', 'Conjunto residencial actualizado correctamente.');
+        return redirect()->route('admin.conjuntos.index')
+                         ->with('success', 'Conjunto residencial actualizado correctamente.');
     }
 
     public function destroy($id)
@@ -63,6 +92,7 @@ class ResidentialComplexController extends Controller
         $complex = ResidentialComplex::findOrFail($id);
         $complex->delete();
 
-        return redirect()->route('admin.conjuntos.index')->with('success', 'Conjunto residencial eliminado correctamente.');
+        return redirect()->route('admin.conjuntos.index')
+                         ->with('success', 'Conjunto residencial eliminado correctamente.');
     }
 }

@@ -7,6 +7,7 @@ use App\Models\Business;
 use App\Models\Order\OrdersSales;
 use App\Models\Order\OrdersSalesDetail;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 class Product extends Audit
 {
@@ -23,7 +24,11 @@ class Product extends Audit
 
     public function productBusinesses()
     {
-        return $this->hasMany(ProductBusiness::class, 'products_id', 'products_id');
+        return $this->hasMany(
+            ProductBusiness::class,
+            'products_id',
+            'products_id'
+        );
     }
 
     public function sales()
@@ -36,6 +41,7 @@ class Product extends Audit
         return $this->hasMany(OrdersSalesDetail::class, 'product_id', 'products_id');
     }
 
+    // ✔ ACCESO A BUSINESS A TRAVÉS DE LA PIVOTE
     public function businesses()
     {
         return $this->belongsToMany(
@@ -43,7 +49,12 @@ class Product extends Audit
             'products_business',
             'products_id',
             'busines_id'
-        );
+        )->withPivot([
+            'busines_products_id',
+            'price',
+            'amount',
+            'qualification'
+        ]);
     }
 
     public function grocery()
@@ -56,7 +67,7 @@ class Product extends Audit
         return $this->hasOne(PharmacyProduct::class, 'products_id', 'products_id');
     }
 
-     public function restaurant()
+    public function restaurant()
     {
         return $this->hasOne(RestaurantProducts::class, 'products_id', 'products_id');
     }
@@ -64,5 +75,14 @@ class Product extends Audit
     public function carPart()
     {
         return $this->hasOne(CarPartsProducts::class, 'products_id', 'products_id');
+    }
+
+    public function getImageUrlAttribute(): string
+    {
+        if ($this->image && Storage::disk('public')->exists($this->image)) {
+            return Storage::url($this->image);
+        }
+
+        return asset('img/default-product.png');
     }
 }

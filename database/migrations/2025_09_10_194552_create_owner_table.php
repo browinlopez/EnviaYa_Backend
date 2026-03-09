@@ -15,14 +15,14 @@ return new class extends Migration
             $table->increments('owner_id');
             $table->unsignedBigInteger('user_id'); // FK a user
             $table->string('profile_photo', 255);
-            $table->integer('document_type')->nullable();
+            $table->foreignId('document_type_id')->constrained('document_types');
             $table->string('document_number', 50);
-            $table->date('birthdate');
+            $table->date('birthdate')->nullable();
             $table->string('contact_secondary', 45)->nullable();
             $table->string('notes', 45)->nullable();
             $table->tinyInteger('state')->nullable();
 
-            $table->unique('profile_photo', 'owner_profile_photo_unique');
+           $table->string('profile_photo', 255)->nullable();    
 
             $table->index('user_id', 'fk_owner_user');
             $table->foreign('user_id', 'fk_owner_user')

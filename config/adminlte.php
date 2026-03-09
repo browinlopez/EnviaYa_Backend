@@ -334,13 +334,10 @@ return [
         ],
 
         [
-            'text'    => 'Cerrar sesión',
-            'url'     => 'logout',
-            'icon'    => 'fas fa-sign-out-alt',
-            'method'  => 'post',
-            'classes' => 'text-danger logout-bottom', // clase custom
+            'text' => 'Dueños negocios',
+            'url'  => 'admin/owners',
+            'icon' => 'fas fa-user-tie',
         ],
-
 
 
         ['header' => 'REPORTES'],
@@ -359,6 +356,17 @@ return [
             'text' => 'Operativos',
             'url'  => 'admin/reportes/operacional',
             'icon' => 'fas fa-cogs',
+        ],
+
+        ['header' => 'Cerrar sesión'],
+
+
+        [
+            'text'    => 'Cerrar sesión',
+            'url'     => 'logout',
+            'icon'    => 'fas fa-sign-out-alt',
+            'method'  => 'post',
+            'classes' => 'text-danger logout-bottom', // clase custom
         ],
     ],
 

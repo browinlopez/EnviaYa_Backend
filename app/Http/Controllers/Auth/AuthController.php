@@ -204,7 +204,6 @@ class AuthController extends Controller
         ]);
     }
 
-
     // Logout
     public function logout(Request $request)
     {
@@ -231,5 +230,31 @@ class AuthController extends Controller
         return $status === Password::RESET_LINK_SENT
             ? response()->json(['message' => 'Se envió el enlace al correo'])
             : response()->json(['message' => 'No se pudo enviar el enlace'], 500);
+    }
+
+    public function resendVerificationEmailWeb(Request $request)
+    {
+        $request->validate(['email' => 'required|email']);
+
+        $user = \App\Models\User::where('email', $request->email)->first();
+        if (!$user) {
+            return back()->with('status', 'Si el correo existe, se enviará un enlace de verificación.');
+        }
+
+        if ($user->email_verified_at) {
+            return redirect()->route('login')->with('status', 'Tu correo ya está verificado.');
+        }
+
+        // Generar nuevo token
+        $user->update([
+            'email_verification_token' => \Illuminate\Support\Str::random(60),
+            'email_verification_expires_at' => now()->addMinutes(60),
+        ]);
+
+        // Enviar correo
+        $actionUrl = config('app.url') . '/verify-email?token=' . $user->email_verification_token;
+        \Illuminate\Support\Facades\Mail::to($user->email)->send(new \App\Mail\VerifyEmailCustomMail($actionUrl));
+
+        return back()->with('status', 'Se ha enviado un nuevo correo de verificación.');
     }
 }

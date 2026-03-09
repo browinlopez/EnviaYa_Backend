@@ -2,195 +2,192 @@
 
 @section('title', 'Editar Producto')
 
-@section('content_header')
-    <h1 class="mb-3">Editar Producto</h1>
-@stop
-
 @section('content')
-<div class="container-fluid">
-    <form action="{{ route('admin.products.update', $product->products_id) }}" method="POST" id="product-form">
+
+<br>
+
+<div class="owner-create-card">
+
+    {{-- HEADER --}}
+    <div class="page-header">
+        <div class="page-header-left">
+            <div class="page-icon">
+                <i class="fas fa-box"></i>
+            </div>
+            <div>
+                <h1>Editar Producto</h1>
+                <p>Actualizar información del producto</p>
+            </div>
+        </div>
+
+        <a href="{{ route('admin.products.index') }}" class="btn-back">
+            <i class="fas fa-arrow-left"></i>
+            Volver
+        </a>
+    </div>
+
+    {{-- FORM --}}
+    <form action="{{ route('admin.products.update', $product->products_id) }}"
+          method="POST"
+          enctype="multipart/form-data"
+          id="product-form">
         @csrf
         @method('PUT')
 
-        {{-- Información General --}}
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-primary text-white">
-                <h4 class="mb-0">Información General</h4>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
+        <div class="owner-grid">
+
+            {{-- CARD IZQUIERDA --}}
+            <div class="owner-card">
+                <h3 class="card-title">Información general</h3>
+
+                <div class="card-content">
+
+                    <div class="row-2">
                         <div class="form-group">
-                            <label>Nombre <span class="text-danger">*</span></label>
-                            <input type="text" name="name" value="{{ $product->name }}" class="form-control" required>
+                            <label>Nombre *</label>
+                            <input name="name" required value="{{ $product->name }}">
                         </div>
-                    </div>
-                    <div class="col-md-6">
+
                         <div class="form-group">
-                            <label>Categoría <span class="text-danger">*</span></label>
-                            <select name="category_id" class="form-control" required>
-                                <option value="">Seleccione una categoría</option>
-                                @foreach($categories as $cat)
-                                    <option value="{{ $cat->category_id }}" @selected($product->category_id == $cat->category_id)>
+                            <label>Categoría *</label>
+                            <select name="category_id" required>
+                                @foreach ($categories as $cat)
+                                    <option value="{{ $cat->category_id }}"
+                                        @selected($product->category_id == $cat->category_id)>
                                         {{ $cat->name }}
                                     </option>
                                 @endforeach
                             </select>
                         </div>
                     </div>
-                    <div class="col-md-12">
-                        <div class="form-group">
-                            <label>Descripción</label>
-                            <textarea name="description" class="form-control">{{ $product->description }}</textarea>
-                        </div>
-                    </div>
-                </div>
 
-                <div class="row">
-                    <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Descripción</label>
+                        <textarea name="description" rows="3">{{ $product->description }}</textarea>
+                    </div>
+
+                    <div class="row-2">
                         <div class="form-group">
                             <label>Estado</label>
-                            <select name="state" class="form-control">
+                            <select name="state">
                                 <option value="1" @selected($product->state)>Activo</option>
                                 <option value="0" @selected(!$product->state)>Inactivo</option>
                             </select>
                         </div>
-                    </div>
-                    <div class="col-md-6">
+
                         <div class="form-group">
-                            <label>Negocio <span class="text-danger">*</span></label>
-                            <select name="busines_id" class="form-control" id="business-select" required>
-                                <option value="">Seleccione un negocio</option>
-                                @foreach($businesses as $b)
-                                    <option value="{{ $b->busines_id }}" data-type="{{ $b->type }}"
-                                        @if($product->businesses->first()?->busines_id == $b->busines_id) selected @endif>
+                            <label>Negocio *</label>
+                            <select name="busines_id" id="business-select" required>
+                                @foreach ($businesses as $b)
+                                    <option value="{{ $b->busines_id }}"
+                                            data-type="{{ $b->type }}"
+                                            @selected($product->businesses->first()?->busines_id == $b->busines_id)>
                                         {{ $b->name }}
                                     </option>
                                 @endforeach
                             </select>
                         </div>
                     </div>
-                </div>
 
-
-                <div class="row">
-                    <div class="col-md-6">
+                    <div class="row-2">
                         <div class="form-group">
-                            <label>Precio <span class="text-danger">*</span></label>
-                            <input type="text" name="price" id="price" class="form-control"
-                                value="{{ number_format($product->productBusinesses->first()?->price, 0, ',', '.') }}" required>
+                            <label>Precio *</label>
+                            <input name="price" id="price" required
+                                   value="{{ number_format($product->productBusinesses->first()?->price, 0, ',', '.') }}">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Cantidad *</label>
+                            <input type="number" name="amount" required
+                                   value="{{ $product->productBusinesses->first()?->amount }}">
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>Cantidad <span class="text-danger">*</span></label>
-                            <input type="number" name="amount" class="form-control"
-                                value="{{ $product->productBusinesses->first()?->amount }}" required>
-                        </div>
-                    </div>
-                </div>
 
+                </div>
             </div>
-        </div>
 
-        {{-- Grocery Fields --}}
-        <div id="grocery-fields" class="card shadow-sm mb-4" style="display:none;">
-            <div class="card-header bg-success text-white">Datos Tienda</div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
+            {{-- CARD DERECHA --}}
+            <div class="owner-card">
+                <h3 class="card-title">Datos específicos</h3>
+
+                <div class="photo-box">
+                    <img id="photoPreview"
+                         src="{{ $product->image
+                            ? asset('storage/'.$product->image)
+                            : 'https://ui-avatars.com/api/?name=Producto&background=1B1464&color=fff' }}"
+                         alt="Producto">
+
+                    <input type="file"
+                           name="product_image"
+                           id="productImage"
+                           accept="image/*">
+                </div>
+
+                {{-- GROCERY --}}
+                <div id="grocery-fields" style="display:none">
+                    <div class="row-2">
                         <div class="form-group">
                             <label>Marca</label>
-                            <input type="text" name="brand" class="form-control" value="{{ $product->grocery?->brand }}">
+                            <input name="brand" value="{{ $product->grocery?->brand }}">
                         </div>
-                    </div>
-                    <div class="col-md-6">
                         <div class="form-group">
                             <label>Tamaño</label>
-                            <input type="text" name="size" class="form-control" value="{{ $product->grocery?->size }}">
+                            <input name="size" value="{{ $product->grocery?->size }}">
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>Fecha de expiración</label>
-                            <input type="date" name="expiration_date" class="form-control" value="{{ $product->grocery?->expiration_date }}">
-                        </div>
+
+                    <div class="form-group">
+                        <label>Fecha de expiración</label>
+                        <input type="date" name="expiration_date"
+                               value="{{ $product->grocery?->expiration_date }}">
                     </div>
                 </div>
-            </div>
-        </div>
 
-        {{-- Pharmacy Fields --}}
-        <div id="pharmacy-fields" class="card shadow-sm mb-4" style="display:none;">
-            <div class="card-header bg-success text-white">Datos Farmacia</div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-3">
+                {{-- PHARMACY --}}
+                <div id="pharmacy-fields" style="display:none">
+                    <div class="row-3">
                         <div class="form-group">
                             <label>Ingrediente activo</label>
-                            <input type="text" name="active_ingredient" class="form-control" value="{{ $product->pharmacy?->active_ingredient }}">
+                            <input name="active_ingredient"
+                                   value="{{ $product->pharmacy?->active_ingredient }}">
                         </div>
-                    </div>
-                    <div class="col-md-3">
                         <div class="form-group">
                             <label>Dosificación</label>
-                            <input type="text" name="dosage" class="form-control" value="{{ $product->pharmacy?->dosage }}">
+                            <input name="dosage"
+                                   value="{{ $product->pharmacy?->dosage }}">
                         </div>
-                    </div>
-                    <div class="col-md-3">
                         <div class="form-group">
                             <label>Presentación</label>
-                            <input type="text" name="presentation" class="form-control" value="{{ $product->pharmacy?->presentation }}">
+                            <input name="presentation"
+                                   value="{{ $product->pharmacy?->presentation }}">
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            <label>Fecha de expiración</label>
-                            <input type="date" name="expiration_date" class="form-control" value="{{ $product->pharmacy?->expiration_date }}">
-                        </div>
+
+                    <div class="form-group">
+                        <label>Fecha de expiración</label>
+                        <input type="date" name="expiration_date"
+                               value="{{ $product->pharmacy?->expiration_date }}">
                     </div>
                 </div>
+
             </div>
         </div>
 
-        {{-- Botón --}}
-        <div class="text-end mb-4">
-            <button type="submit" class="btn btn-primary btn-lg px-4">
-                <i class="fas fa-save"></i> Actualizar Producto
+        {{-- FOOTER --}}
+        <div class="form-footer">
+            <button class="btn-save" type="submit">
+                Actualizar Producto
             </button>
         </div>
+
     </form>
 </div>
 @stop
 
-@section('adminlte_js')
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const businessSelect = document.getElementById('business-select');
-    const groceryFields = document.getElementById('grocery-fields');
-    const pharmacyFields = document.getElementById('pharmacy-fields');
-    const priceInput = document.getElementById('price');
-    const form = document.getElementById('product-form');
+@section('css')
+<link rel="stylesheet" href="{{ asset('css/dashboard.css') }}">
+@stop
 
-    function toggleFields() {
-        const type = businessSelect.selectedOptions[0]?.dataset.type;
-        groceryFields.style.display = type == 1 ? 'block' : 'none';
-        pharmacyFields.style.display = type == 2 ? 'block' : 'none';
-    }
-    businessSelect.addEventListener('change', toggleFields);
-    toggleFields();
-
-    priceInput.addEventListener('input', function() {
-        let value = this.value.replace(/\D/g, '');
-        if (value) {
-            value = Number(value).toLocaleString('es-CO');
-        }
-        this.value = value;
-    });
-
-    form.addEventListener('submit', function() {
-        priceInput.value = priceInput.value.replace(/\./g, '').replace(/,/g, '.');
-    });
-});
-</script>
+@section('js')
+    @include('admin.products.scripts')
 @stop

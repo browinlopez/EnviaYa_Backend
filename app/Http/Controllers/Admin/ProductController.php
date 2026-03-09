@@ -18,13 +18,45 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Maatwebsite\Excel\Excel;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
     public function index()
     {
-        $products = Product::with('category', 'businesses')->get();
-        return view('admin.products.index', compact('products'));
+        return view('admin.products.index');
+    }
+
+    public function indexAjax(Request $request)
+    {
+        $page      = (int) $request->get('page', 1);
+        $businesId = $request->get('busines_id');
+        $search    = trim($request->get('search'));
+
+        $products = Product::with([
+            'category',
+            'businesses',
+            'productBusinesses'
+        ])
+            ->when($businesId, function ($q) use ($businesId) {
+                // Usamos la tabla pivot para evitar ambigüedad
+                $q->whereHas('productBusinesses', function ($b) use ($businesId) {
+                    $b->where('products_business.busines_id', $businesId);
+                });
+            })
+            ->when($search, function ($q) use ($search) {
+                $q->where('name', 'LIKE', "%{$search}%");
+            })
+            ->orderByDesc('products_id')
+            ->paginate(10);
+
+        return response()->json([
+            'data' => $products->items(),
+            'current_page' => $products->currentPage(),
+            'last_page' => $products->lastPage(),
+        ]);
     }
 
     public function create()
@@ -45,14 +77,14 @@ class ProductController extends Controller
 
     public function store(Request $request)
     {
-        // Limpiar precio antes de validar
+        // Limpiar precio
         if ($request->has('price')) {
             $request->merge([
                 'price' => str_replace(',', '.', str_replace('.', '', $request->price))
             ]);
         }
 
-        // Validar campos generales
+        // Validación
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -61,12 +93,13 @@ class ProductController extends Controller
             'busines_id' => 'required|integer|exists:business,busines_id',
             'price' => 'required|numeric',
             'amount' => 'required|integer',
+            'product_image' => 'nullable|image|max:2048',
         ]);
 
         // Crear producto
         $product = Product::create($data);
 
-        // Guardar en tabla pivote
+        // Pivote
         ProductBusiness::create([
             'busines_id' => $data['busines_id'],
             'products_id' => $product->products_id,
@@ -77,11 +110,25 @@ class ProductController extends Controller
 
         $business = Business::find($data['busines_id']);
 
-        // 📌 Dependiendo del tipo del negocio guardar modelo correspondiente
+        /* ================= IMAGEN PRODUCTO ================= */
+        if ($request->hasFile('product_image')) {
 
+            $folder = 'products/' . Str::slug($business->name);
+            $ext = $request->file('product_image')->getClientOriginalExtension();
+            $fileName = 'product_' . $product->products_id . '.' . $ext;
+
+            $request->file('product_image')
+                ->storeAs($folder, $fileName, 'public');
+
+            $product->update([
+                'image' => $folder . '/' . $fileName
+            ]);
+        }
+
+        /* ================= MODELOS POR TIPO ================= */
         switch ($business->type) {
 
-            case 1: // Grocery
+            case 1:
                 GroceryProduct::create([
                     'products_id' => $product->products_id,
                     'brand' => $request->brand,
@@ -90,7 +137,7 @@ class ProductController extends Controller
                 ]);
                 break;
 
-            case 2: // Pharmacy
+            case 2:
                 PharmacyProduct::create([
                     'products_id' => $product->products_id,
                     'active_ingredient' => $request->active_ingredient,
@@ -100,7 +147,7 @@ class ProductController extends Controller
                 ]);
                 break;
 
-            case 3: // Restaurant
+            case 3:
                 RestaurantProducts::create([
                     'products_id' => $product->products_id,
                     'food_type' => $request->food_type,
@@ -111,7 +158,7 @@ class ProductController extends Controller
                 ]);
                 break;
 
-            case 4: // Car parts
+            case 4:
                 CarPartsProducts::create([
                     'products_id' => $product->products_id,
                     'brand' => $request->car_brand,
@@ -123,10 +170,12 @@ class ProductController extends Controller
                 break;
         }
 
-        return redirect()->route('admin.products.index')
+        $this->clearProductsCache();
+
+        return redirect()
+            ->route('admin.products.index')
             ->with('success', 'Producto creado correctamente.');
     }
-
 
     public function edit($id)
     {
@@ -140,7 +189,6 @@ class ProductController extends Controller
     {
         $product = Product::findOrFail($id);
 
-        // Validar campos generales
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -149,13 +197,13 @@ class ProductController extends Controller
             'busines_id' => 'required|integer|exists:business,busines_id',
             'price' => 'required|numeric',
             'amount' => 'required|integer',
+            'product_image' => 'nullable|image|max:2048',
         ]);
 
         $product->update($data);
 
-        // Actualizar pivote ProductBusiness
+        // Pivot
         $productBusiness = ProductBusiness::where('products_id', $product->products_id)
-            ->where('busines_id', $product->businesses->first()?->busines_id ?? 0)
             ->first();
 
         if ($productBusiness) {
@@ -166,45 +214,80 @@ class ProductController extends Controller
             ]);
         }
 
-        // Tipo de negocio actual
         $business = Business::find($data['busines_id']);
 
-        if ($business->type == 1) {
-            // Campos Grocery: solo actualizar si vienen en el request
-            $groceryData = $request->only(['brand', 'size', 'expiration_date']);
-            if ($product->grocery) {
-                $product->grocery->update($groceryData);
-            } else {
-                GroceryProduct::create(array_merge($groceryData, ['products_id' => $product->products_id]));
+        /* ================= ACTUALIZAR IMAGEN ================= */
+        if ($request->hasFile('product_image')) {
+
+            // borrar imagen anterior
+            if ($product->image && Storage::disk('public')->exists($product->image)) {
+                Storage::disk('public')->delete($product->image);
             }
 
-            // Eliminar Pharmacy si existía antes
-            if ($product->pharmacy) {
-                $product->pharmacy->delete();
-            }
-        } elseif ($business->type == 2) {
-            // Campos Pharmacy: solo actualizar si vienen en el request
-            $pharmaData = $request->only(['active_ingredient', 'dosage', 'presentation', 'expiration_date']);
-            if ($product->pharmacy) {
-                $product->pharmacy->update($pharmaData);
-            } else {
-                PharmacyProduct::create(array_merge($pharmaData, ['products_id' => $product->products_id]));
-            }
+            $folder = 'products/' . Str::slug($business->name);
+            $ext = $request->file('product_image')->getClientOriginalExtension();
+            $fileName = 'product_' . $product->products_id . '.' . $ext;
 
-            // Eliminar Grocery si existía antes
-            if ($product->grocery) {
-                $product->grocery->delete();
-            }
+            $request->file('product_image')
+                ->storeAs($folder, $fileName, 'public');
+
+            $product->update([
+                'image' => $folder . '/' . $fileName
+            ]);
         }
 
-        return redirect()->route('admin.products.index')->with('success', 'Producto actualizado correctamente.');
+        /* ================= MODELOS POR TIPO ================= */
+        if ($business->type == 1) {
+
+            $groceryData = $request->only(['brand', 'size', 'expiration_date']);
+
+            $product->grocery
+                ? $product->grocery->update($groceryData)
+                : GroceryProduct::create(array_merge($groceryData, [
+                    'products_id' => $product->products_id
+                ]));
+
+            optional($product->pharmacy)->delete();
+        } elseif ($business->type == 2) {
+
+            $pharmaData = $request->only(['active_ingredient', 'dosage', 'presentation', 'expiration_date']);
+
+            $product->pharmacy
+                ? $product->pharmacy->update($pharmaData)
+                : PharmacyProduct::create(array_merge($pharmaData, [
+                    'products_id' => $product->products_id
+                ]));
+
+            optional($product->grocery)->delete();
+        }
+
+        $this->clearProductsCache();
+
+        return redirect()
+            ->route('admin.products.index')
+            ->with('success', 'Producto actualizado correctamente.');
     }
 
     public function destroy($id)
     {
         $product = Product::findOrFail($id);
+
+        // 🧹 Eliminar imagen física si existe
+        if ($product->image && Storage::disk('public')->exists($product->image)) {
+            Storage::disk('public')->delete($product->image);
+        }
+
         $product->delete();
 
-        return redirect()->route('admin.products.index')->with('success', 'Producto eliminado correctamente.');
+        $this->clearProductsCache();
+
+        return redirect()
+            ->route('admin.products.index')
+            ->with('success', 'Producto eliminado correctamente.');
+    }
+
+    private function clearProductsCache(): void
+    {
+        Cache::flush(); // válido si solo cacheas productos
     }
 }

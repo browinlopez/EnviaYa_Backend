@@ -3,110 +3,160 @@
 @section('title', 'Conjuntos Residenciales')
 
 @section('content_header')
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="m-0">Conjuntos Residenciales</h1>
-    <a href="{{ route('admin.conjuntos.create') }}" 
-       class="btn btn-lg btn-primary shadow-sm"
-       style="transition: transform 0.2s, background-color 0.2s;"
-       onmouseover="this.style.backgroundColor='#0062cc'; this.style.transform='scale(1.05)';"
-       onmouseout="this.style.backgroundColor='#0d6efd'; this.style.transform='scale(1)';">
-        <i class="fas fa-plus me-1"></i> Nuevo Conjunto
+<div class="owners-header">
+    <div class="owners-title">
+        <span class="owners-badge"><i class="fas fa-building"></i></span>
+        <div>
+            <h1>Conjuntos Residenciales</h1>
+            <p>Gestión y control de los conjuntos registrados</p>
+        </div>
+    </div>
+
+    <a href="{{ route('admin.conjuntos.create') }}" class="btn-create-owner">
+        <i class="fas fa-plus"></i> Nuevo Conjunto
     </a>
 </div>
 @stop
 
 @section('content')
-<div class="card shadow-sm">
-    <div class="card-header bg-primary text-white">
-        <h5 class="mb-0">Lista de Conjuntos</h5>
-    </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover table-striped table-bordered align-middle" id="complexes-table">
-                <thead class="table-light">
-                    <tr>
-                        <th>ID</th>
-                        <th>Nombre</th>
-                        <th>Dirección</th>
-                        <th>Estado</th>
-                        <th>Personas</th>
-                        <th class="text-center">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($complexes as $complex)
-                        <tr>
-                            <td>{{ $complex->complex_id }}</td>
-                            <td>{{ $complex->name }}</td>
-                            <td>{{ $complex->address }}</td>
-                            <td>
-                                <span class="badge {{ $complex->state ? 'bg-success' : 'bg-secondary' }}">
-                                    {{ $complex->state ? 'Activo' : 'Inactivo' }}
-                                </span>
-                            </td>
-                            <td>{{ $complex->people_count }}</td>
-                            <td class="text-center">
-                                <a href="{{ route('admin.conjuntos.edit', $complex->complex_id) }}" class="btn btn-sm btn-warning me-1 mb-1">
-                                    <i class="fas fa-edit"></i> Editar
-                                </a>
-                                <form action="{{ route('admin.conjuntos.destroy', $complex->complex_id) }}" method="POST" style="display:inline;">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger mb-1" onclick="return confirm('¿Eliminar?')">
-                                        <i class="fas fa-trash"></i> Eliminar
-                                    </button>
-                                </form>
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
+<div class="modern-card">
+
+    <div class="mb-3 d-flex gap-3">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchInput" placeholder="Buscar conjunto..." onkeyup="loadComplexes(1)">
+        </div>
+        <div class="search-box">
+            <i class="fas fa-toggle-on"></i>
+            <select id="stateFilter" onchange="loadComplexes(1)">
+                <option value="">Todos los estados</option>
+                <option value="1">Activo</option>
+                <option value="0">Inactivo</option>
+            </select>
         </div>
     </div>
+
+    <div id="tableLoader" class="text-center my-4 d-none">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+    </div>
+
+    <table class="modern-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Dirección</th>
+                <th>Estado</th>
+                <th>Personas</th>
+                <th class="text-end">Acciones</th>
+            </tr>
+        </thead>
+        <tbody id="complexesTable"></tbody>
+    </table>
+
+    <div id="pagination" class="d-flex justify-content-center mt-4 gap-2"></div>
 </div>
 @stop
 
 @section('adminlte_js')
-<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-$(document).ready(function() {
-    $('#complexes-table').DataTable({
-        dom: 'Bfrtip',
-        buttons: [
-            {
-                extend: 'excelHtml5',
-                className: 'btn btn-success btn-sm me-1',
-                text: '<i class="fas fa-file-excel"></i> Excel'
-            },
-            {
-                extend: 'csvHtml5',
-                className: 'btn btn-info btn-sm',
-                text: '<i class="fas fa-file-csv"></i> CSV'
-            }
-        ],
-        order: [[0, 'asc']],
-        responsive: true,
-        lengthMenu: [5, 10, 25, 50],
-        language: {
-            search: "_INPUT_",
-            searchPlaceholder: "Buscar...",
-            lengthMenu: "Mostrar _MENU_ registros",
-            info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
-            infoEmpty: "No hay registros",
-            zeroRecords: "No se encontraron coincidencias",
-            paginate: {
-                first: "Primero",
-                last: "Último",
-                next: "Siguiente",
-                previous: "Anterior"
-            }
-        }
-    });
+let currentPage = 1;
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadComplexes();
+    @if(session('success'))
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: @json(session('success')),
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true
+        });
+    @endif
 });
+
+function showLoader(){ document.getElementById('tableLoader').classList.remove('d-none'); }
+function hideLoader(){ document.getElementById('tableLoader').classList.add('d-none'); }
+
+function loadComplexes(page = 1){
+    currentPage = page;
+    const search = document.getElementById('searchInput').value.trim();
+    const state = document.getElementById('stateFilter').value;
+
+    showLoader();
+
+    const url = `{{ route('admin.conjuntos.index') }}?page=${page}&search=${encodeURIComponent(search)}&state=${state}`;
+
+    fetch(url, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+        .then(res => res.json())
+        .then(res => {
+            renderComplexes(res.data);
+            renderPagination(res.current_page,res.last_page);
+        })
+        .catch(err => { console.error(err); alert('Error cargando conjuntos'); })
+        .finally(()=>hideLoader());
+}
+
+function renderComplexes(complexes){
+    const tbody = document.getElementById('complexesTable');
+    tbody.innerHTML = '';
+
+    if(!complexes.length){
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">No se encontraron conjuntos</td></tr>`;
+        return;
+    }
+
+    complexes.forEach(c=>{
+        tbody.innerHTML += `
+        <tr>
+            <td>${c.complex_id}</td>
+            <td><strong>${c.name}</strong></td>
+            <td>${c.address ?? '—'}</td>
+            <td><span class="${c.state?'badge-active':'badge-inactive'}">${c.state?'Activo':'Inactivo'}</span></td>
+            <td>${c.people_count}</td>
+            <td class="text-end">
+                <a href="/admin/conjuntos/${c.complex_id}/edit" class="action-btn me-1"><i class="fas fa-edit"></i></a>
+                <form method="POST" action="/admin/conjuntos/${c.complex_id}" class="d-inline delete-form">
+                    @csrf
+                    @method('DELETE')
+                    <button type="button" class="action-btn text-danger" onclick="confirmDelete(this)">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </form>
+            </td>
+        </tr>`;
+    });
+}
+
+function renderPagination(current,last){
+    const container = document.getElementById('pagination');
+    container.innerHTML = '';
+    for(let i=1;i<=last;i++){
+        container.innerHTML += `<button class="pagination-btn ${i===current?'active':''}" onclick="loadComplexes(${i})">${i}</button>`;
+    }
+}
+
+function confirmDelete(button){
+    const form = button.closest('form');
+    Swal.fire({
+        title:'¿Eliminar conjunto?',
+        text:'Esta acción no se puede deshacer',
+        icon:'warning',
+        showCancelButton:true,
+        confirmButtonColor:'#d33',
+        cancelButtonColor:'#6c757d',
+        confirmButtonText:'Sí, eliminar',
+        cancelButtonText:'Cancelar'
+    }).then(result=>{ if(result.isConfirmed) form.submit(); });
+}
 </script>
+@stop
+
+@section('css')
+<link rel="stylesheet" href="{{ asset('css/dashboardIndex.css') }}">
 @stop
