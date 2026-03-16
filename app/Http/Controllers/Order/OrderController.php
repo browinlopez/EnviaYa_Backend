@@ -419,7 +419,9 @@ class OrderController extends Controller
                 'delivery_date' => now(),
                 'is_scheduled' => false,
                 'pickup' => $request->pickup ?? false,
-                'pickup_time' => $request->pickup ? $request->pickup_time : null,
+                'pickup_time' => $request->pickup && $request->pickup_time
+                    ? \Carbon\Carbon::parse($request->pickup_time)->format('Y-m-d H:i:s')
+                    : null,
                 'state' => 1,
                 'payment_state' => in_array($request->methods_id, [2, 5])
                     ? 'pending_online'
