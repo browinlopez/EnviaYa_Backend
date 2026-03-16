@@ -88,7 +88,7 @@
             Ya puedes disfrutar de todas las funcionalidades de <strong>VeciPa’Ya</strong>.
         </p>
 
-        <a href="https://api.vecipaya.com" class="button">
+        <a href="https://api.enviaya.com.co/" class="button">
             Ir a VeciPa’Ya
         </a>
 

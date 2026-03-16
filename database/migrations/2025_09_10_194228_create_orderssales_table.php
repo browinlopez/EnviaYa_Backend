@@ -23,7 +23,9 @@ return new class extends Migration
             $table->dateTime('sale_date')->nullable();
             $table->tinyInteger('state')->nullable();
 
-            // timestamps de Laravel
+            $table->boolean('pickup')->default(false);
+            $table->timestamp('pickup_time')->nullable();
+
             $table->timestamps();
 
             // índices + FKs
@@ -60,6 +62,17 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::disableForeignKeyConstraints();
+
+        // Tablas que dependen de orderssales
+        Schema::dropIfExists('orders_promotions');
+        Schema::dropIfExists('orders_products');
+        Schema::dropIfExists('orders_status_history');
+        Schema::dropIfExists('orders_payments');
+
+        // Finalmente la tabla principal
         Schema::dropIfExists('orderssales');
+
+        Schema::enableForeignKeyConstraints();
     }
 };

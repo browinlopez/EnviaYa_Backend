@@ -55,6 +55,9 @@ class OrderController extends Controller
                 'sale_date' => $order->sale_date,
                 'is_scheduled' => $order->is_scheduled,
                 'delivery_date' => $order->delivery_date,
+                'delivery_type' => $order->pickup ? 'pickup' : 'delivery',
+                'pickup' => (bool) $order->pickup,
+                'pickup_time' => $order->pickup_time,
                 'state' => $order->state,
                 'business' => [
                     'business_id' => $order->business->busines_id,
@@ -68,7 +71,7 @@ class OrderController extends Controller
                     'state' => $order->business->state,
                     'logo' => $order->business->logo,
                 ],
-                'delivery_address' => $order->address ? [
+                'delivery_address' => !$order->pickup && $order->address ? [
                     'address_id' => $order->address->address_id,
                     'address' => $order->address->address,
                     'alias' => $order->address->alias?->name,
@@ -159,6 +162,11 @@ class OrderController extends Controller
                 'busines_id' => $order->busines_id,
                 'total' => $order->total,
                 'sale_date' => $order->sale_date,
+                'is_scheduled' => $order->is_scheduled,
+                'delivery_date' => $order->delivery_date,
+                'delivery_type' => $order->pickup ? 'pickup' : 'delivery',
+                'pickup' => (bool) $order->pickup,
+                'pickup_time' => $order->pickup_time,
                 'state' => $order->state,
                 'buyer' => $order->buyer ? [
                     'buyer_id' => $order->buyer->buyer_id,
@@ -186,7 +194,7 @@ class OrderController extends Controller
                     'state' => $order->business->state,
                     'logo' => $order->business->logo,
                 ],
-                'delivery_address' => $order->address ? [
+                'delivery_address' => !$order->pickup && $order->address ? [
                     'address_id' => $order->address->address_id,
                     'address' => $order->address->address,
                     'alias' => $order->address->alias?->name,
@@ -364,7 +372,7 @@ class OrderController extends Controller
         $request->validate([
             'user_id' => 'required|integer',
             'busines_id' => 'required|integer',
-            'address_id' => 'required|integer',
+            'address_id' => 'required_if:pickup,false|integer',
             'products' => 'required|array|min:1',
             'products.*.product_id' => 'required|integer',
             'products.*.amount' => 'required|integer|min:1',
@@ -372,6 +380,8 @@ class OrderController extends Controller
             'methods_id' => 'required|integer',
             'payer' => 'required_if:methods_id,2,5|array',
             'payment_method' => 'required_if:methods_id,2|array',
+            'pickup' => 'sometimes|boolean',
+            'pickup_time' => 'required_if:pickup,true|date'
         ]);
 
         /* ========= VALIDACIONES REALES ========= */
@@ -408,6 +418,8 @@ class OrderController extends Controller
                 'sale_date' => now(),
                 'delivery_date' => now(),
                 'is_scheduled' => false,
+                'pickup' => $request->pickup ?? false,
+                'pickup_time' => $request->pickup ? $request->pickup_time : null,
                 'state' => 1,
                 'payment_state' => in_array($request->methods_id, [2, 5])
                     ? 'pending_online'
