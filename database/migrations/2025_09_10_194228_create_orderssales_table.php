@@ -26,6 +26,9 @@ return new class extends Migration
             $table->boolean('pickup')->default(false);
             $table->timestamp('pickup_time')->nullable();
 
+            $table->timestamp('delivery_date')->nullable();
+            $table->boolean('is_scheduled')->default(false);
+
             $table->timestamps();
 
             // índices + FKs

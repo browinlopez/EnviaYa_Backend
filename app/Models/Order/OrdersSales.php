@@ -35,6 +35,8 @@ class OrdersSales extends Audit
         'sale_date',
         'delivery_date',
         'is_scheduled',
+        'pickup',
+        'pickup_time',
         'state'
     ];
 
