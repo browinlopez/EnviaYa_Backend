@@ -36,8 +36,7 @@ RUN apt-get update && apt-get install -y \
     libicu-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install pdo pdo_mysql zip gd mbstring pcntl posix \
-    # Instalar Swoole versión estable específica
-    && pecl install swoole-6.2.1 \
+    && pecl install channel://pecl.php.net/swoole-6.2.0 \
     && docker-php-ext-enable swoole \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
