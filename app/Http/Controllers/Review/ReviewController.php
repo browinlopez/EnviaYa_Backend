@@ -20,12 +20,13 @@ class ReviewController extends Controller
     {
         $request->validate([
             'user_id' => 'required|integer|exists:user,user_id',
+            /* 'order_id' => 'required|integer|exists:orders_sales,order_id', */
             // otros campos según sea necesario
         ]);
 
         $user = User::select('user_id', 'rol')->where('user_id', $request->user_id)->firstOrFail();
 
-        $orderId = $request->order_id; // debes recibir el ID de la orden desde frontend
+        $orderId = $request->order_id;
         $reviewCreated = false;
 
         switch ($user->rol) {
@@ -59,7 +60,6 @@ class ReviewController extends Controller
 
             case 3: // Domiciliario
                 $request->validate([
-                    'user_id' => 'required|integer|exists:user,user_id',
                     'qualification' => 'required|numeric|min:1|max:5',
                     'comment' => 'nullable|string',
                 ]);
@@ -83,7 +83,17 @@ class ReviewController extends Controller
             OrdersSales::where('order_id', $orderId)->update(['has_review' => 1]);
         }
 
-        return response()->json($review->loadMissing(['business', 'domiciliary', 'buyer.user', 'user']));
+        // 🔹 Cargar solo las relaciones existentes según tipo de review
+        $relations = [];
+        if ($review instanceof \App\Models\Reviews\BusinessReview) {
+            $relations = ['business', 'buyer.user'];
+        } elseif ($review instanceof \App\Models\Reviews\DomiciliaryReview) {
+            $relations = ['domiciliary', 'buyer.user'];
+        } elseif ($review instanceof \App\Models\Reviews\UserReview) {
+            $relations = ['user', 'domiciliary'];
+        }
+
+        return response()->json($review->loadMissing($relations));
     }
 
 
