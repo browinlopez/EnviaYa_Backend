@@ -381,7 +381,7 @@ class OrderController extends Controller
             'payer' => 'required_if:methods_id,2,5|array',
             'payment_method' => 'required_if:methods_id,2|array',
             'pickup' => 'sometimes|boolean',
-            'pickup_time' => 'required_if:pickup,true|date'
+            'pickup_time' => 'nullable|required_if:pickup,true|date',
         ]);
 
         /* ========= VALIDACIONES REALES ========= */
