@@ -20,8 +20,6 @@ class ReviewController extends Controller
     {
         $request->validate([
             'user_id' => 'required|integer|exists:user,user_id',
-            /* 'order_id' => 'required|integer|exists:orders_sales,order_id', */
-            // otros campos según sea necesario
         ]);
 
         $user = User::select('user_id', 'rol')->where('user_id', $request->user_id)->firstOrFail();
@@ -80,7 +78,7 @@ class ReviewController extends Controller
 
         // ✅ Actualizar la orden si se creó alguna review
         if ($reviewCreated && $orderId) {
-            OrdersSales::where('order_id', $orderId)->update(['has_review' => 1]);
+            OrdersSales::where('orderSales_id', $orderId)->update(['has_review' => 1]);
         }
 
         // 🔹 Cargar solo las relaciones existentes según tipo de review
