@@ -30,6 +30,8 @@ RUN apt-get update && apt-get install -y \
     libfreetype6-dev \
     libonig-dev \
     libssl-dev \
+    pkg-config \
+    build-essential \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install pdo pdo_mysql zip gd mbstring pcntl posix \
     && pecl install swoole \
