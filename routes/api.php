@@ -100,6 +100,7 @@ Route::middleware('auth:sanctum')->group(function () {
         /* Route::post('geolocation', [OrderController::class, 'updateLocation']); */
         Route::post('geolocation', [OrderController::class, 'storeGeolocation']);
         Route::get('geolocation/latest', [OrderController::class, 'latest']);
+        Route::get('/pending-review', [OrderController::class, 'ordersPendingReview']);
     });
 
     Route::get('paymentMethods', [OrderController::class, 'paymentMethods']); // Listar metodos de pago

@@ -37,6 +37,7 @@ class OrdersSales extends Audit
         'is_scheduled',
         'pickup',
         'pickup_time',
+        'has_review',
         'state'
     ];
 
@@ -122,6 +123,7 @@ class OrdersSales extends Audit
             'delivery_date' => $this->delivery_date,
             'state' => $this->state,
             'is_scheduled' => $this->is_scheduled,
+            'has_review' => $this->has_review,
             'business' => [
                 'business_id' => $this->business->busines_id ?? null,
                 'name' => $this->business->name ?? null,

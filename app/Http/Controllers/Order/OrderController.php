@@ -659,4 +659,30 @@ class OrderController extends Controller
 
         return response()->json([]); // sin ubicación
     }
+
+    public function ordersPendingReview(Request $request)
+    {
+        $orders = OrdersSales::where('state', 4)
+            ->where('has_review', false) // o 0
+            ->where('pickup', false)     // o 0
+            ->with([
+                'details.product.category',
+                'business',
+                'promotions',
+                'payments',
+                'address.municipality.department.country',
+                'address.alias',
+                'domiciliary.user'
+            ])
+            ->get();
+
+        $formattedOrders = $orders->map(function ($order) {
+            return $order->toApi(); // usando tu método toApi para mantener consistencia
+        });
+
+        return response()->json([
+            'message' => 'Órdenes pendientes de review',
+            'orders' => $formattedOrders,
+        ]);
+    }
 }
