@@ -20,7 +20,7 @@ class ReviewController extends Controller
     {
         $request->validate([
             'user_id' => 'required|integer|exists:user,user_id',
-            'order_id' => 'required|integer|exists:orders_sales,order_id',
+            'order_id' => 'required|integer|exists:orderssales,orderSales_id',
             'type' => 'nullable|in:business,domiciliary,skip', // tipo de review o skip
             'id' => 'nullable|integer', // id del negocio o domiciliario
             'qualification' => 'nullable|numeric|min:1|max:5',
