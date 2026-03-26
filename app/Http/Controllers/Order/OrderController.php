@@ -58,6 +58,7 @@ class OrderController extends Controller
                 'delivery_type' => $order->pickup ? 'pickup' : 'delivery',
                 'pickup' => (bool) $order->pickup,
                 'pickup_time' => $order->pickup_time,
+                'has_review' => $order->has_review,
                 'state' => $order->state,
                 'business' => [
                     'business_id' => $order->business->busines_id,
