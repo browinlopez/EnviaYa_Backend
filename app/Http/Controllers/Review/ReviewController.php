@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Business;
 use App\Models\Buyer\Buyer;
 use App\Models\Domiciliary;
+use App\Models\Order\OrdersSales;
 use App\Models\Reviews\BusinessReview;
 use App\Models\Reviews\DomiciliaryReview;
 use App\Models\Reviews\UserReview;
@@ -19,72 +20,86 @@ class ReviewController extends Controller
     {
         $request->validate([
             'user_id' => 'required|integer|exists:user,user_id',
-            // aquí los demás campos que necesites validar para la review
+            'order_id' => 'required|integer|exists:orders_sales,order_id',
+            'type' => 'nullable|in:business,domiciliary,skip', // tipo de review o skip
+            'id' => 'nullable|integer', // id del negocio o domiciliario
+            'qualification' => 'nullable|numeric|min:1|max:5',
+            'comment' => 'nullable|string',
         ]);
 
-        $user = User::select('user_id', 'rol') // solo columnas necesarias
-            ->where('user_id', $request->user_id)
-            ->firstOrFail();
+        $user = User::select('user_id', 'rol')->where('user_id', $request->user_id)->firstOrFail();
+        $orderId = $request->order_id;
+        $reviewCreated = false;
+        $review = null;
+
+        // Caso "skip": solo actualizar la orden sin crear review
+        if ($request->type === 'skip') {
+            OrdersSales::where('order_id', $orderId)->update(['has_review' => 1]);
+            return response()->json([
+                'success' => true,
+                'message' => 'Orden actualizada sin calificación',
+            ]);
+        }
 
         switch ($user->rol) {
-            case 1: // Buyer hace review a business o domiciliario
+            case 1: // Buyer
+                if (!in_array($request->type, ['business', 'domiciliary'])) {
+                    return response()->json(['message' => 'Tipo de review inválido'], 422);
+                }
+
                 $request->validate([
-                    'type' => 'required|in:business,domiciliary',
-                    'id' => 'required|integer', // id del negocio o domiciliario
+                    'id' => 'required|integer',
                     'qualification' => 'required|numeric|min:1|max:5',
-                    'comment' => 'nullable|string',
                 ]);
 
                 if ($request->type === 'business') {
                     $review = BusinessReview::create([
-                        'business_id'   => $request->id,
-                        'buyer_id'     => $user->buyer->buyer_id, // buyer_id desde relación
+                        'business_id' => $request->id,
+                        'buyer_id' => $user->buyer->buyer_id,
                         'qualification' => $request->qualification,
-                        'comment'      => $request->comment,
-                        'state'        => 1,
+                        'comment' => $request->comment,
+                        'state' => 1,
                     ]);
                 } else { // domiciliary
                     $review = DomiciliaryReview::create([
                         'domiciliary_id' => $request->id,
-                        'buyer_id'      => $user->buyer->buyer_id,
+                        'buyer_id' => $user->buyer->buyer_id,
                         'qualification' => $request->qualification,
-                        'comment'       => $request->comment,
-                        'state'         => 1,
+                        'comment' => $request->comment,
+                        'state' => 1,
                     ]);
                 }
+                $reviewCreated = true;
                 break;
 
-            case 3: // Domiciliario hace review a user
+            case 3: // Domiciliario
                 $request->validate([
-                    'user_id' => 'required|integer|exists:user,user_id',
                     'qualification' => 'required|numeric|min:1|max:5',
-                    'comment' => 'nullable|string',
                 ]);
 
                 $review = UserReview::create([
-                    'user_id'       => $request->user_id,
+                    'user_id' => $request->user_id,
                     'domiciliary_id' => $user->domiciliary->domiciliary_id,
                     'qualification' => $request->qualification,
-                    'comment'       => $request->comment,
-                    'state'         => 1,
+                    'comment' => $request->comment,
+                    'state' => 1,
                 ]);
+                $reviewCreated = true;
                 break;
 
             default:
                 return response()->json(['message' => 'Este rol no puede crear reviews'], 403);
         }
 
-        if ($review instanceof BusinessReview) {
-            return response()->json($review->loadMissing(['business', 'buyer.user']));
+        // Actualizar orden si se creó review
+        if ($reviewCreated && $orderId) {
+            OrdersSales::where('order_id', $orderId)->update(['has_review' => 1]);
         }
 
-        if ($review instanceof DomiciliaryReview) {
-            return response()->json($review->loadMissing(['domiciliary', 'buyer.user']));
-        }
-
-        if ($review instanceof UserReview) {
-            return response()->json($review->loadMissing(['user', 'domiciliary']));
-        }
+        return response()->json([
+            'success' => true,
+            'review' => $review ? $review->loadMissing(['business', 'domiciliary', 'buyer.user', 'user']) : null
+        ]);
     }
 
 
