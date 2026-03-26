@@ -4,7 +4,7 @@
 FROM node:20-alpine AS node-builder
 WORKDIR /app
 
-# Copiar e instalar dependencias de Node
+# Copiar dependencias de Node
 COPY package*.json ./
 RUN npm ci --silent
 
@@ -13,44 +13,27 @@ COPY . .
 RUN npm run build
 
 # =========================
-# Stage 2: PHP base con extensiones y Swoole
+# Stage 2: PHP base con Swoole
 # =========================
-FROM php:8.2-fpm-bullseye AS php-base
+FROM quay.io/swoole/php:8.2-fpm AS php-base
 
-# Instalar herramientas y dependencias del sistema
+WORKDIR /var/www
+
+# Instalar extensiones PHP necesarias para Laravel
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git \
-    curl \
-    unzip \
-    wget \
     libzip-dev \
     libpng-dev \
     libjpeg-dev \
     libfreetype6-dev \
     libonig-dev \
-    libssl-dev \
+    libicu-dev \
     pkg-config \
     build-essential \
     zlib1g-dev \
-    libicu-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) pdo pdo_mysql zip gd mbstring pcntl posix \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-# Instalar Swoole manualmente (evita problemas de PECL/SSL)
-RUN curl -fsSL https://pecl.php.net/get/swoole-6.2.0.tgz -o /tmp/swoole.tgz \
-    && mkdir -p /tmp/swoole-src \
-    && tar -xzf /tmp/swoole.tgz -C /tmp/swoole-src --strip-components=1 \
-    && cd /tmp/swoole-src \
-    && phpize \
-    && ./configure \
-    && make -j$(nproc) \
-    && make install \
-    && docker-php-ext-enable swoole \
-    && rm -rf /tmp/swoole.tgz /tmp/swoole-src
-
-WORKDIR /var/www
 
 # =========================
 # Stage 3: Composer builder
