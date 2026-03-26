@@ -4,20 +4,20 @@
 FROM node:20-alpine AS node-builder
 WORKDIR /app
 
-# Copiar y instalar dependencias de Node
+# Copiar e instalar dependencias de Node
 COPY package*.json ./
 RUN npm ci --silent
 
-# Copiar el código y generar assets
+# Copiar código y generar build
 COPY . .
 RUN npm run build
 
 # =========================
-# Stage 2: PHP base con extensiones
+# Stage 2: PHP base con extensiones y Swoole
 # =========================
 FROM php:8.2-fpm-bullseye AS php-base
 
-# Instalar herramientas del sistema y extensiones necesarias
+# Instalar herramientas y dependencias del sistema
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     curl \
@@ -35,19 +35,27 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libicu-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) pdo pdo_mysql zip gd mbstring pcntl posix \
-    && pecl channel-update pecl.php.net \
-    && pecl install swoole-6.2.0 \
-    && docker-php-ext-enable swoole \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Instalar Swoole manualmente (evita problemas de PECL/SSL)
+RUN curl -fsSL https://pecl.php.net/get/swoole-6.2.0.tgz -o /tmp/swoole.tgz \
+    && mkdir -p /tmp/swoole-src \
+    && tar -xzf /tmp/swoole.tgz -C /tmp/swoole-src --strip-components=1 \
+    && cd /tmp/swoole-src \
+    && phpize \
+    && ./configure \
+    && make -j$(nproc) \
+    && make install \
+    && docker-php-ext-enable swoole \
+    && rm -rf /tmp/swoole.tgz /tmp/swoole-src
 
 WORKDIR /var/www
 
 # =========================
-# Stage 3: Instalar dependencias Composer
+# Stage 3: Composer builder
 # =========================
 FROM php-base AS composer-builder
-
 WORKDIR /var/www
 
 # Copiar archivos de Composer
@@ -59,7 +67,7 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local
 # Instalar dependencias de Laravel optimizadas
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 
-# Copiar resto del código
+# Copiar el resto del código
 COPY . .
 
 # Optimizar autoload
@@ -69,10 +77,9 @@ RUN composer dump-autoload --optimize
 # Stage 4: Imagen final de producción
 # =========================
 FROM php-base
-
 WORKDIR /var/www
 
-# Configurar Git como seguro
+# Configurar Git seguro
 RUN git config --global --add safe.directory /var/www
 
 # Copiar código, vendor y frontend build
@@ -91,7 +98,7 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local
     && composer require laravel/octane:^2.1 --with-all-dependencies \
     && php artisan octane:install --server=swoole
 
-# Cache de configuración y rutas
+# Cache de configuración, rutas y vistas
 RUN php artisan config:cache \
     && php artisan route:cache \
     && php artisan view:cache
