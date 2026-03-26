@@ -22,9 +22,9 @@ FROM php:8.2-fpm-bullseye AS php-base
 RUN apt-get update && apt-get install -y \
     git \
     curl \
-    libzip-dev \
     unzip \
     wget \
+    libzip-dev \
     libpng-dev \
     libjpeg-dev \
     libfreetype6-dev \
@@ -32,9 +32,12 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     pkg-config \
     build-essential \
+    zlib1g-dev \
+    libicu-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install pdo pdo_mysql zip gd mbstring pcntl posix \
-    && pecl install swoole \
+    # Instalar Swoole versión estable específica
+    && pecl install swoole-6.2.1 \
     && docker-php-ext-enable swoole \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
