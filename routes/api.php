@@ -38,11 +38,11 @@ Route::post(
 )->middleware('throttle:5,10');
 
 //Bold
-    Route::prefix('bold')->group(function () {
-        Route::post('/intent',[PaymentController::class, 'createIntent']);
-        Route::post('/payment', [PaymentController::class, 'makePayment']);
-        Route::get('/status/{ref}',[PaymentController::class, 'checkStatus']);
-    });
+Route::prefix('bold')->group(function () {
+    Route::post('/intent', [PaymentController::class, 'createIntent']);
+    Route::post('/payment', [PaymentController::class, 'makePayment']);
+    Route::get('/status/{ref}', [PaymentController::class, 'checkStatus']);
+});
 
 Route::middleware('auth:sanctum')->group(function () {
     //Auth
@@ -162,25 +162,25 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('reviews')->group(function () {
         Route::post('store', [ReviewController::class, 'store']);
 
-        //Negocios
-        Route::get('business', [ReviewController::class, 'listBusinessReviews']); // Listar todas
-        Route::post('businessBy', [ReviewController::class, 'listReviewsByBusiness']); // Listar todas
-        Route::post('business', [ReviewController::class, 'createBusinessReview']); // Crear
-        Route::put('business', [ReviewController::class, 'updateBusinessReview']); // Actualizar
-        Route::delete('business/delete', [ReviewController::class, 'deleteBusinessReview']); // Eliminar
+        // Negocios
+        Route::get('business/all', [ReviewController::class, 'listBusinessReviews']);
+        Route::post('business/by', [ReviewController::class, 'listReviewsByBusiness']);
+        Route::post('business/create', [ReviewController::class, 'createBusinessReview']);
+        Route::put('business/update', [ReviewController::class, 'updateBusinessReview']);
+        Route::delete('business/delete', [ReviewController::class, 'deleteBusinessReview']);
 
-        //Domiciliario
-        Route::get('domiciliaries', [ReviewController::class, 'listDomiciliaryReviews']); // Listar todas
-        Route::post('domiciliary', [ReviewController::class, 'listReviewsByDomiciliary']); // Listar por domiciliario
-        Route::post('domiciliary/create', [ReviewController::class, 'createDomiciliaryReview']); // Crear
-        Route::put('domiciliary/update', [ReviewController::class, 'updateDomiciliaryReview']); // Actualizar
-        Route::delete('domiciliary', [ReviewController::class, 'deleteDomiciliaryReview']); // Eliminar
+        // Domiciliarios
+        Route::get('domiciliaries/all', [ReviewController::class, 'listDomiciliaryReviews']);
+        Route::post('domiciliary/by', [ReviewController::class, 'listReviewsByDomiciliary']);
+        Route::post('domiciliary/create', [ReviewController::class, 'createDomiciliaryReview']);
+        Route::put('domiciliary/update', [ReviewController::class, 'updateDomiciliaryReview']);
+        Route::delete('domiciliary/delete', [ReviewController::class, 'deleteDomiciliaryReview']);
 
-        //usuario
-        Route::get('users', [ReviewController::class, 'listAllUserReviews']); // Listar todas
-        Route::get('user', [ReviewController::class, 'listUserReviewsByUser']); // Listar por usuario
-        Route::post('user', [ReviewController::class, 'createUserReview']); // Crear
-        Route::put('user', [ReviewController::class, 'updateUserReview']); // Actualizar
-        Route::delete('user', [ReviewController::class, 'deleteUserReview']); // Eliminar
+        // Usuarios
+        Route::get('users/all', [ReviewController::class, 'listAllUserReviews']);
+        Route::get('user/by', [ReviewController::class, 'listUserReviewsByUser']);
+        Route::post('user/create', [ReviewController::class, 'createUserReview']);
+        Route::put('user/update', [ReviewController::class, 'updateUserReview']);
+        Route::delete('user/delete', [ReviewController::class, 'deleteUserReview']);
     });
 });

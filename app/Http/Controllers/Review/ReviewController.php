@@ -15,8 +15,6 @@ use Illuminate\Support\Facades\DB;
 
 class ReviewController extends Controller
 {
-
-
     public function store(Request $request)
     {
         $request->validate([
@@ -39,7 +37,7 @@ class ReviewController extends Controller
 
                 if ($request->type === 'business') {
                     $review = BusinessReview::create([
-                        'busines_id'   => $request->id,
+                        'business_id'   => $request->id,
                         'buyer_id'     => $user->buyer->buyer_id, // buyer_id desde relación
                         'qualification' => $request->qualification,
                         'comment'      => $request->comment,
