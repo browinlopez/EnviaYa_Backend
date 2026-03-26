@@ -6,7 +6,7 @@ WORKDIR /app
 
 # Copiar y instalar dependencias de Node
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --silent
 
 # Copiar el código y generar assets
 COPY . .
@@ -15,11 +15,10 @@ RUN npm run build
 # =========================
 # Stage 2: PHP base con extensiones
 # =========================
-# Usamos FPM para mejor compatibilidad con Swoole y extensiones PCNTL/POSIX
 FROM php:8.2-fpm-bullseye AS php-base
 
-# Instalar extensiones necesarias y Swoole
-RUN apt-get update && apt-get install -y \
+# Instalar herramientas del sistema y extensiones necesarias
+RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     curl \
     unzip \
@@ -35,11 +34,12 @@ RUN apt-get update && apt-get install -y \
     zlib1g-dev \
     libicu-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install pdo pdo_mysql zip gd mbstring pcntl posix \
-    && pecl install channel://pecl.php.net/swoole-6.2.0 \
+    && docker-php-ext-install -j$(nproc) pdo pdo_mysql zip gd mbstring pcntl posix \
+    && pecl channel-update pecl.php.net \
+    && pecl install swoole-6.2.0 \
     && docker-php-ext-enable swoole \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 WORKDIR /var/www
 
@@ -48,16 +48,21 @@ WORKDIR /var/www
 # =========================
 FROM php-base AS composer-builder
 
+WORKDIR /var/www
+
+# Copiar archivos de Composer
 COPY composer.json composer.lock ./
 
 # Instalar Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-# Instalar dependencias de Laravel
+# Instalar dependencias de Laravel optimizadas
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 
-# Copiar el resto del código y optimizar autoload
+# Copiar resto del código
 COPY . .
+
+# Optimizar autoload
 RUN composer dump-autoload --optimize
 
 # =========================
@@ -67,10 +72,10 @@ FROM php-base
 
 WORKDIR /var/www
 
-# Configurar directorio como seguro para Git (evita 'dubious ownership')
+# Configurar Git como seguro
 RUN git config --global --add safe.directory /var/www
 
-# Copiar código, vendor y assets frontend
+# Copiar código, vendor y frontend build
 COPY --chown=www-data:www-data . .
 COPY --from=composer-builder --chown=www-data:www-data /var/www/vendor ./vendor
 COPY --from=node-builder --chown=www-data:www-data /app/public/build ./public/build
@@ -81,20 +86,18 @@ RUN mkdir -p storage/framework/{sessions,views,cache} \
     && chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
-# Instalar Composer para Octane
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-
-# Instalar Laravel Octane + Swoole con versión compatible
-RUN composer require laravel/octane:^2.1 --with-all-dependencies \
+# Instalar Laravel Octane
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
+    && composer require laravel/octane:^2.1 --with-all-dependencies \
     && php artisan octane:install --server=swoole
 
-# Cache de configuraciones y rutas
+# Cache de configuración y rutas
 RUN php artisan config:cache \
     && php artisan route:cache \
     && php artisan view:cache
 
-# Puerto HTTP expuesto (Traefik se comunica aquí)
+# Exponer puerto
 EXPOSE 8000
 
-# Iniciar servidor Octane con Swoole
+# Iniciar Octane con Swoole
 CMD ["php", "artisan", "octane:start", "--server=swoole", "--host=0.0.0.0", "--port=8000", "--workers=auto"]
