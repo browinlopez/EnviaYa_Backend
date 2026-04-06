@@ -22,3 +22,28 @@
 
 {{-- Main --}}
 <script src="{{ asset('landing/assets/js/main.js') }}"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        new Swiper('.partners-swiper-premium', {
+            slidesPerView: 4,
+            spaceBetween: 30,
+            loop: true,
+            autoplay: {
+                delay: 0, // scroll continuo
+                disableOnInteraction: false,
+                speed: 3000,
+            },
+            speed: 3000,
+            freeMode: true,
+            freeModeMomentum: false,
+            breakpoints: {
+                320: { slidesPerView: 2 },
+                576: { slidesPerView: 3 },
+                768: { slidesPerView: 4 },
+                992: { slidesPerView: 5 },
+                1200: { slidesPerView: 6 },
+            },
+        });
+    });
+</script>

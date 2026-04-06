@@ -1,4 +1,4 @@
-<div id="contacto" class="contact-area bg-gray default-padding"
+<div id="contacto" class="contact-area bg-ligth default-padding"
     style="background-image: url('{{ asset('landing/assets/img/shape/28.png') }}');">
     <div class="container">
         <div class="row align-center">

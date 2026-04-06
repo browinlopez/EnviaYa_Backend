@@ -1,4 +1,4 @@
-<div id="impacto" class="fun-facts-area default-padding">
+<div id="impacto" class="fun-facts-area bg-gray default-padding">
         <div class="container">
             <div class="item-inner">
 

@@ -9107,3 +9107,16 @@ ul.list-two li i {
 		font-size: 16px;
 	}
 }	
+
+.partner-logo-wrapper {
+        display: inline-block;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .partner-logo-wrapper:hover {
+        transform: scale(1.15);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+    }
+    .partner-logo {
+        max-height: 80px;
+        object-fit: contain;
+    }
