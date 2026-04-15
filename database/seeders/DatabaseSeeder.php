@@ -23,8 +23,10 @@ class DatabaseSeeder extends Seeder
             CategoryBusinessSeeder::class,
             CategorySeeder::class,
             PaymentSeeder::class,
+            DocumentTypeSeeder::class,
             DomiciliarioPermissionsSeeder::class,
-            CompradorPermissionsSeeder::class
+            CompradorPermissionsSeeder::class,
+            UsersSeeder::class
         ]);
         /* User::factory()->create([
             'name' => 'Test User',

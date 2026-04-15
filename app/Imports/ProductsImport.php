@@ -2,49 +2,48 @@
 
 namespace App\Imports;
 
-use Maatwebsite\Excel\Concerns\ToCollection;
-use Illuminate\Support\Collection;
 use App\Models\Product\Product;
-use App\Models\Product\Category;
-use App\Models\Business;
-use App\Models\Product\ProductBusiness;
+use Illuminate\Support\Collection;
+use Maatwebsite\Excel\Concerns\ToCollection;
+use Maatwebsite\Excel\Concerns\WithCalculatedFormulas;
 
-class ProductsImport implements ToCollection
+class ProductsImport implements ToCollection, WithCalculatedFormulas
 {
     public function collection(Collection $rows)
     {
         foreach ($rows as $row) {
 
-            // Saltar encabezado
-            if (strtolower($row[0]) === 'nombre') {
+            // saltar headers
+            if (!isset($row[0]) || $row[0] === 'ID') {
                 continue;
             }
 
-            // Buscar por ID
-            $category = Category::find($row[2]);
-            $business = Business::find($row[3]);
+            try {
 
-            if (!$category || !$business) {
-                dump("⚠️ Categoría o negocio NO encontrado:", $row);
-                continue;
+                // 🔥 normalizar category_id
+                $categoryId = $row[3];
+
+                if (!is_numeric($categoryId)) {
+                    $categoryId = null;
+                } else {
+                    $categoryId = (int) $categoryId;
+                }
+
+                $product = Product::create([
+                    'name'        => $row[1] ?? null,
+                    'description' => $row[6] ?? null,
+                    'category_id' => $categoryId,
+                    'state'       => isset($row[7]) && is_numeric($row[7]) ? (int) $row[7] : 1,
+                ]);
+
+                dump("✅ Producto creado:", $product->toArray());
+
+            } catch (\Throwable $e) {
+
+                dump("❌ ERROR FILA:");
+                dump($row);
+                dump($e->getMessage());
             }
-
-            // Crear producto (tabla products)
-            $product = Product::create([
-                'name'        => $row[0],
-                'description' => $row[1],
-                'category_id' => $category->category_id,
-                'state'       => $row[6] ?? 1,
-            ]);
-
-            // Relación en products_business
-            ProductBusiness::create([
-                'products_id' => $product->products_id,   // PK correcta
-                'busines_id'  => $business->busines_id,  // PK correcta
-                'price'       => $row[4],                // precio viene del excel
-                'amount'      => $row[5],                // stock viene del excel
-                'qualification' => 0,                    // default
-            ]);
         }
     }
 }

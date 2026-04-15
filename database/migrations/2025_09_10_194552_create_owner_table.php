@@ -14,7 +14,6 @@ return new class extends Migration
         Schema::create('owner', function (Blueprint $table) {
             $table->increments('owner_id');
             $table->unsignedBigInteger('user_id'); // FK a user
-            $table->string('profile_photo', 255);
             $table->foreignId('document_type_id')->constrained('document_types');
             $table->string('document_number', 50);
             $table->date('birthdate')->nullable();
