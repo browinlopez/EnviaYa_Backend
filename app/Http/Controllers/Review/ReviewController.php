@@ -139,7 +139,7 @@ class ReviewController extends Controller
         ]);
 
         $reviews = BusinessReview::with('business', 'buyer.user')
-            ->where('business_id', $request->business_id)
+            ->where('busines_id', $request->business_id)
             ->get();
 
         $formatted = $reviews->map(function ($review) {
@@ -263,7 +263,6 @@ class ReviewController extends Controller
             ], 500);
         }
     }
-
 
     public function deleteBusinessReview(Request $request)
     {
