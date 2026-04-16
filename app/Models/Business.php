@@ -22,6 +22,7 @@ class Business extends Audit
         'name',
         'phone',
         'address',
+        'description',
         'latitude',
         'longitude',
         'qualification',

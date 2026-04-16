@@ -21,6 +21,8 @@ return new class extends Migration
             $table->string('NIT')->nullable();
             $table->string('logo')->nullable();
 
+            $table->text('description')->nullable();
+
             // 🔹 Campos de ubicación
             $table->decimal('latitude', 10, 7)->nullable();
             $table->decimal('longitude', 10, 7)->nullable();

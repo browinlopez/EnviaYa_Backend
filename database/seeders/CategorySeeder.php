@@ -42,6 +42,13 @@ class CategorySeeder extends Seeder
                 'business_category_id' => 1,
             ],
 
+            [
+                'name' => 'Medicina',
+                'description' => 'Medicamentos de venta libre, productos farmacéuticos y cuidado de la salud',
+                'state' => 1,
+                'business_category_id' => 1, // TIENDA
+            ],
+
             // 🍽️ Categorías de RESTAURANTE
             [
                 'name' => 'Comidas Rápidas',

@@ -15,10 +15,10 @@ class ProductFromExcelSeeder extends Seeder
      */
     public function run()
     {
-        //$productsPath = storage_path('app/seeders/products.xlsx');
+        /* $productsPath = storage_path('app/seeders/products.xlsx'); */
         $businessPath = storage_path('app/seeders/productos_esperanza.xlsx');
 
-        //Excel::import(new ProductsImport, $productsPath);
+        /* Excel::import(new ProductsImport, $productsPath); */
 
         Excel::import(new ProductBusinessImport, $businessPath);
         

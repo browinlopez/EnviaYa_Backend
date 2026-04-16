@@ -133,6 +133,7 @@ class BusinessController extends Controller
                 'name'          => $business->name,
                 'phone'         => $business->phone,
                 'address'       => $business->address,
+                'description'       => $business->description,
                 'qualification' => (float) $business->qualification,
                 'razon_social'  => $business->razonSocial_DCD,
                 'NIT'           => $business->NIT,

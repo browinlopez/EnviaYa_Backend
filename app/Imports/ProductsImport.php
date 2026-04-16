@@ -2,48 +2,66 @@
 
 namespace App\Imports;
 
+use App\Models\Product\Category;
 use App\Models\Product\Product;
-use Illuminate\Support\Collection;
-use Maatwebsite\Excel\Concerns\ToCollection;
-use Maatwebsite\Excel\Concerns\WithCalculatedFormulas;
+use Maatwebsite\Excel\Concerns\ToModel;
+use Maatwebsite\Excel\Concerns\WithChunkReading;
+use Maatwebsite\Excel\Concerns\WithHeadingRow;
 
-class ProductsImport implements ToCollection, WithCalculatedFormulas
+class ProductsImport implements ToModel, WithChunkReading, WithHeadingRow
 {
-    public function collection(Collection $rows)
+    protected static $categories = null;
+
+    public function model(array $row)
     {
-        foreach ($rows as $row) {
-
-            // saltar headers
-            if (!isset($row[0]) || $row[0] === 'ID') {
-                continue;
-            }
-
-            try {
-
-                // 🔥 normalizar category_id
-                $categoryId = $row[3];
-
-                if (!is_numeric($categoryId)) {
-                    $categoryId = null;
-                } else {
-                    $categoryId = (int) $categoryId;
-                }
-
-                $product = Product::create([
-                    'name'        => $row[1] ?? null,
-                    'description' => $row[6] ?? null,
-                    'category_id' => $categoryId,
-                    'state'       => isset($row[7]) && is_numeric($row[7]) ? (int) $row[7] : 1,
-                ]);
-
-                dump("✅ Producto creado:", $product->toArray());
-
-            } catch (\Throwable $e) {
-
-                dump("❌ ERROR FILA:");
-                dump($row);
-                dump($e->getMessage());
-            }
+        if (!$row['nombre_producto']) {
+            return null;
         }
+
+        // 🔥 Cargar categorías una sola vez
+        if (self::$categories === null) {
+            self::$categories = Category::pluck('category_id', 'name')
+                ->mapWithKeys(fn($id, $name) => [trim(strtolower($name)) => $id])
+                ->toArray();
+        }
+
+        // 🔍 Buscar categoría por nombre
+        $categoryName = strtolower(trim($row['categoria'] ?? ''));
+        $categoryId = self::$categories[$categoryName] ?? null;
+
+        // 🔍 Imagen
+        $image = $row['imagen'] ?? null;
+        if (!filter_var($image, FILTER_VALIDATE_URL)) {
+            $image = null;
+        }
+
+        // 🔥 DATA FINAL QUE SE INSERTARÍA
+    /*     $data = [
+            'name'        => $row['nombre_producto'],
+            'description' => $row['descripcion'] ?? null,
+            'category_id' => $categoryId,
+            'image'       => $image,
+            'state'       => isset($row['estado']) && is_numeric($row['estado'])
+                ? (int) $row['estado']
+                : 1,
+        ];
+
+        // 🔥 DEBUG (ver uno y cortar ejecución)
+        dd($data); */
+
+        return new Product([
+            'name'        => $row['nombre_producto'],
+            'description' => $row['descripcion'] ?? null,
+            'category_id' => $categoryId,
+            'image'       => $image,
+            'state'       => isset($row['estado']) && is_numeric($row['estado'])
+                ? (int) $row['estado']
+                : 1,
+        ]);
+    }
+
+    public function chunkSize(): int
+    {
+        return 200;
     }
 }
