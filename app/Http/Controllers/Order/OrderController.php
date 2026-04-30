@@ -455,7 +455,7 @@ class OrderController extends Controller
                     ? array_merge(['name' => 'CREDIT_CARD'], $request->payment_method)
                     : [
                         'name' => 'QR',
-                        'qr_format' => 'BASE64' //CLAVE puede ser ese o TEXT o BASE64
+                        'qr_format' => 'BOLD_BASE64' //CLAVE puede ser ese o TEXT o BASE64
                     ];
 
                 // 4️⃣ Productos
