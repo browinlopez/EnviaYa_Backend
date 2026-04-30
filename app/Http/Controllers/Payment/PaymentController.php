@@ -111,11 +111,14 @@ class PaymentController extends Controller
         $qrExpiresAt = null;
 
         // formato nuevo (expires_at en timestamp)
+        $qrExpiresAt = null;
+
+        // 🔥 FIX correcto
         if (isset($next['expires_at'])) {
-            $qrExpiresAt = \Carbon\Carbon::createFromTimestampMs($next['expires_at']);
+            $qrExpiresAt = now()->addMinutes(10);
         }
 
-        // formato viejo (expires_in en segundos)
+        // fallback viejo
         elseif (isset($next['qr']['expires_in'])) {
             $qrExpiresAt = now()->addSeconds(
                 (int) $next['qr']['expires_in']
