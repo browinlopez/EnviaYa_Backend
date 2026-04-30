@@ -100,16 +100,26 @@ class PaymentController extends Controller
         // Manejo del QR
         $qrPayload = null;
         $qrExpiresAt = null;
-        $redirectUrl = $boldResponse['next_actions']['redirect_url'] ?? null;
+        $next = $boldResponse['next_actions'] ?? [];
 
-        if (isset($boldResponse['next_actions']['qr'])) {
-            $qrPayload = $boldResponse['next_actions']['qr']['payload'] ?? null;
+        $redirectUrl = $next['redirect_url'] ?? null;
 
-            if (isset($boldResponse['next_actions']['qr']['expires_in'])) {
-                $qrExpiresAt = now()->addSeconds(
-                    (int) $boldResponse['next_actions']['qr']['expires_in']
-                );
-            }
+        // 🔥 Soporta ambos formatos (nuevo y viejo de Bold)
+        $qrPayload = $next['qr_payload']
+            ?? ($next['qr']['payload'] ?? null);
+
+        $qrExpiresAt = null;
+
+        // formato nuevo (expires_at en timestamp)
+        if (isset($next['expires_at'])) {
+            $qrExpiresAt = \Carbon\Carbon::createFromTimestampMs($next['expires_at']);
+        }
+
+        // formato viejo (expires_in en segundos)
+        elseif (isset($next['qr']['expires_in'])) {
+            $qrExpiresAt = now()->addSeconds(
+                (int) $next['qr']['expires_in']
+            );
         }
 
         // Guardamos el intento de pago como "running" / pending

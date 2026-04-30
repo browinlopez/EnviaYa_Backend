@@ -453,7 +453,10 @@ class OrderController extends Controller
                 // 3️⃣ Método de pago
                 $paymentMethod = $request->methods_id == 2
                     ? array_merge(['name' => 'CREDIT_CARD'], $request->payment_method)
-                    : ['name' => 'QR'];
+                    : [
+                        'name' => 'QR',
+                        'qr_format' => 'BASE64' //CLAVE puede ser ese o TEXT o BASE64
+                    ];
 
                 // 4️⃣ Productos
                 $products = collect($request->products)->map(fn($p) => [
