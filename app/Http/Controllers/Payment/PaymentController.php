@@ -76,6 +76,10 @@ class PaymentController extends Controller
             "reference_id" => $intent->bold_reference_id,
             "payer" => $payer,
             "payment_method" => $paymentMethod,
+            "amount" => [
+                "currency" => "COP",
+                "total_amount" => (int) $order->total
+            ],
             /* "products" => $products, */
             "metadata" => [
                 "key" => "order_id",
