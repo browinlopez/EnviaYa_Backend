@@ -2,7 +2,7 @@
 
 namespace App\Exports\Comercials;
 
-use App\Models\Order\OrdersSales;
+use App\Models\OrderSale;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithTitle;
@@ -17,12 +17,12 @@ class UsersSheet implements FromCollection, WithHeadings, WithTitle, WithStyles
     public function __construct($start, $end)
     {
         $this->start = $start;
-        $this->end   = $end;
+        $this->end = $end;
     }
 
     public function collection()
     {
-        $orders = OrdersSales::with('buyer.user', 'payments')
+        $orders = OrderSale::with('buyer.user', 'payments')
             ->whereBetween('sale_date', [$this->start, $this->end])
             ->get();
 
@@ -30,15 +30,15 @@ class UsersSheet implements FromCollection, WithHeadings, WithTitle, WithStyles
             $firstOrder = $userOrders->sortBy('sale_date')->first();
             $isNew = $firstOrder->sale_date >= $this->start && $firstOrder->sale_date <= $this->end;
 
-            $totalSpent = $userOrders->sum(function($order){
+            $totalSpent = $userOrders->sum(function ($order) {
                 return $order->payments?->total ?? 0;
             });
 
             return [
-                'Usuario'          => $userOrders->first()->buyer?->user?->name ?? 'N/A',
-                'Tipo de Usuario'  => $isNew ? 'Nuevo' : 'Recurrente',
-                'Pedidos Realizados'=> $userOrders->count(),
-                'Total Gastado'    => $totalSpent,
+                'Usuario' => $userOrders->first()->buyer?->user?->name ?? 'N/A',
+                'Tipo de Usuario' => $isNew ? 'Nuevo' : 'Recurrente',
+                'Pedidos Realizados' => $userOrders->count(),
+                'Total Gastado' => $totalSpent,
             ];
         });
 

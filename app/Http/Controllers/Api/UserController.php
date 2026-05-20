@@ -1,0 +1,292 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\Buyer;
+use App\Models\User;
+use App\Models\UserAddress;
+use Illuminate\Http\Request;
+
+class UserController extends Controller
+{
+    // Listar todos los usuarios con relaciones
+    public function index()
+    {
+        $users = User::with([
+            'buyer.complexes.residentialComplex',
+            'addresses'
+        ])
+            ->where('rol_id', 4)
+            ->get();
+
+        $formatted = $users->map(function ($user) {
+            return [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'address' => $user->address,
+                'rol_id' => $user->rol_id,
+                'qualification' => $user->buyer ? $user->buyer->qualification : null,
+                'state' => $user->state,
+
+                // Buyer directo (sin arreglo)
+                'buyer_id' => $user->buyer ? $user->buyer->buyer_id : null,
+
+                // Complexes simplificado (id y nombre del residencial)
+                'complexes' => $user->buyer && $user->buyer->complexes ? $user->buyer->complexes->map(function ($complex) {
+                    return [
+                        'id' => $complex->id,
+                        'name' => $complex->residentialComplex ? $complex->residentialComplex->name : null,
+                    ];
+                }) : [],
+
+                // Addresses completo
+                'addresses' => $user->addresses,
+            ];
+        });
+
+        return response()->json($formatted);
+    }
+
+    // Detalle de un usuario
+    public function show(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|integer|exists:users,id',
+        ]);
+
+        $user = User::with([
+            'buyer.complexes.residentialComplex',
+            'addresses'
+        ])
+            ->where('rol_id', 4)
+            ->findOrFail($request->user_id);
+
+        $formatted = [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'phone' => $user->phone,
+            'address' => $user->address,
+            'rol_id' => $user->rol_id,
+            'qualification' => $user->buyer ? $user->buyer->qualification : null,
+            'state' => $user->state,
+
+            // Buyer directo (sin arreglo)
+            'buyer_id' => $user->buyer ? $user->buyer->buyer_id : null,
+
+            // Complexes simplificado (id y nombre del residencial)
+            'complexes' => $user->buyer && $user->buyer->complexes ? $user->buyer->complexes->map(function ($complex) {
+                return [
+                    'id' => $complex->id,
+                    'name' => $complex->residentialComplex ? $complex->residentialComplex->name : null,
+                ];
+            }) : [],
+
+            // Addresses completo
+            'addresses' => $user->addresses,
+        ];
+
+        return response()->json($formatted);
+    }
+
+    // Actualizar usuario
+    public function update(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|integer|exists:users,id',
+            'name' => 'nullable|string|max:255',
+            'email' => 'nullable|email|unique:users,email,' . $request->user_id . ',id',
+            'phone' => 'nullable|string|max:20',
+            'address' => 'nullable|string|max:225',
+            'rol_id' => 'nullable|integer|exists:roles,id',
+            'qualification' => 'nullable|numeric|between:0,5',
+            'state' => 'nullable|boolean'
+        ]);
+
+        $user = User::findOrFail($request->user_id);
+        $user->update($request->only([
+            'name',
+            'email',
+            'phone',
+            'address',
+            'rol_id',
+            'qualification',
+            'state'
+        ]));
+
+        return response()->json($user);
+    }
+
+    // Eliminar usuario
+    public function desactivate(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email|exists:users,email',
+        ]);
+
+        $user = User::where('email', $request->email)->firstOrFail();
+
+        if ($user->state === true) {
+            $user->state = false;
+            $user->save();
+
+            return response()->json(['message' => 'Usuario desactivado correctamente']);
+        }
+
+        return response()->json(['message' => 'El usuario ya está desactivado'], 200);
+    }
+
+    // Obtener direcciones del usuario con jerarquía completa
+    public function getAddresses(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|integer|exists:users,id',
+        ]);
+
+        $addresses = UserAddress::where('user_id', $request->user_id)
+            ->where('state', true)
+            ->with([
+                'alias:id,name',
+                'municipality:id,name,department_id',
+                'municipality.department:id,name,country_id',
+                'municipality.department.country:id,name,code'
+            ])
+            ->get()
+            ->map(function ($address) {
+                return [
+                    'address_id' => $address->address_id,
+                    'address' => $address->address,
+                    'latitude' => $address->latitude,
+                    'longitude' => $address->longitude,
+                    'alias_id' => $address->alias?->id,
+                    'alias_name' => $address->alias?->name,
+                    'municipality_id' => $address->municipality?->id,
+                    'municipality_name' => $address->municipality?->name,
+                    'department_id' => $address->municipality?->department?->id,
+                    'department_name' => $address->municipality?->department?->name,
+                    'country_id' => $address->municipality?->department?->country?->id,
+                    'country_name' => $address->municipality?->department?->country?->name,
+                    'country_code' => $address->municipality?->department?->country?->code,
+                ];
+            });
+
+        return response()->json($addresses);
+    }
+
+    // Agregar dirección a un usuario
+    public function addAddress(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|integer|exists:users,id',
+            'address' => 'required|string|max:225',
+            'municipality_id' => 'required|integer|exists:municipalities,id',
+            'alias_id' => 'nullable|integer|exists:aliases,id',
+            'latitude' => 'nullable|numeric',
+            'longitude' => 'nullable|numeric'
+        ]);
+
+        $address = UserAddress::create([
+            'user_id' => $request->user_id,
+            'address' => $request->address,
+            'municipality_id' => $request->municipality_id,
+            'alias_id' => $request->alias_id,
+            'latitude' => $request->latitude,
+            'longitude' => $request->longitude,
+            'state' => true
+        ]);
+
+        return response()->json($address, 201);
+    }
+
+    // Obtener perfil buyer del usuario
+    public function getBuyerProfile(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|integer|exists:users,id',
+        ]);
+
+        $buyer = Buyer::with([
+            'user:id,name,email,phone,address,rol_id,qualification,state'
+        ])->where('user_id', $request->user_id)->first();
+
+        if (!$buyer) {
+            return response()->json(['message' => 'El usuario no tiene perfil comprador'], 404);
+        }
+
+        $response = [
+            'buyer_id' => $buyer->buyer_id,
+            'user_id' => $buyer->user_id,
+            'qualification' => $buyer->qualification,
+            'verification_digit' => $buyer->verification_digit,
+            'municipality_id' => $buyer->municipality_id,
+            'state' => $buyer->state,
+            'user' => [
+                'id' => $buyer->user->id,
+                'name' => $buyer->user->name,
+                'email' => $buyer->user->email,
+                'phone' => $buyer->user->phone,
+                'address' => $buyer->user->address,
+                'rol_id' => $buyer->user->rol_id,
+                'qualification' => $buyer->user->qualification,
+                'state' => $buyer->user->state
+            ]
+        ];
+
+        return response()->json($response);
+    }
+
+
+    // ----------------------------
+    // Notificaciones del usuario
+    // ----------------------------
+
+    // Listar notificaciones
+    /*  public function getNotifications(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|integer|exists:users,id',
+        ]);
+
+        $notifications = Notification::where('user_id', $request->user_id)
+                            ->orderBy('date', 'desc')
+                            ->get();
+
+        return response()->json($notifications);
+    }
+
+    // Crear notificación
+    public function createNotification(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|integer|exists:users,id',
+            'message' => 'required|string',
+        ]);
+
+        $notification = Notification::create([
+            'user_id' => $request->user_id,
+            'message' => $request->message,
+            'read'    => false,
+            'date'    => now(),
+            'state'   => true
+        ]);
+
+        return response()->json($notification, 201);
+    }
+
+    // Marcar notificación como leída
+    public function markAsRead(Request $request)
+    {
+        $request->validate([
+            'notification_id' => 'required|integer|exists:notifications,notification_id',
+        ]);
+
+        $notification = Notification::findOrFail($request->notification_id);
+        $notification->read = true;
+        $notification->save();
+
+        return response()->json(['message' => 'Notificación marcada como leída']);
+    } */
+}

@@ -11,24 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('orderssales_detail', function (Blueprint $table) {
-            $table->increments('orderDet_id');
-            $table->unsignedInteger('orderSales_id')->nullable(); // FK a orderssales
-            $table->unsignedBigInteger('product_id')->nullable(); // FK a products
-            $table->integer('amount');
+        Schema::create('order_sales_details', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('order_sales_id');
+            $table->unsignedBigInteger('product_id');
+            $table->integer('quantity');
             $table->decimal('unit_price', 10, 2);
 
-            // índices + FKs
-            $table->index('orderSales_id', 'fk_orderssales_detail_order');
-            $table->index('product_id', 'fk_orderssales_detail_product');
-
-            $table->foreign('orderSales_id', 'fk_orderssales_detail_order')
-                ->references('orderSales_id')->on('orderssales')
-                ->onDelete('cascade');
-
-            $table->foreign('product_id', 'fk_orderssales_detail_product')
-                ->references('products_id')->on('products')
-                ->onDelete('set null');
+            $table->foreign('order_sales_id')->references('id')->on('orders_sales')->onDelete('cascade');
+            $table->foreign('product_id')->references('id')->on('products')->onDelete('cascade');
         });
     }
 
@@ -37,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('orderssales_detail');
+        Schema::dropIfExists('order_sales_details');
     }
 };

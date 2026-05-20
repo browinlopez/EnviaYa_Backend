@@ -9,12 +9,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('invoices', function (Blueprint $table) {
-            $table->unsignedInteger('payments_id')->nullable()->after('orderSales_id');
+            $table->unsignedBigInteger('payments_id')->nullable()->after('order_sale_id');
             $table->string('payment_provider')->nullable()->after('payments_id');
             $table->string('payment_reference')->nullable()->after('payment_provider');
 
             $table->foreign('payments_id')
-                  ->references('payments_id')->on('payments')
+                  ->references('id')->on('payments')
                   ->nullOnDelete();
         });
     }

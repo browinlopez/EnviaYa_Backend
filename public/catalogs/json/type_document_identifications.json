@@ -1,0 +1,44 @@
+[
+  {
+    "id": 1,
+    "code": "CC",
+    "name_eng": "Citizenship ID",
+    "name_sp": "Cédula de ciudadanía",
+    "bold_name": "CEDULA"
+  },
+  {
+    "id": 2,
+    "code": "TI",
+    "name_eng": "Identity Card",
+    "name_sp": "Tarjeta de identidad",
+    "bold_name": "TARJETA_IDENTIDAD"
+  },
+  {
+    "id": 3,
+    "code": "CE",
+    "name_eng": "Foreigner ID",
+    "name_sp": "Cédula de extranjería",
+    "bold_name": "CEDULA_EXTRANJERIA"
+  },
+  {
+    "id": 4,
+    "code": "PA",
+    "name_eng": "Passport",
+    "name_sp": "Pasaporte",
+    "bold_name": "PASAPORTE"
+  },
+  {
+    "id": 5,
+    "code": "NIT",
+    "name_eng": "Tax Identification Number",
+    "name_sp": "NIT",
+    "bold_name": "NIT"
+  },
+  {
+    "id": 6,
+    "code": "RC",
+    "name_eng": "Civil Registry",
+    "name_sp": "Registro civil",
+    "bold_name": "REGISTRO_CIVIL"
+  }
+]

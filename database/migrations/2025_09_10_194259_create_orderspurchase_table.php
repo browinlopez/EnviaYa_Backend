@@ -11,28 +11,24 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('orderspurchase', function (Blueprint $table) {
-            $table->increments('orderPursh_id');
+        Schema::create('orders_purchases', function (Blueprint $table) {
+            $table->id();
             $table->unsignedBigInteger('supplier_id')->nullable(); // FK a suppliers
             $table->unsignedInteger('methods_id')->nullable();
             $table->unsignedInteger('forms_id')->nullable();
             $table->dateTime('purchase_date')->nullable();
             $table->decimal('total', 10, 2)->nullable();
 
-            // index + FK
-            $table->index('supplier_id', 'fk_orderspurchase_supplier');
-            $table->foreign('supplier_id', 'fk_orderspurchase_supplier')
-                ->references('supplier_id')->on('suppliers')
-                ->onDelete('set null');
-            $table->index('methods_id', 'fk_orderspurchase_methods');
-            $table->index('forms_id', 'fk_orderspurchase_forms');
-
-            $table->foreign('methods_id', 'fk_orderspurchase_methods')
-                ->references('methods_id')->on('payment_methods') // ✅ tabla real
+            $table->foreign('supplier_id')
+                ->references('id')->on('suppliers')
                 ->onDelete('set null');
 
-            $table->foreign('forms_id', 'fk_orderspurchase_forms')
-                ->references('forms_id')->on('payment_forms')
+            $table->foreign('methods_id')
+                ->references('id')->on('payment_methods')
+                ->onDelete('set null');
+
+            $table->foreign('forms_id')
+                ->references('id')->on('payment_forms')
                 ->onDelete('set null');
         });
     }
@@ -42,6 +38,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('orderspurchase');
+        Schema::dropIfExists('orders_purchases');
     }
 };

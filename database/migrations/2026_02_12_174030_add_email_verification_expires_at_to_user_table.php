@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('user', function (Blueprint $table) {
+        Schema::table('users', function (Blueprint $table) {
             $table->timestamp('email_verification_expires_at')
                   ->nullable()
                   ->after('email_verification_token');
@@ -20,7 +20,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('user', function (Blueprint $table) {
+        Schema::table('users', function (Blueprint $table) {
             $table->dropColumn('email_verification_expires_at');
         });
     }

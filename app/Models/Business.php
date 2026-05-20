@@ -2,20 +2,11 @@
 
 namespace App\Models;
 
-use App\Models\Audit\Audit;
-use App\Models\Business\CategoryBusiness;
-use App\Models\Maps\Municipality;
-use App\Models\Order\OrdersSales;
-use App\Models\Owner\Owner;
-use App\Models\Product\Product;
-use App\Models\Product\ProductBusiness;
-use App\Models\Reviews\BusinessReview;
 use Illuminate\Database\Eloquent\Model;
 
 class Business extends Audit
 {
     protected $table = 'business';
-    protected $primaryKey = 'busines_id';
     public $timestamps = false;
 
     protected $fillable = [
@@ -26,12 +17,13 @@ class Business extends Audit
         'latitude',
         'longitude',
         'qualification',
-        'razonSocial_DCD',
+        'legal_name',
+        'type_organization_id',
         "municipality_id",
-        'NIT',
+        'identification_number',
+        'verification_digit',
         'logo',
-        'city',
-        'type',
+        'category_business_id',
         'state'
     ];
 
@@ -39,7 +31,7 @@ class Business extends Audit
     {
         return $this->belongsToMany(
             Owner::class,
-            'owner_busines',
+            'owner_businesses',
             'busines_id',
             'owner_id'
         )->withPivot('state');
@@ -55,15 +47,15 @@ class Business extends Audit
     {
         return $this->belongsToMany(
             Product::class,
-            'products_business',
+            'product_businesses',
             'busines_id',
             'products_id'
-        )->withPivot(['price', 'amount', 'qualification']);
+        )->withPivot(['id', 'price', 'quantity', 'qualification']);
     }
 
     public function orders()
     {
-        return $this->hasMany(OrdersSales::class, 'busines_id', 'busines_id');
+        return $this->hasMany(OrderSale::class, 'busines_id', 'id');
     }
 
     public function reviews()
@@ -71,19 +63,19 @@ class Business extends Audit
         return $this->hasMany(
             BusinessReview::class,
             'busines_id',   // 👈 columna en business_reviews
-            'busines_id'
+            'id'
         );
     }
 
 
     public function productBusinesses()
     {
-        return $this->hasMany(ProductBusiness::class, 'busines_id', 'busines_id');
+        return $this->hasMany(ProductBusiness::class, 'busines_id', 'id');
     }
 
     public function domiciliaries()
     {
-        return $this->belongsToMany(Domiciliary::class, 'business_domiciliary', 'busines_id', 'domiciliary_id')
+        return $this->belongsToMany(Domiciliary::class, 'business_domiciliaries', 'busines_id', 'domiciliary_id')
             ->withPivot('state');
     }
 
@@ -94,6 +86,11 @@ class Business extends Audit
 
     public function category()
     {
-        return $this->belongsTo(CategoryBusiness::class, 'type', 'id');
+        return $this->belongsTo(CategoryBusiness::class, 'category_business_id', 'id');
+    }
+
+    public function typeOrganization()
+    {
+        return $this->belongsTo(TypeOrganization::class, 'type_organization_id', 'id');
     }
 }

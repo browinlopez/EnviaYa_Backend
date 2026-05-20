@@ -11,19 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('order_geolocation', function (Blueprint $table) {
-            $table->increments('geolocation_id'); // PK
-            $table->unsignedInteger('domiciliary_id'); // FK hacia domiciliary
+        Schema::create('order_geolocations', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('domiciliary_id');
             $table->decimal('latitude', 9, 6)->nullable();
             $table->decimal('length', 9, 6)->nullable();
             $table->tinyInteger('state')->nullable();
 
-            // Índice
-            $table->index('domiciliary_id', 'fk_order_geolocation_domiciliary');
-
-            // Foreign Key
-            $table->foreign('domiciliary_id', 'fk_order_geolocation_domiciliary')
-                  ->references('domiciliary_id')->on('domiciliary')
+            $table->foreign('domiciliary_id')
+                  ->references('id')->on('domiciliaries')
                   ->onDelete('cascade');
         });
     }
@@ -33,6 +29,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('order_geolocation');
+        Schema::dropIfExists('order_geolocations');
     }
 };

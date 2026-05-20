@@ -9,7 +9,7 @@ class CategoryBusinessSeeder extends Seeder
 {
     public function run(): void
     {
-        DB::table('category_business')->insert([
+        DB::table('categories_business')->insert([
             [
                 'name' => 'Tienda',
                 'description' => 'Tienda de barrio negocio popular para toda la gente',

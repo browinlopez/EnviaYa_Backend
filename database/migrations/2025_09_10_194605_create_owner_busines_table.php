@@ -11,22 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('owner_busines', function (Blueprint $table) {
-            $table->unsignedInteger('owner_id');
-            $table->unsignedInteger('busines_id');
+        Schema::create('owner_businesses', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('owner_id');
+            $table->unsignedBigInteger('busines_id');
             $table->tinyInteger('state')->default(1);
 
-            $table->primary(['owner_id', 'busines_id']);
-
-            $table->index('owner_id', 'fk_owner_busines_owner');
-            $table->index('busines_id', 'fk_owner_busines_business');
-
-            $table->foreign('owner_id', 'fk_owner_busines_owner')
-                ->references('owner_id')->on('owner')
+            $table->foreign('owner_id')
+                ->references('id')->on('owners')
                 ->onDelete('cascade');
 
-            $table->foreign('busines_id', 'fk_owner_busines_business')
-                ->references('busines_id')->on('business')
+            $table->foreign('busines_id')
+                ->references('id')->on('business')
                 ->onDelete('cascade');
         });
     }
@@ -36,6 +32,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('owner_busines');
+        Schema::dropIfExists('owner_businesses');
     }
 };

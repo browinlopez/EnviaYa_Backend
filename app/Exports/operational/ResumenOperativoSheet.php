@@ -2,33 +2,36 @@
 
 namespace App\Exports\operational;
 
-use App\Models\Order\OrdersSales;
+use App\Models\OrderSale;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithTitle;
 
 class ResumenOperativoSheet implements FromArray, WithTitle
 {
-    public function __construct(protected $start, protected $end) {}
+    public function __construct(protected $start, protected $end)
+    {
+    }
 
     public function array(): array
     {
-        $orders = OrdersSales::whereBetween('sale_date', [$this->start, $this->end])
+        $orders = OrderSale::whereBetween('sale_date', [$this->start, $this->end])
             ->whereNotNull('delivery_date')
             ->get();
 
-        $tiempos = $orders->map(fn($o) =>
+        $tiempos = $orders->map(
+            fn($o) =>
             $o->delivery_date && $o->sale_date
-                ? now()->parse($o->delivery_date)->diffInMinutes($o->sale_date)
-                : null
+            ? now()->parse($o->delivery_date)->diffInMinutes($o->sale_date)
+            : null
         )->filter();
 
         $promedioEntrega = $tiempos->avg() ?? 0;
 
-        $cancelados = OrdersSales::whereBetween('sale_date', [$this->start, $this->end])
+        $cancelados = OrderSale::whereBetween('sale_date', [$this->start, $this->end])
             ->where('state', 'cancelado') // ajusta al estado real
             ->count();
 
-        $totalPedidos = OrdersSales::whereBetween('sale_date', [$this->start, $this->end])->count();
+        $totalPedidos = OrderSale::whereBetween('sale_date', [$this->start, $this->end])->count();
 
         return [
             ['Indicador', 'Valor'],

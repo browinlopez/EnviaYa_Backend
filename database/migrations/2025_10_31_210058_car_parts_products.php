@@ -8,7 +8,7 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::create('car_parts_products', function (Blueprint $table) {
-            $table->id('car_part_product_id');
+            $table->id();
             $table->unsignedBigInteger('products_id');
             $table->string('brand')->nullable();             // Toyota, Honda...
             $table->string('model')->nullable();             // Corolla, Civic...
@@ -17,7 +17,7 @@ return new class extends Migration {
             $table->string('compatibility')->nullable();     // List of compatible models
             $table->timestamps();
 
-            $table->foreign('products_id')->references('products_id')->on('products')->onDelete('cascade');
+            $table->foreign('products_id')->references('id')->on('products')->onDelete('cascade');
         });
     }
 

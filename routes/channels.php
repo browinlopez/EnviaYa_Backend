@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\Chat\ChatParticipant;
+use App\Models\ChatParticipant;
 use Illuminate\Support\Facades\Broadcast;
 
 // routes/channels.php

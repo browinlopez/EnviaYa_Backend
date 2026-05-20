@@ -11,31 +11,21 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('buyer_complex', function (Blueprint $table) {
-            $table->increments('id'); // PK autoincrement
-
-            // foreign keys
-            $table->unsignedInteger('buyer_id');
+        Schema::create('buyer_complexes', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('buyer_id');
             $table->unsignedBigInteger('complex_id');
+            $table->timestamps();
 
-            // timestamps
-            $table->timestamp('created_at')->useCurrent()->nullable();
-            $table->timestamp('updated_at')->useCurrent()->nullable();
-
-            // índices y claves foráneas
-            $table->foreign('buyer_id', 'buyer_complex_ibfk_1')
-                ->references('buyer_id')
-                ->on('buyer')
+            $table->foreign('buyer_id')
+                ->references('id')
+                ->on('buyers')
                 ->onDelete('cascade');
 
-            $table->foreign('complex_id', 'buyer_complex_ibfk_2')
-                ->references('complex_id')
+            $table->foreign('complex_id')
+                ->references('id')
                 ->on('residential_complexes')
                 ->onDelete('cascade');
-
-            // índices individuales opcionales
-            $table->index('buyer_id');
-            $table->index('complex_id');
         });
     }
 
@@ -44,11 +34,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('buyer_complex', function (Blueprint $table) {
-            $table->dropForeign('buyer_complex_ibfk_1');
-            $table->dropForeign('buyer_complex_ibfk_2');
-        });
-
-        Schema::dropIfExists('buyer_complex');
+        Schema::dropIfExists('buyer_complexes');
     }
 };

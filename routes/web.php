@@ -1,18 +1,18 @@
 <?php
 
 use App\Exports\Comercials\ReportGeneralComercial;
-use App\Http\Controllers\Admin\BusinessController;
-use App\Http\Controllers\Admin\BuyerController;
-use App\Http\Controllers\Admin\CategoryBusinessController;
-use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\DomiciliaryController;
-use App\Http\Controllers\Admin\ProductController;
-use App\Http\Controllers\Admin\ReportController;
-use App\Http\Controllers\Admin\ResidentialComplexController;
-use App\Http\Controllers\Auth\AuthController;
-use App\Http\Controllers\Auth\EmailVerificationPromptController;
-use App\Http\Controllers\Auth\VerifyEmailController;
-use App\Http\Controllers\Admin\Owner\OwnerController;
+use App\Http\Controllers\Api\BusinessController;
+use App\Http\Controllers\Api\BuyerController;
+use App\Http\Controllers\Api\AdminCategoryBusinessController;
+use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\AdminDomiciliaryController;
+use App\Http\Controllers\Api\AdminProductController;
+use App\Http\Controllers\Api\ReportController;
+use App\Http\Controllers\Api\ResidentialComplexController;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\EmailVerificationPromptController;
+use App\Http\Controllers\Api\VerifyEmailController;
+use App\Http\Controllers\Api\AdminOwnerController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
@@ -72,22 +72,22 @@ Route::middleware('auth')->group(function () {
 
         // Domiciliarios
         Route::prefix('domiciliarios')->group(function () {
-            Route::get('/', [DomiciliaryController::class, 'index'])->name('domiciliarios.index');
-            Route::get('/create', [DomiciliaryController::class, 'create'])->name('domiciliarios.create');
-            Route::post('/', [DomiciliaryController::class, 'store'])->name('domiciliarios.store');
-            Route::get('/{id}', [DomiciliaryController::class, 'show'])->name('domiciliarios.show');
-            Route::get('/{id}/edit', [DomiciliaryController::class, 'edit'])->name('domiciliarios.edit');
-            Route::put('/{id}', [DomiciliaryController::class, 'update'])->name('domiciliarios.update');
-            Route::delete('/{id}', [DomiciliaryController::class, 'destroy'])->name('domiciliarios.destroy');
+            Route::get('/', [AdminDomiciliaryController::class, 'index'])->name('domiciliarios.index');
+            Route::get('/create', [AdminDomiciliaryController::class, 'create'])->name('domiciliarios.create');
+            Route::post('/', [AdminDomiciliaryController::class, 'store'])->name('domiciliarios.store');
+            Route::get('/{id}', [AdminDomiciliaryController::class, 'show'])->name('domiciliarios.show');
+            Route::get('/{id}/edit', [AdminDomiciliaryController::class, 'edit'])->name('domiciliarios.edit');
+            Route::put('/{id}', [AdminDomiciliaryController::class, 'update'])->name('domiciliarios.update');
+            Route::delete('/{id}', [AdminDomiciliaryController::class, 'destroy'])->name('domiciliarios.destroy');
         });
         // Categorías de negocio
         Route::prefix('category-business')->group(function () {
-            Route::get('/', [CategoryBusinessController::class, 'index'])->name('category-business.index');
-            Route::get('/create', [CategoryBusinessController::class, 'create'])->name('category-business.create');
-            Route::post('/', [CategoryBusinessController::class, 'store'])->name('category-business.store');
-            Route::get('/{id}/edit', [CategoryBusinessController::class, 'edit'])->name('category-business.edit');
-            Route::put('/{id}', [CategoryBusinessController::class, 'update'])->name('category-business.update');
-            Route::delete('/{id}', [CategoryBusinessController::class, 'destroy'])->name('category-business.destroy');
+            Route::get('/', [AdminCategoryBusinessController::class, 'index'])->name('category-business.index');
+            Route::get('/create', [AdminCategoryBusinessController::class, 'create'])->name('category-business.create');
+            Route::post('/', [AdminCategoryBusinessController::class, 'store'])->name('category-business.store');
+            Route::get('/{id}/edit', [AdminCategoryBusinessController::class, 'edit'])->name('category-business.edit');
+            Route::put('/{id}', [AdminCategoryBusinessController::class, 'update'])->name('category-business.update');
+            Route::delete('/{id}', [AdminCategoryBusinessController::class, 'destroy'])->name('category-business.destroy');
         });
         // Conjuntos residenciales
         Route::prefix('conjuntos')->group(function () {
@@ -100,28 +100,28 @@ Route::middleware('auth')->group(function () {
         });
         // Productos
         Route::prefix('productos')->group(function () {
-            Route::get('/', [ProductController::class, 'index'])->name('products.index');
-            Route::get('/ajax', [ProductController::class, 'indexAjax'])->name('product.ajax');
-            Route::get('/create', [ProductController::class, 'create'])->name('products.create');
-            Route::post('/store', [ProductController::class, 'store'])->name('products.store');
-            Route::get('/edit/{id}', [ProductController::class, 'edit'])->name('products.edit');
-            Route::put('/update/{id}', [ProductController::class, 'update'])->name('products.update');
-            Route::delete('/destroy/{id}', [ProductController::class, 'destroy'])->name('products.destroy');
+            Route::get('/', [AdminProductController::class, 'index'])->name('products.index');
+            Route::get('/ajax', [AdminProductController::class, 'indexAjax'])->name('product.ajax');
+            Route::get('/create', [AdminProductController::class, 'create'])->name('products.create');
+            Route::post('/store', [AdminProductController::class, 'store'])->name('products.store');
+            Route::get('/edit/{id}', [AdminProductController::class, 'edit'])->name('products.edit');
+            Route::put('/update/{id}', [AdminProductController::class, 'update'])->name('products.update');
+            Route::delete('/destroy/{id}', [AdminProductController::class, 'destroy'])->name('products.destroy');
         });
         // Importación productos
         Route::prefix('admin/products')->group(function () {
-            Route::post('/import', [ProductController::class, 'import'])->name('admin.products.import');
-            Route::get('/import/preview', [ProductController::class, 'importPreview'])->name('admin.products.importPreview');
-            Route::post('/import/store', [ProductController::class, 'importStore'])->name('admin.products.importStore');
+            Route::post('/import', [AdminProductController::class, 'import'])->name('admin.products.import');
+            Route::get('/import/preview', [AdminProductController::class, 'importPreview'])->name('admin.products.importPreview');
+            Route::post('/import/store', [AdminProductController::class, 'importStore'])->name('admin.products.importStore');
         });
         // Relación propietarios - negocios
         Route::prefix('owners')->group(function () {
-            Route::get('/', [OwnerController::class, 'index'])->name('owners.index');
-            Route::get('/create', [OwnerController::class, 'create'])->name('owners.create');
-            Route::post('/', [OwnerController::class, 'store'])->name('owners.store');
-            Route::get('/{owner}/edit', [OwnerController::class, 'edit'])->name('owners.edit');
-            Route::put('/{owner}', [OwnerController::class, 'update'])->name('owners.update');
-            Route::post('/{owner}/businesses', [OwnerController::class, 'syncBusinesses'])->name('admin.owners.businesses.sync');
+            Route::get('/', [AdminOwnerController::class, 'index'])->name('owners.index');
+            Route::get('/create', [AdminOwnerController::class, 'create'])->name('owners.create');
+            Route::post('/', [AdminOwnerController::class, 'store'])->name('owners.store');
+            Route::get('/{owner}/edit', [AdminOwnerController::class, 'edit'])->name('owners.edit');
+            Route::put('/{owner}', [AdminOwnerController::class, 'update'])->name('owners.update');
+            Route::post('/{owner}/businesses', [AdminOwnerController::class, 'syncBusinesses'])->name('admin.owners.businesses.sync');
         });
         // Reportes
         Route::prefix('reportes')->group(function () {

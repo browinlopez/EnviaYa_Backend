@@ -11,25 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('orders_promotions', function (Blueprint $table) {
-            $table->increments('promOrd_id'); // PK autoincremental
-
-            $table->unsignedInteger('orderSales_id'); // FK a orders_sales
-            $table->unsignedBigInteger('promotion_id')->nullable(); // FK a promotions
-
+        Schema::create('order_promotions', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('order_sales_id');
+            $table->unsignedBigInteger('promotion_id')->nullable();
             $table->tinyInteger('state')->nullable();
 
-            // Índices
-            $table->index('orderSales_id', 'fk_orders_promotions_ordersales');
-            $table->index('promotion_id', 'fk_orders_promotions_promotion');
-
-            // Foreign Keys
-            $table->foreign('orderSales_id', 'fk_orders_promotions_ordersales')
-                  ->references('orderSales_id')->on('orderssales')
+            $table->foreign('order_sales_id')
+                  ->references('id')->on('orders_sales')
                   ->onDelete('cascade');
 
-            $table->foreign('promotion_id', 'fk_orders_promotions_promotion')
-                  ->references('promotion_id')->on('promotions')
+            $table->foreign('promotion_id')
+                  ->references('id')->on('promotions')
                   ->onDelete('set null');
         });
     }
@@ -39,6 +32,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('orders_promotions');
+        Schema::dropIfExists('order_promotions');
     }
 };

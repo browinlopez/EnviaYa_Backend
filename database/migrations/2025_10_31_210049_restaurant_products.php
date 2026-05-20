@@ -8,7 +8,7 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::create('restaurant_products', function (Blueprint $table) {
-            $table->id('restaurant_product_id');
+            $table->id();
             $table->unsignedBigInteger('products_id');
             $table->string('food_type')->nullable();        // Fast food, Italian, Sushi...
             $table->string('portion_size')->nullable();      // Small, Medium, Large
@@ -17,7 +17,7 @@ return new class extends Migration {
             $table->string('allergens')->nullable();         // lactose, peanuts, etc.
             $table->timestamps();
 
-            $table->foreign('products_id')->references('products_id')->on('products')->onDelete('cascade');
+            $table->foreign('products_id')->references('id')->on('products')->onDelete('cascade');
         });
     }
 

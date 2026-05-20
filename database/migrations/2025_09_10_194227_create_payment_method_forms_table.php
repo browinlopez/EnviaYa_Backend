@@ -12,19 +12,16 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('payment_method_forms', function (Blueprint $table) {
-            $table->increments('id');
-            $table->unsignedInteger('methods_id');
-            $table->unsignedInteger('forms_id');
+            $table->id();
+            $table->unsignedInteger('payment_method_id');
+            $table->unsignedInteger('payment_form_id');
 
-            $table->index('methods_id', 'fk_payment_method_forms_methods');
-            $table->index('forms_id', 'fk_payment_method_forms_forms');
-
-            $table->foreign('methods_id', 'fk_payment_method_forms_methods')
-                ->references('methods_id')->on('payment_methods')
+            $table->foreign('payment_method_id')
+                ->references('id')->on('payment_methods')
                 ->onDelete('cascade');
 
-            $table->foreign('forms_id', 'fk_payment_method_forms_forms')
-                ->references('forms_id')->on('payment_forms')
+            $table->foreign('payment_form_id')
+                ->references('id')->on('payment_forms')
                 ->onDelete('cascade');
         });
     }

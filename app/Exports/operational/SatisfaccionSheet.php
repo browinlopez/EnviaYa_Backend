@@ -2,8 +2,8 @@
 
 namespace App\Exports\operational;
 
-use App\Models\Reviews\BusinessReview;
-use App\Models\Reviews\DomiciliaryReview;
+use App\Models\BusinessReview;
+use App\Models\DomiciliaryReview;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithTitle;
 

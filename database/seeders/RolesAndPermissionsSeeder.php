@@ -30,9 +30,8 @@ class RolesAndPermissionsSeeder extends Seeder
             Permission::firstOrCreate(['name' => $perm]);
         }
 
-        // Crear rol ADMIN con rol_id = 1
+        // Crear rol ADMIN
         $adminRole = Rol::firstOrCreate(
-            ['rol_id' => 4],
             ['name' => 'admin', 'guard_name' => 'web']
         );
 

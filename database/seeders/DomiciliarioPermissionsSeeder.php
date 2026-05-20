@@ -23,9 +23,8 @@ class DomiciliarioPermissionsSeeder extends Seeder
             Permission::firstOrCreate(['name' => $perm]);
         }
 
-        // Crear o asignar rol DOMICILIARIO (rol_id = 5 por ejemplo)
+        // Crear o asignar rol DOMICILIARIO
         $domiRole = Rol::firstOrCreate(
-             ['rol_id' => 3],
             ['name' => 'domiciliario']
         );
 

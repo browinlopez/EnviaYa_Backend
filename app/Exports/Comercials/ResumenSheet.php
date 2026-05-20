@@ -2,7 +2,7 @@
 
 namespace App\Exports\Comercials;
 
-use App\Models\Order\OrdersSales;
+use App\Models\OrderSale;
 use App\Models\Business;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithTitle;
@@ -17,21 +17,21 @@ class ResumenSheet implements FromArray, WithTitle, WithStyles
     public function __construct($start, $end)
     {
         $this->start = $start;
-        $this->end   = $end;
+        $this->end = $end;
     }
 
     public function array(): array
     {
         // Ticket promedio
-        $avgTicket = OrdersSales::whereBetween('sale_date', [$this->start, $this->end])->avg('total');
+        $avgTicket = OrderSale::whereBetween('sale_date', [$this->start, $this->end])->avg('total');
 
         // Usuarios
-        $buyersIds = OrdersSales::whereBetween('sale_date', [$this->start, $this->end])
+        $buyersIds = OrderSale::whereBetween('sale_date', [$this->start, $this->end])
             ->pluck('buyer_id')->unique();
 
         $totalActiveUsers = $buyersIds->count();
 
-        $newUsers = OrdersSales::select('buyer_id')
+        $newUsers = OrderSale::select('buyer_id')
             ->whereIn('buyer_id', $buyersIds)
             ->groupBy('buyer_id')
             ->havingRaw('MIN(sale_date) BETWEEN ? AND ?', [$this->start, $this->end])
@@ -40,7 +40,7 @@ class ResumenSheet implements FromArray, WithTitle, WithStyles
         $recurrentUsers = $totalActiveUsers - $newUsers;
 
         // Tiendas activas/inactivas
-        $businessWithOrders = OrdersSales::whereBetween('sale_date', [$this->start, $this->end])
+        $businessWithOrders = OrderSale::whereBetween('sale_date', [$this->start, $this->end])
             ->distinct('busines_id')
             ->count('busines_id');
 
@@ -48,7 +48,7 @@ class ResumenSheet implements FromArray, WithTitle, WithStyles
         $inactiveBusinesses = $totalBusinesses - $businessWithOrders;
 
         // Tasa repetición
-        $repeatCustomers = OrdersSales::whereBetween('sale_date', [$this->start, $this->end])
+        $repeatCustomers = OrderSale::whereBetween('sale_date', [$this->start, $this->end])
             ->select('buyer_id')
             ->groupBy('buyer_id')
             ->havingRaw('COUNT(*) > 1')

@@ -2,11 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\Buyer\Buyer;
-use App\Models\Owner\Owner;
-use App\Models\Reviews\BusinessReview;
-use App\Models\Reviews\UserReview;
-use App\Models\User\UserAddress;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens;
@@ -18,9 +13,6 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 class User extends Authenticatable implements Auditable, MustVerifyEmail
 {
     use HasApiTokens, HasFactory, HasRoles, Notifiable, \OwenIt\Auditing\Auditable;
-
-    protected $table = 'user';
-    protected $primaryKey = 'user_id';
     public $timestamps = false;
 
     protected $fillable = [
@@ -29,7 +21,7 @@ class User extends Authenticatable implements Auditable, MustVerifyEmail
         'password',
         'phone',
         'address',
-        'rol',
+        'rol_id',
         'qualification',
         'state',
         'email_verification_token',
@@ -49,42 +41,42 @@ class User extends Authenticatable implements Auditable, MustVerifyEmail
     // Relaciones
     public function rolRelation()
     {
-        return $this->belongsTo(Rol::class, 'rol', 'rol_id');
+        return $this->belongsTo(Rol::class, 'rol_id', 'id');
     }
 
     public function domiciliary()
     {
-        return $this->hasOne(Domiciliary::class, 'user_id', 'user_id');
+        return $this->hasOne(Domiciliary::class, 'user_id', 'id');
     }
 
     public function buyer()
     {
-        return $this->hasOne(Buyer::class, 'user_id', 'user_id');
+        return $this->hasOne(Buyer::class, 'user_id', 'id');
     }
 
     public function owner()
     {
-        return $this->hasOne(Owner::class, 'user_id', 'user_id');
+        return $this->hasOne(Owner::class, 'user_id', 'id');
     }
 
     public function reviewsWritten()
     {
-        return $this->hasMany(UserReview::class, 'user_id', 'user_id');
+        return $this->hasMany(UserReview::class, 'user_id', 'id');
     }
 
     public function businessReviews()
     {
-        return $this->hasMany(BusinessReview::class, 'buyer_id', 'user_id');
+        return $this->hasMany(BusinessReview::class, 'buyer_id', 'id');
     }
 
     public function notifications()
     {
-        return $this->hasMany(Notification::class, 'user_id', 'user_id');
+        return $this->hasMany(Notification::class, 'user_id', 'id');
     }
 
     public function addresses()
     {
-        return $this->hasMany(UserAddress::class, 'user_id', 'user_id');
+        return $this->hasMany(UserAddress::class, 'user_id', 'id');
     }
 
     public function favoriteBusinesses()

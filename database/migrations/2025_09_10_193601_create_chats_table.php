@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('chats', function (Blueprint $table) {
-            $table->increments('chat_id'); // PK autoincremental
+            $table->id(); // PK id
 
             // enum('private','group') con default 'private'
             $table->enum('type', ['private', 'group'])->default('private');

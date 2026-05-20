@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('payment_intents', function (Blueprint $table) {
             $table->id();
-            $table->unsignedInteger('orderSales_id');
+            $table->unsignedBigInteger('order_sale_id');
             $table->string('provider', 30)->default('bold');
             $table->string('bold_reference_id')->unique();
             $table->decimal('amount', 10, 2);
@@ -20,8 +20,8 @@ return new class extends Migration
             $table->json('response')->nullable();
             $table->timestamps();
 
-            $table->foreign('orderSales_id')
-                  ->references('orderSales_id')->on('orderssales')
+            $table->foreign('order_sale_id')
+                  ->references('id')->on('orders_sales')
                   ->cascadeOnDelete();
         });
     }

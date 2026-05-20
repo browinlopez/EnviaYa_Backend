@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('alias', function (Blueprint $table) {
-            $table->id('alias_id')->primary(); // sin auto_increment
+        Schema::create('aliases', function (Blueprint $table) {
+            $table->id(); // PK id
             $table->string('name', 255)->nullable();
         });
     }
@@ -22,6 +22,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('alias');
+        Schema::dropIfExists('aliases');
     }
 };

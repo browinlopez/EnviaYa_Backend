@@ -82,4 +82,18 @@ class LoginRequest extends FormRequest
     {
         return Str::transliterate(Str::lower($this->string('email')).'|'.$this->ip());
     }
+
+    /**
+     * Mensajes de error personalizados en español.
+     */
+    public function messages(): array
+    {
+        return [
+            'email.required' => 'El correo electrónico es obligatorio.',
+            'email.string' => 'El correo electrónico debe ser una cadena de texto.',
+            'email.email' => 'El correo electrónico debe tener un formato válido (ej. usuario@ejemplo.com).',
+            'password.required' => 'La contraseña es obligatoria.',
+            'password.string' => 'La contraseña debe ser una cadena de texto.',
+        ];
+    }
 }

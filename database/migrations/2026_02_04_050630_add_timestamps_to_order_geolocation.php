@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('order_geolocation', function (Blueprint $table) {
+        Schema::table('order_geolocations', function (Blueprint $table) {
             $table->timestamps();
         });
     }
@@ -21,8 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('order_geolocation', function (Blueprint $table) {
-            //
+        Schema::table('order_geolocations', function (Blueprint $table) {
+            $table->dropTimestamps();
         });
     }
 };

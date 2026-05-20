@@ -12,19 +12,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('grocery_products', function (Blueprint $table) {
-            $table->increments('grocery_product_id'); // PK autoincremental
-            $table->unsignedBigInteger('products_id'); // FK hacia products
+            $table->id();
+            $table->unsignedBigInteger('products_id');
             $table->string('brand', 255)->nullable();
             $table->string('size', 100)->nullable();
             $table->date('expiration_date')->nullable();
 
-            // Índice para products_id
-            $table->index('products_id');
-
-            // Foreign Key
-            $table->foreign('products_id', 'grocery_products_ibfk_1')
-                  ->references('products_id')->on('products')
-                  ->onDelete('cascade'); // opcional
+            $table->foreign('products_id')
+                  ->references('id')->on('products')
+                  ->onDelete('cascade');
         });
     }
 

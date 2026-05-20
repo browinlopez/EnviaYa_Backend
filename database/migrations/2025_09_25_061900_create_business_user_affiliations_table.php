@@ -14,10 +14,10 @@ return new class extends Migration
         Schema::create('business_user_affiliations', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('user_id');
-            $table->unsignedInteger('busines_id');
+            $table->unsignedBigInteger('busines_id');
 
-            $table->foreign('user_id')->references('user_id')->on('user')->onDelete('cascade');
-            $table->foreign('busines_id')->references('busines_id')->on('business')->onDelete('cascade');
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('busines_id')->references('id')->on('business')->onDelete('cascade');
 
             $table->unique(['user_id', 'busines_id']); // un usuario solo una vez por tienda
         });

@@ -11,24 +11,25 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('products_business', function (Blueprint $table) {
-            $table->increments('busines_products_id');
+        Schema::create('product_businesses', function (Blueprint $table) {
+            $table->id();
             $table->unsignedBigInteger('busines_id');
             $table->unsignedBigInteger('products_id');
             $table->decimal('price', 10, 2);
-            $table->integer('amount')->default(0);
+            $table->integer('quantity')->default(0);
             $table->decimal('qualification', 3, 2)->default(0.00);
+            $table->timestamps();
 
-             $table->timestamps();
+            $table->foreign('busines_id')->references('id')->on('business')->onDelete('cascade');
+            $table->foreign('products_id')->references('id')->on('products')->onDelete('cascade');
         });
     }
-
 
     /**
      * Reverse the migrations.
      */
     public function down(): void
     {
-        Schema::dropIfExists('products_business');
+        Schema::dropIfExists('product_businesses');
     }
 };

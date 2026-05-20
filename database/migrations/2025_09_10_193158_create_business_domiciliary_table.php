@@ -11,23 +11,20 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('business_domiciliary', function (Blueprint $table) {
-            $table->unsignedInteger('busines_id');
-            $table->unsignedInteger('domiciliary_id');
+        Schema::create('business_domiciliaries', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('busines_id');
+            $table->unsignedBigInteger('domiciliary_id');
             $table->tinyInteger('state')->default(1);
 
-            // PK compuesta
-            $table->primary(['busines_id', 'domiciliary_id']);
-
-            // índices y claves foráneas
-            $table->foreign('busines_id', 'fk_bd_business')
-                ->references('busines_id')
+            $table->foreign('busines_id')
+                ->references('id')
                 ->on('business')
                 ->onDelete('cascade');
 
-            $table->foreign('domiciliary_id', 'fk_bd_domiciliary')
-                ->references('domiciliary_id')
-                ->on('domiciliary')
+            $table->foreign('domiciliary_id')
+                ->references('id')
+                ->on('domiciliaries')
                 ->onDelete('cascade');
         });
     }
@@ -37,11 +34,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('business_domiciliary', function (Blueprint $table) {
-            $table->dropForeign('fk_bd_business');
-            $table->dropForeign('fk_bd_domiciliary');
-        });
-
-        Schema::dropIfExists('business_domiciliary');
+        Schema::dropIfExists('business_domiciliaries');
     }
 };

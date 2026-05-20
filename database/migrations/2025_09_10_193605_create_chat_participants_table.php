@@ -4,37 +4,30 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
     public function up(): void
     {
         Schema::create('chat_participants', function (Blueprint $table) {
-            $table->increments('participant_id'); // PK autoincremental
-            $table->unsignedInteger('chat_id');   // FK hacia chats
-            $table->unsignedBigInteger('user_id');   // FK hacia user
-            $table->integer('role_id');   // FK hacia rol
+            $table->id();
+            $table->unsignedInteger('chat_id');
+            $table->unsignedBigInteger('user_id');
+            $table->unsignedBigInteger('role_id');
             $table->timestamp('joined_at')->nullable()->useCurrent();
 
-            // Índices
-            $table->index('chat_id', 'fk_chat_participant_chat');
-            $table->index('user_id', 'fk_chat_participant_user');
-            $table->index('role_id', 'fk_chat_participant_role');
+            $table->foreign('chat_id')
+                ->references('id')->on('chats')
+                ->onDelete('cascade');
 
-            // Foreign Keys
-            $table->foreign('chat_id', 'fk_chat_participant_chat')
-                  ->references('chat_id')->on('chats')
-                  ->onDelete('cascade');
+            $table->foreign('user_id')
+                ->references('id')->on('users')
+                ->onDelete('cascade');
 
-            $table->foreign('user_id', 'fk_chat_participant_user')
-                  ->references('user_id')->on('user')
-                  ->onDelete('cascade');
-
-            $table->foreign('role_id', 'fk_chat_participant_role')
-                  ->references('rol_id')->on('rol')
-                  ->onDelete('cascade');
+            $table->foreign('role_id')
+                ->references('id')->on('roles')
+                ->onDelete('cascade');
         });
     }
 

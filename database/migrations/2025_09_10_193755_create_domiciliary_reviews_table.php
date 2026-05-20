@@ -12,9 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('domiciliary_reviews', function (Blueprint $table) {
-            $table->increments('reviews_id'); // PK autoincremental
-            $table->unsignedInteger('domiciliary_id'); // FK hacia domiciliary
-            $table->unsignedInteger('buyer_id')->nullable();
+            $table->id(); // PK id
+            $table->unsignedBigInteger('domiciliary_id'); // FK hacia domiciliary
+            $table->unsignedBigInteger('buyer_id')->nullable();
             $table->decimal('qualification', 3, 2)->default(0.00);
             $table->text('comment')->nullable();
             $table->tinyInteger('state')->nullable();
@@ -26,11 +26,11 @@ return new class extends Migration
 
             // Foreign Keys
             $table->foreign('domiciliary_id', 'fk_domiciliary_reviews_domiciliary')
-                ->references('domiciliary_id')->on('domiciliary')
+                ->references('id')->on('domiciliaries')
                 ->onDelete('cascade');
 
             $table->foreign('buyer_id', 'fk_domiciliary_reviews_buyer')
-                ->references('buyer_id')->on('buyer')
+                ->references('id')->on('buyers')
                 ->onDelete('cascade');
         });
     }

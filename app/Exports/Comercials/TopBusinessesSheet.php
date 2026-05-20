@@ -2,7 +2,7 @@
 
 namespace App\Exports\Comercials;
 
-use App\Models\Order\OrdersSales;
+use App\Models\OrderSale;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithTitle;
@@ -17,19 +17,19 @@ class TopBusinessesSheet implements FromCollection, WithHeadings, WithTitle, Wit
     public function __construct($start, $end)
     {
         $this->start = $start;
-        $this->end   = $end;
+        $this->end = $end;
     }
 
     public function collection()
     {
-        return OrdersSales::with('business')
+        return OrderSale::with('business')
             ->whereBetween('sale_date', [$this->start, $this->end])
             ->selectRaw('busines_id, COUNT(*) as total_orders, SUM(total) as total_amount')
             ->groupBy('busines_id')
             ->get()
             ->map(function ($item) {
                 return [
-                    'Negocio'       => $item->business?->name ?? 'N/A',
+                    'Negocio' => $item->business?->name ?? 'N/A',
                     'Total Pedidos' => $item->total_orders,
                     'Total Facturado' => $item->total_amount,
                 ];

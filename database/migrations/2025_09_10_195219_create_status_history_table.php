@@ -11,23 +11,24 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('status_history', function (Blueprint $table) {
-            $table->id('history_id');
-            $table->unsignedBigInteger('order_id');
+        Schema::create('status_histories', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedInteger('order_sales_id');
             $table->integer('status_history')->nullable();
             $table->tinyInteger('state')->nullable();
             $table->timestamp('created_by')->nullable();
             $table->timestamp('updated_by')->nullable();
-            $table->timestamps(); // crea created_at y updated_at
+            $table->timestamps();
+
+            $table->foreign('order_sales_id')->references('id')->on('orders_sales')->onDelete('cascade');
         });
     }
-
 
     /**
      * Reverse the migrations.
      */
     public function down(): void
     {
-        Schema::dropIfExists('status_history');
+        Schema::dropIfExists('status_histories');
     }
 };

@@ -2,31 +2,32 @@
 
 namespace App\Models;
 
-use App\Models\Audit\Audit;
-use App\Models\Reviews\DomiciliaryReview;
 use Illuminate\Database\Eloquent\Model;
 
 class Domiciliary extends Audit
 {
-    protected $table = 'domiciliary';
-    protected $primaryKey = 'domiciliary_id';
     public $timestamps = false;
 
-    protected $fillable = ['user_id', 'available', 'document',  'qualification', 'state'];
+    protected $fillable = ['user_id', 'available', 'document',  'qualification', 'state', 'municipality_id'];
 
     public function user()
     {
-        return $this->belongsTo(User::class, 'user_id', 'user_id');
+        return $this->belongsTo(User::class, 'user_id', 'id');
+    }
+
+    public function municipality()
+    {
+        return $this->belongsTo(\App\Models\Municipality::class, 'municipality_id', 'id');
     }
 
     public function reviews()
     {
-        return $this->hasMany(DomiciliaryReview::class, 'domiciliary_id', 'domiciliary_id');
+        return $this->hasMany(DomiciliaryReview::class, 'domiciliary_id', 'id');
     }
 
     public function geolocation()
     {
-        return $this->hasMany(OrderGeolocation::class, 'domiciliary_id', 'domiciliary_id');
+        return $this->hasMany(OrderGeolocation::class, 'domiciliary_id', 'id');
     }
 
     public function businesses()

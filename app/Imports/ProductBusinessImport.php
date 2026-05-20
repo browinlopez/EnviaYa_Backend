@@ -3,8 +3,8 @@
 namespace App\Imports;
 
 use App\Models\Business;
-use App\Models\Product\Product;
-use App\Models\Product\ProductBusiness;
+use App\Models\Product;
+use App\Models\ProductBusiness;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\ToCollection;
 
@@ -52,7 +52,7 @@ class ProductBusinessImport implements ToCollection
                 'products_id' => $productId,
                 'busines_id'  => $businessId,
                 'price'       => $row[2] ?? 0,
-                'amount'      => $row[3] ?? 0,
+                'quantity'      => $row[3] ?? 0,
                 'qualification' => 0,
             ]);
 

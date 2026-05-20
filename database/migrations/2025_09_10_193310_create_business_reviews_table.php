@@ -12,13 +12,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('business_reviews', function (Blueprint $table) {
-            $table->increments('reviews_id'); // PK auto_increment
+            $table->id(); // PK id
 
             // foreign keys
-            $table->unsignedInteger('busines_id'); // FK business
-            $table->unsignedInteger('buyer_id')->nullable(); // FK buyer (INT para que coincida)
-            // Elimina user_id si ya no se usa
-            // $table->unsignedBigInteger('user_id')->nullable();
+            $table->unsignedBigInteger('busines_id'); // FK business
+            $table->unsignedBigInteger('buyer_id')->nullable(); // FK buyer
 
             // demás columnas
             $table->decimal('qualification', 3, 2)->default(0.00);
@@ -30,13 +28,13 @@ return new class extends Migration
 
             // índices y claves foráneas
             $table->foreign('busines_id', 'fk_business_reviews_business')
-                ->references('busines_id')
+                ->references('id')
                 ->on('business')
                 ->onDelete('cascade');
 
             $table->foreign('buyer_id', 'fk_business_reviews_buyer')
-                ->references('buyer_id')
-                ->on('buyer')
+                ->references('id')
+                ->on('buyers')
                 ->onDelete('set null');
         });
     }

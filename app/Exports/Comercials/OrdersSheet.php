@@ -2,7 +2,7 @@
 
 namespace App\Exports\Comercials;
 
-use App\Models\Order\OrdersSales;
+use App\Models\OrderSale;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithTitle;
@@ -17,26 +17,26 @@ class OrdersSheet implements FromCollection, WithHeadings, WithTitle, WithStyles
     public function __construct($start, $end)
     {
         $this->start = $start;
-        $this->end   = $end;
+        $this->end = $end;
     }
 
     public function collection()
     {
-        return OrdersSales::with(['buyer.user', 'business', 'payments'])
+        return OrderSale::with(['buyer.user', 'business', 'payments'])
             ->whereBetween('sale_date', [$this->start, $this->end])
             ->get()
             ->map(function ($order) {
                 $payment = $order->payments; // trae el hasOne payment
-
+    
                 return [
-                    'ID Pedido'       => $order->orderSales_id,
-                    'Cliente'         => $order->buyer?->user?->name ?? 'N/A',
-                    'Negocio'         => $order->business?->name ?? 'N/A',
-                    'Subtotal'        => $payment?->subtotal ?? 0,
-                    'Descuento'       => $payment?->valor_promocion ?? 0,
-                    'Total'           => $payment?->total ?? 0,
+                    'ID Pedido' => $order->order_sale_id,
+                    'Cliente' => $order->buyer?->user?->name ?? 'N/A',
+                    'Negocio' => $order->business?->name ?? 'N/A',
+                    'Subtotal' => $payment?->subtotal ?? 0,
+                    'Descuento' => $payment?->valor_promocion ?? 0,
+                    'Total' => $payment?->total ?? 0,
                     'Costo Domicilio' => $payment?->domicilio ?? 0,
-                    'Fecha'           => $order->sale_date,
+                    'Fecha' => $order->sale_date,
                 ];
             });
     }

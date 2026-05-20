@@ -4,15 +4,14 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
     public function up()
     {
-        Schema::create('rol', function (Blueprint $table) {
-            $table->integer('rol_id')->primary(); // tu PK no es auto increment, respeta el modelo
+        Schema::create('roles', function (Blueprint $table) {
+            $table->id(); // PK id
             $table->string('name', 255)->nullable();
             $table->string('guard_name', 255)->nullable();
         });
@@ -23,6 +22,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('rol');
+        Schema::dropIfExists('roles');
     }
 };

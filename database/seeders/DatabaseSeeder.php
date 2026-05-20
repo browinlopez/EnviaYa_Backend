@@ -17,20 +17,16 @@ class DatabaseSeeder extends Seeder
             AliasSeeder::class,
             RolesAndPermissionsSeeder::class,
             TenderoPermissionsSeeder::class,
-            CountrySeeder::class,
-            DepartmentSeeder::class,
             MunicipalitySeeder::class,
             CategoryBusinessSeeder::class,
             CategorySeeder::class,
             PaymentSeeder::class,
-            DocumentTypeSeeder::class,
+            PaymentGatewaySeeder::class,
+            TypeDocumentIdentificationSeeder::class,
             DomiciliarioPermissionsSeeder::class,
             CompradorPermissionsSeeder::class,
-            UsersSeeder::class
+            UsersSeeder::class,
+            TypeOrganizationSeeder::class
         ]);
-        /* User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]); */
     }
 }

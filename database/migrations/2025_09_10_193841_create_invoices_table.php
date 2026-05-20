@@ -16,7 +16,7 @@ return new class extends Migration
             $table->integer('invoice_id')->primary();
 
             // campos
-            $table->unsignedInteger('orderSales_id')->nullable();
+            $table->unsignedInteger('order_sale_id')->nullable();
             $table->string('invoice_number', 80);
             $table->dateTime('invoice_date')->nullable();
             $table->decimal('subtotal', 10, 2)->nullable();
@@ -25,8 +25,8 @@ return new class extends Migration
             $table->decimal('total', 10, 2)->nullable();
 
             // si luego quieres relacionarlo con orderSales, aquí va el FK
-            // $table->foreign('orderSales_id')
-            //       ->references('orderSales_id')->on('orderSales')
+            // $table->foreign('order_sale_id')
+            //       ->references('order_sale_id')->on('orderSales')
             //       ->onDelete('set null');
         });
     }

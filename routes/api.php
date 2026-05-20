@@ -1,41 +1,35 @@
 <?php
 
-use App\Http\Controllers\Auth\AuthController;
-use App\Http\Controllers\Auth\EmailVerificationController;
-use App\Http\Controllers\Business\AffiliationController;
-use App\Http\Controllers\Business\BusinessController;
-use App\Http\Controllers\Business\BusinessUserFavoriteController;
-use App\Http\Controllers\Business\CategoryBusinessController;
-use App\Http\Controllers\Business\FavoriteController;
-use App\Http\Controllers\Category\CategoryController;
-use App\Http\Controllers\Chat\ChatController;
-use App\Http\Controllers\Domiciliary\DomiciliaryController;
-use App\Http\Controllers\Order\OrderController;
-use App\Http\Controllers\Owner\OwnerController;
-use App\Http\Controllers\Payment\PaymentController;
-use App\Http\Controllers\Product\ProductController;
-use App\Http\Controllers\Review\ReviewController;
-use App\Http\Controllers\User\UserController;
-use App\Models\OrdersSales;
-use Illuminate\Support\Facades\Broadcast;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\AffiliationController;
+use App\Http\Controllers\Api\BusinessController;
+use App\Http\Controllers\Api\CategoryBusinessController;
+use App\Http\Controllers\Api\FavoriteController;
+use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\ChatController;
+use App\Http\Controllers\Api\DomiciliaryController;
+use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\OwnerController;
+use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\ReviewController;
+use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\WebhookController;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Foundation\Auth\EmailVerificationRequest;
 
 Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('auth/login', [AuthController::class, 'login']);
 Route::post('/forgot-password', [AuthController::class, 'resetPassword']);
 
 //Categoria sin Auth
 Route::get('categories-business/indexFree', [CategoryBusinessController::class, 'index']);
 Route::get('categories-free/', [CategoryController::class, 'index']);
 Route::get('top-businesses-free', [BusinessController::class, 'indexByQualification']);
+Route::get('type-organizations', [\App\Http\Controllers\Api\TypeOrganizationController::class, 'index']);
 
 // Envio de correos de verificación
 Route::post('/resend-verification-email', [AuthController::class, 'resendVerificationEmail']);
-Route::post(
-    '/email/resend-verification',
-    [AuthController::class, 'resendVerificationEmail']
-)->middleware('throttle:5,10');
+Route::post('/email/resend-verification', [AuthController::class, 'resendVerificationEmail']);//->middleware('throttle:5,10');
 
 //Bold
 Route::prefix('bold')->group(function () {
@@ -43,6 +37,19 @@ Route::prefix('bold')->group(function () {
     Route::post('/payment', [PaymentController::class, 'makePayment']);
     Route::get('/status/{ref}', [PaymentController::class, 'checkStatus']);
 });
+
+// v1 Bold endpoints
+Route::get('/payment-intent/{referenceId}', [PaymentController::class, 'getPaymentIntent']);
+Route::put('/payment-intent', [PaymentController::class, 'updatePaymentIntent']);
+Route::get('/payment/pse/banks', [PaymentController::class, 'getPseBanks']);
+Route::get('/payment/refund/{transactionId}', [PaymentController::class, 'getRefundStatus']);
+Route::get('/payment/{referenceId}', [PaymentController::class, 'getPaymentAttempt']);
+Route::post('/payment/void', [PaymentController::class, 'voidPayment']);
+Route::post('/payment/refund', [PaymentController::class, 'refundPayment']);
+
+// Webhooks de pasarelas
+Route::post('/webhooks/{gateway}', [WebhookController::class, 'handle']);
+
 
 Route::middleware('auth:sanctum')->group(function () {
     //Auth

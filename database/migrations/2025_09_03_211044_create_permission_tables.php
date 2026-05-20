@@ -58,19 +58,19 @@ return new class extends Migration
         });
 
         Schema::create('model_has_roles', function (Blueprint $table) {
-            $table->integer('rol_id'); // 👈 Igual que en tu tabla rol (SIGNED)
+            $table->unsignedBigInteger('rol_id');
             $table->string('model_type');
             $table->unsignedBigInteger('model_id');
 
-            $table->foreign('rol_id')->references('rol_id')->on('rol')->onDelete('cascade');
+            $table->foreign('rol_id')->references('id')->on('roles')->onDelete('cascade');
             $table->primary(['rol_id', 'model_id', 'model_type']);
         });
 
         Schema::create('role_has_permissions', function (Blueprint $table) {
-            $table->integer('rol_id'); // 👈 Igual que en tu tabla rol (SIGNED)
+            $table->unsignedBigInteger('rol_id');
             $table->unsignedBigInteger('permission_id');
 
-            $table->foreign('rol_id')->references('rol_id')->on('rol')->onDelete('cascade');
+            $table->foreign('rol_id')->references('id')->on('roles')->onDelete('cascade');
             $table->foreign('permission_id')->references('id')->on('permissions')->onDelete('cascade');
 
             $table->primary(['rol_id', 'permission_id']);

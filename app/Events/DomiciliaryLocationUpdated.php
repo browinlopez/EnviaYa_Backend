@@ -2,7 +2,7 @@
 
 namespace App\Events;
 
-use App\Models\Order\OrderGeolocation;
+use App\Models\OrderGeolocation;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PresenceChannel;
@@ -25,7 +25,7 @@ class DomiciliaryLocationUpdated implements ShouldBroadcast
     // canal dinámico por pedido
     public function broadcastOn()
     {
-        return new Channel('order.'.$this->geolocation->orderSales_id);
+        return new Channel('order.'.$this->geolocation->order_sale_id);
     }
 
     public function broadcastAs()

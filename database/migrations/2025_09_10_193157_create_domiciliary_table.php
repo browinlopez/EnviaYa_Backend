@@ -11,21 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('domiciliary', function (Blueprint $table) {
-            $table->increments('domiciliary_id'); // PK autoincremental
-            $table->unsignedBigInteger('user_id')->nullable(); // FK hacia user
+        Schema::create('domiciliaries', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('user_id');
             $table->tinyInteger('available')->nullable();
-            $table->string('document')->nullable(); // <-- AGREGAR
+            $table->string('document', 225)->nullable();
             $table->decimal('qualification', 3, 2)->default(0.00);
+            $table->unsignedBigInteger('municipality_id')->nullable();
             $table->tinyInteger('state')->nullable();
 
-            // Índice para user_id
-            $table->index('user_id', 'fk_domiciliary_user');
-
-            // Foreign Key
-            $table->foreign('user_id', 'fk_domiciliary_user')
-                  ->references('user_id')->on('user')
-                  ->onDelete('cascade');
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('municipality_id')->references('id')->on('municipalities')->onDelete('set null');
         });
     }
 

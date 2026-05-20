@@ -9,10 +9,10 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up()
+    public function up(): void
     {
         Schema::create('products', function (Blueprint $table) {
-            $table->id('products_id');
+            $table->id();
             $table->string('name', 255);
             $table->text('description')->nullable();
             $table->unsignedBigInteger('category_id')->nullable();

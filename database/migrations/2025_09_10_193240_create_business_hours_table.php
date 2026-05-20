@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('business_hours', function (Blueprint $table) {
-            $table->increments('hours_id'); // PK auto_increment
+            $table->id(); // PK id
             $table->unsignedInteger('busines_id'); // FK hacia business
 
             // columnas de días
@@ -29,7 +29,7 @@ return new class extends Migration
 
             // FK
             $table->foreign('busines_id')
-                ->references('busines_id')
+                ->references('id')
                 ->on('business')
                 ->onDelete('cascade');
         });

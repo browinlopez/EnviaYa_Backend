@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('certificate', function (Blueprint $table) {
-            $table->increments('certificate_id'); // PK autoincremental
+        Schema::create('certificates', function (Blueprint $table) {
+            $table->id(); // PK id
             $table->string('name', 255)->nullable();
             $table->string('password', 255)->nullable();
         });
@@ -23,6 +23,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('certificate');
+        Schema::dropIfExists('certificates');
     }
 };

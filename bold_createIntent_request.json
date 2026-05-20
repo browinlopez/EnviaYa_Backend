@@ -1,0 +1,46 @@
+{
+    "reference_id": "ORD-22",
+    "amount": {
+        "currency": "COP",
+        "total_amount": 25000,
+        "tip_amount": 0,
+        "taxes": []
+    },
+    "description": "Pago orden #22",
+    "metadata": {
+        "key": "order_id",
+        "value": "22"
+    },
+    "customer": {
+        "name": "Happy Brownie",
+        "phone": "3004567890",
+        "email": "juan.perez@example.com",
+        "billing_address": {
+            "street1": "Calle de Browin # 1 - 2",
+            "street2": "",
+            "city": "Medellín",
+            "province": "Antioquia",
+            "phone": "3004567890"
+        },
+        "shipping_address": {
+            "street1": "Calle de Browin # 1 - 2",
+            "street2": "",
+            "city": "Medellín",
+            "province": "Antioquia",
+            "phone": "3004567890"
+        }
+    },
+    "device_fingerprint": {
+        "ip": "186.116.10.20",
+        "device_type": "DESKTOP",
+        "os": "Linux",
+        "model": "",
+        "browser": "Chrome",
+        "java_enabled": false,
+        "language": "es-CO",
+        "color_depth": 24,
+        "screen_height": 1080,
+        "screen_width": 1920,
+        "time_zone_offset": -300
+    }
+}

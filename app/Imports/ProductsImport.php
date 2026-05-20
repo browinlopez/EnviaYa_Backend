@@ -2,8 +2,8 @@
 
 namespace App\Imports;
 
-use App\Models\Product\Category;
-use App\Models\Product\Product;
+use App\Models\Category;
+use App\Models\Product;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithChunkReading;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;

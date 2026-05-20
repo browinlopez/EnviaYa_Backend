@@ -29,9 +29,8 @@ class TenderoPermissionsSeeder extends Seeder
         Permission::firstOrCreate(['name' => $perm]);
     }
 
-    // Crear o actualizar el rol TENDERO (rol_id = 2)
+    // Crear o actualizar el rol TENDERO
     $tenderoRole = Rol::firstOrCreate(
-        ['rol_id' => 2],
         ['name' => 'tendero']
     );
 

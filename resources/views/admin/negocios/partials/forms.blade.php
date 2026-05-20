@@ -46,9 +46,9 @@
                     class="form-control form-control-sm">
             </div>
             <div class="col-md-4 mb-3">
-                <label class="form-label">Razón Social DCD</label>
-                <input type="text" name="razonSocial_DCD"
-                    value="{{ old('razonSocial_DCD', $business->razonSocial_DCD ?? '') }}"
+                <label class="form-label">Razón Social / Nombre Legal</label>
+                <input type="text" name="legal_name"
+                    value="{{ old('legal_name', $business->legal_name ?? '') }}"
                     class="form-control form-control-sm">
             </div>
         </div>

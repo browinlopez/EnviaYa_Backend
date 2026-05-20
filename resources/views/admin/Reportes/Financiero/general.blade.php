@@ -3,7 +3,7 @@
 @section('title', 'Reporte Financiero')
 
 @section('content_header')
-    <h1>Reporte Financiero</h1>
+<h1>Reporte Financiero</h1>
 @stop
 
 @section('content')
@@ -48,12 +48,11 @@
 
             <div class="col-md-1 d-flex align-items-end">
                 <a href="{{ route('admin.report.export', [
-                    'business_id' => request('business_id'),
-                    'domiciliary_id' => request('domiciliary_id'),
-                    'date_start' => request('date_start'),
-                    'date_end' => request('date_end'),
-                ]) }}"
-                    class="btn btn-success btn-block">Exportar</a>
+        'business_id' => request('business_id'),
+        'domiciliary_id' => request('domiciliary_id'),
+        'date_start' => request('date_start'),
+        'date_end' => request('date_end'),
+    ]) }}" class="btn btn-success btn-block">Exportar</a>
             </div>
         </form>
 
@@ -65,16 +64,16 @@
                     role="tab">Ingresos negocio</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" id="incomeDomiciliary-tab" data-toggle="tab" href="#incomeDomiciliary"
-                    role="tab">Pagos a domiciliarios</a>
+                <a class="nav-link" id="incomeDomiciliary-tab" data-toggle="tab" href="#incomeDomiciliary" role="tab">Pagos
+                    a domiciliarios</a>
             </li>
             <li class="nav-item">
                 <a class="nav-link" id="paymentsToStore-tab" data-toggle="tab" href="#paymentsToStore" role="tab">Pagos
                     a tenderos</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" id="profitPerOrder-tab" data-toggle="tab" href="#profitPerOrder"
-                    role="tab">Rentabilidad por pedido</a>
+                <a class="nav-link" id="profitPerOrder-tab" data-toggle="tab" href="#profitPerOrder" role="tab">Rentabilidad
+                    por pedido</a>
             </li>
         </ul>
 
@@ -151,7 +150,7 @@
         new Chart(document.getElementById('profitPerOrderChart'), {
             type: 'bar',
             data: {
-                labels: @json($profitPerOrder->pluck('orderSales_id')),
+                labels: @json($profitPerOrder->pluck('order_sale_id')),
                 datasets: [{
                     label: 'Rentabilidad por pedido',
                     data: @json($profitPerOrder->pluck('profit')),

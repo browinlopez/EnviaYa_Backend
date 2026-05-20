@@ -12,7 +12,7 @@ return new class extends Migration
     public function up()
     {
         Schema::create('promotions', function (Blueprint $table) {
-            $table->id('promotion_id');
+            $table->id();
             $table->unsignedBigInteger('busines_id');
             $table->string('code_promotions', 50)->nullable();
             $table->text('description')->nullable();
@@ -20,6 +20,10 @@ return new class extends Migration
             $table->timestamp('start_date')->nullable();
             $table->timestamp('end_date')->nullable();
             $table->tinyInteger('state')->nullable();
+
+            $table->foreign('busines_id')
+                ->references('id')->on('business')
+                ->onDelete('cascade');
         });
     }
 

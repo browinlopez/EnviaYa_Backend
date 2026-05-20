@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('payment_forms', function (Blueprint $table) {
-            $table->increments('forms_id');
+            $table->id();
             $table->string('name', 50);
             $table->tinyInteger('state')->nullable();
         });

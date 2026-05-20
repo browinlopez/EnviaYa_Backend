@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('payment_methods', function (Blueprint $table) {
-            $table->increments('methods_id'); // INT AUTO_INCREMENT PRIMARY KEY
+            $table->id(); // PK id
             $table->string('name', 50);        // NOT NULL
             $table->tinyInteger('state')->nullable(); // TINYINT(1) DEFAULT NULL
         });

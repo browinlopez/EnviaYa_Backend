@@ -36,7 +36,7 @@ return [
          * default value but you may easily change it to any table you like.
          */
 
-        'roles' => 'rol',
+        'roles' => 'roles',
 
         /*
          * When using the "HasPermissions" trait from this package, we need to know which
@@ -75,7 +75,7 @@ return [
         /*
          * Change this if you want to name the related pivots other than defaults
          */
-       'role_pivot_key' => 'rol_id', // default 'role_id',
+        'role_pivot_key' => 'rol_id', // default 'role_id',
         'permission_pivot_key' => null, // default 'permission_id',
 
         /*

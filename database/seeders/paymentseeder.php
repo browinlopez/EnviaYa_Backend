@@ -37,8 +37,8 @@ class paymentseeder extends Seeder
         }
 
         // Obtener IDs
-        $methodIds = DB::table('payment_methods')->pluck('methods_id', 'name')->toArray();
-        $formIds = DB::table('payment_forms')->pluck('forms_id', 'name')->toArray();
+        $methodIds = DB::table('payment_methods')->pluck('id', 'name')->toArray();
+        $formIds = DB::table('payment_forms')->pluck('id', 'name')->toArray();
 
         // Relacionar métodos con formas específicas
         $relations = [
@@ -55,8 +55,8 @@ class paymentseeder extends Seeder
             foreach ($formNames as $formName) {
                 $formId = $formIds[$formName];
                 DB::table('payment_method_forms')->insert([
-                    'methods_id' => $methodId,
-                    'forms_id' => $formId,
+                    'payment_method_id' => $methodId,
+                    'payment_form_id' => $formId,
                 ]);
             }
         }
