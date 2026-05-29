@@ -1,0 +1,31 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "Laravel",
+        "version": "1.0.0",
+        "description": "# EnviaYa Backend API\n\nAPI REST para la plataforma de delivery EnviaYa. Esta documentaci\u00f3n es **React Native First** y contiene ejemplos de c\u00f3digo para Axios y Fetch en cada endpoint.\n\n## Autenticaci\u00f3n\n\nLa API usa **Laravel Sanctum** con tokens Bearer.\nTodas las rutas protegidas requieren el header:\n\n```\nAuthorization: Bearer {your_token}\nAccept: application/json\n```\n\nObt\u00e9n tu token en `POST /auth/login`.\n\n## Errores Est\u00e1ndar\n\n| C\u00f3digo | Significado |\n|--------|-------------|\n| `401` | Token inv\u00e1lido o expirado |\n| `403` | Sin permisos para este recurso |\n| `404` | Recurso no encontrado |\n| `422` | Error de validaci\u00f3n (revisar campo `errors`) |\n| `500` | Error interno del servidor |\n\n## WebSockets / Reverb\n\nPara eventos en tiempo real, usa `laravel-echo` con `pusher-js`.\nConsulta la secci\u00f3n **Frontend Integration Contract** en `/docs/frontend-contract`.\n\n## Arquitectura\n\n- PostGIS para c\u00e1lculos de distancia reales\n- RabbitMQ para procesos as\u00edncronos\n- Laravel Reverb para WebSockets"
+    },
+    "servers": [
+        {
+            "url": "http://localhost"
+        }
+    ],
+    "paths": {
+        "/": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -16,12 +16,14 @@ return new class extends Migration {
             $table->string('address', 225);
             $table->unsignedBigInteger('municipality_id')->nullable();
             $table->unsignedInteger('alias_id')->nullable();
-            $table->double('latitude')->nullable();
-            $table->double('longitude')->nullable();
+            $table->string('complement', 50)->nullable();
+            $table->geography('location', subtype: 'point', srid: 4326)->nullable();
             $table->tinyInteger('state')->nullable();
 
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             $table->foreign('municipality_id')->references('id')->on('municipalities')->onDelete('set null');
+
+            $table->spatialIndex('location');
         });
     }
 

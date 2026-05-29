@@ -24,9 +24,11 @@ class OrderSale extends Audit
         'is_scheduled',
         'pickup',
         'pickup_time',
-        'has_review',
+        'state',
         'payment_state',
-        'state'
+        'has_review',
+        'delivery_distance_meters',
+        'delivery_fee_applied'
     ];
 
     protected $casts = [

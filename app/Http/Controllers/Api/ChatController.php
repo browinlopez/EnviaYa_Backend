@@ -50,7 +50,9 @@ class ChatController extends Controller
         $request->validate([
             'user_id' => 'required|exists:users,id',
             'recipient_id' => 'required|exists:users,id',
-            'content' => 'required|string|max:1000',
+            'content' => 'nullable|string|max:1000',
+            'file_url' => 'nullable|url|max:255',
+            'file_type' => 'nullable|string|max:50',
         ]);
 
         return DB::transaction(function () use ($request) {
@@ -89,13 +91,15 @@ class ChatController extends Controller
                 'user_id' => $sender->user_id,
                 'role_id' => $sender->rol,
                 'content' => $request->content,
+                'file_url' => $request->file_url,
+                'file_type' => $request->file_type,
             ]);
 
             // -----------------------------
             // Usar ReverbClient para enviar mensaje
             // -----------------------------
-            // Disparar evento para broadcasting
-            /* event(new MessageSent($message)); */
+            // Disparar evento para broadcasting por WebSockets
+            event(new MessageSent($message));
 
             return response()->json([
                 'message' => 'Mensaje enviado',
@@ -238,5 +242,38 @@ class ChatController extends Controller
         });
 
         return response()->json($formattedChats);
+    }
+
+    /**
+     * Marcar mensajes como leídos en un chat
+     */
+    public function markAsRead(Request $request)
+    {
+        $request->validate([
+            'chat_id' => 'required|exists:chats,chat_id',
+            'user_id' => 'required|exists:users,id', // El usuario que está leyendo
+        ]);
+
+        $chat = Chat::findOrFail($request->chat_id);
+
+        // Marcar todos los mensajes no leídos donde el emisor NO es el que lee
+        Message::where('chat_id', $chat->chat_id)
+            ->where('user_id', '!=', $request->user_id)
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
+
+        // Actualizar el puntero del participante
+        $lastMessage = Message::where('chat_id', $chat->chat_id)->latest('message_id')->first();
+        if ($lastMessage) {
+            ChatParticipant::where('chat_id', $chat->chat_id)
+                ->where('user_id', $request->user_id)
+                ->update(['last_read_message_id' => $lastMessage->message_id]);
+        }
+
+        // Aquí se podría emitir un evento 'MessagesRead' por websockets si es necesario.
+
+        return response()->json([
+            'message' => 'Mensajes marcados como leídos',
+        ]);
     }
 }

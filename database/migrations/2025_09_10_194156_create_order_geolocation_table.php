@@ -14,13 +14,14 @@ return new class extends Migration
         Schema::create('order_geolocations', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('domiciliary_id');
-            $table->decimal('latitude', 9, 6)->nullable();
-            $table->decimal('length', 9, 6)->nullable();
+            $table->geography('location', subtype: 'point', srid: 4326)->nullable();
             $table->tinyInteger('state')->nullable();
 
             $table->foreign('domiciliary_id')
                   ->references('id')->on('domiciliaries')
                   ->onDelete('cascade');
+                  
+            $table->spatialIndex('location');
         });
     }
 

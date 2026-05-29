@@ -18,10 +18,13 @@ return new class extends Migration
             $table->string('document', 225)->nullable();
             $table->decimal('qualification', 3, 2)->default(0.00);
             $table->unsignedBigInteger('municipality_id')->nullable();
+            $table->geography('last_location', subtype: 'point', srid: 4326)->nullable();
             $table->tinyInteger('state')->nullable();
 
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             $table->foreign('municipality_id')->references('id')->on('municipalities')->onDelete('set null');
+            
+            $table->spatialIndex('last_location');
         });
     }
 

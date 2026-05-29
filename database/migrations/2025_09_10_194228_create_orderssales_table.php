@@ -24,6 +24,10 @@ return new class extends Migration {
 
             $table->boolean('pickup')->default(false);
             $table->timestamp('pickup_time')->nullable();
+            
+            // Geolocalización inmutable del pedido
+            $table->geography('pickup_location', subtype: 'point', srid: 4326)->nullable();
+            $table->geography('delivery_location', subtype: 'point', srid: 4326)->nullable();
 
             $table->timestamp('delivery_date')->nullable();
             $table->boolean('is_scheduled')->default(false);
@@ -56,6 +60,9 @@ return new class extends Migration {
             $table->foreign('forms_id', 'fk_orders_sales_forms')
                 ->references('id')->on('payment_forms')
                 ->onDelete('set null');
+                
+            $table->spatialIndex('pickup_location');
+            $table->spatialIndex('delivery_location');
         });
     }
 

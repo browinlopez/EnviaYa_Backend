@@ -365,7 +365,9 @@ class OrderService
                 'address_id' => $address ? $address->id : null,
                 'methods_id' => $data['payment_method_id'],
                 'forms_id' => $data['payment_form_id'],
-                'total' => $total,
+                'total' => $total, // Actualizaremos este total en el flujo más adelante si hay domicilio en la compra.
+                'delivery_distance_meters' => null,
+                'delivery_fee_applied' => null,
                 'sale_date' => now(),
                 'delivery_date' => now(),
                 'is_scheduled' => false,
@@ -464,6 +466,38 @@ class OrderService
             $order->state = 4;
             $order->delivery_date = now();
 
+            // ==========================================
+            // POSTGIS Y CÁLCULO DINÁMICO DE TARIFA
+            // ==========================================
+            $business = \App\Models\Business::find($order->business_id);
+            $address = \App\Models\UserAddress::find($order->address_id);
+
+            $distance = 0;
+            $deliveryFee = 2000; // Tarifa base por defecto
+
+            if ($business && $address) {
+                // Cálculo de distancia en metros exactos usando PostGIS
+                $postgisQuery = \Illuminate\Support\Facades\DB::selectOne("
+                    SELECT ST_Distance(
+                        (SELECT location FROM business WHERE id = ?),
+                        (SELECT location FROM user_address WHERE id = ?)
+                    ) as meters
+                ", [$business->id, $address->id]);
+
+                if ($postgisQuery && $postgisQuery->meters !== null) {
+                    $distance = (int) ceil($postgisQuery->meters);
+                    
+                    // Buscar tarifa dinámica en base de datos
+                    $dynamicFee = \App\Models\DeliveryDistanceRate::getPriceForDistance($distance);
+                    if ($dynamicFee !== null) {
+                        $deliveryFee = $dynamicFee;
+                    }
+                }
+            }
+
+            $order->delivery_distance_meters = $distance;
+            $order->delivery_fee_applied = $deliveryFee;
+
             // si método de pago == 1 (efectivo), crear pago local
             if ($order->methods_id == 1) {
                 $subtotal = 0;
@@ -471,18 +505,17 @@ class OrderService
                     $subtotal += $d->quantity * $d->unit_price;
                 }
 
-                $domicilio = 2000;
                 $valorPromocion = 0;
-                $total = $subtotal - $domicilio - $valorPromocion;
+                $total = $subtotal - $deliveryFee - $valorPromocion;
 
-                Payment::create([
+                \App\Models\Payment::create([
                     'order_sale_id' => $order->id,
                     'methods_id' => $order->methods_id,
                     'forms_id' => $order->forms_id,
                     'amount' => 1,
                     'subtotal' => $subtotal,
                     'total' => $total,
-                    'domicilio' => $domicilio,
+                    'domicilio' => $deliveryFee,
                     'valor_promocion' => $valorPromocion,
                     'payment_status' => 1,
                     'payment_date' => now(),
@@ -505,7 +538,22 @@ class OrderService
      */
     public function storeGeolocation(array $data): OrderGeolocation
     {
-        return OrderGeolocation::create($data);
+        // $data asume que vienen 'latitude' y 'longitude' desde el cliente.
+        // Lo convertiremos a PostGIS Point
+        $geo = new OrderGeolocation();
+        $geo->domiciliary_id = $data['domiciliary_id'];
+        $geo->state = $data['state'] ?? 1;
+        $geo->save();
+
+        if (isset($data['latitude']) && isset($data['longitude'])) {
+            \Illuminate\Support\Facades\DB::table('order_geolocations')
+                ->where('id', $geo->id)
+                ->update([
+                    'location' => \Illuminate\Support\Facades\DB::raw("ST_MakePoint({$data['longitude']}, {$data['latitude']})")
+                ]);
+        }
+
+        return $geo;
     }
 
     /**
@@ -513,15 +561,19 @@ class OrderService
      */
     public function getLatestGeolocation(int $domiciliaryId): array
     {
-        $last = OrderGeolocation::where('domiciliary_id', $domiciliaryId)
+        // Se extrae la longitud (ST_X) y latitud (ST_Y) del punto PostGIS
+        $last = \Illuminate\Support\Facades\DB::table('order_geolocations')
+            ->select('id', 'domiciliary_id', 'state', 'created_at', 
+                     \Illuminate\Support\Facades\DB::raw('ST_X(location::geometry) as longitude, ST_Y(location::geometry) as latitude'))
+            ->where('domiciliary_id', $domiciliaryId)
             ->orderByDesc('created_at')
             ->first();
 
         if ($last) {
             return [
-                'latitude' => $last->latitude,
-                'longitude' => $last->longitude,
-                'order_sale_id' => $last->order_sale_id,
+                'latitude' => (float) $last->latitude,
+                'longitude' => (float) $last->longitude,
+                'domiciliary_id' => $last->domiciliary_id,
                 'state' => $last->state,
                 'created_at' => $last->created_at,
             ];

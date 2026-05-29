@@ -26,7 +26,8 @@ class DatabaseSeeder extends Seeder
             DomiciliarioPermissionsSeeder::class,
             CompradorPermissionsSeeder::class,
             UsersSeeder::class,
-            TypeOrganizationSeeder::class
+            TypeOrganizationSeeder::class,
+            DeliveryDistanceRateSeeder::class,
         ]);
     }
 }
