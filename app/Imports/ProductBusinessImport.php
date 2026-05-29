@@ -40,7 +40,7 @@ class ProductBusinessImport implements ToCollection
 
             // evitar duplicados (opcional pero recomendado)
             $exists = ProductBusiness::where('products_id', $productId)
-                ->where('busines_id', $businessId)
+                ->where('business_id', $businessId)
                 ->exists();
 
             if ($exists) {
@@ -50,9 +50,9 @@ class ProductBusinessImport implements ToCollection
 
             ProductBusiness::create([
                 'products_id' => $productId,
-                'busines_id'  => $businessId,
-                'price'       => $row[2] ?? 0,
-                'quantity'      => $row[3] ?? 0,
+                'business_id' => $businessId,
+                'price' => $row[2] ?? 0,
+                'quantity' => $row[3] ?? 0,
                 'qualification' => 0,
             ]);
 

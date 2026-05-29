@@ -11,25 +11,25 @@ class BusinessUserFavoriteController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'busines_id' => 'required|exists:business,busines_id',
+            'business_id' => 'required|exists:business,business_id',
         ]);
 
         $userId = Auth::id();
 
         $favorite = BusinessUserFavorite::firstOrCreate([
             'user_id' => $userId,
-            'busines_id' => $request->busines_id,
+            'business_id' => $request->business_id,
         ]);
 
         return response()->json(['message' => 'Afiliado correctamente', 'data' => $favorite]);
     }
 
-    public function destroy($busines_id)
+    public function destroy($business_id)
     {
         $userId = Auth::id();
 
         BusinessUserFavorite::where('user_id', $userId)
-            ->where('busines_id', $busines_id)
+            ->where('business_id', $business_id)
             ->delete();
 
         return response()->json(['message' => 'Desafiliado correctamente']);

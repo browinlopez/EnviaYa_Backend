@@ -15,7 +15,7 @@ class StoreOrderRequest extends FormRequest
     {
         return [
             'payer_id' => 'required|integer|exists:buyers,id',
-            'busines_id' => 'required|integer|exists:business,id',
+            'business_id' => 'required|integer|exists:business,id',
             'address_id' => 'required_if:pickup,false|integer|exists:user_address,id',
             'products' => 'required|array|min:1',
             'products.*.product_id' => 'required|integer|exists:products,id',

@@ -24,8 +24,8 @@ class TopBusinessesSheet implements FromCollection, WithHeadings, WithTitle, Wit
     {
         return OrderSale::with('business')
             ->whereBetween('sale_date', [$this->start, $this->end])
-            ->selectRaw('busines_id, COUNT(*) as total_orders, SUM(total) as total_amount')
-            ->groupBy('busines_id')
+            ->selectRaw('business_id, COUNT(*) as total_orders, SUM(total) as total_amount')
+            ->groupBy('business_id')
             ->get()
             ->map(function ($item) {
                 return [

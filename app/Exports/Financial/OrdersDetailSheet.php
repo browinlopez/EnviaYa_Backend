@@ -36,13 +36,13 @@ class OrdersDetailSheet implements FromCollection, WithTitle, WithHeadings, With
                 DB::raw('payments.total as total')
             )
             ->join('OrderSale', 'OrderSale.order_sale_id', '=', 'payments.order_sale_id')
-            ->join('business', 'business.busines_id', '=', 'OrderSale.busines_id')
+            ->join('business', 'business.business_id', '=', 'OrderSale.business_id')
             ->join('domiciliary', 'domiciliary.domiciliary_id', '=', 'OrderSale.domiciliary_id')
             ->join('user as u', 'u.user_id', '=', 'domiciliary.user_id')
             ->when(
                 $this->business_id,
                 fn($q) =>
-                $q->where('OrderSale.busines_id', $this->business_id)
+                $q->where('OrderSale.business_id', $this->business_id)
             )
             ->when(
                 $this->domiciliary_id,

@@ -43,6 +43,23 @@ class PaymentService
     }
 
     /**
+     * Reintenta el pago de una orden existente delegando en la pasarela seleccionada.
+     */
+    public function retryPayment(OrderSale $order, array $data): array
+    {
+        // 2. Validar que la orden NO esté en estado PAID
+        if (strtolower($order->payment_state) === 'paid') {
+            throw new \Exception("La orden ya se encuentra en estado de pago exitoso (PAID) y no puede ser reintentada.");
+        }
+
+        // 3. Validar que la pasarela exista y esté activa (resuelto por getGateway)
+        $gatewayName = $data['payment_gateway'] ?? 'bold';
+        $gateway = $this->getGateway($gatewayName);
+
+        return $gateway->retryPaymentFlow($order, $data);
+    }
+
+    /**
      * Consulta el estado del pago delegando en la pasarela correspondiente.
      */
     public function checkPaymentStatus(string $reference): array
@@ -93,6 +110,31 @@ class PaymentService
     {
         $gateway = $this->getGateway('bold');
         return $gateway->getRefundStatus($transactionId);
+    }
+
+    public function getGatewayById(int $id): PaymentGatewayInterface
+    {
+        $gatewayRecord = PaymentGateway::where('id', $id)
+            ->where('state', true)
+            ->first();
+
+        if (!$gatewayRecord) {
+            throw new \Exception("La pasarela de pago seleccionada no existe o se encuentra inactiva.");
+        }
+
+        $class = "App\\Services\\" . $gatewayRecord->class;
+
+        if (!class_exists($class)) {
+            throw new \Exception("El servicio de pasarela de pago '{$class}' no existe.");
+        }
+
+        return app($class);
+    }
+
+    public function getRawPaymentStatus(string $referenceId, int $gatewayId)
+    {
+        $gateway = $this->getGatewayById($gatewayId);
+        return $gateway->getRawPaymentStatus($referenceId);
     }
 }
 

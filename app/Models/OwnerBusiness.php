@@ -14,7 +14,7 @@ class OwnerBusiness extends Model implements AuditableContract
 
     protected $fillable = [
         'owner_id',
-        'busines_id',
+        'business_id',
         'state'
     ];
 }

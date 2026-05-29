@@ -49,7 +49,7 @@ class Owner extends Authenticatable implements AuditableContract
             Business::class,
             'owner_busines',
             'owner_id',
-            'busines_id'
+            'business_id'
         )->withPivot('state');
     }
 

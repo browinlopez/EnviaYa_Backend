@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -14,7 +13,7 @@ return new class extends Migration
         Schema::create('orders_sales', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('buyer_id')->nullable();
-            $table->unsignedBigInteger('busines_id')->nullable();
+            $table->unsignedBigInteger('business_id')->nullable();
             $table->unsignedBigInteger('domiciliary_id')->nullable();
             $table->unsignedBigInteger('address_id')->nullable();
             $table->unsignedBigInteger('methods_id')->nullable();
@@ -33,7 +32,7 @@ return new class extends Migration
 
             // índices + FKs
             $table->index('buyer_id', 'fk_orders_sales_buyer');
-            $table->index('busines_id', 'fk_orders_sales_business');
+            $table->index('business_id', 'fk_orders_sales_business');
             $table->index('domiciliary_id', 'fk_orders_sales_domiciliary');
             $table->index('methods_id', 'fk_orders_sales_methods');
             $table->index('forms_id', 'fk_orders_sales_forms');
@@ -42,7 +41,7 @@ return new class extends Migration
                 ->references('id')->on('buyers')
                 ->onDelete('set null');
 
-            $table->foreign('busines_id', 'fk_orders_sales_business')
+            $table->foreign('business_id', 'fk_orders_sales_business')
                 ->references('id')->on('business')
                 ->onDelete('set null');
 

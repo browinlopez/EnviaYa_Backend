@@ -14,7 +14,7 @@ class UpdateBusinessRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'busines_id' => 'sometimes|required|integer|exists:business,busines_id',
+            'business_id' => 'sometimes|required|integer|exists:business,business_id',
             'name' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string|max:255',
@@ -38,7 +38,7 @@ class UpdateBusinessRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'busines_id.exists' => 'El negocio seleccionado no es válido.',
+            'business_id.exists' => 'El negocio seleccionado no es válido.',
             'name.string' => 'El nombre debe ser una cadena de texto.',
             'name.max' => 'El nombre no puede superar los 255 caracteres.',
             'phone.max' => 'El teléfono no puede superar los 20 caracteres.',

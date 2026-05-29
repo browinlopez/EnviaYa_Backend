@@ -9,7 +9,7 @@ class BusinessReview extends Audit
     public $timestamps = false;
 
     protected $fillable = [
-        'busines_id',
+        'business_id',
         'buyer_id',
         'qualification',
         'comment',
@@ -18,7 +18,7 @@ class BusinessReview extends Audit
 
     public function business()
     {
-        return $this->belongsTo(Business::class, 'busines_id', 'id');
+        return $this->belongsTo(Business::class, 'business_id', 'id');
     }
 
     public function buyer()

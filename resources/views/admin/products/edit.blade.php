@@ -27,10 +27,8 @@
     </div>
 
     {{-- FORM --}}
-    <form action="{{ route('admin.products.update', $product->products_id) }}"
-          method="POST"
-          enctype="multipart/form-data"
-          id="product-form">
+    <form action="{{ route('admin.products.update', $product->products_id) }}" method="POST"
+        enctype="multipart/form-data" id="product-form">
         @csrf
         @method('PUT')
 
@@ -77,11 +75,10 @@
 
                         <div class="form-group">
                             <label>Negocio *</label>
-                            <select name="busines_id" id="business-select" required>
+                            <select name="business_id" id="business-select" required>
                                 @foreach ($businesses as $b)
-                                    <option value="{{ $b->busines_id }}"
-                                            data-type="{{ $b->type }}"
-                                            @selected($product->businesses->first()?->busines_id == $b->busines_id)>
+                                    <option value="{{ $b->business_id }}" data-type="{{ $b->type }}"
+                                        @selected($product->businesses->first()?->business_id == $b->business_id)>
                                         {{ $b->name }}
                                     </option>
                                 @endforeach
@@ -93,13 +90,13 @@
                         <div class="form-group">
                             <label>Precio *</label>
                             <input name="price" id="price" required
-                                   value="{{ number_format($product->productBusinesses->first()?->price, 0, ',', '.') }}">
+                                value="{{ number_format($product->productBusinesses->first()?->price, 0, ',', '.') }}">
                         </div>
 
                         <div class="form-group">
                             <label>Cantidad *</label>
                             <input type="number" name="amount" required
-                                   value="{{ $product->productBusinesses->first()?->amount }}">
+                                value="{{ $product->productBusinesses->first()?->amount }}">
                         </div>
                     </div>
 
@@ -111,16 +108,12 @@
                 <h3 class="card-title">Datos específicos</h3>
 
                 <div class="photo-box">
-                    <img id="photoPreview"
-                         src="{{ $product->image
-                            ? asset('storage/'.$product->image)
-                            : 'https://ui-avatars.com/api/?name=Producto&background=1B1464&color=fff' }}"
-                         alt="Producto">
+                    <img id="photoPreview" src="{{ $product->image
+    ? asset('storage/' . $product->image)
+    : 'https://ui-avatars.com/api/?name=Producto&background=1B1464&color=fff' }}"
+                        alt="Producto">
 
-                    <input type="file"
-                           name="product_image"
-                           id="productImage"
-                           accept="image/*">
+                    <input type="file" name="product_image" id="productImage" accept="image/*">
                 </div>
 
                 {{-- GROCERY --}}
@@ -138,8 +131,7 @@
 
                     <div class="form-group">
                         <label>Fecha de expiración</label>
-                        <input type="date" name="expiration_date"
-                               value="{{ $product->grocery?->expiration_date }}">
+                        <input type="date" name="expiration_date" value="{{ $product->grocery?->expiration_date }}">
                     </div>
                 </div>
 
@@ -148,25 +140,21 @@
                     <div class="row-3">
                         <div class="form-group">
                             <label>Ingrediente activo</label>
-                            <input name="active_ingredient"
-                                   value="{{ $product->pharmacy?->active_ingredient }}">
+                            <input name="active_ingredient" value="{{ $product->pharmacy?->active_ingredient }}">
                         </div>
                         <div class="form-group">
                             <label>Dosificación</label>
-                            <input name="dosage"
-                                   value="{{ $product->pharmacy?->dosage }}">
+                            <input name="dosage" value="{{ $product->pharmacy?->dosage }}">
                         </div>
                         <div class="form-group">
                             <label>Presentación</label>
-                            <input name="presentation"
-                                   value="{{ $product->pharmacy?->presentation }}">
+                            <input name="presentation" value="{{ $product->pharmacy?->presentation }}">
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label>Fecha de expiración</label>
-                        <input type="date" name="expiration_date"
-                               value="{{ $product->pharmacy?->expiration_date }}">
+                        <input type="date" name="expiration_date" value="{{ $product->pharmacy?->expiration_date }}">
                     </div>
                 </div>
 
@@ -189,5 +177,5 @@
 @stop
 
 @section('js')
-    @include('admin.products.scripts')
+@include('admin.products.scripts')
 @stop

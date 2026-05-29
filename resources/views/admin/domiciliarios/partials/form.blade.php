@@ -8,42 +8,36 @@
         <div class="row g-3">
             <div class="col-md-6">
                 <label class="form-label">Nombre</label>
-                <input type="text" name="name" 
-                       value="{{ old('name', $domiciliary->user->name ?? '') }}"
-                       class="form-control" required>
+                <input type="text" name="name" value="{{ old('name', $domiciliary->user->name ?? '') }}"
+                    class="form-control" required>
             </div>
             <div class="col-md-6">
                 <label class="form-label">Email</label>
-                <input type="email" name="email" 
-                       value="{{ old('email', $domiciliary->user->email ?? '') }}"
-                       class="form-control" required>
+                <input type="email" name="email" value="{{ old('email', $domiciliary->user->email ?? '') }}"
+                    class="form-control" required>
             </div>
             <div class="col-md-6">
                 <label class="form-label">
-                    Contraseña 
+                    Contraseña
                     @if(!isset($domiciliary)) <span class="text-danger">*</span> @endif
                 </label>
-                <input type="password" name="password" class="form-control"
-                       @if(!isset($domiciliary)) required @endif>
+                <input type="password" name="password" class="form-control" @if(!isset($domiciliary)) required @endif>
                 <small class="text-muted">Déjelo vacío si no desea cambiarla</small>
             </div>
             <div class="col-md-6">
                 <label class="form-label">Teléfono</label>
-                <input type="text" name="phone" 
-                       value="{{ old('phone', $domiciliary->user->phone ?? '') }}"
-                       class="form-control">
+                <input type="text" name="phone" value="{{ old('phone', $domiciliary->user->phone ?? '') }}"
+                    class="form-control">
             </div>
             <div class="col-md-6">
                 <label class="form-label">Dirección</label>
-                <input type="text" name="address" 
-                       value="{{ old('address', $domiciliary->user->address ?? '') }}"
-                       class="form-control">
+                <input type="text" name="address" value="{{ old('address', $domiciliary->user->address ?? '') }}"
+                    class="form-control">
             </div>
             <div class="col-md-6">
                 <label class="form-label">Documento</label>
-                <input type="text" name="document" 
-                       value="{{ old('document', $domiciliary->document ?? '') }}"
-                       class="form-control">
+                <input type="text" name="document" value="{{ old('document', $domiciliary->document ?? '') }}"
+                    class="form-control">
             </div>
         </div>
     </div>
@@ -61,7 +55,8 @@
                 <label class="form-label">Disponible</label>
                 <select name="available" class="form-control">
                     <option value="1" @selected(old('available', $domiciliary->available ?? '') == 1)>Disponible</option>
-                    <option value="0" @selected(old('available', $domiciliary->available ?? '') == 0)>No disponible</option>
+                    <option value="0" @selected(old('available', $domiciliary->available ?? '') == 0)>No disponible
+                    </option>
                 </select>
             </div>
             <div class="col-md-4">
@@ -74,16 +69,14 @@
             <div class="col-md-4">
                 <label class="form-label">Calificación</label>
                 <input type="number" step="0.1" min="0" max="5" name="qualification"
-                       value="{{ old('qualification', $domiciliary->qualification ?? '') }}"
-                       class="form-control">
+                    value="{{ old('qualification', $domiciliary->qualification ?? '') }}" class="form-control">
             </div>
             <div class="col-md-6">
                 <label class="form-label">Negocio</label>
                 <select name="business_id" class="form-control">
                     <option value="">-- Seleccione un negocio --</option>
                     @foreach($businesses as $business)
-                        <option value="{{ $business->busines_id }}"
-                            @if(isset($domiciliary) && $domiciliary->businesses->first()?->busines_id == $business->busines_id) selected @endif>
+                        <option value="{{ $business->business_id }}" @if(isset($domiciliary) && $domiciliary->businesses->first()?->business_id == $business->business_id) selected @endif>
                             {{ $business->name }}
                         </option>
                     @endforeach

@@ -13,7 +13,7 @@ class OrderSale extends Audit
 
     protected $fillable = [
         'buyer_id',
-        'busines_id',
+        'business_id',
         'domiciliary_id',
         'address_id',
         'methods_id',
@@ -58,7 +58,7 @@ class OrderSale extends Audit
 
     public function business()
     {
-        return $this->belongsTo(Business::class, 'busines_id', 'id');
+        return $this->belongsTo(Business::class, 'business_id', 'id');
     }
 
     public function domiciliary()
@@ -79,6 +79,11 @@ class OrderSale extends Audit
     public function payments()
     {
         return $this->hasOne(Payment::class, 'order_sale_id', 'id');
+    }
+
+    public function paymentAttempts()
+    {
+        return $this->hasMany(\App\Models\PaymentAttempt::class, 'order_sale_id', 'id');
     }
 
     public function paymentMethod()
@@ -104,7 +109,7 @@ class OrderSale extends Audit
         return [
             'order_id' => $this->id,
             'buyer_id' => $this->buyer_id,
-            'busines_id' => $this->busines_id,
+            'business_id' => $this->business_id,
             'total' => $this->total,
             'sale_date' => $this->sale_date,
             'delivery_date' => $this->delivery_date,

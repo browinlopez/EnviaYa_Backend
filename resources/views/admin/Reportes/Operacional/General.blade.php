@@ -26,7 +26,7 @@
                     <select name="business_id" class="form-control">
                         <option value="">Todos</option>
                         @foreach ($businesses as $b)
-                            <option value="{{ $b->busines_id }}" {{ $business_id == $b->busines_id ? 'selected' : '' }}>
+                            <option value="{{ $b->business_id }}" {{ $business_id == $b->business_id ? 'selected' : '' }}>
                                 {{ $b->name }}
                             </option>
                         @endforeach

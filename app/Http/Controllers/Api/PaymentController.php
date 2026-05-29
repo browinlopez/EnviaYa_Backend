@@ -6,8 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\CreateIntentPaymentRequest;
 use App\Http\Requests\Api\MakePaymentPaymentRequest;
 use App\Models\OrderSale;
+use App\Models\PaymentIntent;
 use App\Services\PaymentService;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class PaymentController extends Controller
 {
@@ -18,54 +22,7 @@ class PaymentController extends Controller
         $this->paymentService = $paymentService;
     }
 
-    /**
-     * Crear intención de pago y procesar pago (flujo unificado)
-     */
-    public function createIntent(OrderSale $order, CreateIntentPaymentRequest $request): JsonResponse
-    {
-        try {
-            $responseData = $this->paymentService->initiatePayment($order, $request->validated());
-            return response()->json($responseData);
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Error al iniciar el pago',
-                'error' => $e->getMessage()
-            ], 400);
-        }
-    }
 
-    /**
-     * Procesar pago (endpoint legacy/custom)
-     */
-    public function makePayment(MakePaymentPaymentRequest $request): JsonResponse
-    {
-        try {
-            $order = OrderSale::with(['buyer.user', 'buyer.TypeDocumentIdentification', 'address.municipality.department'])->findOrFail($request->order_id);
-            $responseData = $this->paymentService->initiatePayment($order, $request->validated());
-            return response()->json($responseData);
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Error al procesar el pago',
-                'error' => $e->getMessage()
-            ], 400);
-        }
-    }
-
-    /**
-     * Consultar estado del pago
-     */
-    public function checkStatus(string $ref): JsonResponse
-    {
-        try {
-            $statusData = $this->paymentService->checkPaymentStatus($ref);
-            return response()->json($statusData);
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Error al consultar el estado del pago',
-                'error' => $e->getMessage()
-            ], 400);
-        }
-    }
 
     /**
      * Obtener la información de una intención de pago
@@ -190,6 +147,87 @@ class PaymentController extends Controller
                 'message' => 'Error al obtener el estado del reembolso',
                 'error' => json_decode($e->getMessage()) ?? $e->getMessage()
             ], $status);
+        }
+    }
+
+    /**
+     * Reintentar el pago de una orden existente
+     */
+    public function retryPayment(int $id, \Illuminate\Http\Request $request): JsonResponse
+    {
+        try {
+            $order = OrderSale::with(['buyer.user', 'buyer.TypeDocumentIdentification', 'address.municipality.department'])->findOrFail($id);
+            $responseData = $this->paymentService->retryPayment($order, $request->all());
+            return response()->json($responseData);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error al reintentar el pago',
+                'error' => $e->getMessage()
+            ], 400);
+        }
+    }
+
+    /**
+     * Consultar el estado de un pago directamente en la pasarela dinámica y retornar la respuesta cruda (sin transformar)
+     */
+    public function getRawPaymentStatus(Request $request)
+    {
+        try {
+            $paymentGatewayId = $request->query('paymentGatewayId');
+            $referenceIdQuery = $request->query('referenceId');
+
+            if (!$paymentGatewayId || !$referenceIdQuery) {
+                return response()->json([
+                    'message' => 'Los parámetros paymentGatewayId y referenceId son requeridos.'
+                ], 422);
+            }
+
+            $referenceId = null;
+
+            if (is_numeric($referenceIdQuery)) {
+                // 1. Buscar la orden en la DB si enviaron un ID numérico (lanza 404 si no existe)
+                $orderId = (int) $referenceIdQuery;
+                $order = OrderSale::findOrFail($orderId);
+
+                // 2. Obtener el reference_id buscando el más reciente en PaymentIntent
+                $intent = PaymentIntent::where('order_sale_id', $orderId)->latest()->first();
+                $referenceId = $intent ? $intent->bold_reference_id : 'ORD-' . $orderId;
+            } else {
+                // Si el frontend envía directamente el string de referencia (ej. ORD-21 u ORDER-31)
+                $referenceId = $referenceIdQuery;
+            }
+
+            if (!$referenceId) {
+                return response()->json([
+                    'message' => 'La orden no tiene un reference_id asociado'
+                ], 422);
+            }
+
+            // 3. Consumir directamente la API usando el gateway resuelto
+            $response = $this->paymentService->getRawPaymentStatus($referenceId, (int) $paymentGatewayId);
+
+            // 4. Retornar EXACTAMENTE la misma respuesta y status code
+            $status = $response->status();
+            $body = $response->json() ?? json_decode($response->body(), true) ?? $response->body();
+
+            if (is_array($body)) {
+                return response()->json($body, $status);
+            }
+
+            // En caso de que no sea JSON por alguna razón, retornar plano
+            return response($response->body(), $status)->header('Content-Type', 'application/json');
+
+        } catch (ModelNotFoundException $e) {
+            // Orden no existe -> lanzar 404
+            return response()->json([
+                'message' => 'La orden no existe'
+            ], 404);
+        } catch (\Exception $e) {
+            Log::error("❌ ERROR CONSULTANDO ESTADO BOLD: " . $e->getMessage());
+            return response()->json([
+                'message' => 'Error al obtener el estado del pago desde Bold',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
 }

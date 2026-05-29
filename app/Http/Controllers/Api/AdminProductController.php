@@ -31,9 +31,9 @@ class AdminProductController extends Controller
 
     public function indexAjax(Request $request)
     {
-        $page      = (int) $request->get('page', 1);
-        $businesId = $request->get('busines_id');
-        $search    = trim($request->get('search'));
+        $page = (int) $request->get('page', 1);
+        $businesId = $request->get('business_id');
+        $search = trim($request->get('search'));
 
         $products = Product::with([
             'category',
@@ -43,7 +43,7 @@ class AdminProductController extends Controller
             ->when($businesId, function ($q) use ($businesId) {
                 // Usamos la tabla pivot para evitar ambigüedad
                 $q->whereHas('productBusinesses', function ($b) use ($businesId) {
-                    $b->where('product_businesses.busines_id', $businesId);
+                    $b->where('product_businesses.business_id', $businesId);
                 });
             })
             ->when($search, function ($q) use ($search) {
@@ -90,7 +90,7 @@ class AdminProductController extends Controller
             'description' => 'nullable|string',
             'category_id' => 'required|integer',
             'state' => 'required|boolean',
-            'busines_id' => 'required|integer|exists:business,id',
+            'business_id' => 'required|integer|exists:business,id',
             'price' => 'required|numeric',
             'quantity' => 'required|integer',
             'product_image' => 'nullable|image|max:2048',
@@ -101,14 +101,14 @@ class AdminProductController extends Controller
 
         // Pivote
         ProductBusiness::create([
-            'busines_id' => $data['busines_id'],
+            'business_id' => $data['business_id'],
             'products_id' => $product->id,
             'price' => $data['price'],
             'quantity' => $data['quantity'],
             'qualification' => 0
         ]);
 
-        $business = Business::find($data['busines_id']);
+        $business = Business::find($data['business_id']);
 
         /* ================= IMAGEN PRODUCTO ================= */
         if ($request->hasFile('product_image')) {
@@ -194,7 +194,7 @@ class AdminProductController extends Controller
             'description' => 'nullable|string',
             'category_id' => 'required|integer',
             'state' => 'required|boolean',
-            'busines_id' => 'required|integer|exists:business,id',
+            'business_id' => 'required|integer|exists:business,id',
             'price' => 'required|numeric',
             'quantity' => 'required|integer',
             'product_image' => 'nullable|image|max:2048',
@@ -208,13 +208,13 @@ class AdminProductController extends Controller
 
         if ($productBusiness) {
             $productBusiness->update([
-                'busines_id' => $data['busines_id'],
+                'business_id' => $data['business_id'],
                 'price' => $data['price'],
                 'quantity' => $data['quantity'],
             ]);
         }
 
-        $business = Business::find($data['busines_id']);
+        $business = Business::find($data['business_id']);
 
         /* ================= ACTUALIZAR IMAGEN ================= */
         if ($request->hasFile('product_image')) {

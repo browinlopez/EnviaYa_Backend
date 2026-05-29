@@ -41,8 +41,8 @@ class ResumenSheet implements FromArray, WithTitle, WithStyles
 
         // Tiendas activas/inactivas
         $businessWithOrders = OrderSale::whereBetween('sale_date', [$this->start, $this->end])
-            ->distinct('busines_id')
-            ->count('busines_id');
+            ->distinct('business_id')
+            ->count('business_id');
 
         $totalBusinesses = Business::count();
         $inactiveBusinesses = $totalBusinesses - $businessWithOrders;

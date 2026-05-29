@@ -1,193 +1,41 @@
 <?php
 
-use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\AffiliationController;
-use App\Http\Controllers\Api\BusinessController;
-use App\Http\Controllers\Api\CategoryBusinessController;
-use App\Http\Controllers\Api\FavoriteController;
-use App\Http\Controllers\Api\CategoryController;
-use App\Http\Controllers\Api\ChatController;
-use App\Http\Controllers\Api\DomiciliaryController;
-use App\Http\Controllers\Api\OrderController;
-use App\Http\Controllers\Api\OwnerController;
-use App\Http\Controllers\Api\PaymentController;
-use App\Http\Controllers\Api\ProductController;
-use App\Http\Controllers\Api\ReviewController;
-use App\Http\Controllers\Api\UserController;
-use App\Http\Controllers\Api\WebhookController;
 use Illuminate\Support\Facades\Route;
 
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('auth/login', [AuthController::class, 'login']);
-Route::post('/forgot-password', [AuthController::class, 'resetPassword']);
+/*
+|--------------------------------------------------------------------------
+| API Routes
+|--------------------------------------------------------------------------
+|
+| Here is where you can register API routes for your application. These
+| routes are loaded by the RouteServiceProvider and all of them will
+| be assigned to the "api" middleware group. Make something great!
+|
+*/
 
-//Categoria sin Auth
-Route::get('categories-business/indexFree', [CategoryBusinessController::class, 'index']);
-Route::get('categories-free/', [CategoryController::class, 'index']);
-Route::get('top-businesses-free', [BusinessController::class, 'indexByQualification']);
-Route::get('type-organizations', [\App\Http\Controllers\Api\TypeOrganizationController::class, 'index']);
+// Auth & Registration
+require __DIR__ . '/auth.php';
 
-// Envio de correos de verificación
-Route::post('/resend-verification-email', [AuthController::class, 'resendVerificationEmail']);
-Route::post('/email/resend-verification', [AuthController::class, 'resendVerificationEmail']);//->middleware('throttle:5,10');
+// Products & Inventory
+require __DIR__ . '/products.php';
 
-//Bold
-Route::prefix('bold')->group(function () {
-    Route::post('/intent', [PaymentController::class, 'createIntent']);
-    Route::post('/payment', [PaymentController::class, 'makePayment']);
-    Route::get('/status/{ref}', [PaymentController::class, 'checkStatus']);
-});
+// Orders & Geo-tracking
+require __DIR__ . '/orders.php';
 
-// v1 Bold endpoints
-Route::get('/payment-intent/{referenceId}', [PaymentController::class, 'getPaymentIntent']);
-Route::put('/payment-intent', [PaymentController::class, 'updatePaymentIntent']);
-Route::get('/payment/pse/banks', [PaymentController::class, 'getPseBanks']);
-Route::get('/payment/refund/{transactionId}', [PaymentController::class, 'getRefundStatus']);
-Route::get('/payment/{referenceId}', [PaymentController::class, 'getPaymentAttempt']);
-Route::post('/payment/void', [PaymentController::class, 'voidPayment']);
-Route::post('/payment/refund', [PaymentController::class, 'refundPayment']);
+// Users, Profiles & Favorites
+require __DIR__ . '/users.php';
 
-// Webhooks de pasarelas
-Route::post('/webhooks/{gateway}', [WebhookController::class, 'handle']);
+// Businesses, Owners & Affiliations
+require __DIR__ . '/business.php';
 
+// Payments & Webhooks
+require __DIR__ . '/payments.php';
 
-Route::middleware('auth:sanctum')->group(function () {
-    //Auth
-    Route::get('/profile', [AuthController::class, 'profile']);
-    Route::post('/logout', [AuthController::class, 'logout']);
+// Chat Conversations
+require __DIR__ . '/chats.php';
 
-    Route::prefix('users')->group(function () {
-        // Listar usuarios
-        Route::get('/', [UserController::class, 'index']);
-        // Detalle usuario
-        Route::post('/show', [UserController::class, 'show']);
-        // Actualizar usuario
-        Route::put('/update', [UserController::class, 'update']);
-        // Eliminar usuario
-        Route::delete('/delete', [UserController::class, 'desactivate']);
-        // Direcciones
-        Route::post('/addresses', [UserController::class, 'getAddresses']);
-        Route::post('/addresses/add', [UserController::class, 'addAddress']);
-        // Perfil buyer
-        Route::post('/buyer', [UserController::class, 'getBuyerProfile']);
-    });
+// Domiciliaries / Delivery Staff
+require __DIR__ . '/domiciliaries.php';
 
-    //Productos tendero
-    Route::prefix('product')->group(function () {
-        Route::post('index', [ProductController::class, 'index']);
-        Route::post('create', [ProductController::class, 'store']);
-        Route::post('show', [ProductController::class, 'show']);
-        Route::put('update', [ProductController::class, 'update']);
-        Route::post('top-products', [ProductController::class, 'topRated']);
-        Route::post('topProductsBusiness', [ProductController::class, 'mostPopularProducts']);
-    });
-
-    Route::prefix('categories')->group(function () {
-        Route::post('/create', [CategoryController::class, 'store']);         // Crear categoría
-        Route::get('/show', [CategoryController::class, 'show']); // Mostrar categoría específica
-        Route::put('/update', [CategoryController::class, 'update']); // Actualizar categoría
-        Route::delete('/delete', [CategoryController::class, 'destroy']); // Eliminar categoría
-    });
-
-    Route::prefix('categories-business')->group(function () {
-        Route::get('index', [CategoryBusinessController::class, 'index']);
-        Route::post('store', [CategoryBusinessController::class, 'store']);
-        Route::post('show', [CategoryBusinessController::class, 'show']);
-        Route::post('update', [CategoryBusinessController::class, 'update']);
-        Route::post('destroy', [CategoryBusinessController::class, 'destroy']);
-    });
-
-    //Ordenes
-    Route::prefix('orders')->group(function () {
-        Route::post('user', [OrderController::class, 'ordersUser']); // Usuario comprador
-        Route::post('business', [OrderController::class, 'ordersBusiness']); // Tendero / negocio
-        Route::post('IncomeBusiness', [OrderController::class, 'incomeBusiness']); // Tendero / negocio
-        Route::post('orders', [OrderController::class, 'store']); // Crear orden
-        Route::put('update', [OrderController::class, 'updateStatus']); // Crear orden
-        /* Route::post('geolocation', [OrderController::class, 'updateLocation']); */
-        Route::post('geolocation', [OrderController::class, 'storeGeolocation']);
-        Route::get('geolocation/latest', [OrderController::class, 'latest']);
-        Route::get('/pending-review', [OrderController::class, 'ordersPendingReview']);
-    });
-
-    Route::get('paymentMethods', [OrderController::class, 'paymentMethods']); // Listar metodos de pago
-    Route::get('paymentForms', [OrderController::class, 'paymentForms']); // Listar formas de pago
-
-    //Chat
-    Route::prefix('chats')->group(function () {
-        Route::post('/create', [ChatController::class, 'createChat']);     // crear chat
-        Route::post('/user-chats', [ChatController::class, 'getUserChats']); // listar chats de un user
-        Route::post('/messages', [ChatController::class, 'getMessages']);   // listar mensajes
-        Route::post('/updateMessage', [ChatController::class, 'updateMessage']); // Actualizar mensaje estado
-        Route::post('/send-message', [ChatController::class, 'sendMessage']); // enviar mensaje
-    });
-
-    //Negocios
-    Route::prefix('businesses')->group(function () {
-        Route::get('index', [BusinessController::class, 'index']);
-        Route::get('top-businesses', [BusinessController::class, 'indexByQualification']);
-        Route::post('store', [BusinessController::class, 'store']);
-        Route::post('show', [BusinessController::class, 'show']);
-        Route::put('update', [BusinessController::class, 'update']);
-        Route::prefix('affiliations')->group(function () {
-            Route::post('/AfiliationUser', [AffiliationController::class, 'AfiliationUser']);
-            Route::post('/getAffiliatedUsers', [AffiliationController::class, 'getAffiliatedUsers']);
-            Route::post('/DesafiliationUser', [AffiliationController::class, 'DesafiliationUser']);
-            Route::post('toggleBusinesses', [AffiliationController::class, 'toggle']);
-            Route::get('usersBusinesses', [AffiliationController::class, 'listUsers']);
-            Route::get('searchBusinesses', [AffiliationController::class, 'searchBuyerByPhone']);
-        });
-    });
-
-    Route::prefix('favorites')->group(function () {
-        Route::post('toggle', [FavoriteController::class, 'toggleFavorite']);
-        Route::post('index', [FavoriteController::class, 'myFavorites']);
-    });
-
-    //Dueños
-    Route::prefix('owner')->group(function () {
-        Route::get('index', [OwnerController::class, 'index']);
-        Route::post('store', [OwnerController::class, 'store']);
-        Route::post('show', [OwnerController::class, 'show']);
-        Route::put('update', [OwnerController::class, 'update']);
-    });
-
-    //Domiciliario
-    Route::prefix('domiciliaries')->group(function () {
-        Route::get('/listDomiciliary', [DomiciliaryController::class, 'listDomiciliary']);      // Listar todos
-        Route::get('/listDomiciliariesByBusiness', [DomiciliaryController::class, 'listDomiciliariesByBusiness']);      // Listar todos
-        Route::post('/createDomiciliary', [DomiciliaryController::class, 'createDomiciliary']);  // Crear
-        Route::post('/showDomiciliary', [DomiciliaryController::class, 'showDomiciliary']);      // Obtener uno
-        Route::post('/updateDomiciliary', [DomiciliaryController::class, 'updateDomiciliary']);  // Actualizar
-        Route::post('/deleteDomiciliary', [DomiciliaryController::class, 'deleteDomiciliary']);  // Eliminar
-        Route::post('/assignToBusiness', [DomiciliaryController::class, 'assignToBusiness']);  // Actualizar
-        Route::post('/listbussiness', [DomiciliaryController::class, 'listBusinessesByDomiciliary']);  // Eliminar   
-        Route::post('/incomeDomiciliary', [DomiciliaryController::class, 'incomeDomiciliary']);
-    });
-
-    //reviews
-    Route::prefix('reviews')->group(function () {
-        Route::post('store', [ReviewController::class, 'store']);
-
-        // Negocios
-        Route::get('business/all', [ReviewController::class, 'listBusinessReviews']);
-        Route::post('business/by', [ReviewController::class, 'listReviewsByBusiness']);
-        Route::post('business/create', [ReviewController::class, 'createBusinessReview']);
-        Route::put('business/update', [ReviewController::class, 'updateBusinessReview']);
-        Route::delete('business/delete', [ReviewController::class, 'deleteBusinessReview']);
-
-        // Domiciliarios
-        Route::get('domiciliaries/all', [ReviewController::class, 'listDomiciliaryReviews']);
-        Route::post('domiciliary/by', [ReviewController::class, 'listReviewsByDomiciliary']);
-        Route::post('domiciliary/create', [ReviewController::class, 'createDomiciliaryReview']);
-        Route::put('domiciliary/update', [ReviewController::class, 'updateDomiciliaryReview']);
-        Route::delete('domiciliary/delete', [ReviewController::class, 'deleteDomiciliaryReview']);
-
-        // Usuarios
-        Route::get('users/all', [ReviewController::class, 'listAllUserReviews']);
-        Route::get('user/by', [ReviewController::class, 'listUserReviewsByUser']);
-        Route::post('user/create', [ReviewController::class, 'createUserReview']);
-        Route::put('user/update', [ReviewController::class, 'updateUserReview']);
-        Route::delete('user/delete', [ReviewController::class, 'deleteUserReview']);
-    });
-});
+// Ratings & Reviews
+require __DIR__ . '/reviews.php';

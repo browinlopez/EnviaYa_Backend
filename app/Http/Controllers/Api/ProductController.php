@@ -118,7 +118,7 @@ class ProductController extends Controller
 
             // Relación con el negocio (tabla pivote product_businesses)
             ProductBusiness::create([
-                'busines_id' => $business->id,
+                'business_id' => $business->id,
                 'products_id' => $product->id,
                 'price' => $request->price,
                 'quantity' => $request->quantity,
@@ -255,7 +255,7 @@ class ProductController extends Controller
             ]));
 
             $pb = ProductBusiness::where('products_id', $product->id)
-                ->where('busines_id', $request->business_id)
+                ->where('business_id', $request->business_id)
                 ->first();
 
             if ($pb) {
@@ -318,7 +318,7 @@ class ProductController extends Controller
                 'price' => $item->price,
                 'quantity' => $item->quantity,
                 'qualification' => $item->qualification,
-                'business_id' => $item->busines_id,
+                'business_id' => $item->business_id,
             ];
         });
 
@@ -336,7 +336,7 @@ class ProductController extends Controller
 
         $products = OrderSaleDetail::selectRaw('product_id, SUM(quantity) as total_ordered')
             ->whereHas('order', function ($query) use ($request) {
-                $query->where('busines_id', $request->business_id);
+                $query->where('business_id', $request->business_id);
             })
             ->with('product')
             ->groupBy('product_id')

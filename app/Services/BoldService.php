@@ -7,6 +7,7 @@ use App\Models\OrderSale;
 use App\Models\Payment;
 use App\Models\PaymentIntent;
 use App\Models\Webhook;
+use App\Models\PaymentAttempt;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
 use App\Traits\ValidateVerificationDigit;
@@ -36,12 +37,12 @@ class BoldService implements PaymentGatewayInterface
     public function createIntent(array $body): array
     {
         Log::info('--- BOLD REQUEST: createIntent ---', $body);
-        
+
         $jsonBody = json_encode($body, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-        
+
         // Log formatted JSON precisely like console.log(JSON.stringify(payload, null, 2))
         Log::info("📤 ENVIANDO PAYLOAD BOLD (payment-intent):\n" . json_encode($body, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
-        
+
         file_put_contents(base_path('bold_createIntent_request.json'), json_encode($body, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 
         $headers = $this->headers();
@@ -53,7 +54,7 @@ class BoldService implements PaymentGatewayInterface
             Log::error('--- BOLD ERROR: createIntent ---', ['response' => $response->body()]);
             $errResponse = json_decode($response->body(), true) ?? $response->body();
             file_put_contents(base_path('bold_createIntent_error.json'), json_encode($errResponse, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
-            
+
             $this->logTraceability('/v1/payment-intent', $body, $errResponse, $headers);
             throw new \Exception($response->body());
         }
@@ -61,7 +62,7 @@ class BoldService implements PaymentGatewayInterface
         $resJson = $response->json();
         Log::info('--- BOLD SUCCESS: createIntent ---', $resJson);
         file_put_contents(base_path('bold_createIntent_success.json'), json_encode($resJson, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
-        
+
         $this->logTraceability('/v1/payment-intent', $body, $resJson, $headers);
         return $resJson;
     }
@@ -69,12 +70,12 @@ class BoldService implements PaymentGatewayInterface
     public function makePayment(array $body): array
     {
         Log::info('--- BOLD REQUEST: makePayment ---', $body);
-        
+
         $jsonBody = json_encode($body, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-        
+
         // Log formatted JSON precisely like console.log(JSON.stringify(payload, null, 2))
         Log::info("📤 ENVIANDO PAYLOAD BOLD (payment):\n" . json_encode($body, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
-        
+
         file_put_contents(base_path('bold_makePayment_request.json'), json_encode($body, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 
         $headers = $this->headers();
@@ -86,7 +87,7 @@ class BoldService implements PaymentGatewayInterface
             Log::error('--- BOLD ERROR: makePayment ---', ['response' => $response->json()]);
             $errResponse = $response->json();
             file_put_contents(base_path('bold_makePayment_error.json'), json_encode($errResponse, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
-            
+
             $this->logTraceability('/v1/payment', $body, $errResponse, $headers);
             throw new \Exception(json_encode($errResponse));
         }
@@ -94,7 +95,7 @@ class BoldService implements PaymentGatewayInterface
         $responseData = $response->json()['payload'] ?? $response->json();
         Log::info('--- BOLD SUCCESS: makePayment ---', $responseData);
         file_put_contents(base_path('bold_makePayment_success.json'), json_encode($responseData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
-        
+
         $this->logTraceability('/v1/payment', $body, $responseData, $headers);
         return $responseData;
     }
@@ -298,6 +299,13 @@ class BoldService implements PaymentGatewayInterface
         $webhook->update([
             'payment_id' => $payment->id
         ]);
+
+        // Actualizar el estado de la intención de pago
+        $intent = PaymentIntent::where('bold_reference_id', $boldOrderId)->first();
+        if ($intent) {
+            $intent->update(['status' => $statusUpper]);
+            Log::info("📝 [BoldService Webhook] PaymentIntent ({$boldOrderId}) actualizado a estado: {$statusUpper}");
+        }
 
         return [
             'order_id' => $order->id,
@@ -722,7 +730,7 @@ class BoldService implements PaymentGatewayInterface
         $screenWidth = (int) ($clientFingerprint['screen_width'] ?? 1920);
 
         $timezoneOffset = $clientFingerprint['time_zone_offset'] ?? null;
-        if ($timezoneOffset === null || (int)$timezoneOffset === 300) {
+        if ($timezoneOffset === null || (int) $timezoneOffset === 300) {
             $timezoneOffset = (int) env('BOLD_DEFAULT_TIMEZONE_OFFSET', -300);
         } else {
             $timezoneOffset = (int) $timezoneOffset;
@@ -744,18 +752,265 @@ class BoldService implements PaymentGatewayInterface
     }
 
     /**
+     * Reintenta el pago de una orden existente SIN crear una intención de pago en Bold.
+     * Construye y envía directamente el payload a POST /v1/payment.
+     */
+    public function retryPaymentFlow(OrderSale $order, array $data): array
+    {
+        // 1. Asegurar relaciones
+        $order->loadMissing([
+            'buyer.user',
+            'buyer.TypeDocumentIdentification',
+            'address.municipality.department.country',
+            'address.alias',
+            'details.product.category',
+            'business',
+            'promotions',
+            'payments'
+        ]);
+
+        // 2. Establecer reference_id
+        $reference = 'ORDER-' . $order->id;
+
+        // 3. Reconstruir datos base
+        $addressStr = $order->address->address ?? "Calle 1";
+        $city = $order->address->municipality->name ?? "Bogotá";
+        $province = $order->address->department->name ?? "Cundinamarca";
+
+        $countryCode = "CO";
+        if ($order->address && $order->address->municipality && $order->address->municipality->department && $order->address->municipality->department->country) {
+            $code = $order->address->municipality->department->country->code;
+            if (strlen($code) === 2) {
+                $countryCode = strtoupper($code);
+            }
+        }
+
+        $phone = $order->buyer->user->phone ?? "3000000000";
+        $email = $order->buyer->user->email ?? "correo@ejemplo.com";
+        $buyerName = $order->buyer->user->name ?? "Cliente";
+
+        // Obtener el método de pago del request o del fallback de la orden
+        $paymentMethodReq = $data['payment_method'] ?? [];
+        if (empty($paymentMethodReq)) {
+            $pmId = $data['payment_method_id'] ?? $order->methods_id;
+            if ($pmId == 5) {
+                $paymentMethodReq = ['name' => 'QR', 'qr_format' => 'BOLD_BASE64'];
+            } elseif ($pmId == 2) {
+                $paymentMethodReq = ['name' => 'CREDIT_CARD'];
+            } elseif ($pmId == 6) {
+                $paymentMethodReq = ['name' => 'NEQUI'];
+            }
+        }
+
+        if (strtoupper($paymentMethodReq['name'] ?? '') === 'QR') {
+            $paymentMethodReq['qr_format'] = $paymentMethodReq['qr_format'] ?? 'BOLD_BASE64';
+        }
+
+        // Obtener el device fingerprint exacto del request, sin alteraciones (tal cual)
+        $deviceFingerprint = $data['device_fingerprint'] ?? [];
+
+        // Reconstruir el Payer Billing Address
+        $payerBillingAddress = [
+            "street1" => $addressStr,
+            "street2" => "",
+            "city" => $city,
+            "zip_code" => "110111",
+            "province" => $province,
+            "country" => $countryCode,
+            "phone" => $phone
+        ];
+
+        $payer = [
+            "person_type" => "NATURAL_PERSON",
+            "name" => $buyerName,
+            "phone" => $phone,
+            "email" => $email,
+            "document_type" => $order->buyer->TypeDocumentIdentification->bold_name ?? 'CEDULA',
+            "document_number" => $order->buyer->identification_number ?? '1234567890',
+            "billing_address" => $payerBillingAddress
+        ];
+
+        // 6. Construir el payload directo para Bold POST /v1/payment
+        $paymentBody = [
+            "reference_id" => $reference,
+            "metadata" => [
+                "key" => "order_id",
+                "value" => (string) $order->id
+            ],
+            "payer" => $payer,
+            "payment_method" => $paymentMethodReq,
+            "device_fingerprint" => $deviceFingerprint
+        ];
+
+        // Actualizar el método y forma en la orden
+        $order->update([
+            'methods_id' => $data['payment_method_id'] ?? $order->methods_id,
+            'forms_id' => $data['payment_form_id'] ?? $order->forms_id,
+        ]);
+
+        try {
+            // Procesar el pago en Bold (Llama a POST /v1/payment)
+            $paymentResponse = $this->makePayment($paymentBody);
+
+            $transactionId = $paymentResponse['transaction_id'] ?? null;
+            $status = $paymentResponse['status'] ?? 'RUNNING';
+
+            $expiresAt = $paymentResponse['next_actions']['expires_at'] ?? null;
+            $qrExpiresAt = null;
+            if ($expiresAt) {
+                if (strlen((string) $expiresAt) > 10) {
+                    $qrExpiresAt = Carbon::createFromTimestamp((int) ($expiresAt / 1000000000));
+                } else {
+                    $qrExpiresAt = Carbon::createFromTimestamp((int) $expiresAt);
+                }
+            }
+
+            // Registrar/actualizar la tabla payments
+            $payment = Payment::where('order_sale_id', $order->id)->first();
+            if (!$payment) {
+                $payment = Payment::create([
+                    'order_sale_id' => $order->id,
+                    'methods_id' => $order->methods_id,
+                    'forms_id' => $order->forms_id,
+                    'provider' => 'bold',
+                    'provider_payment_id' => $transactionId ?? $reference,
+                    'amount' => 1,
+                    'subtotal' => $order->total,
+                    'total' => $order->total,
+                    'payment_status' => 0,
+                    'status' => strtolower($status),
+                    'provider_snapshot' => $paymentResponse,
+                    'redirect_url' => $paymentResponse['next_actions']['redirect_url'] ?? null,
+                    'qr_payload' => $paymentResponse['next_actions']['qr_payload'] ?? null,
+                    'qr_expires_at' => $qrExpiresAt,
+                    'state' => 1,
+                    'payment_date' => now(),
+                ]);
+            } else {
+                $payment->update([
+                    'methods_id' => $order->methods_id,
+                    'forms_id' => $order->forms_id,
+                    'provider_payment_id' => $transactionId ?? $reference,
+                    'status' => strtolower($status),
+                    'provider_snapshot' => $paymentResponse,
+                    'redirect_url' => $paymentResponse['next_actions']['redirect_url'] ?? null,
+                    'qr_payload' => $paymentResponse['next_actions']['qr_payload'] ?? null,
+                    'qr_expires_at' => $qrExpiresAt,
+                    'payment_date' => now(),
+                ]);
+            }
+
+            // Guardar o actualizar la "Intención de Pago" local para mapear la nueva referencia de reintento
+            PaymentIntent::updateOrCreate(
+                ['bold_reference_id' => $reference],
+                [
+                    'order_sale_id' => $order->id,
+                    'provider' => 'bold',
+                    'amount' => $order->total,
+                    'currency' => 'COP',
+                    'status' => strtoupper($status),
+                    'payload' => $paymentBody,
+                    'response' => $paymentResponse,
+                ]
+            );
+
+            // Guardar historial de intento exitoso en BD
+            PaymentAttempt::create([
+                'order_sale_id' => $order->id,
+                'reference_id' => $reference,
+                'transaction_id' => $transactionId,
+                'payment_method_id' => $data['payment_method_id'] ?? null,
+                'payment_form_id' => $data['payment_form_id'] ?? null,
+                'status' => strtolower($status),
+                'request_payload' => $paymentBody,
+                'response_payload' => $paymentResponse,
+                'error_payload' => null,
+            ]);
+
+            return [
+                'order' => $order->load('details.product.category', 'business', 'address', 'promotions', 'payments')->toApi(),
+                'bold_response' => $paymentResponse,
+                'internalOrderId' => $order->id,
+                'reference_id' => $reference,
+                'transaction_id' => $transactionId,
+                'status' => $status,
+                'action' => [
+                    'type' => isset($paymentResponse['next_actions']['redirect_url']) ? 'REDIRECT' : (isset($paymentResponse['next_actions']['qr_payload']) ? 'QR' : 'NONE'),
+                    'qr_image' => null,
+                    'qr_payload' => $paymentResponse['next_actions']['qr_payload'] ?? null,
+                    'expires_at' => $qrExpiresAt?->toIso8601String(),
+                    'redirect_url' => $paymentResponse['next_actions']['redirect_url'] ?? null,
+                    'redirect_method' => $paymentResponse['next_actions']['redirect_method'] ?? 'POST'
+                ]
+            ];
+
+        } catch (\Exception $e) {
+            $errData = json_decode($e->getMessage(), true) ?? ['message' => $e->getMessage()];
+
+            // Registrar intento fallido en PaymentIntent local para trazabilidad y consultas futuras
+            PaymentIntent::updateOrCreate(
+                ['bold_reference_id' => $reference],
+                [
+                    'order_sale_id' => $order->id,
+                    'provider' => 'bold',
+                    'amount' => $order->total,
+                    'currency' => 'COP',
+                    'status' => 'FAILED',
+                    'payload' => $paymentBody,
+                    'response' => $errData,
+                ]
+            );
+
+            // Guardar historial de intento fallido en BD
+            PaymentAttempt::create([
+                'order_sale_id' => $order->id,
+                'reference_id' => $reference,
+                'transaction_id' => null,
+                'payment_method_id' => $data['payment_method_id'] ?? null,
+                'payment_form_id' => $data['payment_form_id'] ?? null,
+                'status' => 'failed',
+                'request_payload' => $paymentBody,
+                'response_payload' => null,
+                'error_payload' => $errData,
+            ]);
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Realiza un proxy crudo de la respuesta de Bold para consultar el estado del pago.
+     */
+    public function getRawPaymentStatus(string $referenceId)
+    {
+        Log::info("CONSULTANDO ESTADO BOLD: " . $referenceId);
+
+        $headers = $this->headers();
+        $response = Http::withHeaders($headers)
+            ->get("{$this->apiUrl}/v1/payment/{$referenceId}");
+
+        if ($response->failed()) {
+            Log::error("❌ ERROR CONSULTANDO ESTADO BOLD: " . ($response->body() ?: 'No response body'));
+        } else {
+            Log::info("📥 RESPUESTA DIRECTA BOLD:\n" . json_encode($response->json() ?? $response->body(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+        }
+
+        return $response;
+    }
+
+    /**
      * Registra un registro de trazabilidad en bold_traceability_log.json
      */
     private function logTraceability(string $endpoint, array $requestBody, $response, array $headers): void
     {
         try {
             $traceFile = base_path('bold_traceability_log.json');
-            
+
             $existing = [];
             if (file_exists($traceFile)) {
                 $existing = json_decode(file_get_contents($traceFile), true) ?: [];
             }
-            
+
             if (count($existing) >= 50) {
                 array_shift($existing);
             }
@@ -783,7 +1038,7 @@ class BoldService implements PaymentGatewayInterface
             $existing[] = $newTrace;
 
             file_put_contents(
-                $traceFile, 
+                $traceFile,
                 json_encode($existing, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
             );
         } catch (\Exception $e) {

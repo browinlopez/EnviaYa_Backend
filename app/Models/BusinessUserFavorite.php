@@ -7,11 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 class BusinessUserFavorite extends Model
 {
     protected $table = 'business_user_favorites';
-    protected $fillable = ['user_id', 'busines_id'];
+    protected $fillable = ['user_id', 'business_id'];
 
     public function business()
     {
-        return $this->belongsTo(Business::class, 'busines_id', 'busines_id');
+        return $this->belongsTo(Business::class, 'business_id', 'business_id');
     }
 
     public function user()

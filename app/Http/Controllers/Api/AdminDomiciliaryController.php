@@ -87,7 +87,7 @@ class AdminDomiciliaryController extends Controller
             'qualification' => 'nullable|numeric|min:0|max:5',
             'document' => 'nullable|string|max:225',
             'state' => 'required|boolean',
-            'business_id' => 'nullable|exists:business,busines_id',
+            'business_id' => 'nullable|exists:business,business_id',
             'municipality_id' => 'nullable|exists:municipalities,id',
         ]);
 

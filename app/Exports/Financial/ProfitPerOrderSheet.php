@@ -31,11 +31,11 @@ class ProfitPerOrderSheet implements FromCollection, WithStyles, WithTitle, With
                 DB::raw('SUM(payments.total - payments.domicilio - payments.valor_promocion) as rentabilidad')
             )
             ->join('OrderSale', 'OrderSale.order_sale_id', '=', 'payments.order_sale_id')
-            ->join('business', 'business.busines_id', '=', 'OrderSale.busines_id')
+            ->join('business', 'business.business_id', '=', 'OrderSale.business_id')
             ->when(
                 $this->business_id,
                 fn($q) =>
-                $q->where('OrderSale.busines_id', $this->business_id)
+                $q->where('OrderSale.business_id', $this->business_id)
             )
             ->whereBetween('payments.payment_date', [$this->date_start, $this->date_end])
             ->groupBy('mes', 'payments.order_sale_id', 'business.name')

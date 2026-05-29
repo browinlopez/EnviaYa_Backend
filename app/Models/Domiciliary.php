@@ -8,7 +8,7 @@ class Domiciliary extends Audit
 {
     public $timestamps = false;
 
-    protected $fillable = ['user_id', 'available', 'document',  'qualification', 'state', 'municipality_id'];
+    protected $fillable = ['user_id', 'available', 'document', 'qualification', 'state', 'municipality_id'];
 
     public function user()
     {
@@ -32,7 +32,7 @@ class Domiciliary extends Audit
 
     public function businesses()
     {
-        return $this->belongsToMany(Business::class, 'business_domiciliary', 'domiciliary_id', 'busines_id')
+        return $this->belongsToMany(Business::class, 'business_domiciliary', 'domiciliary_id', 'business_id')
             ->withPivot('state');
     }
 }

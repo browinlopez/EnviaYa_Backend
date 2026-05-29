@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -15,7 +14,7 @@ return new class extends Migration
             $table->id(); // PK id
 
             // foreign keys
-            $table->unsignedBigInteger('busines_id'); // FK business
+            $table->unsignedBigInteger('business_id'); // FK business
             $table->unsignedBigInteger('buyer_id')->nullable(); // FK buyer
 
             // demás columnas
@@ -23,11 +22,11 @@ return new class extends Migration
             $table->text('comment')->nullable();
             $table->tinyInteger('state')->nullable();
 
-             // timestamps
+            // timestamps
             $table->timestamps(); // <-- crea created_at y updated_at
 
             // índices y claves foráneas
-            $table->foreign('busines_id', 'fk_business_reviews_business')
+            $table->foreign('business_id', 'fk_business_reviews_business')
                 ->references('id')
                 ->on('business')
                 ->onDelete('cascade');

@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -13,7 +12,7 @@ return new class extends Migration
     {
         Schema::create('business_hours', function (Blueprint $table) {
             $table->id(); // PK id
-            $table->unsignedInteger('busines_id'); // FK hacia business
+            $table->unsignedInteger('business_id'); // FK hacia business
 
             // columnas de días
             $table->text('monday')->nullable();
@@ -28,7 +27,7 @@ return new class extends Migration
             $table->text('state')->nullable();
 
             // FK
-            $table->foreign('busines_id')
+            $table->foreign('business_id')
                 ->references('id')
                 ->on('business')
                 ->onDelete('cascade');
@@ -41,7 +40,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('business_hours', function (Blueprint $table) {
-            $table->dropForeign(['busines_id']);
+            $table->dropForeign(['business_id']);
         });
 
         Schema::dropIfExists('business_hours');

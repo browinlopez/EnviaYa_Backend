@@ -38,19 +38,19 @@ class BusinessController extends Controller
                 ]);
 
                 $user = User::with('affiliatedBusinesses')->findOrFail($userId);
-                $affiliatedIds = $user->affiliatedBusinesses->pluck('busines_id')->toArray();
+                $affiliatedIds = $user->affiliatedBusinesses->pluck('business_id')->toArray();
             }
 
             $businesses = Business::with(['owners', 'municipality', 'products', 'reviews', 'category'])
                 ->when(count($affiliatedIds) > 0, function ($q) use ($affiliatedIds) {
-                    $q->orderByRaw("FIELD(busines_id," . implode(',', $affiliatedIds) . ") DESC");
+                    $q->orderByRaw("FIELD(business_id," . implode(',', $affiliatedIds) . ") DESC");
                 })
                 ->orderBy('name')
                 ->get();
 
             $formatted = $businesses->map(function ($business) use ($affiliatedIds) {
                 return [
-                    'business_id' => $business->busines_id,
+                    'business_id' => $business->business_id,
                     'name' => $business->name,
                     'phone' => $business->phone,
                     'address' => $business->address,
@@ -71,7 +71,7 @@ class BusinessController extends Controller
                         'id' => $business->municipality->id,
                         'name' => $business->municipality->name,
                     ] : null,
-                    'is_affiliated' => in_array($business->busines_id, $affiliatedIds),
+                    'is_affiliated' => in_array($business->business_id, $affiliatedIds),
                 ];
             });
 
@@ -132,7 +132,7 @@ class BusinessController extends Controller
      */
     public function show(Request $request, $id = null)
     {
-        $businessId = $id ?? $request->input('busines_id');
+        $businessId = $id ?? $request->input('business_id');
 
         if (!$businessId) {
             return response()->json(['message' => 'El id del negocio es requerido.'], 400);
@@ -143,7 +143,7 @@ class BusinessController extends Controller
 
         if ($request->expectsJson() || $request->is('api/*')) {
             return response()->json([
-                'business_id' => $business->busines_id,
+                'business_id' => $business->business_id,
                 'name' => $business->name,
                 'phone' => $business->phone,
                 'address' => $business->address,
@@ -234,7 +234,7 @@ class BusinessController extends Controller
     public function update(UpdateBusinessRequest $request, $id = null)
     {
         $data = $request->validated();
-        $businessId = $id ?? $request->input('busines_id');
+        $businessId = $id ?? $request->input('business_id');
 
         if (!$businessId) {
             return response()->json(['message' => 'El id del negocio es requerido.'], 400);
@@ -271,7 +271,7 @@ class BusinessController extends Controller
      */
     public function destroy(Request $request, $id = null)
     {
-        $businessId = $id ?? $request->input('busines_id');
+        $businessId = $id ?? $request->input('business_id');
 
         if (!$businessId) {
             return response()->json(['message' => 'El id del negocio es requerido.'], 400);
@@ -313,7 +313,7 @@ class BusinessController extends Controller
 
         $formatted = $businesses->map(function ($business) {
             return [
-                'business_id' => $business->busines_id,
+                'business_id' => $business->business_id,
                 'name' => $business->name,
                 'phone' => $business->phone,
                 'address' => $business->address,

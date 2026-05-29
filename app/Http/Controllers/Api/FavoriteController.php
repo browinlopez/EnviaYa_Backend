@@ -13,14 +13,14 @@ class FavoriteController extends Controller
     {
         $request->validate([
             'user_id' => 'required|integer|exists:users,id',
-            'busines_id' => 'required|integer|exists:business,busines_id',
+            'business_id' => 'required|integer|exists:business,business_id',
         ]);
 
         $userId = $request->user_id;
-        $businessId = $request->busines_id;
+        $businessId = $request->business_id;
 
         $favorite = BusinessUserFavorite::where('user_id', $userId)
-            ->where('busines_id', $businessId)
+            ->where('business_id', $businessId)
             ->first();
 
         if ($favorite) {
@@ -31,7 +31,7 @@ class FavoriteController extends Controller
             // no existe, crearlo
             BusinessUserFavorite::create([
                 'user_id' => $userId,
-                'busines_id' => $businessId,
+                'business_id' => $businessId,
             ]);
             return response()->json(['message' => 'Agregado a favoritos']);
         }
@@ -63,7 +63,7 @@ class FavoriteController extends Controller
 
             return [
                 'favorite_id' => $favorite->id,
-                'business_id' => $business->busines_id,
+                'business_id' => $business->business_id,
                 'name' => $business->name,
                 'phone' => $business->phone,
                 'address' => $business->address,

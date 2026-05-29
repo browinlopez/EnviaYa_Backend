@@ -51,11 +51,11 @@
 
             <div class="col-md-6">
                 <label>Negocio *</label>
-                <select name="busines_id" class="form-control" id="business-select" required>
+                <select name="business_id" class="form-control" id="business-select" required>
                     @foreach($businesses as $b)
-                        <option value="{{ $b->busines_id }}"
+                        <option value="{{ $b->business_id }}"
                                 data-type="{{ $b->type }}"
-                                @selected(old('busines_id', $product->businesses->first()?->busines_id ?? '') == $b->busines_id)>
+                                @selected(old('business_id', $product->businesses->first()?->business_id ?? '') == $b->business_id)>
                             {{ $b->name }}
                         </option>
                     @endforeach

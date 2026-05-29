@@ -44,7 +44,7 @@ class OrderService
             return [
                 'order_id' => $order->id,
                 'buyer_id' => $order->buyer_id,
-                'busines_id' => $order->busines_id,
+                'business_id' => $order->business_id,
                 'total' => $order->total,
                 'sale_date' => $order->sale_date,
                 'is_scheduled' => $order->is_scheduled,
@@ -114,7 +114,7 @@ class OrderService
             throw new \Exception('Negocio no encontrado', 404);
         }
 
-        $orders = OrderSale::where('busines_id', $business->id)
+        $orders = OrderSale::where('business_id', $business->id)
             ->with([
                 'business',
                 'details.product',
@@ -142,7 +142,7 @@ class OrderService
             return [
                 'order_id' => $order->id,
                 'buyer_id' => $order->buyer_id,
-                'busines_id' => $order->busines_id,
+                'business_id' => $order->business_id,
                 'total' => $order->total,
                 'sale_date' => $order->sale_date,
                 'is_scheduled' => $order->is_scheduled,
@@ -235,7 +235,7 @@ class OrderService
         )
             ->whereHas(
                 'order',
-                fn($q) => $q->where('busines_id', $businessId)
+                fn($q) => $q->where('business_id', $businessId)
             )
             ->whereBetween(
                 'payment_date',
@@ -264,7 +264,7 @@ class OrderService
 
         $previousWeekTotal = Payment::whereHas(
             'order',
-            fn($q) => $q->where('busines_id', $businessId)
+            fn($q) => $q->where('business_id', $businessId)
         )
             ->whereBetween(
                 'payment_date',
@@ -282,7 +282,7 @@ class OrderService
 
         $monthlyIncome = Payment::whereHas(
             'order',
-            fn($q) => $q->where('busines_id', $businessId)
+            fn($q) => $q->where('business_id', $businessId)
         )
             ->whereBetween(
                 'payment_date',
@@ -292,7 +292,7 @@ class OrderService
 
         $totalIncome = Payment::whereHas(
             'order',
-            fn($q) => $q->where('busines_id', $businessId)
+            fn($q) => $q->where('business_id', $businessId)
         )->sum('total');
 
         return [
@@ -345,7 +345,7 @@ class OrderService
             throw new \Exception('Usuario comprador no encontrado', 404);
         }
 
-        $business = Business::find($data['busines_id']);
+        $business = Business::find($data['business_id']);
         if (!$business) {
             throw new \Exception('Negocio no encontrado', 404);
         }
@@ -361,7 +361,7 @@ class OrderService
 
             $order = OrderSale::create([
                 'buyer_id' => $buyer->id,
-                'busines_id' => $business->id,
+                'business_id' => $business->id,
                 'address_id' => $address ? $address->id : null,
                 'methods_id' => $data['payment_method_id'],
                 'forms_id' => $data['payment_form_id'],

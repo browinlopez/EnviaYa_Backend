@@ -27,7 +27,7 @@ class ReportController extends Controller
 
     public function generalFinancial(Request $request)
     {
-        $businesses = Business::select('busines_id', 'name')->orderBy('name')->get();
+        $businesses = Business::select('business_id', 'name')->orderBy('name')->get();
         $domiciliaries = Domiciliary::with('user')->get();
 
         $business_id = $request->business_id ?? null;
@@ -46,7 +46,7 @@ class ReportController extends Controller
             DB::raw('DATE(payment_date) as date'),
             DB::raw('SUM(total) as total_income')
         )
-            ->when($business_id, fn($q) => $q->whereHas('order', fn($sub) => $sub->where('busines_id', $business_id)))
+            ->when($business_id, fn($q) => $q->whereHas('order', fn($sub) => $sub->where('business_id', $business_id)))
             ->whereBetween('payment_date', [$date_start, $date_end])
             ->groupBy('date')->orderBy('date')->get();
 
@@ -64,7 +64,7 @@ class ReportController extends Controller
             DB::raw('DATE(payment_date) as date'),
             DB::raw('SUM(total - domicilio) as total_tendero')
         )
-            ->when($business_id, fn($q) => $q->whereHas('order', fn($sub) => $sub->where('busines_id', $business_id)))
+            ->when($business_id, fn($q) => $q->whereHas('order', fn($sub) => $sub->where('business_id', $business_id)))
             ->whereBetween('payment_date', [$date_start, $date_end])
             ->groupBy('date')->orderBy('date')->get();
 
@@ -73,7 +73,7 @@ class ReportController extends Controller
             'order_sale_id',
             DB::raw('SUM(total - domicilio - valor_promocion) as profit')
         )
-            ->when($business_id, fn($q) => $q->whereHas('order', fn($sub) => $sub->where('busines_id', $business_id)))
+            ->when($business_id, fn($q) => $q->whereHas('order', fn($sub) => $sub->where('business_id', $business_id)))
             ->whereBetween('payment_date', [$date_start, $date_end])
             ->groupBy('order_sale_id')->get();
 
@@ -138,16 +138,16 @@ class ReportController extends Controller
 
         // 4. Tiendas activas vs inactivas
         $businessWithOrders = OrderSale::whereBetween('sale_date', [$start, $end])
-            ->distinct('busines_id')
-            ->count('busines_id');
+            ->distinct('business_id')
+            ->count('business_id');
 
         $totalBusinesses = Business::count();
         $inactiveBusinesses = $totalBusinesses - $businessWithOrders;
 
         // 5. Top tiendas
         $topBusinesses = OrderSale::whereBetween('sale_date', [$start, $end])
-            ->selectRaw('busines_id, COUNT(*) as total_orders, SUM(total) as total_amount')
-            ->groupBy('busines_id')
+            ->selectRaw('business_id, COUNT(*) as total_orders, SUM(total) as total_amount')
+            ->groupBy('business_id')
             ->orderByDesc('total_orders')
             ->with('business') // asegúrate de que OrderSale tenga relación business()
             ->take(10)
@@ -221,14 +221,14 @@ class ReportController extends Controller
         $domiciliary_id = $request->input('domiciliary_id');
 
         // listas para selects
-        $businesses = Business::select('busines_id', 'name', 'latitude', 'longitude')->orderBy('name')->get();
+        $businesses = Business::select('business_id', 'name', 'latitude', 'longitude')->orderBy('name')->get();
         $domiciliaries = Domiciliary::with('user')->get();
 
 
         // Base orders query (aplicable a KPIs cuando haya filtros de negocio/domiciliario)
         $baseOrders = OrderSale::query()
             ->whereBetween('sale_date', [$start, $end])
-            ->when($business_id, fn($q) => $q->where('busines_id', $business_id))
+            ->when($business_id, fn($q) => $q->where('business_id', $business_id))
             ->when($domiciliary_id, fn($q) => $q->where('domiciliary_id', $domiciliary_id));
 
         // KPIs
@@ -238,7 +238,7 @@ class ReportController extends Controller
 
         $satisfaccionNegocios = round(
             BusinessReview::whereBetween('created_at', [$start, $end])
-                ->when($business_id, fn($q) => $q->where('busines_id', $business_id))
+                ->when($business_id, fn($q) => $q->where('business_id', $business_id))
                 ->avg('qualification') ?? 0,
             2
         );
@@ -258,7 +258,7 @@ class ReportController extends Controller
 
         if ($filtro === 'negocios') {
             // negocios (usa lat/lng guardados en business)
-            $coordenadas = Business::when($business_id, fn($q) => $q->where('busines_id', $business_id))
+            $coordenadas = Business::when($business_id, fn($q) => $q->where('business_id', $business_id))
                 ->whereNotNull('latitude')
                 ->whereNotNull('longitude')
                 ->get()
@@ -267,7 +267,7 @@ class ReportController extends Controller
                     'lng' => (float) $b->longitude,
                     'label' => $b->name,
                     'type' => 'negocio',
-                    'id' => $b->busines_id
+                    'id' => $b->business_id
                 ]);
         } elseif ($filtro === 'domiciliarios') {
             // domiciliarios: intentamos obtener la última geolocalización desde order_geolocation
@@ -304,7 +304,7 @@ class ReportController extends Controller
             // pedidos: usamos la dirección relacionada (user_address.latitude/longitude)
             $orders = OrderSale::with(['address', 'business'])
                 ->whereBetween('sale_date', [$start, $end])
-                ->when($business_id, fn($q) => $q->where('busines_id', $business_id))
+                ->when($business_id, fn($q) => $q->where('business_id', $business_id))
                 ->when($domiciliary_id, fn($q) => $q->where('domiciliary_id', $domiciliary_id))
                 ->get();
 
@@ -319,7 +319,7 @@ class ReportController extends Controller
 
         $businessReviewsList = BusinessReview::with(['business', 'buyer.user'])
             ->when($start && $end, fn($q) => $q->whereBetween('created_at', [$start, $end]))
-            ->when($business_id, fn($q) => $q->where('busines_id', $business_id))
+            ->when($business_id, fn($q) => $q->where('business_id', $business_id))
             ->orderByDesc('created_at')
             ->get();
 
@@ -332,7 +332,7 @@ class ReportController extends Controller
 
         $distBusiness = BusinessReview::select('qualification', DB::raw('count(*) as total'))
             ->whereBetween('created_at', [$start, $end])
-            ->when($business_id, fn($q) => $q->where('busines_id', $business_id))
+            ->when($business_id, fn($q) => $q->where('business_id', $business_id))
             ->groupBy('qualification')
             ->orderBy('qualification')
             ->pluck('total', 'qualification')

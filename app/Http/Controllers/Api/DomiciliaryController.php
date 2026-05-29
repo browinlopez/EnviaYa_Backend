@@ -24,10 +24,10 @@ class DomiciliaryController extends Controller
     public function listDomiciliariesByBusiness(Request $request)
     {
         $request->validate([
-            'busines_id' => 'required|integer|exists:business,busines_id',
+            'business_id' => 'required|integer|exists:business,business_id',
         ]);
 
-        $business = \App\Models\Business::with(['domiciliaries.user'])->findOrFail($request->busines_id);
+        $business = \App\Models\Business::with(['domiciliaries.user'])->findOrFail($request->business_id);
 
         $domiciliaries = $business->domiciliaries->map(function ($domiciliary) {
             return [
@@ -42,7 +42,7 @@ class DomiciliaryController extends Controller
         });
 
         return response()->json([
-            'busines_id' => $business->busines_id,
+            'business_id' => $business->business_id,
             'business_name' => $business->name,
             'domiciliaries' => $domiciliaries
         ]);
@@ -181,20 +181,20 @@ class DomiciliaryController extends Controller
     {
         $request->validate([
             'domiciliary_id' => 'required|integer|exists:domiciliary,domiciliary_id',
-            'busines_id' => 'required|integer|exists:business,busines_id',
+            'business_id' => 'required|integer|exists:business,business_id',
             'state' => 'boolean'
         ]);
 
         $domiciliary = Domiciliary::findOrFail($request->domiciliary_id);
 
         $domiciliary->businesses()->syncWithoutDetaching([
-            $request->busines_id => ['state' => $request->state ?? true]
+            $request->business_id => ['state' => $request->state ?? true]
         ]);
 
         return response()->json([
             'message' => 'Domiciliario asignado al negocio correctamente',
             'domiciliary_id' => $request->domiciliary_id,
-            'busines_id' => $request->busines_id
+            'business_id' => $request->business_id
         ]);
     }
 
@@ -217,7 +217,7 @@ class DomiciliaryController extends Controller
             ],
             'businesses' => $domiciliary->businesses->map(function ($business) {
                 return [
-                    'busines_id' => $business->busines_id,
+                    'business_id' => $business->business_id,
                     'name' => $business->name,
                     'phone' => $business->phone,
                     'address' => $business->address,

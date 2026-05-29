@@ -32,7 +32,7 @@ class Business extends Audit
         return $this->belongsToMany(
             Owner::class,
             'owner_businesses',
-            'busines_id',
+            'business_id',
             'owner_id'
         )->withPivot('state');
     }
@@ -48,21 +48,21 @@ class Business extends Audit
         return $this->belongsToMany(
             Product::class,
             'product_businesses',
-            'busines_id',
+            'business_id',
             'products_id'
         )->withPivot(['id', 'price', 'quantity', 'qualification']);
     }
 
     public function orders()
     {
-        return $this->hasMany(OrderSale::class, 'busines_id', 'id');
+        return $this->hasMany(OrderSale::class, 'business_id', 'id');
     }
 
     public function reviews()
     {
         return $this->hasMany(
             BusinessReview::class,
-            'busines_id',   // 👈 columna en business_reviews
+            'business_id',   // 👈 columna en business_reviews
             'id'
         );
     }
@@ -70,18 +70,18 @@ class Business extends Audit
 
     public function productBusinesses()
     {
-        return $this->hasMany(ProductBusiness::class, 'busines_id', 'id');
+        return $this->hasMany(ProductBusiness::class, 'business_id', 'id');
     }
 
     public function domiciliaries()
     {
-        return $this->belongsToMany(Domiciliary::class, 'business_domiciliaries', 'busines_id', 'domiciliary_id')
+        return $this->belongsToMany(Domiciliary::class, 'business_domiciliaries', 'business_id', 'domiciliary_id')
             ->withPivot('state');
     }
 
     public function usersWhoFavorite()
     {
-        return $this->belongsToMany(User::class, 'business_user_favorites', 'busines_id', 'user_id');
+        return $this->belongsToMany(User::class, 'business_user_favorites', 'business_id', 'user_id');
     }
 
     public function category()

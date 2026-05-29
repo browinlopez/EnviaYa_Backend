@@ -2,6 +2,8 @@
 
 namespace App\Contracts;
 
+use App\Models\OrderSale;
+
 interface PaymentGatewayInterface
 {
     public function createIntent(array $body): array;
@@ -19,5 +21,6 @@ interface PaymentGatewayInterface
     public function voidPayment(array $body): array;
     public function refundPayment(array $body): array;
     public function getRefundStatus(string $transactionId): array;
+    public function retryPaymentFlow(\App\Models\OrderSale $order, array $data): array;
+    public function getRawPaymentStatus(string $referenceId);
 }
-

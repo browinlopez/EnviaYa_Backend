@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -13,7 +12,7 @@ return new class extends Migration
     {
         Schema::create('promotions', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('busines_id');
+            $table->unsignedBigInteger('business_id');
             $table->string('code_promotions', 50)->nullable();
             $table->text('description')->nullable();
             $table->decimal('percentage_discount', 5, 2)->nullable();
@@ -21,7 +20,7 @@ return new class extends Migration
             $table->timestamp('end_date')->nullable();
             $table->tinyInteger('state')->nullable();
 
-            $table->foreign('busines_id')
+            $table->foreign('business_id')
                 ->references('id')->on('business')
                 ->onDelete('cascade');
         });

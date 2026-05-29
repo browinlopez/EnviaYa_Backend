@@ -43,7 +43,7 @@ class Product extends Audit
             Business::class,
             'product_businesses',
             'products_id',
-            'busines_id'
+            'business_id'
         )->withPivot([
                     'id',
                     'price',

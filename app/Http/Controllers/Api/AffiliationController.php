@@ -14,14 +14,14 @@ class AffiliationController extends Controller
     {
         $request->validate([
             'user_id' => 'required|integer|exists:users,id',
-            'busines_id' => 'required|integer|exists:business,busines_id',
+            'business_id' => 'required|integer|exists:business,business_id',
         ]);
 
         $userId = $request->user_id;
-        $businessId = $request->busines_id;
+        $businessId = $request->business_id;
 
         $affiliation = BusinessUserAffiliation::where('user_id', $userId)
-            ->where('busines_id', $businessId)
+            ->where('business_id', $businessId)
             ->first();
 
         if ($affiliation) {
@@ -30,7 +30,7 @@ class AffiliationController extends Controller
         } else {
             BusinessUserAffiliation::create([
                 'user_id' => $userId,
-                'busines_id' => $businessId,
+                'business_id' => $businessId,
             ]);
             return response()->json(['message' => 'Usuario afiliado']);
         }
@@ -39,15 +39,15 @@ class AffiliationController extends Controller
     public function listUsers(Request $request)
     {
         $request->validate([
-            'busines_id' => 'required|integer|exists:business,busines_id',
+            'business_id' => 'required|integer|exists:business,business_id',
         ]);
 
-        $businessId = $request->busines_id;
+        $businessId = $request->business_id;
 
         // 🔹 Cargar afiliaciones con información del usuario + relaciones
-        $affiliations = BusinessUserAffiliation::where('busines_id', $businessId)
+        $affiliations = BusinessUserAffiliation::where('business_id', $businessId)
             ->with([
-                'business:busines_id,name',
+                'business:business_id,name',
                 'user' => function ($query) {
                     $query->select('user_id', 'name', 'email', 'phone', 'roles', 'qualification', 'state')
                         ->with([
@@ -64,7 +64,7 @@ class AffiliationController extends Controller
             return [
                 'affiliation_id' => $aff->id ?? null,
                 'business' => [
-                    'id' => $aff->business->busines_id ?? null,
+                    'id' => $aff->business->business_id ?? null,
                     'name' => $aff->business->name ?? null,
                 ],
                 'user' => [
@@ -126,15 +126,15 @@ class AffiliationController extends Controller
     {
         $request->validate([
             'user_id' => 'required|integer|exists:users,id',
-            'busines_id' => 'required|integer|exists:business,busines_id',
+            'business_id' => 'required|integer|exists:business,business_id',
         ]);
 
         $userId = $request->user_id;
-        $businessId = $request->busines_id;
+        $businessId = $request->business_id;
 
         // 1️⃣ Verificar si ya está afiliado a este negocio
         $alreadyAffiliated = BusinessUserAffiliation::where('user_id', $userId)
-            ->where('busines_id', $businessId)
+            ->where('business_id', $businessId)
             ->exists();
 
         if ($alreadyAffiliated) {
@@ -155,7 +155,7 @@ class AffiliationController extends Controller
         // 3️⃣ Crear afiliación
         $affiliation = BusinessUserAffiliation::create([
             'user_id' => $userId,
-            'busines_id' => $businessId,
+            'business_id' => $businessId,
         ]);
 
         return response()->json([
@@ -168,11 +168,11 @@ class AffiliationController extends Controller
     {
         $request->validate([
             'user_id' => 'required|integer|exists:users,id',
-            'busines_id' => 'required|integer|exists:business,busines_id',
+            'business_id' => 'required|integer|exists:business,business_id',
         ]);
 
         $affiliation = BusinessUserAffiliation::where('user_id', $request->user_id)
-            ->where('busines_id', $request->busines_id)
+            ->where('business_id', $request->business_id)
             ->first();
 
         if (!$affiliation) {
@@ -192,12 +192,12 @@ class AffiliationController extends Controller
     public function getAffiliatedUsers(Request $request)
     {
         $request->validate([
-            'busines_id' => 'required|integer|exists:business,busines_id',
+            'business_id' => 'required|integer|exists:business,business_id',
         ]);
 
-        $businessId = $request->busines_id;
+        $businessId = $request->business_id;
 
-        $affiliations = BusinessUserAffiliation::where('busines_id', $businessId)
+        $affiliations = BusinessUserAffiliation::where('business_id', $businessId)
             ->with([
                 'user' => function ($q) {
                     $q->select('user_id', 'name', 'email', 'phone', 'roles', 'qualification', 'state')

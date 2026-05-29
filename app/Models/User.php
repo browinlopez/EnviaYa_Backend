@@ -81,7 +81,7 @@ class User extends Authenticatable implements Auditable, MustVerifyEmail
 
     public function favoriteBusinesses()
     {
-        return $this->belongsToMany(Business::class, 'business_user_favorites', 'user_id', 'busines_id');
+        return $this->belongsToMany(Business::class, 'business_user_favorites', 'user_id', 'business_id');
     }
 
     public function affiliatedBusinesses()
@@ -90,7 +90,7 @@ class User extends Authenticatable implements Auditable, MustVerifyEmail
             Business::class,
             'business_user_affiliations',
             'user_id',
-            'busines_id'
+            'business_id'
         );
     }
 
