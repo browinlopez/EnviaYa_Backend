@@ -18,10 +18,11 @@ RUN npm run build
 FROM php:8.2-cli-bullseye AS php-base
 
 RUN apt-get update && apt-get install -y \
-    git curl unzip zip \
+    git curl unzip zip wget \
     libzip-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev \
     libicu-dev libonig-dev libpq-dev \
-    autoconf build-essential pkg-config \
+    libssl-dev pkg-config \
+    autoconf build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg
@@ -31,8 +32,10 @@ RUN docker-php-ext-install -j$(nproc) \
     mbstring bcmath exif intl \
     pcntl posix sockets zip gd
 
-# Redis + Swoole
-RUN pecl install redis swoole \
+RUN pecl channel-update pecl.php.net
+
+RUN pecl install redis \
+    && pecl install swoole \
     && docker-php-ext-enable redis swoole
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
