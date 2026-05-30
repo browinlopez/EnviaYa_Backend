@@ -3,7 +3,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    restart: unless-stopped
 
     env_file:
       - .env
@@ -19,11 +18,12 @@ services:
     networks:
       - test-vecipaya
 
+    restart: unless-stopped
+
   reverb:
     build:
       context: .
       dockerfile: Dockerfile
-    restart: unless-stopped
 
     env_file:
       - .env
@@ -39,11 +39,11 @@ services:
     networks:
       - test-vecipaya
 
+    restart: unless-stopped
+
   queue:
     build:
       context: .
-      dockerfile: Dockerfile
-    restart: unless-stopped
 
     env_file:
       - .env
@@ -56,11 +56,11 @@ services:
     networks:
       - test-vecipaya
 
+    restart: unless-stopped
+
   scheduler:
     build:
       context: .
-      dockerfile: Dockerfile
-    restart: unless-stopped
 
     env_file:
       - .env
@@ -71,6 +71,8 @@ services:
 
     networks:
       - test-vecipaya
+
+    restart: unless-stopped
 
 networks:
   test-vecipaya:
