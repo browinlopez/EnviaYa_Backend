@@ -5,18 +5,20 @@ services:
       dockerfile: Dockerfile
     container_name: enviaya_api
     restart: unless-stopped
-    working_dir: /var/www
 
     env_file:
       - .env
 
+    working_dir: /var/www
+
     ports:
       - "8000:8000"
 
-    command: [ "php", "artisan", "octane:start", "--server=swoole", "--host=0.0.0.0", "--port=8000", "--workers=auto", "--task-workers=auto" ]
+    command: >
+      php artisan octane:start --server=swoole --host=0.0.0.0 --port=8000 --workers=auto --task-workers=auto
 
     networks:
-      - dokploy-network
+      - test-vecipaya
 
   reverb:
     build:
@@ -24,18 +26,20 @@ services:
       dockerfile: Dockerfile
     container_name: enviaya_reverb
     restart: unless-stopped
-    working_dir: /var/www
 
     env_file:
       - .env
 
-    command: [ "php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080" ]
+    working_dir: /var/www
 
     ports:
       - "8080:8080"
 
+    command: >
+      php artisan reverb:start --host=0.0.0.0 --port=8080
+
     networks:
-      - dokploy-network
+      - test-vecipaya
 
   queue:
     build:
@@ -43,15 +47,17 @@ services:
       dockerfile: Dockerfile
     container_name: enviaya_queue
     restart: unless-stopped
-    working_dir: /var/www
 
     env_file:
       - .env
 
-    command: [ "php", "artisan", "queue:work", "rabbitmq", "--sleep=1", "--tries=3", "--timeout=300" ]
+    working_dir: /var/www
+
+    command: >
+      php artisan queue:work rabbitmq --sleep=1 --tries=3 --timeout=300
 
     networks:
-      - dokploy-network
+      - test-vecipaya
 
   scheduler:
     build:
@@ -59,16 +65,17 @@ services:
       dockerfile: Dockerfile
     container_name: enviaya_scheduler
     restart: unless-stopped
-    working_dir: /var/www
 
     env_file:
       - .env
 
-    command: [ "php", "artisan", "schedule:work" ]
+    working_dir: /var/www
+
+    command: php artisan schedule:work
 
     networks:
-      - dokploy-network
+      - test-vecipaya
 
 networks:
-  dokploy-network:
-    external: true
+  test-vecipaya:
+    driver: bridge
