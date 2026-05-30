@@ -3,7 +3,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: enviaya_api
     restart: unless-stopped
 
     env_file:
@@ -24,7 +23,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: enviaya_reverb
     restart: unless-stopped
 
     env_file:
@@ -45,7 +43,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: enviaya_queue
     restart: unless-stopped
 
     env_file:
@@ -63,7 +60,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: enviaya_scheduler
     restart: unless-stopped
 
     env_file:
@@ -78,4 +74,4 @@ services:
 
 networks:
   test-vecipaya:
-    driver: bridge
+    external: true

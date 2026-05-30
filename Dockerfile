@@ -1,5 +1,5 @@
 # ==========================================================
-# STAGE 1 - Frontend (Vite)
+# STAGE 1 - Frontend
 # ==========================================================
 FROM node:20-alpine AS node-builder
 
@@ -40,7 +40,7 @@ WORKDIR /var/www
 
 
 # ==========================================================
-# STAGE 3 - Composer deps
+# STAGE 3 - Composer
 # ==========================================================
 FROM php-base AS composer-builder
 
@@ -50,8 +50,7 @@ RUN composer install \
     --no-dev \
     --prefer-dist \
     --optimize-autoloader \
-    --no-interaction \
-    --no-scripts
+    --no-interaction
 
 COPY . .
 RUN composer dump-autoload --optimize
@@ -77,9 +76,6 @@ RUN mkdir -p \
 RUN chown -R www-data:www-data /var/www \
     && chmod -R 775 storage bootstrap/cache
 
-USER www-data
-
 EXPOSE 8000 8080
 
-# ⚠️ NO artisan en build
-CMD ["bash"]
+CMD ["php", "artisan", "octane:start"]
