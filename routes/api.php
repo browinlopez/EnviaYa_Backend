@@ -39,3 +39,10 @@ require __DIR__ . '/domiciliaries.php';
 
 // Ratings & Reviews
 require __DIR__ . '/reviews.php';
+
+Route::get('/health', function () {
+    return response()->json([
+        'status' => 'ok',
+        'time' => now(),
+    ]);
+});

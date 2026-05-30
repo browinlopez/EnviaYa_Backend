@@ -6,24 +6,68 @@ services:
     container_name: enviaya_api
     restart: unless-stopped
     working_dir: /var/www
-    environment:
-      - APP_ENV=production
-      - APP_KEY=${APP_KEY}
-      - DB_CONNECTION=pgsql
-      - DB_HOST=db
-      - DB_PORT=5432
-      - DB_DATABASE=${DB_DATABASE:-laravel}
-      - DB_USERNAME=${DB_USERNAME:-laravel}
-      - DB_PASSWORD=${DB_PASSWORD:-password}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-    ports:
-      - "8000:8000" # Cambiado a 8000
-    networks:
-      - dokploy-network # Usar la misma red overlay que Traefik
 
-volumes:
-  storage_data:
+    env_file:
+      - .env
+
+    ports:
+      - "8000:8000"
+
+    command: [ "php", "artisan", "octane:start", "--server=swoole", "--host=0.0.0.0", "--port=8000", "--workers=auto", "--task-workers=auto" ]
+
+    networks:
+      - dokploy-network
+
+  reverb:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: enviaya_reverb
+    restart: unless-stopped
+    working_dir: /var/www
+
+    env_file:
+      - .env
+
+    command: [ "php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080" ]
+
+    ports:
+      - "8080:8080"
+
+    networks:
+      - dokploy-network
+
+  queue:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: enviaya_queue
+    restart: unless-stopped
+    working_dir: /var/www
+
+    env_file:
+      - .env
+
+    command: [ "php", "artisan", "queue:work", "rabbitmq", "--sleep=1", "--tries=3", "--timeout=300" ]
+
+    networks:
+      - dokploy-network
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: enviaya_scheduler
+    restart: unless-stopped
+    working_dir: /var/www
+
+    env_file:
+      - .env
+
+    command: [ "php", "artisan", "schedule:work" ]
+
+    networks:
+      - dokploy-network
 
 networks:
   dokploy-network:

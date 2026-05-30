@@ -24,11 +24,11 @@ Route::get('/', function () {
 Route::get('/verify-email', [AuthController::class, 'verify'])
     ->name('verify.email');
 
-Route::get('/clear-session', function () {
-    auth()->logout(); // cerrar sesión
-    session()->flush(); // borrar toda la sesión
-    return redirect('/'); // redirige a inicio
-});
+// Route::get('/clear-session', function () {
+//     auth()->logout(); // cerrar sesión
+//     session()->flush(); // borrar toda la sesión
+//     return redirect('/'); // redirige a inicio
+// });
 
 // --- Dashboard protegido con middleware verified de Laravel ---
 Route::get('/dashboard', [DashboardController::class, 'index'])
@@ -136,3 +136,10 @@ Route::middleware('auth')->group(function () {
 });
 
 require __DIR__ . '/auth.php';
+
+Route::get('/health', function () {
+    return response()->json([
+        'status' => 'ok',
+        'time' => now(),
+    ]);
+});
