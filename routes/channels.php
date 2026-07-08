@@ -26,3 +26,10 @@ Broadcast::channel('gps.order.{orderId}', function ($user, $orderId) {
     // return $order && ($user->id === $order->buyer_id || $user->id === $order->domiciliary_id);
     return true; // Permitido por defecto para pruebas, ajusta la lógica a tus roles
 });
+
+// Estado de pago de una orden: solo el comprador dueño de esa orden puede escucharlo
+Broadcast::channel('order.{orderId}', function ($user, $orderId) {
+    $order = OrderSale::with('buyer')->find($orderId);
+
+    return $order && $order->buyer && (int) $order->buyer->user_id === (int) $user->id;
+});

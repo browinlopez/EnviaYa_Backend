@@ -307,6 +307,9 @@ class BoldService implements PaymentGatewayInterface
             Log::info("📝 [BoldService Webhook] PaymentIntent ({$boldOrderId}) actualizado a estado: {$statusUpper}");
         }
 
+        // Avisar en tiempo real (websocket) al comprador que está esperando el resultado del pago
+        \App\Events\PaymentStatusUpdated::dispatch($order->id, $finalPaymentState, $paymentStatusString);
+
         return [
             'order_id' => $order->id,
             'status' => $finalPaymentState,
