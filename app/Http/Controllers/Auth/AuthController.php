@@ -232,6 +232,29 @@ class AuthController extends Controller
             : response()->json(['message' => 'No se pudo enviar el enlace'], 500);
     }
 
+    // Confirmar restablecimiento de contraseña (token + nueva contraseña)
+    public function resetPasswordConfirm(Request $request)
+    {
+        $request->validate([
+            'token' => 'required|string',
+            'email' => 'required|email',
+            'password' => 'required|string|min:6|confirmed',
+        ]);
+
+        $status = Password::reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function (User $user) use ($request) {
+                $user->forceFill([
+                    'password' => Hash::make($request->password),
+                ])->save();
+            }
+        );
+
+        return $status === Password::PASSWORD_RESET
+            ? response()->json(['message' => 'Contraseña actualizada correctamente'])
+            : response()->json(['message' => __($status)], 400);
+    }
+
     public function resendVerificationEmailWeb(Request $request)
     {
         $request->validate(['email' => 'required|email']);

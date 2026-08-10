@@ -38,5 +38,6 @@ return [
     'bold' => [
         'base_url' => env('BOLD_BASE_URL', 'https://integrations.api.bold.co'),
         'api_key'  => env('BOLD_API_KEY'),
+        'webhook_secret' => env('BOLD_WEBHOOK_SECRET', ''),
     ],
 ];

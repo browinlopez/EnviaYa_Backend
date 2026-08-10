@@ -13,6 +13,7 @@ use App\Http\Controllers\Domiciliary\DomiciliaryController;
 use App\Http\Controllers\Order\OrderController;
 use App\Http\Controllers\Owner\OwnerController;
 use App\Http\Controllers\Payment\PaymentController;
+use App\Http\Controllers\Payment\BoldWebhookController;
 use App\Http\Controllers\Product\ProductController;
 use App\Http\Controllers\Review\ReviewController;
 use App\Http\Controllers\User\UserController;
@@ -24,6 +25,7 @@ use Illuminate\Foundation\Auth\EmailVerificationRequest;
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/forgot-password', [AuthController::class, 'resetPassword']);
+Route::post('/reset-password', [AuthController::class, 'resetPasswordConfirm']);
 
 //Categoria sin Auth
 Route::get('categories-business/indexFree', [CategoryBusinessController::class, 'index']);
@@ -43,6 +45,9 @@ Route::prefix('bold')->group(function () {
     Route::post('/payment', [PaymentController::class, 'makePayment']);
     Route::get('/status/{ref}', [PaymentController::class, 'checkStatus']);
 });
+
+// Bold llama acá directo cuando el estado de un pago cambia (QR, tarjeta, etc.)
+Route::post('webhooks/bold', [BoldWebhookController::class, 'handle']);
 
 Route::middleware('auth:sanctum')->group(function () {
     //Auth
