@@ -6,7 +6,10 @@ use Illuminate\Support\Facades\Route;
 // Public Auth routes
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('auth/login', [AuthController::class, 'login']);
+// Alias: la app móvil llama POST /v1/login (mismo controlador que auth/login)
+Route::post('/login', [AuthController::class, 'login']);
 Route::post('/forgot-password', [AuthController::class, 'resetPassword']);
+Route::post('/reset-password', [AuthController::class, 'resetPasswordConfirm']);
 Route::post('/resend-verification-email', [AuthController::class, 'resendVerificationEmail']);
 Route::post('/email/resend-verification', [AuthController::class, 'resendVerificationEmail']);
 

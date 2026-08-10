@@ -181,6 +181,22 @@ class AuthService
     }
 
     /**
+     * Confirma el restablecimiento: valida el token y guarda la nueva contraseña.
+     * Devuelve el status de Password::reset para que el controller decida la respuesta.
+     */
+    public function resetPasswordWithToken(array $credentials): string
+    {
+        return Password::reset(
+            $credentials,
+            function (User $user) use ($credentials) {
+                $user->forceFill([
+                    'password' => Hash::make($credentials['password']),
+                ])->save();
+            }
+        );
+    }
+
+    /**
      * Reenvía correo de verificación para Web (Blade flow).
      */
     public function resendVerificationWeb(string $email): array

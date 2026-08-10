@@ -132,8 +132,14 @@ class BoldService implements PaymentGatewayInterface
 
         Log::info("🔔 [BoldService Webhook] Recibida petición. Origen: {$source}");
 
-        // Si es Bold oficial y trae firma, la verificamos
-        if ($source === 'bold' && !empty($signature)) {
+        // Bold oficial: si hay secreto configurado la firma es obligatoria;
+        // aceptar peticiones sin firma permitiría falsificar webhooks de pago.
+        if ($source === 'bold' && $this->webhookSecret() !== '') {
+            if (empty($signature)) {
+                Log::warning('⚠️ [BoldService Webhook] Petición sin firma rechazada.');
+                throw new \Exception('Missing Bold signature', 401);
+            }
+
             $verified = $this->verifySignature($payload, $signature);
             if (!$verified) {
                 Log::warning('⚠️ [BoldService Webhook] Firma inválida detectada.');
@@ -200,11 +206,21 @@ class BoldService implements PaymentGatewayInterface
         return ['message' => 'No matching order found.'];
     }
 
+    /**
+     * Secreto para firmar webhooks. Acepta ambos nombres de variable porque
+     * .env.example documenta BOLD_WEBHOOK_SECRET pero despliegues previos
+     * pudieron usar BOLD_SIGNING_SECRET.
+     */
+    protected function webhookSecret(): string
+    {
+        return (string) (env('BOLD_SIGNING_SECRET') ?: env('BOLD_WEBHOOK_SECRET', ''));
+    }
+
     protected function verifySignature(array $payload, string $signature): bool
     {
         try {
             // Si el webhook es de pruebas de link o botón de pagos, la doc indica que la clave secreta es un string vacío
-            $secretKey = env('BOLD_SIGNING_SECRET') ?? '';
+            $secretKey = $this->webhookSecret();
 
             $strPayload = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
             $base64Payload = base64_encode($strPayload);
