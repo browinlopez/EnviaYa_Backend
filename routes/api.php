@@ -44,6 +44,9 @@ Route::middleware('throttle:60,1')->group(function () {
     Route::get('categories-business/indexFree', [CategoryBusinessController::class, 'index']);
     Route::get('categories-free', [CategoryController::class, 'index']);
     Route::get('top-businesses-free', [BusinessController::class, 'indexByQualification']);
+    // Las reseñas de un negocio se ven sin sesión (la respuesta no expone
+    // datos de contacto del reseñador).
+    Route::post('reviews/business/by', [ReviewController::class, 'listReviewsByBusiness']);
 });
 
 // --- Webhooks de terceros: sin token de usuario, protegidos por firma HMAC ---
@@ -183,8 +186,8 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::post('store', [ReviewController::class, 'store']);
 
         // Negocios
+        // (business/by es público, está arriba en la zona de catálogo)
         Route::get('business/all', [ReviewController::class, 'listBusinessReviews']);
-        Route::post('business/by', [ReviewController::class, 'listReviewsByBusiness']);
         Route::post('business/create', [ReviewController::class, 'createBusinessReview']);
         Route::put('business/update', [ReviewController::class, 'updateBusinessReview']);
         Route::delete('business/delete', [ReviewController::class, 'deleteBusinessReview']);

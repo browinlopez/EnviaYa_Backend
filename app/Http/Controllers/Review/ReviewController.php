@@ -148,10 +148,10 @@ class ReviewController extends Controller
                 'qualification' => $review->qualification,
                 'comment' => $review->comment,
                 'state' => $review->state,
-                'user' => $review->buyer && $review->buyer->user ? [ // accedemos a buyer->user
+                // Endpoint público: no exponer el email del reseñador.
+                'user' => $review->buyer && $review->buyer->user ? [
                     'user_id' => $review->buyer->user->user_id,
                     'name' => $review->buyer->user->name,
-                    'email' => $review->buyer->user->email,
                     'qualification' => $review->buyer->qualification,
                     'state' => $review->buyer->state,
                 ] : null,
