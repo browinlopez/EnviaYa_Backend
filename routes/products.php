@@ -8,6 +8,9 @@ use Illuminate\Support\Facades\Route;
 // Public product & category routes
 Route::get('categories-business-free', [CategoryBusinessController::class, 'index']);
 Route::get('categories-free', [CategoryController::class, 'index']);
+// Alias legacy: la app móvil publicada llama a esta ruta (nombre de la rama Devs).
+// Debe registrarse antes del grupo protegido para ganarle a categories-business/{id}.
+Route::get('categories-business/indexFree', [CategoryBusinessController::class, 'index']);
 
 // Protected product & category routes
 Route::middleware('auth:sanctum')->group(function () {
