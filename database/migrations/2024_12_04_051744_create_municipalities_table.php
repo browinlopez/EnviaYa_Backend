@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('municipalities', function (Blueprint $table) {
-            $table->id()->primary()->unique(); // Unique identifier for the municipality
+            $table->id(); // id() ya es primary key autoincremental (única)
             $table->string('name', 100); // Municipality name
             $table->foreignId('department_id')->constrained('departments')->onDelete('cascade'); // Foreign key to departments table
             $table->timestamps(); // Created at and updated at timestamps

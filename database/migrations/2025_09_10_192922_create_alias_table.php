@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('alias', function (Blueprint $table) {
-            $table->id('alias_id')->primary(); // sin auto_increment
+            $table->id('alias_id'); // id() ya es primary key
             $table->string('name', 255)->nullable();
         });
     }

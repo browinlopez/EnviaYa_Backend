@@ -11,7 +11,6 @@ use App\Http\Controllers\Category\CategoryController;
 use App\Http\Controllers\Chat\ChatController;
 use App\Http\Controllers\Domiciliary\DomiciliaryController;
 use App\Http\Controllers\Order\OrderController;
-use App\Http\Controllers\Owner\OwnerController;
 use App\Http\Controllers\Payment\PaymentController;
 use App\Http\Controllers\Payment\BoldWebhookController;
 use App\Http\Controllers\Product\ProductController;
@@ -140,14 +139,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('favorites')->group(function () {
         Route::post('toggle', [FavoriteController::class, 'toggleFavorite']);
         Route::post('index', [FavoriteController::class, 'myFavorites']);
-    });
-
-    //Dueños
-    Route::prefix('owner')->group(function () {
-        Route::get('index', [OwnerController::class, 'index']);
-        Route::post('store', [OwnerController::class, 'store']);
-        Route::post('show', [OwnerController::class, 'show']);
-        Route::put('update', [OwnerController::class, 'update']);
     });
 
     //Domiciliario

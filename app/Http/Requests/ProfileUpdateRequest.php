@@ -23,7 +23,9 @@ class ProfileUpdateRequest extends FormRequest
                 'lowercase',
                 'email',
                 'max:255',
-                Rule::unique(User::class)->ignore($this->user()->id),
+                // La PK de user es user_id (no id); con ->ignore(null) la regla
+                // unique chocaba contra el propio registro al no cambiar el email.
+                Rule::unique(User::class)->ignore($this->user()->user_id, 'user_id'),
             ],
         ];
     }
