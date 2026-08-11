@@ -4,9 +4,9 @@ namespace App\Models\Business;
 
 use App\Models\Business;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Model;
+use App\Models\Audit\Audit;
 
-class BusinessUserAffiliation extends Model
+class BusinessUserAffiliation extends Audit
 {
     protected $table = 'business_user_affiliations';
     protected $fillable = ['user_id', 'busines_id'];

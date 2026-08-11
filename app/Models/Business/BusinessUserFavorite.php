@@ -4,9 +4,9 @@ namespace App\Models\Business;
 
 use App\Models\Business;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Model;
+use App\Models\Audit\Audit;
 
-class BusinessUserFavorite extends Model
+class BusinessUserFavorite extends Audit
 {
     protected $table = 'business_user_favorites';
     protected $fillable = ['user_id', 'busines_id'];

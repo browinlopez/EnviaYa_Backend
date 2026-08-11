@@ -8,9 +8,9 @@ use App\Models\Maps\Municipality;
 use App\Models\Maps\Department;
 use App\Models\Maps\Country;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use App\Models\Audit\Audit;
 
-class UserAddress extends Model
+class UserAddress extends Audit
 {
     use HasFactory;
 

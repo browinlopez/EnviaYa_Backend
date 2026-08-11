@@ -4,9 +4,9 @@ namespace App\Models\Maps;
 
 use App\Models\User\UserAddress;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use App\Models\Audit\Audit;
 
-class Municipality extends Model
+class Municipality extends Audit
 {
     use HasFactory;
 

@@ -2,9 +2,9 @@
 
 namespace App\Models\Buyer;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Models\Audit\Audit;
 
-class BuyerComplex extends Model
+class BuyerComplex extends Audit
 {
     protected $table = 'buyer_complex';
     protected $primaryKey = 'id';

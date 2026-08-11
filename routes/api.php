@@ -56,8 +56,12 @@ Route::post('webhooks/bold', [BoldWebhookController::class, 'handle'])
 |--------------------------------------------------------------------------
 | Todo endpoint nuevo se agrega AQUÍ por defecto. Solo se saca al bloque
 | público con una razón explícita (y con throttle).
+|
+| audit.api registra cada escritura (POST/PUT/PATCH/DELETE) en
+| storage/logs/audit-*.log con usuario, ruta, resultado e IP. Los cambios
+| de datos además quedan en la tabla `audits` (auditoría de modelos).
 */
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
     //Auth
     Route::get('/profile', [AuthController::class, 'profile']);
     Route::post('/logout', [AuthController::class, 'logout']);

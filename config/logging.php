@@ -58,6 +58,16 @@ return [
             'ignore_exceptions' => false,
         ],
 
+        // Rastro de escrituras autenticadas de la API (middleware audit.api).
+        // Un archivo por día, 30 días de retención.
+        'audit' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/audit.log'),
+            'level' => 'info',
+            'days' => 30,
+            'replace_placeholders' => true,
+        ],
+
         'single' => [
             'driver' => 'single',
             'path' => storage_path('logs/laravel.log'),

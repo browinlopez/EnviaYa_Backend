@@ -2,9 +2,9 @@
 
 namespace App\Models\Product;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Models\Audit\Audit;
 
-class GroceryProduct extends Model
+class GroceryProduct extends Audit
 {
     protected $table = 'grocery_products';
     protected $primaryKey = 'grocery_product_id';

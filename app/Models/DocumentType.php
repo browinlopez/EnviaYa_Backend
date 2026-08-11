@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Models\Audit\Audit;
 
-class DocumentType extends Model
+class DocumentType extends Audit
 {
     //
 }

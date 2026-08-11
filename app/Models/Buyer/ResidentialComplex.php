@@ -2,9 +2,9 @@
 
 namespace App\Models\Buyer;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Models\Audit\Audit;
 
-class ResidentialComplex extends Model
+class ResidentialComplex extends Audit
 {
     protected $table = 'residential_complexes';
     protected $primaryKey = 'complex_id';

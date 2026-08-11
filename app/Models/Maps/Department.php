@@ -3,9 +3,9 @@
 namespace App\Models\Maps;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use App\Models\Audit\Audit;
 
-class Department extends Model
+class Department extends Audit
 {
     use HasFactory;
 

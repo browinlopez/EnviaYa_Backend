@@ -2,9 +2,9 @@
 
 namespace App\Models\Product;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Models\Audit\Audit;
 
-class PharmacyProduct extends Model
+class PharmacyProduct extends Audit
 {
     protected $table = 'pharmacy_products';
     protected $primaryKey = 'pharmacy_product_id';

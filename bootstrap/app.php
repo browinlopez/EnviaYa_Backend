@@ -18,6 +18,10 @@ return Application::configure(basePath: dirname(__DIR__))
         \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
         \Illuminate\Http\Middleware\HandleCors::class, // 👈 Este es el middleware de CORS
     ]);
+
+    $middleware->alias([
+        'audit.api' => \App\Http\Middleware\AuditApiRequest::class,
+    ]);
 })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

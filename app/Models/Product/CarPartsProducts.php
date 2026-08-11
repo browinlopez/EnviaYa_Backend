@@ -2,9 +2,9 @@
 
 namespace App\Models\Product;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Models\Audit\Audit;
 
-class CarPartsProducts extends Model
+class CarPartsProducts extends Audit
 {
     protected $primaryKey = 'car_part_product_id';
 

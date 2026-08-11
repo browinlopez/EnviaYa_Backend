@@ -4,9 +4,9 @@ namespace App\Models\Business;
 
 use App\Models\Business;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use App\Models\Audit\Audit;
 
-class CategoryBusiness extends Model
+class CategoryBusiness extends Audit
 {
     use HasFactory;
 
@@ -18,7 +18,7 @@ class CategoryBusiness extends Model
         "image"
     ];
 
-    // Relación inversa con Business
+    // RelaciÃ³n inversa con Business
     public function businesses()
     {
         return $this->hasMany(Business::class, 'type', 'id');
