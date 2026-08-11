@@ -40,7 +40,9 @@ Route::middleware('throttle:5,10')->group(function () {
 });
 
 // --- Catálogo público: lo que la app muestra antes de loguearse ---
-Route::middleware('throttle:60,1')->group(function () {
+// 300/min y no menos: la app dispara varias de estas por pantalla, y en
+// producción muchos usuarios móviles comparten IP (CGNAT del operador).
+Route::middleware('throttle:300,1')->group(function () {
     Route::get('categories-business/indexFree', [CategoryBusinessController::class, 'index']);
     Route::get('categories-free', [CategoryController::class, 'index']);
     Route::get('top-businesses-free', [BusinessController::class, 'indexByQualification']);
