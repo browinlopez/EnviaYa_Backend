@@ -17,7 +17,8 @@ class Category extends Audit
     protected $fillable = [
         'name',
         'description',
-        'state'
+        'state',
+        'business_category_id'
     ];
 
     // Scope para categorías activas

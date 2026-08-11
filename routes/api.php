@@ -94,6 +94,8 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
 
     //Productos tendero
     Route::prefix('product')->group(function () {
+        // Formulario dinámico: campos y categorías según el tipo del negocio
+        Route::get('schema', [ProductController::class, 'schema']);
         Route::post('index', [ProductController::class, 'index']);
         Route::post('create', [ProductController::class, 'store']);
         Route::post('show', [ProductController::class, 'show']);
