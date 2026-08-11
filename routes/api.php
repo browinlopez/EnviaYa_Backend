@@ -1,10 +1,8 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthController;
-use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Http\Controllers\Business\AffiliationController;
 use App\Http\Controllers\Business\BusinessController;
-use App\Http\Controllers\Business\BusinessUserFavoriteController;
 use App\Http\Controllers\Business\CategoryBusinessController;
 use App\Http\Controllers\Business\FavoriteController;
 use App\Http\Controllers\Category\CategoryController;
@@ -16,42 +14,63 @@ use App\Http\Controllers\Payment\BoldWebhookController;
 use App\Http\Controllers\Product\ProductController;
 use App\Http\Controllers\Review\ReviewController;
 use App\Http\Controllers\User\UserController;
-use App\Models\OrdersSales;
-use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Foundation\Auth\EmailVerificationRequest;
 
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/forgot-password', [AuthController::class, 'resetPassword']);
-Route::post('/reset-password', [AuthController::class, 'resetPasswordConfirm']);
+/*
+|--------------------------------------------------------------------------
+| RUTAS PÚBLICAS (sin token)
+|--------------------------------------------------------------------------
+| Regla: acá solo va lo que un usuario SIN sesión necesita. Todo lo demás
+| vive en el grupo auth:sanctum de abajo. Cada bloque público lleva rate
+| limiting (throttle:intentos,minutos) porque son la superficie de ataque.
+*/
 
-//Categoria sin Auth
-Route::get('categories-business/indexFree', [CategoryBusinessController::class, 'index']);
-Route::get('categories-free/', [CategoryController::class, 'index']);
-Route::get('top-businesses-free', [BusinessController::class, 'indexByQualification']);
-
-// Envio de correos de verificación
-Route::post('/resend-verification-email', [AuthController::class, 'resendVerificationEmail']);
-Route::post(
-    '/email/resend-verification',
-    [AuthController::class, 'resendVerificationEmail']
-)->middleware('throttle:5,10');
-
-//Bold
-Route::prefix('bold')->group(function () {
-    Route::post('/intent', [PaymentController::class, 'createIntent']);
-    Route::post('/payment', [PaymentController::class, 'makePayment']);
-    Route::get('/status/{ref}', [PaymentController::class, 'checkStatus']);
+// --- Autenticación: throttle agresivo contra fuerza bruta ---
+Route::middleware('throttle:10,1')->group(function () {
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/login', [AuthController::class, 'login']);
 });
 
-// Bold llama acá directo cuando el estado de un pago cambia (QR, tarjeta, etc.)
-Route::post('webhooks/bold', [BoldWebhookController::class, 'handle']);
+// --- Recuperación de cuenta: pocos intentos, ventana larga (envían correo) ---
+Route::middleware('throttle:5,10')->group(function () {
+    Route::post('/forgot-password', [AuthController::class, 'resetPassword']);
+    Route::post('/reset-password', [AuthController::class, 'resetPasswordConfirm']);
+    Route::post('/resend-verification-email', [AuthController::class, 'resendVerificationEmail']);
+    Route::post('/email/resend-verification', [AuthController::class, 'resendVerificationEmail']);
+});
 
+// --- Catálogo público: lo que la app muestra antes de loguearse ---
+Route::middleware('throttle:60,1')->group(function () {
+    Route::get('categories-business/indexFree', [CategoryBusinessController::class, 'index']);
+    Route::get('categories-free', [CategoryController::class, 'index']);
+    Route::get('top-businesses-free', [BusinessController::class, 'indexByQualification']);
+});
+
+// --- Webhooks de terceros: sin token de usuario, protegidos por firma HMAC ---
+Route::post('webhooks/bold', [BoldWebhookController::class, 'handle'])
+    ->middleware('throttle:120,1');
+
+/*
+|--------------------------------------------------------------------------
+| RUTAS AUTENTICADAS (auth:sanctum)
+|--------------------------------------------------------------------------
+| Todo endpoint nuevo se agrega AQUÍ por defecto. Solo se saca al bloque
+| público con una razón explícita (y con throttle).
+*/
 Route::middleware('auth:sanctum')->group(function () {
     //Auth
     Route::get('/profile', [AuthController::class, 'profile']);
     Route::post('/logout', [AuthController::class, 'logout']);
+
+    //Pagos (Bold): el usuario siempre está logueado cuando paga.
+    //Antes eran públicos: cualquiera podía crear intents de pago.
+    Route::prefix('bold')->group(function () {
+        Route::post('/intent', [PaymentController::class, 'createIntent']);
+        Route::post('/payment', [PaymentController::class, 'makePayment']);
+        Route::get('/status/{ref}', [PaymentController::class, 'checkStatus']);
+    });
+    // Alias estilo dev97 que usa la app (GET /payment/status?referenceId=)
+    Route::get('payment/status', [PaymentController::class, 'checkStatusByReference']);
 
     Route::prefix('users')->group(function () {
         // Listar usuarios
@@ -101,7 +120,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('IncomeBusiness', [OrderController::class, 'incomeBusiness']); // Tendero / negocio
         Route::post('orders', [OrderController::class, 'store']); // Crear orden
         Route::put('update', [OrderController::class, 'updateStatus']); // Crear orden
-        /* Route::post('geolocation', [OrderController::class, 'updateLocation']); */
         Route::post('geolocation', [OrderController::class, 'storeGeolocation']);
         Route::get('geolocation/latest', [OrderController::class, 'latest']);
         Route::get('/pending-review', [OrderController::class, 'ordersPendingReview']);
@@ -149,8 +167,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/showDomiciliary', [DomiciliaryController::class, 'showDomiciliary']);      // Obtener uno
         Route::post('/updateDomiciliary', [DomiciliaryController::class, 'updateDomiciliary']);  // Actualizar
         Route::post('/deleteDomiciliary', [DomiciliaryController::class, 'deleteDomiciliary']);  // Eliminar
-        Route::post('/assignToBusiness', [DomiciliaryController::class, 'assignToBusiness']);  // Actualizar
-        Route::post('/listbussiness', [DomiciliaryController::class, 'listBusinessesByDomiciliary']);  // Eliminar   
+        Route::post('/assignToBusiness', [DomiciliaryController::class, 'assignToBusiness']);
+        Route::post('/listbussiness', [DomiciliaryController::class, 'listBusinessesByDomiciliary']);
         Route::post('/incomeDomiciliary', [DomiciliaryController::class, 'incomeDomiciliary']);
     });
 

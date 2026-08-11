@@ -150,6 +150,40 @@ class PaymentController extends Controller
     }
 
     /**
+     * Consultar estado del pago por query string (GET /payment/status).
+     *
+     * La app móvil (migrada a la API de dev97) manda el order_id numérico
+     * como referenceId; internamente el estado se consulta con la referencia
+     * Bold del intent más reciente de esa orden. Devuelve además `status` en
+     * la raíz porque la app lo lee ahí.
+     */
+    public function checkStatusByReference(\Illuminate\Http\Request $request, BoldService $bold)
+    {
+        $reference = (string) $request->query('referenceId', '');
+
+        if ($reference === '') {
+            return response()->json(['message' => 'referenceId es requerido'], 422);
+        }
+
+        if (ctype_digit($reference)) {
+            $intent = PaymentIntent::where('orderSales_id', $reference)
+                ->orderByDesc('id')
+                ->first();
+
+            if (!$intent) {
+                return response()->json(['message' => 'No hay intento de pago para esa orden'], 404);
+            }
+
+            $reference = $intent->bold_reference_id;
+        }
+
+        $payload = $this->checkStatus($reference, $bold)->getData(true);
+        $payload['status'] = $payload['payment_status'] ?? null;
+
+        return response()->json($payload);
+    }
+
+    /**
      * Consultar estado del pago
      */
     public function checkStatus(string $reference, BoldService $bold)
