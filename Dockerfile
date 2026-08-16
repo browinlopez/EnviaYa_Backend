@@ -81,12 +81,16 @@ RUN mkdir -p storage/framework/{sessions,views,cache} \
     && chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
-# Instalar Composer para Octane
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-
-# Instalar Laravel Octane + Swoole con versión compatible
-RUN composer require laravel/octane:^2.1 --with-all-dependencies \
-    && php artisan octane:install --server=swoole
+# Octane ya viene instalado: es una dependencia declarada en composer.json, así
+# que el stage 3 lo resuelve desde composer.lock junto al resto y config/octane.php
+# está versionado en el repositorio.
+#
+# Antes se hacía aquí un `composer require laravel/octane --with-all-dependencies`,
+# lo cual traía cuatro problemas: el build dejaba de ser reproducible (resolvía
+# contra Packagist en vivo, no contra el lock), `--with-all-dependencies` podía
+# subir otros paquetes solo en producción, al no llevar `--no-dev` metía las
+# dependencias de desarrollo en la imagen final, y obligaba a instalar Composer
+# aquí para poder ejecutarlo.
 
 # Cache de configuraciones y rutas
 RUN php artisan config:cache \
