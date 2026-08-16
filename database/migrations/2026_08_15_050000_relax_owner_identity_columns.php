@@ -1,7 +1,9 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * La papelería del propietario deja de ser obligatoria en la base.
@@ -16,17 +18,46 @@ use Illuminate\Support\Facades\DB;
  */
 return new class extends Migration
 {
+    /*
+     * `ALTER TABLE ... MODIFY` es sintaxis de MySQL, que es lo que corre en
+     * producción. Los tests usan SQLite en memoria, donde eso no existe y
+     * tumbaba la suite completa, así que el resto de motores va por el schema
+     * builder, que Laravel traduce a la reconstrucción de tabla que toque.
+     */
+    private function esMysql(): bool
+    {
+        return in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true);
+    }
+
     public function up(): void
     {
-        DB::statement('ALTER TABLE `owner` MODIFY `document_type_id` BIGINT UNSIGNED NULL');
-        DB::statement('ALTER TABLE `owner` MODIFY `document_number` VARCHAR(50) NULL');
-        DB::statement('ALTER TABLE `owner` MODIFY `notes` TEXT NULL');
+        if ($this->esMysql()) {
+            DB::statement('ALTER TABLE `owner` MODIFY `document_type_id` BIGINT UNSIGNED NULL');
+            DB::statement('ALTER TABLE `owner` MODIFY `document_number` VARCHAR(50) NULL');
+            DB::statement('ALTER TABLE `owner` MODIFY `notes` TEXT NULL');
+
+            return;
+        }
+
+        Schema::table('owner', function (Blueprint $table) {
+            $table->unsignedBigInteger('document_type_id')->nullable()->change();
+            $table->string('document_number', 50)->nullable()->change();
+            $table->text('notes')->nullable()->change();
+        });
     }
 
     public function down(): void
     {
         // Volver a NOT NULL exigiría inventar un valor para las filas que
         // queden sin documento, así que solo se restaura el tamaño de `notes`.
-        DB::statement('ALTER TABLE `owner` MODIFY `notes` VARCHAR(45) NULL');
+        if ($this->esMysql()) {
+            DB::statement('ALTER TABLE `owner` MODIFY `notes` VARCHAR(45) NULL');
+
+            return;
+        }
+
+        Schema::table('owner', function (Blueprint $table) {
+            $table->string('notes', 45)->nullable()->change();
+        });
     }
 };
