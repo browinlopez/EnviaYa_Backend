@@ -4,7 +4,25 @@ use App\Models\Business;
 use App\Models\Business\CategoryBusiness;
 use App\Models\Product\Category;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
+
+/**
+ * Asigna una categoría de producto a una categoría de negocio.
+ *
+ * La relación es de muchos a muchos y vive en `category_category_business`;
+ * `category.business_category_id` quedó solo como columna heredada que apunta
+ * a la primera. El backend valida contra la pivote, así que un escenario que
+ * rellene únicamente la columna no representa ningún estado real: es lo que
+ * hace `AdminApiController::sincronizarCategoriasDeNegocio` al guardar.
+ */
+function asignarCategoriaANegocio(int $categoryId, int $businessCategoryId): void
+{
+    DB::table('category_category_business')->insertOrIgnore([
+        'category_id'          => $categoryId,
+        'business_category_id' => $businessCategoryId,
+    ]);
+}
 
 /**
  * Crea el escenario mínimo: un negocio del tipo dado, una categoría de ese
@@ -28,6 +46,8 @@ function productTestSetup(int $businessType): array
         'state' => 1,
         'business_category_id' => $businessType,
     ]);
+
+    asignarCategoriaANegocio($category->category_id, $businessType);
 
     Sanctum::actingAs(User::factory()->create());
 
@@ -75,6 +95,11 @@ test('rechaza categoria de otro tipo de negocio', function () {
         'state' => 1,
         'business_category_id' => 1,
     ]);
+
+    // Se asigna de verdad al tipo 1. Sin esto la categoría no estaría asignada
+    // a ningún tipo y el rechazo llegaría por no existir en la pivote, no por
+    // pertenecer a otro tipo, que es la regla que este test comprueba.
+    asignarCategoriaANegocio($categoryDeTienda->category_id, 1);
 
     $response = $this->postJson('/v1/product/create', [
         'name' => 'Acetaminofén',
