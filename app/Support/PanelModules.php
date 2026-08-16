@@ -28,6 +28,13 @@ class PanelModules
         'ordenes'       => ['Órdenes', 'Operación'],
         'domiciliarios' => ['Domiciliarios', 'Operación'],
         'pagos'         => ['Pagos', 'Operación'],
+        'liquidaciones' => ['Liquidaciones', 'Operación'],
+
+        // Seguridad y salud en el trabajo. Grupo propio porque responde a otra
+        // pregunta que el resto del panel: no "cómo va la operación" sino
+        // "está la gente en condiciones de operar".
+        'sst.documentos' => ['Documentación', 'SST'],
+        'sst.incidentes' => ['Incidentes', 'SST'],
 
         'negocios'           => ['Negocios', 'Catálogo'],
         'productos'          => ['Productos', 'Catálogo'],
@@ -47,6 +54,7 @@ class PanelModules
         'conjuntos'    => ['Conjuntos', 'Comunidad'],
         'resenas'      => ['Reseñas', 'Comunidad'],
         'chats'        => ['Conversaciones', 'Comunidad'],
+        'pqrs'         => ['PQRS', 'Comunidad'],
 
         'reportes'  => ['Reportes', 'Control'],
         'auditoria' => ['Auditoría', 'Control'],

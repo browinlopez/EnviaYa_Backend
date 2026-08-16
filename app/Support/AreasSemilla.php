@@ -58,7 +58,8 @@ class AreasSemilla
                  *    información de negocio.
                  */
                 'ver'         => [
-                    'panel', 'ordenes', 'domiciliarios', 'pagos',
+                    'panel', 'ordenes', 'domiciliarios', 'pagos', 'liquidaciones',
+                    'sst.documentos', 'sst.incidentes', 'pqrs',
                     'negocios', 'productos', 'categorias', 'categorias-negocio',
                     'marketing', 'marketing.anunciantes', 'marketing.campanas',
                     'marketing.banners', 'marketing.cupones',
@@ -77,12 +78,13 @@ class AreasSemilla
                 'description' => 'Cuadra la caja: pagos, liquidaciones a negocios y domiciliarios, y lo comprometido en pauta.',
                 'is_system'   => false,
                 'ver'         => [
-                    'panel', 'ordenes', 'pagos', 'negocios', 'propietarios',
-                    'domiciliarios', 'reportes', 'auditoria', 'marketing',
+                    'panel', 'ordenes', 'pagos', 'liquidaciones',
+                    'negocios', 'propietarios', 'domiciliarios',
+                    'reportes', 'auditoria', 'marketing',
                 ],
                 // Los pedidos los ve para cuadrar, pero cambiarles el estado es
                 // una decisión operativa que no le corresponde.
-                'gestionar'   => ['pagos'],
+                'gestionar'   => ['pagos', 'liquidaciones'],
             ],
 
             'marketing' => [
@@ -114,6 +116,9 @@ class AreasSemilla
                     'panel', 'ordenes', 'reportes',
                     'negocios', 'productos', 'categorias', 'categorias-negocio',
                     'propietarios', 'conjuntos', 'resenas',
+                    // Las quejas sobre un negocio son información comercial:
+                    // se ven, pero atenderlas es de Calidad.
+                    'pqrs',
                     'marketing', 'marketing.destacados',
                 ],
                 'gestionar'   => [
@@ -129,10 +134,14 @@ class AreasSemilla
                 'name'        => 'SST',
                 'description' => 'Seguridad y salud en el trabajo: vinculación, documentación y condiciones de los domiciliarios.',
                 'is_system'   => false,
-                'ver'         => ['panel', 'domiciliarios', 'ordenes', 'reportes'],
+                'ver'         => [
+                    'panel', 'domiciliarios', 'ordenes', 'reportes',
+                    'sst.documentos', 'sst.incidentes',
+                ],
                 // Gestiona la ficha del domiciliario porque ahí viven el acuerdo
-                // de vinculación y su papelería.
-                'gestionar'   => ['domiciliarios'],
+                // de vinculación y su papelería, y ahora también su
+                // documentación vigente y los incidentes que lo involucran.
+                'gestionar'   => ['domiciliarios', 'sst.documentos', 'sst.incidentes'],
             ],
 
             'calidad' => [
@@ -140,12 +149,15 @@ class AreasSemilla
                 'description' => 'Vigila la experiencia: reseñas, conversaciones y cómo se están cumpliendo los pedidos.',
                 'is_system'   => false,
                 'ver'         => [
-                    'panel', 'resenas', 'chats', 'ordenes',
+                    'panel', 'resenas', 'chats', 'pqrs', 'ordenes',
                     'domiciliarios', 'negocios', 'reportes',
+                    // Un reclamo por un accidente durante la entrega necesita
+                    // mirar el incidente; registrarlo sigue siendo de SST.
+                    'sst.incidentes',
                 ],
-                // Puede retirar una reseña que incumple las normas; no edita
-                // pedidos ni negocios, solo los observa.
-                'gestionar'   => ['resenas'],
+                // Puede retirar una reseña que incumple las normas y lleva los
+                // PQRS de punta a punta; no edita pedidos ni negocios.
+                'gestionar'   => ['resenas', 'pqrs'],
             ],
         ];
     }

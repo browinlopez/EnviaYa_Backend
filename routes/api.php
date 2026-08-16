@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\Api\AdminApiController;
 use App\Http\Controllers\Admin\Api\AreasApiController;
 use App\Http\Controllers\Admin\Api\MarketingApiController;
+use App\Http\Controllers\Admin\Api\OperacionApiController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Business\AffiliationController;
 use App\Http\Controllers\Business\BusinessController;
@@ -351,6 +352,41 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::get('audits', [AdminApiController::class, 'audits'])->middleware('modulo:auditoria');
 
         Route::get('reports/{kind}', [AdminApiController::class, 'report'])->middleware('modulo:reportes');
+
+        /*
+        |------------------------------------------------------------------
+        | SST · CALIDAD · CONTABILIDAD
+        |------------------------------------------------------------------
+        | Comparten controlador porque comparten forma, pero NO permisos: cada
+        | bloque va detrás de su propio módulo, así que SST no alcanza las
+        | liquidaciones aunque el código viva al lado.
+        */
+        Route::prefix('sst')->group(function () {
+            Route::get('documentos', [OperacionApiController::class, 'documentos'])->middleware('modulo:sst.documentos');
+            Route::post('documentos', [OperacionApiController::class, 'storeDocumento'])->middleware('modulo:sst.documentos,gestionar');
+            Route::put('documentos/{id}', [OperacionApiController::class, 'updateDocumento'])->middleware('modulo:sst.documentos,gestionar');
+            Route::delete('documentos/{id}', [OperacionApiController::class, 'deleteDocumento'])->middleware('modulo:sst.documentos,gestionar');
+
+            Route::get('incidentes', [OperacionApiController::class, 'incidentes'])->middleware('modulo:sst.incidentes');
+            Route::post('incidentes', [OperacionApiController::class, 'storeIncidente'])->middleware('modulo:sst.incidentes,gestionar');
+            Route::put('incidentes/{id}', [OperacionApiController::class, 'updateIncidente'])->middleware('modulo:sst.incidentes,gestionar');
+        });
+
+        Route::prefix('pqrs')->group(function () {
+            Route::get('/', [OperacionApiController::class, 'pqrs'])->middleware('modulo:pqrs');
+            Route::post('/', [OperacionApiController::class, 'storePqrs'])->middleware('modulo:pqrs,gestionar');
+            Route::get('{id}', [OperacionApiController::class, 'showPqrs'])->middleware('modulo:pqrs');
+            Route::put('{id}', [OperacionApiController::class, 'updatePqrs'])->middleware('modulo:pqrs,gestionar');
+            Route::post('{id}/notes', [OperacionApiController::class, 'addPqrsNote'])->middleware('modulo:pqrs,gestionar');
+        });
+
+        Route::prefix('settlements')->group(function () {
+            Route::get('/', [OperacionApiController::class, 'liquidaciones'])->middleware('modulo:liquidaciones');
+            Route::post('/', [OperacionApiController::class, 'generarLiquidacion'])->middleware('modulo:liquidaciones,gestionar');
+            Route::get('{id}', [OperacionApiController::class, 'showLiquidacion'])->middleware('modulo:liquidaciones');
+            Route::put('{id}', [OperacionApiController::class, 'updateLiquidacion'])->middleware('modulo:liquidaciones,gestionar');
+            Route::delete('{id}', [OperacionApiController::class, 'deleteLiquidacion'])->middleware('modulo:liquidaciones,gestionar');
+        });
 
         /*
         |------------------------------------------------------------------
