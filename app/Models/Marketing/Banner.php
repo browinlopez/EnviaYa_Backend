@@ -71,10 +71,17 @@ class Banner extends Model
     {
         $hoy = now()->toDateString();
 
-        return $q->where('state', 1)
+        // Calificadas por el mismo motivo que en los demás scopes del módulo:
+        // en cuanto esta consulta se combine con un join, `state` deja de ser
+        // resoluble por sí solo.
+        return $q->where($q->qualifyColumn('state'), 1)
             ->whereHas('campaign', fn (Builder $c) => $c->vigente())
-            ->where(fn (Builder $s) => $s->whereNull('starts_at')->orWhereDate('starts_at', '<=', $hoy))
-            ->where(fn (Builder $s) => $s->whereNull('ends_at')->orWhereDate('ends_at', '>=', $hoy));
+            ->where(fn (Builder $s) => $s
+                ->whereNull($s->qualifyColumn('starts_at'))
+                ->orWhereDate($s->qualifyColumn('starts_at'), '<=', $hoy))
+            ->where(fn (Builder $s) => $s
+                ->whereNull($s->qualifyColumn('ends_at'))
+                ->orWhereDate($s->qualifyColumn('ends_at'), '>=', $hoy));
     }
 
     /**

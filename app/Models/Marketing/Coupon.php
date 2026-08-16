@@ -68,13 +68,17 @@ class Coupon extends Model
         return $this->belongsTo(Advertiser::class, 'advertiser_id');
     }
 
+    /**
+     * Columnas calificadas: el listado del panel une `business` y `category`,
+     * y ambas tienen `state`. Sin calificar, la consulta es ambigua en MySQL.
+     */
     public function scopeVigente(Builder $q): Builder
     {
         $hoy = now()->toDateString();
 
-        return $q->where('state', 1)
-            ->whereDate('starts_at', '<=', $hoy)
-            ->whereDate('ends_at', '>=', $hoy);
+        return $q->where($q->qualifyColumn('state'), 1)
+            ->whereDate($q->qualifyColumn('starts_at'), '<=', $hoy)
+            ->whereDate($q->qualifyColumn('ends_at'), '>=', $hoy);
     }
 
     /** ¿Se agotó el cupo global? */

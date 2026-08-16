@@ -40,12 +40,21 @@ class FeaturedBusiness extends Model
         return $this->belongsTo(Business::class, 'business_id', 'busines_id');
     }
 
+    /**
+     * Destaques en curso hoy.
+     *
+     * Las columnas van calificadas con su tabla porque este scope se usa junto
+     * a un join con `business`, que también tiene `state`: sin calificar,
+     * MySQL responde "Column 'state' in where clause is ambiguous" y el
+     * endpoint público se cae entero. SQLite no lo detecta, así que el fallo
+     * solo aparecía contra la base real.
+     */
     public function scopeVigente(Builder $q): Builder
     {
         $hoy = now()->toDateString();
 
-        return $q->where('state', 1)
-            ->whereDate('starts_at', '<=', $hoy)
-            ->whereDate('ends_at', '>=', $hoy);
+        return $q->where($q->qualifyColumn('state'), 1)
+            ->whereDate($q->qualifyColumn('starts_at'), '<=', $hoy)
+            ->whereDate($q->qualifyColumn('ends_at'), '>=', $hoy);
     }
 }

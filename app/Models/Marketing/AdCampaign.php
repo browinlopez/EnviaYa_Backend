@@ -58,8 +58,8 @@ class AdCampaign extends Model
      */
     public function scopeVigente(Builder $q): Builder
     {
-        return $q->where('state', self::ACTIVA)
-            ->whereDate('starts_at', '<=', now()->toDateString())
-            ->whereDate('ends_at', '>=', now()->toDateString());
+        return $q->where($q->qualifyColumn('state'), self::ACTIVA)
+            ->whereDate($q->qualifyColumn('starts_at'), '<=', now()->toDateString())
+            ->whereDate($q->qualifyColumn('ends_at'), '>=', now()->toDateString());
     }
 }

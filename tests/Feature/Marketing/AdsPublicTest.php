@@ -4,6 +4,7 @@ use App\Models\Marketing\AdCampaign;
 use App\Models\Marketing\Advertiser;
 use App\Models\Marketing\Banner;
 use App\Models\Marketing\Coupon;
+use App\Models\Marketing\FeaturedBusiness;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -142,6 +143,76 @@ test('rastrear un banner inexistente no revienta', function () {
     // Pasa cuando el banner se apaga mientras el cliente lo tenía en pantalla.
     $this->postJson('/v1/ads/banners/99999/track', ['type' => 'impression'])
         ->assertNoContent();
+});
+
+/* ------------------------- NEGOCIOS DESTACADOS ------------------------ */
+
+test('entrega los negocios destacados vigentes', function () {
+    /*
+     * Este caso existe por un fallo real: el scope `vigente()` filtraba por
+     * `state` sin calificar la tabla, y como la consulta une `business` —que
+     * también tiene `state`— MySQL respondía "Column 'state' in where clause
+     * is ambiguous" y el endpoint entero se caía. No se había detectado porque
+     * ninguna prueba lo ejercitaba CON un negocio unido de verdad.
+     */
+    $negocio = DB::table('business')->insertGetId([
+        'name'          => 'Tienda Destacada',
+        'qualification' => 0,
+        'state'         => 1,
+    ]);
+
+    FeaturedBusiness::create([
+        'business_id' => $negocio,
+        'placement'   => 'home_top',
+        'priority'    => 5,
+        'starts_at'   => now()->subDay()->toDateString(),
+        'ends_at'     => now()->addDays(10)->toDateString(),
+        'paid_amount' => 150000,
+    ]);
+
+    $this->getJson('/v1/ads/featured?placement=home_top')
+        ->assertOk()
+        ->assertJsonCount(1)
+        ->assertJsonPath('0.name', 'Tienda Destacada');
+});
+
+test('no entrega un destaque cuyo negocio está inactivo', function () {
+    // El destaque compra posición, no visibilidad de algo cerrado.
+    $negocio = DB::table('business')->insertGetId([
+        'name'          => 'Tienda Cerrada',
+        'qualification' => 0,
+        'state'         => 0,
+    ]);
+
+    FeaturedBusiness::create([
+        'business_id' => $negocio,
+        'placement'   => 'home_top',
+        'starts_at'   => now()->subDay()->toDateString(),
+        'ends_at'     => now()->addDays(10)->toDateString(),
+    ]);
+
+    $this->getJson('/v1/ads/featured?placement=home_top')
+        ->assertOk()
+        ->assertJsonCount(0);
+});
+
+test('no entrega un destaque fuera de su periodo', function () {
+    $negocio = DB::table('business')->insertGetId([
+        'name'          => 'Tienda Vencida',
+        'qualification' => 0,
+        'state'         => 1,
+    ]);
+
+    FeaturedBusiness::create([
+        'business_id' => $negocio,
+        'placement'   => 'home_top',
+        'starts_at'   => now()->subDays(30)->toDateString(),
+        'ends_at'     => now()->subDay()->toDateString(),
+    ]);
+
+    $this->getJson('/v1/ads/featured?placement=home_top')
+        ->assertOk()
+        ->assertJsonCount(0);
 });
 
 /* ---------------------------------------------------------------------- */
