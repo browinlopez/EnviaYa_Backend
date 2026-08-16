@@ -36,6 +36,11 @@ class OrdersSales extends Audit
         // crear la orden para no tener que reconstruirlo después.
         'subtotal',
         'domicilio',
+        // Descuento por cupón y cuál se usó. Se guardan en la orden para que
+        // `total` cuadre contra `subtotal + domicilio - discount`: sin esto la
+        // diferencia no se puede explicar mirando el pedido.
+        'discount',
+        'coupon_id',
         // Parte del domicilio que le queda al domiciliario (el resto es de la
         // plataforma). Se calcula al crear la orden y no se recalcula después.
         'domiciliary_fee',

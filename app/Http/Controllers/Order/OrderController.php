@@ -19,6 +19,7 @@ use App\Models\Product\ProductBusiness;
 use App\Models\User;
 use App\Models\User\UserAddress;
 use App\Services\BoldService;
+use App\Services\CouponService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -389,6 +390,9 @@ class OrderController extends Controller
             'pickup_time' => 'nullable|date',
             'is_scheduled' => 'sometimes|boolean',
             'delivery_date' => 'nullable|required_if:is_scheduled,true|date|after:now',
+            // Opcional: el código que el usuario escribió en el carrito. El
+            // descuento NO llega desde el cliente, se recalcula acá.
+            'coupon_code' => 'sometimes|nullable|string|max:40',
         ]);
 
         /* ========= VALIDACIONES REALES ========= */
@@ -457,7 +461,26 @@ class OrderController extends Controller
 
             // Tarifa de domicilio del lado del servidor (config/services.php)
             $domicilio = $isPickup ? 0 : (float) config('services.delivery_fee', 2000);
-            $total = $subtotal + $domicilio;
+
+            /*
+             * Cupón. El descuento se recalcula en el servidor a partir del
+             * código: aceptar el monto que mande el cliente sería dejar que
+             * cualquiera se ponga el descuento que quiera.
+             *
+             * Solo aplica sobre el subtotal de productos, nunca sobre el
+             * domicilio: esa tarifa es del domiciliario, y descontarla saldría
+             * de su bolsillo y no de la promoción.
+             */
+            $cupon = app(CouponService::class)->resolver(
+                $request->input('coupon_code'),
+                $subtotal,
+                (int) $request->user_id,
+                (int) $business->busines_id,
+            );
+
+            $descuento = $cupon ? $cupon->descuentoPara($subtotal) : 0.0;
+
+            $total = $subtotal + $domicilio - $descuento;
 
             // Del domicilio, una porción es del domiciliario y el resto de la
             // plataforma. Se congela acá: si la comisión cambia después, esta
@@ -474,6 +497,8 @@ class OrderController extends Controller
                 'total' => $total,
                 'subtotal' => $subtotal,
                 'domicilio' => $domicilio,
+                'discount' => $descuento,
+                'coupon_id' => $cupon?->id,
                 'domiciliary_fee' => $domiciliaryFee,
                 'sale_date' => now(),
                 'delivery_date' => $isScheduled ? $deliveryDate : now(),
@@ -495,6 +520,17 @@ class OrderController extends Controller
                     'amount' => $p['amount'],
                     'unit_price' => (float) $prices[$p['product_id']],
                 ]);
+            }
+
+            // El uso se consume ya con la orden creada, dentro de la misma
+            // transacción: si algo falla más abajo, el cupón se libera solo.
+            if ($cupon) {
+                app(CouponService::class)->canjear(
+                    $cupon,
+                    (int) $request->user_id,
+                    (int) $order->orderSales_id,
+                    $descuento,
+                );
             }
 
             /* ========= PAGO ONLINE ========= */
@@ -584,6 +620,16 @@ class OrderController extends Controller
                     'redirect_url' => $payment->redirect_url ?? null,
                 ] : null,
             ], 201);
+        } catch (\RuntimeException $e) {
+            DB::rollBack();
+
+            /*
+             * Rechazos de cupón (vencido, agotado, tope por persona). El mensaje
+             * ya viene redactado para quien pide y va tal cual: dejarlo caer en
+             * el catch de abajo lo convertiría en "Error al crear la orden" y el
+             * usuario reintentaría el mismo código sin saber qué pasó.
+             */
+            return response()->json(['message' => $e->getMessage()], 422);
         } catch (\Exception $e) {
             DB::rollBack();
 

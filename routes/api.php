@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\Api\AdminApiController;
+use App\Http\Controllers\Admin\Api\MarketingApiController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Business\AffiliationController;
 use App\Http\Controllers\Business\BusinessController;
@@ -9,6 +10,7 @@ use App\Http\Controllers\Business\FavoriteController;
 use App\Http\Controllers\Category\CategoryController;
 use App\Http\Controllers\Chat\ChatController;
 use App\Http\Controllers\Domiciliary\DomiciliaryController;
+use App\Http\Controllers\Marketing\AdsController;
 use App\Http\Controllers\Order\OrderController;
 use App\Http\Controllers\Payment\PaymentController;
 use App\Http\Controllers\Payment\BoldWebhookController;
@@ -51,6 +53,27 @@ Route::middleware('throttle:300,1')->group(function () {
     // datos de contacto del reseñador).
     Route::post('reviews/business/by', [ReviewController::class, 'listReviewsByBusiness']);
 });
+
+/*
+ * --- Publicidad: la ve todo el mundo, con sesión y sin ella ---
+ *
+ * Va en la zona pública a propósito: exigir token dejaría sin banners
+ * justamente a quien todavía no se ha registrado, que es el público al que más
+ * interesa alcanzar. Cuando SÍ llega un token, el controlador lo aprovecha por
+ * el guard `sanctum` para segmentar por rol y atribuir el evento.
+ *
+ * El registro de eventos lleva su propio throttle, mucho más alto que el resto:
+ * cada banner que aparece en pantalla dispara una impresión, así que una sola
+ * sesión de scroll genera decenas de llamadas legítimas.
+ */
+Route::middleware('throttle:300,1')->group(function () {
+    Route::get('ads/banners', [AdsController::class, 'banners']);
+    Route::get('ads/featured', [AdsController::class, 'featured']);
+    Route::post('ads/coupons/validate', [AdsController::class, 'validateCoupon']);
+});
+
+Route::post('ads/banners/{id}/track', [AdsController::class, 'track'])
+    ->middleware('throttle:600,1');
 
 // --- Webhooks de terceros: sin token de usuario, protegidos por firma HMAC ---
 Route::post('webhooks/bold', [BoldWebhookController::class, 'handle'])
@@ -293,5 +316,55 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::get('audits', [AdminApiController::class, 'audits']);
 
         Route::get('reports/{kind}', [AdminApiController::class, 'report']);
+
+        /*
+        |------------------------------------------------------------------
+        | MARKETING
+        |------------------------------------------------------------------
+        | Mismo prefijo y mismo middleware `admin` que el resto del panel:
+        | desde afuera es la misma API. Cambia solo el controlador, porque
+        | AdminApiController ya es demasiado grande para seguir creciendo.
+        |
+        | La contraparte pública de estos endpoints —lo que consultan la app
+        | y la web— está arriba, bajo `ads/*`.
+        */
+        Route::prefix('marketing')->group(function () {
+            Route::get('overview', [MarketingApiController::class, 'overview']);
+
+            Route::get('advertisers', [MarketingApiController::class, 'advertisers']);
+            Route::post('advertisers', [MarketingApiController::class, 'storeAdvertiser']);
+            Route::put('advertisers/{id}', [MarketingApiController::class, 'updateAdvertiser']);
+            Route::delete('advertisers/{id}', [MarketingApiController::class, 'deleteAdvertiser']);
+
+            Route::get('campaigns', [MarketingApiController::class, 'campaigns']);
+            Route::post('campaigns', [MarketingApiController::class, 'storeCampaign']);
+            Route::put('campaigns/{id}', [MarketingApiController::class, 'updateCampaign']);
+            Route::delete('campaigns/{id}', [MarketingApiController::class, 'deleteCampaign']);
+
+            Route::get('banners', [MarketingApiController::class, 'banners']);
+            Route::post('banners', [MarketingApiController::class, 'storeBanner']);
+            Route::get('banners/{id}', [MarketingApiController::class, 'showBanner']);
+            Route::put('banners/{id}', [MarketingApiController::class, 'updateBanner']);
+            Route::delete('banners/{id}', [MarketingApiController::class, 'deleteBanner']);
+            Route::get('banners/{id}/metrics', [MarketingApiController::class, 'bannerMetrics']);
+
+            Route::get('coupons', [MarketingApiController::class, 'coupons']);
+            Route::post('coupons', [MarketingApiController::class, 'storeCoupon']);
+            Route::put('coupons/{id}', [MarketingApiController::class, 'updateCoupon']);
+            Route::delete('coupons/{id}', [MarketingApiController::class, 'deleteCoupon']);
+            Route::get('coupons/{id}/redemptions', [MarketingApiController::class, 'couponRedemptions']);
+
+            Route::get('featured', [MarketingApiController::class, 'featured']);
+            Route::post('featured', [MarketingApiController::class, 'storeFeatured']);
+            Route::put('featured/{id}', [MarketingApiController::class, 'updateFeatured']);
+            Route::delete('featured/{id}', [MarketingApiController::class, 'deleteFeatured']);
+
+            Route::get('push', [MarketingApiController::class, 'pushCampaigns']);
+            Route::post('push', [MarketingApiController::class, 'storePushCampaign']);
+            Route::post('push/preview', [MarketingApiController::class, 'pushPreview']);
+            Route::put('push/{id}', [MarketingApiController::class, 'updatePushCampaign']);
+            Route::post('push/{id}/send', [MarketingApiController::class, 'sendPushCampaign']);
+            Route::post('push/{id}/cancel', [MarketingApiController::class, 'cancelPushCampaign']);
+        });
     });
 });

@@ -38,6 +38,11 @@ class MediaService
         // Solo las de NEGOCIO: son las que la app pinta en su carrusel. Las de
         // producto no tienen columna de imagen en la base.
         'categorias' => 'categorias',
+        // Piezas publicitarias. Van al mismo bucket que el resto en vez de a un
+        // hospedaje aparte: la app ya sabe resolver estas URL y el panel ya
+        // sabe subirlas, así que un segundo mecanismo solo para publicidad
+        // sería otra cosa que mantener sin ganar nada.
+        'banners' => 'banners',
     ];
 
     public const TIPOS = ['logo', 'galeria', 'documentos'];
@@ -49,7 +54,7 @@ class MediaService
      * documentos que valgan. Se declara acá y no en la interfaz para que la
      * regla se cumpla venga la petición de donde venga.
      */
-    public const UNA_SOLA_IMAGEN = ['productos', 'categorias'];
+    public const UNA_SOLA_IMAGEN = ['productos', 'categorias', 'banners'];
 
     /**
      * Entidades que SOLO admiten documentos.
