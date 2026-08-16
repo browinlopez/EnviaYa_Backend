@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\BusinessMediaService;
 use App\Services\ContratoService;
 use App\Services\MediaService;
+use App\Support\ListadoPaginado;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -887,9 +888,30 @@ class AdminApiController extends Controller
             );
     }
 
-    public function orders()
+    /**
+     * Pedidos, paginados en el servidor.
+     *
+     * Es el listado que crece sin techo: cada pedido que entra se queda para
+     * siempre. Devolverlos todos funcionaba con nueve y se vuelve inusable con
+     * cincuenta mil, así que la búsqueda, el orden y el corte se hacen contra
+     * la base y no en el navegador.
+     */
+    public function orders(Request $request)
     {
-        return response()->json($this->ordenesBase()->orderByDesc('o.sale_date')->get());
+        return response()->json(ListadoPaginado::responder(
+            $request,
+            $this->ordenesBase(),
+            buscables: ['bu.name', 'b.name', 'du.name', 'o.orderSales_id'],
+            ordenables: [
+                'orderSales_id' => 'o.orderSales_id',
+                'sale_date'     => 'o.sale_date',
+                'total'         => 'o.total',
+                'state'         => 'o.state',
+                'business_name' => 'b.name',
+                'buyer_name'    => 'bu.name',
+            ],
+            ordenPorDefecto: 'sale_date',
+        ));
     }
 
     public function showOrder($id)
@@ -1267,31 +1289,43 @@ class AdminApiController extends Controller
        PAGOS
        ================================================================== */
 
-    public function payments()
+    /** Pagos, paginados en el servidor: crecen al mismo ritmo que los pedidos. */
+    public function payments(Request $request)
     {
-        return response()->json(
-            DB::table('payments as p')
-                ->leftJoin('orderssales as o', 'o.orderSales_id', '=', 'p.orderSales_id')
-                ->leftJoin('buyer as by', 'by.buyer_id', '=', 'o.buyer_id')
-                ->leftJoin('user as bu', 'bu.user_id', '=', 'by.user_id')
-                // El negocio del pedido: un pago suelto no dice a qué tienda
-                // corresponde la venta, que es justo lo que hace falta para
-                // conciliar y para pagarle a cada uno.
-                ->leftJoin('business as b', 'b.busines_id', '=', 'o.busines_id')
-                ->leftJoin('payment_methods as pm', 'pm.methods_id', '=', 'p.methods_id')
-                ->orderByDesc('p.payments_id')
-                ->get([
-                    'p.payments_id', 'p.orderSales_id', 'p.provider', 'p.provider_payment_id',
-                    'p.amount', 'p.subtotal', 'p.total', 'p.domicilio', 'p.domiciliary_fee',
-                    'p.payment_status', 'p.status', 'p.payment_date', 'p.created_at',
-                    'bu.name as buyer_name', 'pm.name as method_name',
-                    'b.busines_id', 'b.name as business_name', 'b.logo as business_logo',
-                    // Estado del pedido al que pertenece el cobro: un pago
-                    // aprobado sobre un pedido que todavía va en camino no es
-                    // lo mismo que uno ya entregado.
-                    'o.state as order_state', 'o.delivery_date',
-                ])
-        );
+        $q = DB::table('payments as p')
+            ->leftJoin('orderssales as o', 'o.orderSales_id', '=', 'p.orderSales_id')
+            ->leftJoin('buyer as by', 'by.buyer_id', '=', 'o.buyer_id')
+            ->leftJoin('user as bu', 'bu.user_id', '=', 'by.user_id')
+            // El negocio del pedido: un pago suelto no dice a qué tienda
+            // corresponde la venta, que es justo lo que hace falta para
+            // conciliar y para pagarle a cada uno.
+            ->leftJoin('business as b', 'b.busines_id', '=', 'o.busines_id')
+            ->leftJoin('payment_methods as pm', 'pm.methods_id', '=', 'p.methods_id')
+            ->select([
+                'p.payments_id', 'p.orderSales_id', 'p.provider', 'p.provider_payment_id',
+                'p.amount', 'p.subtotal', 'p.total', 'p.domicilio', 'p.domiciliary_fee',
+                'p.payment_status', 'p.status', 'p.payment_date', 'p.created_at',
+                'bu.name as buyer_name', 'pm.name as method_name',
+                'b.busines_id', 'b.name as business_name', 'b.logo as business_logo',
+                // Estado del pedido al que pertenece el cobro: un pago
+                // aprobado sobre un pedido que todavía va en camino no es
+                // lo mismo que uno ya entregado.
+                'o.state as order_state', 'o.delivery_date',
+            ]);
+
+        return response()->json(ListadoPaginado::responder(
+            $request,
+            $q,
+            buscables: ['bu.name', 'b.name', 'p.provider_payment_id', 'p.orderSales_id'],
+            ordenables: [
+                'payments_id'   => 'p.payments_id',
+                'amount'        => 'p.amount',
+                'total'         => 'p.total',
+                'payment_date'  => 'p.payment_date',
+                'business_name' => 'b.name',
+            ],
+            ordenPorDefecto: 'payments_id',
+        ));
     }
 
     /* ==================================================================
