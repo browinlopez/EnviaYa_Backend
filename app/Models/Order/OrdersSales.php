@@ -32,6 +32,13 @@ class OrdersSales extends Audit
         'methods_id',
         'forms_id',
         'total',
+        // Desglose del total: productos + tarifa de domicilio. Se guarda al
+        // crear la orden para no tener que reconstruirlo después.
+        'subtotal',
+        'domicilio',
+        // Parte del domicilio que le queda al domiciliario (el resto es de la
+        // plataforma). Se calcula al crear la orden y no se recalcula después.
+        'domiciliary_fee',
         'sale_date',
         'delivery_date',
         'is_scheduled',
@@ -124,6 +131,14 @@ class OrdersSales extends Audit
             'state' => $this->state,
             'is_scheduled' => $this->is_scheduled,
             'has_review' => $this->has_review,
+            'dispatched_at' => $this->dispatched_at,
+            'domiciliary' => $this->domiciliary ? [
+                'domiciliary_id' => $this->domiciliary->domiciliary_id,
+                'user_id' => $this->domiciliary->user->user_id ?? null,
+                'name' => $this->domiciliary->user->name ?? null,
+                'phone' => $this->domiciliary->user->phone ?? null,
+                'qualification' => $this->domiciliary->qualification,
+            ] : null,
             'business' => [
                 'business_id' => $this->business->busines_id ?? null,
                 'name' => $this->business->name ?? null,

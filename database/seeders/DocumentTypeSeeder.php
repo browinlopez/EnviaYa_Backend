@@ -13,7 +13,8 @@ class DocumentTypeSeeder extends Seeder
      */
     public function run(): void
     {
-        DB::table('document_types')->insert([
+        // Idempotente: correr de nuevo actualiza en vez de duplicar
+        $types = [
             [
                 'id' => 1,
                 'code' => 'CC',
@@ -50,6 +51,13 @@ class DocumentTypeSeeder extends Seeder
                 'name_en' => 'Civil Registry',
                 'name_es' => 'Registro civil'
             ]
-        ]);
+        ];
+
+        foreach ($types as $type) {
+            DB::table('document_types')->updateOrInsert(
+                ['id' => $type['id']],
+                $type,
+            );
+        }
     }
 }

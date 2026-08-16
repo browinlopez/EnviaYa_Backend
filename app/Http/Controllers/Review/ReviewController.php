@@ -31,14 +31,25 @@ class ReviewController extends Controller
             case 1: // Buyer
                 $request->validate([
                     'type' => 'required|in:business,domiciliary',
-                    'id' => 'required|integer', // id del negocio o domiciliario
+                    'id' => $request->type === 'business'
+                        ? 'required|integer|exists:business,busines_id'
+                        : 'required|integer|exists:domiciliary,domiciliary_id',
                     'qualification' => 'required|numeric|min:1|max:5',
                     'comment' => 'nullable|string',
                 ]);
 
+                if (!$user->buyer) {
+                    return response()->json([
+                        'message' => 'El usuario no tiene perfil de comprador',
+                    ], 422);
+                }
+
                 if ($request->type === 'business') {
+                    // La columna real es busines_id (una sola "s"); con
+                    // business_id el campo se descartaba del fillable y el
+                    // INSERT reventaba con 500.
                     $review = BusinessReview::create([
-                        'business_id' => $request->id,
+                        'busines_id' => $request->id,
                         'buyer_id' => $user->buyer->buyer_id,
                         'qualification' => $request->qualification,
                         'comment' => $request->comment,
@@ -91,7 +102,11 @@ class ReviewController extends Controller
             $relations = ['user', 'domiciliary'];
         }
 
-        return response()->json($review->loadMissing($relations));
+        // La app comprueba data.review para saber si se creó
+        return response()->json([
+            'message' => 'Review creada',
+            'review' => $review->loadMissing($relations),
+        ], 201);
     }
 
 
@@ -138,8 +153,11 @@ class ReviewController extends Controller
             'business_id' => 'required|integer|exists:business,busines_id'
         ]);
 
+        // Las más recientes primero; las que no tienen fecha (reseñas viejas,
+        // creadas cuando el modelo no guardaba timestamps) quedan al final.
         $reviews = BusinessReview::with('business', 'buyer.user')
             ->where('busines_id', $request->business_id)
+            ->orderByRaw('created_at IS NULL, created_at DESC')
             ->get();
 
         $formatted = $reviews->map(function ($review) {
@@ -148,6 +166,7 @@ class ReviewController extends Controller
                 'qualification' => $review->qualification,
                 'comment' => $review->comment,
                 'state' => $review->state,
+                'created_at' => $review->created_at,
                 // Endpoint público: no exponer el email del reseñador.
                 'user' => $review->buyer && $review->buyer->user ? [
                     'user_id' => $review->buyer->user->user_id,
@@ -176,8 +195,16 @@ class ReviewController extends Controller
 
     public function createBusinessReview(Request $request)
     {
+        // La columna real es busines_id (una sola "s"); se acepta business_id
+        // por compatibilidad con clientes viejos pero se normaliza antes de
+        // validar e insertar (con business_id el fillable lo descartaba y el
+        // INSERT reventaba con "Field 'busines_id' doesn't have a default value").
+        if ($request->filled('business_id') && !$request->filled('busines_id')) {
+            $request->merge(['busines_id' => $request->business_id]);
+        }
+
         $request->validate([
-            'business_id' => 'required|integer|exists:business,business_id',
+            'busines_id' => 'required|integer|exists:business,busines_id',
             'buyer_id' => 'required|integer|exists:buyer,buyer_id',
             'qualification' => 'required|numeric|min:0|max:5',
             'comment' => 'nullable|string',
@@ -188,10 +215,12 @@ class ReviewController extends Controller
 
         try {
             // Crear la reseña
-            $review = BusinessReview::create($request->all());
+            $review = BusinessReview::create($request->only([
+                'busines_id', 'buyer_id', 'qualification', 'comment', 'state',
+            ]));
 
             // Recalcular el promedio de calificaciones activas
-            $average = BusinessReview::where('business_id', $review->business_id)
+            $average = BusinessReview::where('busines_id', $review->busines_id)
                 ->where('state', true)
                 ->avg('qualification');
 
@@ -200,7 +229,7 @@ class ReviewController extends Controller
             $average = min(round($average, 2), 5.00);
 
             // Actualizar el campo qualification en la tabla business
-            Business::where('busines_id', $review->business_id)
+            Business::where('busines_id', $review->busines_id)
                 ->update(['qualification' => $average]);
 
             DB::commit();
@@ -495,8 +524,11 @@ class ReviewController extends Controller
             'domiciliary_id' => 'required|integer|exists:domiciliary,domiciliary_id'
         ]);
 
+        // Misma forma y mismo orden que listReviewsByBusiness, para que la
+        // pantalla de calificaciones sea idéntica en los dos roles.
         $reviews = DomiciliaryReview::where('domiciliary_id', $request->domiciliary_id)
-            ->with(['buyer', 'domiciliary.user'])
+            ->with(['buyer.user', 'domiciliary.user'])
+            ->orderByRaw('created_at IS NULL, created_at DESC')
             ->get();
 
         $formatted = $reviews->map(function ($review) {
@@ -505,13 +537,20 @@ class ReviewController extends Controller
                 'qualification' => $review->qualification,
                 'comment' => $review->comment,
                 'state' => $review->state,
-                'buyer' => [
-                    'user_id' => $review->buyer->buyer_id,
-                    'name' => $review->buyer->name,
-                    'email' => $review->buyer->email,
+                'created_at' => $review->created_at,
+                /*
+                 * El nombre y el correo se leían de `buyer`, pero esa tabla
+                 * solo guarda el vínculo: los datos de la persona están en
+                 * `user`. Por eso el reseñador salía siempre en null.
+                 * Se omite el email: quién califica no tiene por qué quedar
+                 * expuesto ante el domiciliario.
+                 */
+                'user' => $review->buyer && $review->buyer->user ? [
+                    'user_id' => $review->buyer->user->user_id,
+                    'name' => $review->buyer->user->name,
                     'qualification' => $review->buyer->qualification,
                     'state' => $review->buyer->state,
-                ],
+                ] : null,
                 'domiciliary' => [
                     'domiciliary_id' => $review->domiciliary->domiciliary_id,
                     'available' => $review->domiciliary->available,

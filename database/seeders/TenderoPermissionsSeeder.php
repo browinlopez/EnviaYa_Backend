@@ -32,14 +32,14 @@ class TenderoPermissionsSeeder extends Seeder
     // Crear o actualizar el rol TENDERO (rol_id = 2)
     $tenderoRole = Rol::firstOrCreate(
         ['rol_id' => 2],
-        ['name' => 'tendero']
+        ['name' => 'tendero', 'guard_name' => 'web']
     );
 
-    // Asignar los permisos al rol tendero
+    // Asignar los permisos al rol tendero (sin duplicar en re-ejecuciones)
     foreach ($permissions as $perm) {
         $permission = Permission::where('name', $perm)->first();
         if ($permission) {
-            $tenderoRole->permissions()->attach($permission->id);
+            $tenderoRole->permissions()->syncWithoutDetaching([$permission->id]);
         }
     }
 }

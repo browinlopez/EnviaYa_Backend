@@ -60,6 +60,33 @@ return [
             'report' => false,
         ],
 
+        /*
+         * Cloudflare R2 — imágenes y documentos de los negocios.
+         *
+         * R2 habla el protocolo de S3, así que se usa el mismo driver con tres
+         * particularidades:
+         *  · `region` siempre es 'auto': R2 no tiene regiones al estilo AWS.
+         *  · `use_path_style_endpoint` en true, porque el endpoint de R2 no
+         *    admite el estilo virtual-host (bucket como subdominio).
+         *  · `url` es el dominio PÚBLICO de lectura, que NO es el endpoint de
+         *    la API: por r2.cloudflarestorage.com solo se escribe con firma.
+         *
+         * `throw` en true a propósito: si una subida falla se quiere el error,
+         * no un `false` silencioso que deje al negocio sin imagen y sin aviso.
+         */
+        'r2' => [
+            'driver' => 's3',
+            'key' => env('R2_ACCESS_KEY_ID'),
+            'secret' => env('R2_SECRET_ACCESS_KEY'),
+            'region' => 'auto',
+            'bucket' => env('R2_BUCKET', 'vecipaya-media'),
+            'endpoint' => env('R2_ENDPOINT'),
+            'url' => env('R2_PUBLIC_URL'),
+            'use_path_style_endpoint' => true,
+            'throw' => true,
+            'report' => false,
+        ],
+
     ],
 
     /*

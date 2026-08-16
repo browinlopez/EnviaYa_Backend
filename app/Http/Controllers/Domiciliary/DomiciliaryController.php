@@ -27,17 +27,36 @@ class DomiciliaryController extends Controller
             'busines_id' => 'required|integer|exists:business,busines_id',
         ]);
 
-        $business = \App\Models\Business::with(['domiciliaries.user'])->findOrFail($request->busines_id);
+        $business = \App\Models\Business::with(['domiciliaries.user'])
+            ->findOrFail($request->busines_id);
 
-        $domiciliaries = $business->domiciliaries->map(function ($domiciliary) {
+        // Pedidos que cada domiciliario lleva encima ahora mismo, para que el
+        // tendero vea a quién puede despacharle antes de intentarlo.
+        $business->domiciliaries->loadCount([
+            'orders as active_orders' => fn($q) => $q->where('state', 3),
+        ]);
+
+        $maxSimultaneos = (int) config('services.max_active_deliveries', 3);
+
+        $domiciliaries = $business->domiciliaries->map(function ($domiciliary) use ($maxSimultaneos) {
+            $enCurso = (int) ($domiciliary->active_orders ?? 0);
+            $disponible = (bool) $domiciliary->available;
+
             return [
                 'domiciliary_id' => $domiciliary->domiciliary_id,
+                // user_id del domiciliario: requerido para despachar una
+                // orden (transición 2 → 3 en orders/update)
+                'user_id'        => $domiciliary->user_id,
                 'name'           => $domiciliary->user ? $domiciliary->user->name : null,
                 'email'          => $domiciliary->user ? $domiciliary->user->email : null,
                 'phone'          => $domiciliary->user ? $domiciliary->user->phone : null,
                 'available'      => $domiciliary->available,
                 'qualification'  => $domiciliary->qualification,
                 'state'          => $domiciliary->state,
+                'active_orders'     => $enCurso,
+                'max_active_orders' => $maxSimultaneos,
+                // Mismas condiciones que valida orders/update al despachar.
+                'can_take'          => $disponible && $enCurso < $maxSimultaneos,
             ];
         });
 
@@ -88,12 +107,24 @@ class DomiciliaryController extends Controller
                 'document' => $request->document ?? null   // si tienes este campo
             ]);
 
+            // Vincularlo al negocio de quien lo está creando. Sin esto el
+            // domiciliario quedaba "suelto": no aparecía en el listado de la
+            // tienda ni en el selector al despachar un pedido, y el tendero
+            // tampoco podía editarlo.
+            $negocio = $this->negocioDelCreador($request);
+
+            if ($negocio) {
+                $domiciliary->businesses()->syncWithoutDetaching([
+                    $negocio => ['state' => 1],
+                ]);
+            }
+
             DB::commit();
 
             return response()->json([
                 'message' => 'Usuario y domiciliario creados correctamente',
                 'user' => $user,
-                'domiciliary' => $domiciliary
+                'domiciliary' => $domiciliary->load('businesses'),
             ]);
         } catch (\Throwable $e) {
 
@@ -113,17 +144,26 @@ class DomiciliaryController extends Controller
             'user_id' => 'required|integer|exists:user,user_id',
             // Campos del domiciliario
             'available' => 'boolean',
-            'qualification' => 'numeric|min:0|max:5',
             'state' => 'boolean',
             // Campos del usuario
             'name' => 'string|max:255',
-            'email' => 'email|max:255',
+            // El correo es la credencial de acceso: no puede chocar con otro.
+            'email' => 'email|max:255|unique:user,email,' . $request->user_id . ',user_id',
             'phone' => 'string|max:20',
             'address' => 'string|max:255',
         ]);
 
         // Buscar usuario
         $user = User::findOrFail($request->user_id);
+
+        // Solo puede editar el propio domiciliario o el dueño de un negocio al
+        // que esté asignado. Antes cualquier sesión válida podía modificar a
+        // cualquier usuario mandando su user_id.
+        if (!$this->puedeEditarDomiciliario($request->user(), $user)) {
+            return response()->json([
+                'message' => 'No tienes permiso para editar este domiciliario',
+            ], 403);
+        }
 
         // Actualizar usuario
         $user->update($request->only([
@@ -133,12 +173,13 @@ class DomiciliaryController extends Controller
             'address',
         ]));
 
-        // Obtener y actualizar domiciliario relacionado
+        // Obtener y actualizar domiciliario relacionado.
+        // `qualification` se excluye a propósito: la calificación la producen
+        // las reseñas de los compradores, no puede fijarse a mano desde aquí.
         $domiciliary = $user->domiciliary;
         if ($domiciliary) {
             $domiciliary->update($request->only([
                 'available',
-                'qualification',
                 'state'
             ]));
         }
@@ -148,6 +189,56 @@ class DomiciliaryController extends Controller
             'user' => $user,
             'domiciliary' => $domiciliary
         ]);
+    }
+
+    /**
+     * Negocio al que se vincula un domiciliario recién creado: el indicado en
+     * la petición si pertenece a quien crea, o su primer negocio.
+     */
+    private function negocioDelCreador(Request $request): ?int
+    {
+        $owner = $request->user()?->owner;
+
+        if (!$owner) {
+            return null;
+        }
+
+        $propios = $owner->businesses->pluck('busines_id');
+
+        if ($request->filled('busines_id')) {
+            return $propios->contains((int) $request->busines_id)
+                ? (int) $request->busines_id
+                : null;
+        }
+
+        return $propios->first();
+    }
+
+    /**
+     * Un domiciliario puede editarse a sí mismo; un dueño de negocio puede
+     * editar a los domiciliarios asignados a alguno de sus negocios.
+     */
+    private function puedeEditarDomiciliario($autenticado, User $objetivo): bool
+    {
+        if (!$autenticado) {
+            return false;
+        }
+
+        if ((int) $autenticado->user_id === (int) $objetivo->user_id) {
+            return true;
+        }
+
+        $domiciliary = $objetivo->domiciliary;
+
+        if (!$domiciliary || !$autenticado->owner) {
+            return false;
+        }
+
+        $negociosPropios = $autenticado->owner->businesses->pluck('busines_id');
+
+        return $domiciliary->businesses()
+            ->whereIn('business.busines_id', $negociosPropios)
+            ->exists();
     }
 
 
@@ -260,13 +351,17 @@ class DomiciliaryController extends Controller
 
         $currentWeek = Payment::select(
             DB::raw('DAYOFWEEK(payment_date) as weekday'),
-            DB::raw('SUM(domicilio) as total')
+            DB::raw('SUM(domiciliary_fee) as total')
         )
             ->whereHas(
                 'order',
                 fn($q) =>
                 $q->where('domiciliary_id', $domiciliary_id)
             )
+            // Solo pagos aprobados: Bold registra una fila por cada intento
+            // de cobro, y contarlos todos multiplicaría el domicilio de una
+            // misma entrega por cada reintento del cliente.
+            ->where('payment_status', 1)
             ->whereBetween('payment_date', [$weekStart, $weekEnd])
             ->groupBy('weekday')
             ->get()
@@ -280,13 +375,17 @@ class DomiciliaryController extends Controller
 
         $previousWeek = Payment::select(
             DB::raw('DAYOFWEEK(payment_date) as weekday'),
-            DB::raw('SUM(domicilio) as total')
+            DB::raw('SUM(domiciliary_fee) as total')
         )
             ->whereHas(
                 'order',
                 fn($q) =>
                 $q->where('domiciliary_id', $domiciliary_id)
             )
+            // Solo pagos aprobados: Bold registra una fila por cada intento
+            // de cobro, y contarlos todos multiplicaría el domicilio de una
+            // misma entrega por cada reintento del cliente.
+            ->where('payment_status', 1)
             ->whereBetween('payment_date', [$prevWeekStart, $prevWeekEnd])
             ->groupBy('weekday')
             ->get()
@@ -328,7 +427,9 @@ class DomiciliaryController extends Controller
             'order',
             fn($q) =>
             $q->where('domiciliary_id', $domiciliary_id)
-        )->sum('domicilio');
+        )
+            ->where('payment_status', 1)
+            ->sum('domiciliary_fee');
 
         return response()->json([
             'weekly_current' => $current,

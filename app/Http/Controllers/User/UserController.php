@@ -7,6 +7,8 @@ use App\Models\Buyer\Buyer;
 use App\Models\User;
 use App\Models\User\UserAddress;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
 {
@@ -93,31 +95,75 @@ class UserController extends Controller
     }
 
     // Actualizar usuario
+    /**
+     * Actualiza el perfil del usuario autenticado.
+     *
+     * Antes tomaba el user_id del cuerpo y actualizaba a cualquiera: con una
+     * sesión válida se podían editar los datos de otra persona. Además dejaba
+     * cambiar `rol`, lo que permitía convertirse en tendero o administrador.
+     * Ahora solo se edita el propio perfil y solo los campos de contacto; el
+     * rol, la calificación y el estado se gestionan por sus propios flujos.
+     */
     public function update(Request $request)
     {
+        $user = $request->user();
+
         $request->validate([
-            'user_id'       => 'required|integer|exists:user,user_id',
-            'name'          => 'nullable|string|max:255',
-            'email'         => 'nullable|email|unique:user,email,' . $request->user_id . ',user_id',
-            'phone'         => 'nullable|string|max:20',
-            'address'       => 'nullable|string|max:225',
-            'rol'           => 'nullable|integer|exists:rol,rol_id',
-            'qualification' => 'nullable|numeric|between:0,5',
-            'state'         => 'nullable|boolean'
+            'name'    => 'nullable|string|max:255',
+            'email'   => 'nullable|email|unique:user,email,' . $user->user_id . ',user_id',
+            'phone'   => 'nullable|string|max:20',
+            'address' => 'nullable|string|max:225',
         ]);
 
-        $user = User::findOrFail($request->user_id);
-        $user->update($request->only([
-            'name',
-            'email',
-            'phone',
-            'address',
-            'rol',
-            'qualification',
-            'state'
-        ]));
+        $user->update($request->only(['name', 'email', 'phone', 'address']));
 
         return response()->json($user);
+    }
+
+    /**
+     * Cambia la contraseña del usuario autenticado.
+     *
+     * Se exige la contraseña actual: sin eso, quien tuviera el teléfono
+     * desbloqueado un momento podría dejar al dueño fuera de su cuenta.
+     */
+    public function updatePassword(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required|string',
+            'password'         => ['required', 'confirmed', Password::min(8)],
+        ]);
+
+        $user = $request->user();
+
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json([
+                'message' => 'La contraseña actual no es correcta',
+                'errors'  => [
+                    'current_password' => ['La contraseña actual no es correcta'],
+                ],
+            ], 422);
+        }
+
+        if (Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'message' => 'La nueva contraseña debe ser distinta a la actual',
+                'errors'  => [
+                    'password' => ['La nueva contraseña debe ser distinta a la actual'],
+                ],
+            ], 422);
+        }
+
+        $user->password = Hash::make($request->password);
+        $user->save();
+
+        // Se cierran las demás sesiones: si la contraseña se cambió porque
+        // alguien más tenía acceso, ese acceso debe terminar aquí.
+        $actual = $request->user()->currentAccessToken();
+        $user->tokens()->where('id', '!=', $actual?->id)->delete();
+
+        return response()->json([
+            'message' => 'Contraseña actualizada correctamente',
+        ]);
     }
 
     // Eliminar usuario

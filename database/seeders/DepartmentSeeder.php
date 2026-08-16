@@ -14,6 +14,11 @@ class DepartmentSeeder extends Seeder
      */
     public function run(): void
     {
+        // Catálogo estático: si ya está sembrado, no re-insertar
+        if (DB::table('departments')->exists()) {
+            return;
+        }
+
         $departments = [
             ['name' => 'Amazonas', 'country_id' => 1],
             ['name' => 'Antioquia', 'country_id' => 1],

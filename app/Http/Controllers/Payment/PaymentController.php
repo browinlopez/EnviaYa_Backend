@@ -136,7 +136,12 @@ class PaymentController extends Controller
             'provider' => 'bold',
             'provider_payment_id' => $boldResponse['transaction_id'] ?? null,
             'amount' => $order->total,
-            'subtotal' => $order->total,
+            // Desglose real de la orden. `subtotal` traía el total completo y
+            // `domicilio` ni se enviaba, así que quedaba en 0: por eso los
+            // pedidos pagados en línea no le generaban ingreso al domiciliario.
+            'subtotal' => $order->subtotal,
+            'domicilio' => $order->domicilio,
+            'domiciliary_fee' => $order->domiciliary_fee,
             'total' => $order->total,
             'status' => 'running', // estado inicial
             'payment_status' => 0,  // aún no aprobado

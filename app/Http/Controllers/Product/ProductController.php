@@ -77,8 +77,15 @@ class ProductController extends Controller
         return response()->json(array_merge(
             ProductTypeSchema::forApi($type),
             [
+                // Una categoría puede servir a varios tipos de negocio, así que
+                // el filtro va contra la tabla de vínculos, no contra la columna.
                 'categories' => Category::active()
-                    ->where('business_category_id', $type)
+                    ->whereIn(
+                        'category_id',
+                        DB::table('category_category_business')
+                            ->where('business_category_id', $type)
+                            ->pluck('category_id')
+                    )
                     ->get(['category_id', 'name']),
             ],
         ));
@@ -175,15 +182,20 @@ class ProductController extends Controller
     }
 
     /**
-     * La categoría del producto debe pertenecer al tipo del negocio
-     * (category.business_category_id == business.type).
+     * La categoría del producto debe estar asignada al tipo del negocio.
+     *
+     * La asignación es de muchos a muchos: se comprueba contra
+     * `category_category_business` y no contra la columna heredada, que solo
+     * guarda la primera de las categorías de negocio elegidas.
      */
     private function assertCategoryMatchesType(int $categoryId, int $type): void
     {
-        $categoryType = Category::where('category_id', $categoryId)
-            ->value('business_category_id');
+        $pertenece = DB::table('category_category_business')
+            ->where('category_id', $categoryId)
+            ->where('business_category_id', $type)
+            ->exists();
 
-        if ((int) $categoryType !== $type) {
+        if (!$pertenece) {
             throw ValidationException::withMessages([
                 'category_id' => 'La categoría no pertenece al tipo de este negocio.',
             ]);
@@ -378,7 +390,12 @@ class ProductController extends Controller
             ->take($limit)
             ->get();
 
-        $formatted = $products->map(function ($item) {
+        // Precio actual de cada producto en este negocio
+        $prices = ProductBusiness::where('busines_id', $request->business_id)
+            ->whereIn('products_id', $products->pluck('product_id'))
+            ->pluck('price', 'products_id');
+
+        $formatted = $products->map(function ($item) use ($prices) {
             return [
                 'product_id' => $item->product->products_id,
                 'name' => $item->product->name,
@@ -386,6 +403,7 @@ class ProductController extends Controller
                 'category_id' => $item->product->category_id,
                 'image' => $item->product->image,
                 'state' => $item->product->state,
+                'price' => (float) ($prices[$item->product_id] ?? 0),
                 'total_ordered' => (int) $item->total_ordered, // cantidad total pedida
             ];
         });

@@ -52,6 +52,15 @@ class OrderController extends Controller
                 'buyer_id' => $order->buyer_id,
                 'busines_id' => $order->busines_id,
                 'total' => $order->total,
+                // Desglose, para que cada rol sepa qué parte le corresponde:
+                // el negocio cobra el subtotal y el domiciliario el domicilio.
+                'subtotal' => $order->subtotal,
+                'domicilio' => $order->domicilio,
+                'domiciliary_fee' => $order->domiciliary_fee,
+                // El domiciliario necesita saber si cobra en la puerta o
+                // si el pedido ya viene pagado en línea.
+                'methods_id' => $order->methods_id,
+                'payment_state' => $order->payment_state,
                 'sale_date' => $order->sale_date,
                 'is_scheduled' => $order->is_scheduled,
                 'delivery_date' => $order->delivery_date,
@@ -59,6 +68,7 @@ class OrderController extends Controller
                 'pickup' => (bool) $order->pickup,
                 'pickup_time' => $order->pickup_time,
                 'has_review' => $order->has_review,
+                'dispatched_at' => $order->dispatched_at,
                 'state' => $order->state,
                 'business' => [
                     'business_id' => $order->business->busines_id,
@@ -162,6 +172,15 @@ class OrderController extends Controller
                 'buyer_id' => $order->buyer_id,
                 'busines_id' => $order->busines_id,
                 'total' => $order->total,
+                // Desglose, para que cada rol sepa qué parte le corresponde:
+                // el negocio cobra el subtotal y el domiciliario el domicilio.
+                'subtotal' => $order->subtotal,
+                'domicilio' => $order->domicilio,
+                'domiciliary_fee' => $order->domiciliary_fee,
+                // El domiciliario necesita saber si cobra en la puerta o
+                // si el pedido ya viene pagado en línea.
+                'methods_id' => $order->methods_id,
+                'payment_state' => $order->payment_state,
                 'sale_date' => $order->sale_date,
                 'is_scheduled' => $order->is_scheduled,
                 'delivery_date' => $order->delivery_date,
@@ -247,36 +266,15 @@ class OrderController extends Controller
         $business_id = $request->business_id;
 
         /**
-         * SEMANA ACTUAL
+         * Una orden cuenta como ingreso cuando su pago online está
+         * confirmado (payment_state 'paid') o cuando ya fue entregada
+         * (efectivo, state 4). Antes se sumaba desde `payments`, que solo
+         * existe para pagos online: las ventas en efectivo no contaban.
          */
-        $currentWeekStart = now()->startOfWeek();
-        $currentWeekEnd   = (clone $currentWeekStart)->endOfWeek();
-
-        /**
-         * SEMANA ANTERIOR
-         */
-        $previousWeekStart = (clone $currentWeekStart)->subWeek();
-        $previousWeekEnd   = (clone $previousWeekStart)->endOfWeek();
-
-        /**
-         * INGRESOS POR DÍA (SEMANA ACTUAL)
-         */
-        $incomeWeek = Payment::select(
-            DB::raw('DAYOFWEEK(payment_date) as weekday'),
-            DB::raw('SUM(total) as total_income')
-        )
-            ->whereHas(
-                'order',
-                fn($q) =>
-                $q->where('busines_id', $business_id)
-            )
-            ->whereBetween(
-                'payment_date',
-                [$currentWeekStart->toDateString(), $currentWeekEnd->toDateString()]
-            )
-            ->groupBy('weekday')
-            ->get()
-            ->keyBy('weekday');
+        $incomeOrders = fn() => OrdersSales::where('busines_id', $business_id)
+            ->where(function ($q) {
+                $q->where('payment_state', 'paid')->orWhere('state', 4);
+            });
 
         $daysOfWeek = [
             2 => 'Lunes',
@@ -288,63 +286,50 @@ class OrderController extends Controller
             1 => 'Domingo',
         ];
 
-        $weeklyIncome = [];
-        foreach ($daysOfWeek as $key => $day) {
-            $weeklyIncome[$day] = (float)($incomeWeek[$key]->total_income ?? 0);
-        }
+        // Ingresos por día de la semana para un rango dado
+        $incomeByDay = function ($start, $end) use ($incomeOrders, $daysOfWeek) {
+            $rows = $incomeOrders()
+                ->select(
+                    DB::raw('DAYOFWEEK(sale_date) as weekday'),
+                    DB::raw('SUM(total) as total_income')
+                )
+                ->whereBetween('sale_date', [$start, $end])
+                ->groupBy('weekday')
+                ->get()
+                ->keyBy('weekday');
 
-        /**
-         * TOTAL SEMANA ACTUAL
-         */
-        $currentWeekTotal = array_sum($weeklyIncome);
+            $out = [];
+            foreach ($daysOfWeek as $key => $day) {
+                $out[$day] = (float) ($rows[$key]->total_income ?? 0);
+            }
 
-        /**
-         * TOTAL SEMANA ANTERIOR
-         */
-        $previousWeekTotal = Payment::whereHas(
-            'order',
-            fn($q) =>
-            $q->where('busines_id', $business_id)
-        )
-            ->whereBetween(
-                'payment_date',
-                [$previousWeekStart->toDateString(), $previousWeekEnd->toDateString()]
-            )
-            ->sum('total');
+            return $out;
+        };
 
-        /**
-         * DIFERENCIAS
-         */
+        $currentWeekStart = now()->startOfWeek();
+        $currentWeekEnd   = (clone $currentWeekStart)->endOfWeek();
+        $previousWeekStart = (clone $currentWeekStart)->subWeek();
+        $previousWeekEnd   = (clone $previousWeekStart)->endOfWeek();
+
+        $weeklyIncome = $incomeByDay($currentWeekStart, $currentWeekEnd);
+        $previousWeeklyIncome = $incomeByDay($previousWeekStart, $previousWeekEnd);
+
+        $currentWeekTotal  = array_sum($weeklyIncome);
+        $previousWeekTotal = array_sum($previousWeeklyIncome);
+
         $difference = $currentWeekTotal - $previousWeekTotal;
         $percentageChange = $previousWeekTotal > 0
             ? ($difference / $previousWeekTotal) * 100
             : 100;
 
-        /**
-         * MES ACTUAL
-         */
         $month_start = now()->startOfMonth();
         $month_end   = (clone $month_start)->endOfMonth();
 
-        $monthlyIncome = Payment::whereHas(
-            'order',
-            fn($q) =>
-            $q->where('busines_id', $business_id)
-        )
-            ->whereBetween(
-                'payment_date',
-                [$month_start->toDateString(), $month_end->toDateString()]
-            )
+        $monthlyIncome = $incomeOrders()
+            ->whereBetween('sale_date', [$month_start, $month_end])
             ->sum('total');
 
-        /**
-         * TOTAL HISTÓRICO
-         */
-        $totalIncome = Payment::whereHas(
-            'order',
-            fn($q) =>
-            $q->where('busines_id', $business_id)
-        )->sum('total');
+        $totalIncome = $incomeOrders()->sum('total');
 
         return response()->json([
             'business_id' => $business_id,
@@ -353,6 +338,9 @@ class OrderController extends Controller
             'week_end'   => $currentWeekEnd->toDateString(),
 
             'weekly_income' => $weeklyIncome,
+            // Semana anterior desglosada por día (antes solo venía el total
+            // y la línea comparativa del chart no tenía datos)
+            'previous_weekly_income' => $previousWeeklyIncome,
 
             'current_week_income'  => (float)$currentWeekTotal,
             'previous_week_income' => (float)$previousWeekTotal,
@@ -370,19 +358,37 @@ class OrderController extends Controller
     // Crear orden de venta
     public function store(Request $request, BoldService $bold)
     {
+        /* ========= COMPATIBILIDAD DE NOMBRES =========
+           La app migrada a la API nueva manda business_id / payment_method_id
+           / quantity; el contrato original usa busines_id / methods_id /
+           amount. Se aceptan ambos. */
+        if (!$request->filled('busines_id') && $request->filled('business_id')) {
+            $request->merge(['busines_id' => $request->input('business_id')]);
+        }
+        if (!$request->filled('methods_id') && $request->filled('payment_method_id')) {
+            $request->merge(['methods_id' => $request->input('payment_method_id')]);
+        }
+        $normalizedProducts = collect($request->input('products', []))
+            ->map(fn($p) => [
+                'product_id' => $p['product_id'] ?? null,
+                'amount' => $p['amount'] ?? $p['quantity'] ?? null,
+            ])->all();
+        $request->merge(['products' => $normalizedProducts]);
+
         $request->validate([
-            'user_id' => 'required|integer',
-            'busines_id' => 'required|integer',
-            'address_id' => 'required_if:pickup,false|integer',
+            'user_id' => 'required|integer|exists:user,user_id',
+            'busines_id' => 'required|integer|exists:business,busines_id',
+            'address_id' => 'required_if:pickup,false|nullable|integer',
             'products' => 'required|array|min:1',
             'products.*.product_id' => 'required|integer',
-            'products.*.amount' => 'required|integer|min:1',
-            'products.*.unit_price' => 'required|numeric|min:0',
-            'methods_id' => 'required|integer',
-            'payer' => 'required_if:methods_id,2,5|array',
+            'products.*.amount' => 'required|integer|min:1|max:1000',
+            'methods_id' => 'required|integer|exists:payment_methods,methods_id',
+            'payer' => 'nullable|array',
             'payment_method' => 'required_if:methods_id,2|array',
             'pickup' => 'sometimes|boolean',
-            'pickup_time' => 'nullable|required_if:pickup,true|date',
+            'pickup_time' => 'nullable|date',
+            'is_scheduled' => 'sometimes|boolean',
+            'delivery_date' => 'nullable|required_if:is_scheduled,true|date|after:now',
         ]);
 
         /* ========= VALIDACIONES REALES ========= */
@@ -397,9 +403,48 @@ class OrderController extends Controller
             return response()->json(['message' => 'Negocio no encontrado'], 404);
         }
 
-        $address = UserAddress::find($request->address_id);
-        if (!$address) {
-            return response()->json(['message' => 'Dirección no encontrada'], 404);
+        $isPickup = (bool) ($request->pickup ?? false);
+
+        // La dirección solo aplica (y solo se exige) para domicilio, y debe
+        // pertenecer al usuario que ordena.
+        $address = null;
+        if (!$isPickup) {
+            $address = UserAddress::find($request->address_id);
+            if (!$address || (int) $address->user_id !== (int) $request->user_id) {
+                return response()->json(['message' => 'Dirección no encontrada'], 404);
+            }
+        }
+
+        /* ========= PRECIOS REALES DEL SERVIDOR =========
+           El unit_price NUNCA se toma del cliente: se busca el precio del
+           producto en este negocio. De paso valida que cada producto
+           realmente pertenezca al negocio. */
+        $productIds = collect($request->products)->pluck('product_id')->all();
+
+        $prices = ProductBusiness::where('busines_id', $business->busines_id)
+            ->whereIn('products_id', $productIds)
+            ->pluck('price', 'products_id');
+
+        $missing = collect($productIds)->reject(fn($id) => $prices->has($id));
+        if ($missing->isNotEmpty()) {
+            return response()->json([
+                'message' => 'Hay productos que no pertenecen a este negocio',
+                'product_ids' => $missing->values(),
+            ], 422);
+        }
+
+        /* ========= PROGRAMACIÓN ========= */
+        $isScheduled = (bool) ($request->is_scheduled ?? false);
+        $deliveryDate = null;
+
+        if ($isScheduled) {
+            $deliveryDate = \Carbon\Carbon::parse($request->delivery_date);
+            $hour = (int) $deliveryDate->format('G');
+            if ($hour < 7 || $hour > 20) {
+                return response()->json([
+                    'message' => 'Los pedidos programados solo se aceptan entre 7:00 AM y 9:00 PM',
+                ], 422);
+            }
         }
 
         DB::beginTransaction();
@@ -407,20 +452,34 @@ class OrderController extends Controller
         try {
             /* ========= ORDEN ========= */
 
-            $total = collect($request->products)
-                ->sum(fn($p) => $p['amount'] * $p['unit_price']);
+            $subtotal = collect($request->products)
+                ->sum(fn($p) => $p['amount'] * (float) $prices[$p['product_id']]);
+
+            // Tarifa de domicilio del lado del servidor (config/services.php)
+            $domicilio = $isPickup ? 0 : (float) config('services.delivery_fee', 2000);
+            $total = $subtotal + $domicilio;
+
+            // Del domicilio, una porción es del domiciliario y el resto de la
+            // plataforma. Se congela acá: si la comisión cambia después, esta
+            // orden conserva lo que se pactó al crearla.
+            $domiciliaryFee = round(
+                $domicilio * (float) config('services.domiciliary_share', 0.25)
+            );
 
             $order = OrdersSales::create([
                 'buyer_id' => $buyer->buyer_id,
                 'busines_id' => $business->busines_id,
-                'address_id' => $address->address_id,
+                'address_id' => $address?->address_id,
                 'methods_id' => $request->methods_id,
                 'total' => $total,
+                'subtotal' => $subtotal,
+                'domicilio' => $domicilio,
+                'domiciliary_fee' => $domiciliaryFee,
                 'sale_date' => now(),
-                'delivery_date' => now(),
-                'is_scheduled' => false,
-                'pickup' => $request->pickup ?? false,
-                'pickup_time' => $request->pickup && $request->pickup_time
+                'delivery_date' => $isScheduled ? $deliveryDate : now(),
+                'is_scheduled' => $isScheduled,
+                'pickup' => $isPickup,
+                'pickup_time' => $isPickup && $request->pickup_time
                     ? \Carbon\Carbon::parse($request->pickup_time)->format('Y-m-d H:i:s')
                     : null,
                 'state' => 1,
@@ -434,7 +493,7 @@ class OrderController extends Controller
                     'orderSales_id' => $order->orderSales_id,
                     'product_id' => $p['product_id'],
                     'amount' => $p['amount'],
-                    'unit_price' => $p['unit_price'],
+                    'unit_price' => (float) $prices[$p['product_id']],
                 ]);
             }
 
@@ -447,8 +506,37 @@ class OrderController extends Controller
                 // 1️⃣ Crear intent
                 $intent = $paymentController->createIntent($order, $bold);
 
-                // 2️⃣ PAYER COMPLETO (NO NORMALIZAR)
+                // 2️⃣ Payer: si la app no lo manda, se construye desde el
+                //    perfil del comprador con el formato EXACTO que exige
+                //    Bold (person_type, document y billing_address son
+                //    obligatorios). Mismos fallbacks que usa dev97.
                 $payer = $request->payer;
+
+                if (!$payer) {
+                    $payerUser = $buyer->user;
+                    $phone = $payerUser->phone ?? '3000000000';
+                    $addressStr = $address->address ?? 'Calle 1';
+                    $city = $address?->municipality?->name ?? 'Barranquilla';
+                    $province = $address?->municipality?->department?->name ?? 'Atlántico';
+
+                    $payer = [
+                        'person_type' => 'NATURAL_PERSON',
+                        'name' => $payerUser->name ?? 'Cliente',
+                        'phone' => $phone,
+                        'email' => $payerUser->email ?? 'correo@ejemplo.com',
+                        'document_type' => 'CEDULA',
+                        'document_number' => '1234567890',
+                        'billing_address' => [
+                            'street1' => $addressStr,
+                            'street2' => '',
+                            'city' => $city,
+                            'zip_code' => '110111',
+                            'province' => $province,
+                            'country' => 'CO',
+                            'phone' => $phone,
+                        ],
+                    ];
+                }
 
                 // 3️⃣ Método de pago
                 $paymentMethod = $request->methods_id == 2
@@ -458,11 +546,11 @@ class OrderController extends Controller
                         'qr_format' => 'BOLD_BASE64' //CLAVE puede ser ese o TEXT o BASE64
                     ];
 
-                // 4️⃣ Productos
+                // 4️⃣ Productos (con los precios reales del servidor)
                 $products = collect($request->products)->map(fn($p) => [
                     'product_id' => $p['product_id'],
                     'amount' => (int) $p['amount'],
-                    'unit_price' => (float) $p['unit_price'],
+                    'unit_price' => (float) $prices[$p['product_id']],
                 ])->toArray();
 
                 // 5️⃣ Ejecutar pago
@@ -490,12 +578,23 @@ class OrderController extends Controller
                 'message' => 'Orden creada',
                 'order' => $order->load('details.product.category', 'business', 'address', 'promotions', 'payments')->toApi(),
                 'bold_reference_id' => $intent->bold_reference_id ?? null,
+                // La app lee el QR / redirect de acá para el pago online
+                'action' => isset($payment) ? [
+                    'qr_payload' => $payment->qr_payload ?? null,
+                    'redirect_url' => $payment->redirect_url ?? null,
+                ] : null,
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
 
+            // Errores de configuración del comercio en Bold → mensaje claro
+            $message = str_contains($e->getMessage(), 'MCFG_004')
+                || str_contains($e->getMessage(), 'Not Available')
+                ? 'Este método de pago no está disponible por el momento. Intenta con otro método.'
+                : 'Error al crear la orden';
+
             return response()->json([
-                'message' => 'Error al crear la orden',
+                'message' => $message,
                 'error' => $e->getMessage()
             ], 422);
         }
@@ -551,37 +650,83 @@ class OrderController extends Controller
                 return response()->json(['message' => 'Domiciliario no encontrado'], 404);
             }
 
+            /*
+             * Reglas de asignación. Se validan acá y no en la app porque por
+             * esta misma transición pasan los dos caminos: el domiciliario
+             * aceptando un pedido y el tendero despachándoselo. Si viviera
+             * solo en el cliente, cualquiera de los dos podría saltársela.
+             */
+            if (!$domiciliary->available) {
+                return response()->json([
+                    'message' => 'El domiciliario no está disponible en este momento.',
+                    'reason'  => 'unavailable',
+                ], 422);
+            }
+
+            $maxSimultaneos = (int) config('services.max_active_deliveries', 3);
+
+            $enCurso = OrdersSales::where('domiciliary_id', $domiciliary->domiciliary_id)
+                ->where('state', 3)
+                ->where('orderSales_id', '!=', $order->orderSales_id)
+                ->count();
+
+            if ($enCurso >= $maxSimultaneos) {
+                return response()->json([
+                    'message' => "Ya hay {$enCurso} pedidos en curso. Se debe entregar alguno antes de aceptar otro.",
+                    'reason'  => 'limit_reached',
+                    'active_orders' => $enCurso,
+                    'max_active_orders' => $maxSimultaneos,
+                ], 422);
+            }
+
             $order->state = 3;
             $order->domiciliary_id = $domiciliary->domiciliary_id;
+            // Ancla del cronómetro de entrega en la app
+            $order->dispatched_at = now();
 
             // Pedido entregado
         } elseif ($order->state == 3 && $request->state == 4) {
             $order->state = 4;
             $order->delivery_date = now();
 
-            // si método de pago == 1, crear pago
+            /*
+             * Pago en efectivo: se registra al entregar, porque es cuando el
+             * domiciliario recibe la plata.
+             *
+             * Los importes salen de la orden, no se recalculan acá. Antes el
+             * domicilio estaba quemado en 2000 (ignorando la tarifa real y los
+             * pedidos pickup), el total restaba el domicilio en vez de sumarlo
+             * y `amount` estaba fijo en 1.
+             */
             if ($order->methods_id == 1) {
-                // calcular valores
-                $subtotal = $order->details->sum(function ($d) {
-                    return $d->amount * $d->unit_price;
-                });
-                $domicilio = 2000; // aquí pones tu cálculo del costo de domicilio
-                $valorPromocion = 0; // aquí aplicas descuentos/promociones
-                $total = $subtotal - $domicilio - $valorPromocion;
+                $valorPromocion = 0; // pendiente: descuentos y promociones
 
                 Payment::create([
                     'orderSales_id' => $order->orderSales_id,
                     'methods_id' => $order->methods_id,
                     'forms_id' => $order->forms_id,
-                    'amount' => /* $total */ 1,
-                    'subtotal' => $subtotal,
-                    'total' => $total,
-                    'domicilio' => $domicilio,
+                    'amount' => $order->total,
+                    'subtotal' => $order->subtotal,
+                    'total' => $order->total - $valorPromocion,
+                    'domicilio' => $order->domicilio,
+                    'domiciliary_fee' => $order->domiciliary_fee,
                     'valor_promocion' => $valorPromocion,
-                    'payment_status' => 1, // por ejemplo pagado
+                    // `status` es NOT NULL y sin default: no enviarlo hacía
+                    // fallar el insert, así que los pedidos en efectivo nunca
+                    // llegaron a registrar pago (y el domiciliario no cobraba).
+                    'provider' => 'cash',
+                    'status' => 'approved',
+                    'payment_status' => 1, // pagado
                     'payment_date' => now(),
                     'state' => 1 // activo
                 ]);
+
+                // El pago quedaba registrado y aprobado, pero la orden seguía
+                // diciendo 'pending' para siempre: nadie sincronizaba este
+                // campo al cobrar en efectivo. Resultado: pedidos entregados y
+                // cobrados que en los tableros aparecían como pendientes de
+                // pago, contradiciendo a la tabla de pagos.
+                $order->payment_state = 'paid';
             }
         } else {
             return response()->json(['message' => 'Transición de estado no permitida.'], 400);
@@ -666,7 +811,23 @@ class OrderController extends Controller
 
     public function ordersPendingReview(Request $request)
     {
-        $orders = OrdersSales::where('state', 4)
+        /*
+         * Solo los pedidos de quien pregunta. La consulta no filtraba por
+         * comprador, así que devolvía TODOS los pedidos entregados del
+         * sistema: a cualquiera se le pedía calificar compras ajenas (y de
+         * paso se le exponía la dirección de entrega de otras personas).
+         */
+        $buyer = Buyer::where('user_id', $request->user()->user_id)->first();
+
+        if (!$buyer) {
+            return response()->json([
+                'message' => 'Órdenes pendientes de review',
+                'orders' => [],
+            ]);
+        }
+
+        $orders = OrdersSales::where('buyer_id', $buyer->buyer_id)
+            ->where('state', 4)
             ->where('has_review', false) // o 0
             ->where('pickup', false)     // o 0
             ->with([

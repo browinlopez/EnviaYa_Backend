@@ -13,19 +13,12 @@ class AliasSeeder extends Seeder
      */
     public function run(): void
     {
-        DB::table('alias')->insert([
-            [
-                'alias_id' => 1,
-                'name' => 'Casa'
-            ],
-            [
-                'alias_id' => 2,
-                'name' => 'Trabajo'
-            ],
-            [
-                'alias_id' => 3,
-                'name' => 'Otros'
-            ],
-        ]);
+        // Idempotente: correr el seeder de nuevo no duplica ni revienta
+        foreach ([1 => 'Casa', 2 => 'Trabajo', 3 => 'Otros'] as $id => $name) {
+            DB::table('alias')->updateOrInsert(
+                ['alias_id' => $id],
+                ['name' => $name],
+            );
+        }
     }
 }

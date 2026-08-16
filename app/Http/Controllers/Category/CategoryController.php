@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Category;
 use App\Http\Controllers\Controller;
 use App\Models\Product\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class CategoryController extends Controller
 {
@@ -18,8 +19,15 @@ class CategoryController extends Controller
 
         $businessType = $request->type;
 
-        // Filtrar categorías según el tipo de negocio
-        $categories = Category::where('business_category_id', $businessType)->get();
+        // Filtrar categorías según el tipo de negocio.
+        // La relación es de muchos a muchos (`category_category_business`):
+        // "Bebidas" puede servir a la vez para tiendas y para restaurantes.
+        $categories = Category::whereIn(
+            'category_id',
+            DB::table('category_category_business')
+                ->where('business_category_id', $businessType)
+                ->pluck('category_id')
+        )->get();
 
         return response()->json([
             'status' => true,

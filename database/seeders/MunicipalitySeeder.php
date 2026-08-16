@@ -14,6 +14,11 @@ class MunicipalitySeeder extends Seeder
      */
     public function run(): void
     {
+        // Catálogo estático: si ya está sembrado, no re-insertar
+        if (DB::table('municipalities')->exists()) {
+            return;
+        }
+
         $municipalities = [
             // Amazonas
             ['name' => 'Leticia', 'department_id' => 1],

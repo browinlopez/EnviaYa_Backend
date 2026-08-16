@@ -40,4 +40,35 @@ return [
         'api_key'  => env('BOLD_API_KEY'),
         'webhook_secret' => env('BOLD_WEBHOOK_SECRET', ''),
     ],
+
+    // Tarifa de domicilio en COP. El total de la orden se calcula en el
+    // servidor: subtotal de productos (precios reales) + esta tarifa.
+    'delivery_fee' => env('DELIVERY_FEE', 2000),
+
+    // Cuántos pedidos puede llevar un domiciliario al mismo tiempo (estado 3).
+    // Al llegar al tope no puede aceptar ni le pueden despachar más hasta
+    // que entregue alguno.
+    'max_active_deliveries' => env('MAX_ACTIVE_DELIVERIES', 3),
+
+    // Porción de la tarifa de domicilio que le corresponde al domiciliario.
+    // El resto queda para la plataforma. Se calcula al crear la orden y se
+    // guarda ahí, así que cambiar este valor no reescribe lo ya entregado.
+    'domiciliary_share' => env('DOMICILIARY_SHARE', 0.25),
+
+    /*
+     * Datos de la empresa que firma el acuerdo de vinculación con los
+     * domiciliarios. Van en configuración y no en el código del documento
+     * porque son los que cambian: NIT, representante legal y ciudad.
+     *
+     * Si el NIT o el representante están vacíos, el contrato sale con la
+     * línea en blanco, tal cual la plantilla en papel.
+     */
+    'contrato' => [
+        'empresa'        => env('CONTRATO_EMPRESA', 'MARCAVA GROUP S.A.S.'),
+        'nit'            => env('CONTRATO_NIT', ''),
+        'plataforma'     => env('CONTRATO_PLATAFORMA', "VECIPA'YA"),
+        'representante'  => env('CONTRATO_REPRESENTANTE', ''),
+        'representante_cc' => env('CONTRATO_REPRESENTANTE_CC', ''),
+        'ciudad'         => env('CONTRATO_CIUDAD', 'Barranquilla'),
+    ],
 ];

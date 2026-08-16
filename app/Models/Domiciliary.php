@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Audit\Audit;
+use App\Models\Order\OrdersSales;
 use App\Models\Reviews\DomiciliaryReview;
 use Illuminate\Database\Eloquent\Model;
 
@@ -27,6 +28,16 @@ class Domiciliary extends Audit
     public function geolocation()
     {
         return $this->hasMany(OrderGeolocation::class, 'domiciliary_id', 'domiciliary_id');
+    }
+
+    /**
+     * Pedidos asignados a este domiciliario. Se usa sobre todo para contar
+     * los que tiene en curso (estado 3) y así aplicar el tope de entregas
+     * simultáneas antes de asignarle uno nuevo.
+     */
+    public function orders()
+    {
+        return $this->hasMany(OrdersSales::class, 'domiciliary_id', 'domiciliary_id');
     }
 
     public function businesses()

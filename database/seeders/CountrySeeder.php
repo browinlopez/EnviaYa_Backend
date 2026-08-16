@@ -14,6 +14,11 @@ class CountrySeeder extends Seeder
      */
     public function run(): void
     {
+        // Catálogo estático: si ya está sembrado, no re-insertar
+        if (DB::table('countries')->exists()) {
+            return;
+        }
+
         $countries = [
             ['name' => 'Colombia', 'iso_code' => 'COL', ],
             ['name' => 'Argentina', 'iso_code' => 'ARG'],

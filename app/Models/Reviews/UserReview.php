@@ -11,7 +11,8 @@ class UserReview extends Audit
 {
     protected $table = 'user_reviews';
     protected $primaryKey = 'reviews_id';
-    public $timestamps = false;
+    // Ver nota en BusinessReview: la tabla ya tenía las columnas de fecha.
+    public $timestamps = true;
 
     protected $fillable = [
         'user_id',

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\Api\AdminApiController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Business\AffiliationController;
 use App\Http\Controllers\Business\BusinessController;
@@ -86,8 +87,11 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::get('/', [UserController::class, 'index']);
         // Detalle usuario
         Route::post('/show', [UserController::class, 'show']);
-        // Actualizar usuario
+        // Actualizar el perfil propio (solo datos de contacto)
         Route::put('/update', [UserController::class, 'update']);
+        // Cambiar la contraseña propia (exige la actual)
+        Route::put('/password', [UserController::class, 'updatePassword'])
+            ->middleware('throttle:5,1');
         // Eliminar usuario
         Route::delete('/delete', [UserController::class, 'desactivate']);
         // Direcciones
@@ -207,5 +211,87 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::post('user/create', [ReviewController::class, 'createUserReview']);
         Route::put('user/update', [ReviewController::class, 'updateUserReview']);
         Route::delete('user/delete', [ReviewController::class, 'deleteUserReview']);
+    });
+
+    /*
+    |----------------------------------------------------------------------
+    | SUPERADMINISTRACIÓN (rol 4)
+    |----------------------------------------------------------------------
+    | Superficie JSON para el panel de React (EnviaYa_Admin). Los
+    | controladores de Admin\* que ya existían sirven al panel Blade de
+    | routes/web.php: devuelven vistas y dependen de la sesión, así que no
+    | le sirven a un SPA con token.
+    |
+    | Todo el bloque pasa por el middleware `admin`, que exige rol 4. La
+    | validación del cliente es comodidad; esta es la que cuenta.
+    */
+    Route::prefix('admin')->middleware('admin')->group(function () {
+        Route::get('overview', [AdminApiController::class, 'overview']);
+
+        Route::get('users', [AdminApiController::class, 'users']);
+        Route::post('users', [AdminApiController::class, 'storeUser']);
+        Route::get('users/{id}', [AdminApiController::class, 'showUser']);
+        Route::put('users/{id}', [AdminApiController::class, 'updateUser']);
+
+        Route::get('locations', [AdminApiController::class, 'locations']);
+
+        // Archivos de cualquier entidad: negocios, productos, usuarios, conjuntos.
+        Route::get('storage', [AdminApiController::class, 'storageStatus']);
+        Route::get('media/{entidad}/{id}', [AdminApiController::class, 'media']);
+        Route::post('media/{entidad}/{id}', [AdminApiController::class, 'uploadMedia']);
+        Route::delete('media/{entidad}/{id}', [AdminApiController::class, 'deleteMedia']);
+        Route::put('media/{entidad}/{id}/principal', [AdminApiController::class, 'setPrimaryMedia']);
+
+        Route::get('businesses', [AdminApiController::class, 'businesses']);
+        Route::post('businesses', [AdminApiController::class, 'storeBusiness']);
+        Route::get('businesses/{id}', [AdminApiController::class, 'showBusiness']);
+        Route::put('businesses/{id}', [AdminApiController::class, 'updateBusiness']);
+
+        // Medios en Cloudflare R2. La subida pasa por el backend porque las
+        // llaves del bucket no pueden salir del servidor.
+        Route::get('businesses/{id}/media', [AdminApiController::class, 'businessMedia']);
+        Route::post('businesses/{id}/media', [AdminApiController::class, 'uploadBusinessMedia']);
+        Route::delete('businesses/{id}/media', [AdminApiController::class, 'deleteBusinessMedia']);
+
+        Route::get('products', [AdminApiController::class, 'products']);
+        Route::post('products', [AdminApiController::class, 'storeProduct']);
+        Route::get('products/{id}', [AdminApiController::class, 'showProduct']);
+        Route::put('products/{id}', [AdminApiController::class, 'updateProduct']);
+
+        Route::get('orders', [AdminApiController::class, 'orders']);
+        Route::get('orders/{id}', [AdminApiController::class, 'showOrder']);
+
+        Route::get('domiciliaries', [AdminApiController::class, 'domiciliaries']);
+        Route::post('domiciliaries', [AdminApiController::class, 'storeDomiciliary']);
+        Route::get('domiciliaries/{id}', [AdminApiController::class, 'showDomiciliary']);
+        Route::put('domiciliaries/{id}', [AdminApiController::class, 'updateDomiciliary']);
+        Route::post('domiciliaries/{id}/contrato', [AdminApiController::class, 'signContract']);
+
+        Route::get('payments', [AdminApiController::class, 'payments']);
+
+        Route::get('reviews', [AdminApiController::class, 'reviews']);
+        Route::delete('reviews', [AdminApiController::class, 'deleteReview']);
+
+        Route::get('categories', [AdminApiController::class, 'categories']);
+        Route::post('categories', [AdminApiController::class, 'storeCategory']);
+        Route::put('categories', [AdminApiController::class, 'updateCategory']);
+        Route::delete('categories', [AdminApiController::class, 'deleteCategory']);
+
+        Route::get('complexes', [AdminApiController::class, 'complexes']);
+        Route::post('complexes', [AdminApiController::class, 'storeComplex']);
+        Route::put('complexes/{id}', [AdminApiController::class, 'updateComplex']);
+        Route::delete('complexes/{id}', [AdminApiController::class, 'deleteComplex']);
+
+        Route::get('owners', [AdminApiController::class, 'owners']);
+        Route::get('owners/options', [AdminApiController::class, 'ownerOptions']);
+        Route::post('owners', [AdminApiController::class, 'storeOwner']);
+        Route::put('owners/{id}', [AdminApiController::class, 'updateOwner']);
+
+        Route::get('chats', [AdminApiController::class, 'chats']);
+        Route::get('chats/{chatId}/messages', [AdminApiController::class, 'chatMessages']);
+
+        Route::get('audits', [AdminApiController::class, 'audits']);
+
+        Route::get('reports/{kind}', [AdminApiController::class, 'report']);
     });
 });

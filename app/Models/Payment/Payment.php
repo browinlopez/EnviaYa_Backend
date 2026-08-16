@@ -25,6 +25,9 @@ class Payment extends Audit
         'subtotal',
         'total',
         'domicilio',
+        // Porción del domicilio que cobra el domiciliario; de esta columna
+        // salen sus reportes de ingresos.
+        'domiciliary_fee',
         'valor_promocion',
         'payment_status',
         'status',

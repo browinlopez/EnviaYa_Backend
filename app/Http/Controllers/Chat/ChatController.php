@@ -212,15 +212,31 @@ class ChatController extends Controller
             'user_id' => 'required|exists:user,user_id',
         ]);
 
+        // Se precarga el último mensaje de cada chat: sin él la lista solo
+        // podía mostrar el nombre del contacto, sin vista previa ni fecha.
         $chats = Chat::whereHas('participants', function ($q) use ($request) {
             $q->where('user_id', $request->user_id);
-        })->with('participants.user')->get();
+        })
+            ->with([
+                'participants.user',
+                'messages' => fn ($q) => $q->latest('created_at')->limit(1),
+            ])
+            ->get()
+            // Los chats con actividad reciente van primero; los que no tienen
+            // ningún mensaje quedan al final.
+            ->sortByDesc(fn ($chat) => optional($chat->messages->first())->created_at)
+            ->values();
 
         $formattedChats = $chats->map(function ($chat) {
+            $ultimo = $chat->messages->first();
+
             return [
                 'chat_id' => $chat->chat_id,
                 'type' => $chat->type,
                 'created_at' => $chat->created_at,
+                'last_message' => $ultimo?->content,
+                'last_message_at' => $ultimo?->created_at,
+                'last_message_user_id' => $ultimo?->user_id,
                 'participants' => $chat->participants->map(function ($participant) {
                     return [
                         'user_id' => $participant->user->user_id,

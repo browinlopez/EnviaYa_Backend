@@ -12,7 +12,10 @@ class BusinessReview extends Audit
 {
     protected $table = 'business_reviews';
     protected $primaryKey = 'reviews_id';
-    public $timestamps = false;
+    // La tabla tiene created_at/updated_at pero estaban desactivados, así que
+    // ninguna reseña guardaba cuándo se hizo y la app no podía ordenarlas ni
+    // mostrar la fecha.
+    public $timestamps = true;
 
     protected $fillable = [
         'busines_id',

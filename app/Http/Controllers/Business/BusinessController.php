@@ -28,8 +28,16 @@ class BusinessController extends Controller
             $userAuthenticated = true;
         }
 
-        // Traemos todos los negocios con sus relaciones
+        /*
+         * Solo negocios activos.
+         *
+         * `state` existía en la tabla pero nadie lo consultaba: el panel
+         * permitía marcar una tienda como inactiva y seguía apareciendo en la
+         * app como si nada. Desactivar tiene que sacarla del catálogo o no
+         * sirve de nada.
+         */
         $businesses = Business::with(['owners', 'municipality', 'products', 'reviews'])
+            ->where('state', 1)
             ->when(count($affiliatedIds) > 0, function ($q) use ($affiliatedIds) {
                 // Ordena los negocios afiliados primero
                 $q->orderByRaw("FIELD(busines_id," . implode(',', $affiliatedIds) . ") DESC");
@@ -119,8 +127,9 @@ class BusinessController extends Controller
             $userAuthenticated = true;
         }
 
-        // Traemos negocios ordenados por calificación (de mayor a menor)
+        // Ídem que en index(): un negocio desactivado no se publica.
         $businesses = Business::with(['owners', 'municipality', 'products.category', 'reviews'])
+            ->where('state', 1)
             ->orderByDesc('qualification')
             ->get();
 

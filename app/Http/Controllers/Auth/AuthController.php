@@ -181,6 +181,24 @@ class AuthController extends Controller
             return response()->json(['message' => 'Credenciales incorrectas'], 401);
         }
 
+        /*
+         * Cuenta deshabilitada por la administración.
+         *
+         * Hasta ahora `user.state` no se miraba en ningún lado: el panel
+         * permitía marcar a alguien como inactivo y la persona seguía
+         * entrando a la app con normalidad. Bloquear tiene que impedir el
+         * acceso o no es un bloqueo.
+         *
+         * Se comprueba ANTES que el correo verificado porque es la razón más
+         * grave, y así el mensaje que recibe es el correcto.
+         */
+        if (!$user->state) {
+            return response()->json([
+                'message' => 'Tu cuenta está deshabilitada. Comunícate con el administrador.',
+                'reason'  => 'account_disabled',
+            ], 403);
+        }
+
         // ⛔ BLOQUEAR SI NO VERIFICÓ CORREO
         if (!$user->hasVerifiedEmail()) {
             return response()->json([
