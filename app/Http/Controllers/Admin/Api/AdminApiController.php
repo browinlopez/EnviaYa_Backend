@@ -957,7 +957,22 @@ class AdminApiController extends Controller
             ->selectSub(
                 DB::table('business_domiciliary as bd2')
                     ->join('business as b2', 'b2.busines_id', '=', 'bd2.busines_id')
-                    ->selectRaw("GROUP_CONCAT(b2.name ORDER BY b2.name SEPARATOR '|')")
+                    /*
+                     * `ORDER BY ... SEPARATOR` dentro de GROUP_CONCAT es de
+                     * MySQL. En SQLite —donde corren las pruebas— es un error
+                     * de sintaxis que hacía fallar el endpoint entero con un
+                     * 500, así que esta pantalla no se podía probar.
+                     *
+                     * El separador se deja igual en ambos ('|') porque el panel
+                     * parte por él; lo que se pierde en SQLite es el orden
+                     * alfabético, que solo afecta a cómo se lee la lista y no a
+                     * lo que se está probando.
+                     */
+                    ->selectRaw(
+                        in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true)
+                            ? "GROUP_CONCAT(b2.name ORDER BY b2.name SEPARATOR '|')"
+                            : "GROUP_CONCAT(b2.name, '|')"
+                    )
                     ->whereColumn('bd2.domiciliary_id', 'd.domiciliary_id'),
                 'businesses_names',
             )

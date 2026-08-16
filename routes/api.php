@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\Api\AdminApiController;
+use App\Http\Controllers\Admin\Api\AreasApiController;
 use App\Http\Controllers\Admin\Api\MarketingApiController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Business\AffiliationController;
@@ -247,75 +248,109 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
     |
     | Todo el bloque pasa por el middleware `admin`, que exige rol 4. La
     | validación del cliente es comodidad; esta es la que cuenta.
+    |
+    | Encima va `modulo:<clave>` —y `modulo:<clave>,gestionar` en lo que
+    | escribe—, que comprueba el área de la persona contra el catálogo de
+    | App\Support\PanelModules. `admin` responde "¿es del equipo?" y `modulo`
+    | responde "¿le toca esta sección, y puede tocarla o solo mirarla?".
+    |
+    | Los endpoints transversales (ubicaciones, medios, mis permisos) no llevan
+    | puerta de módulo: son auxiliares de otras pantallas, y ponerles una
+    | obligaría a conceder módulos sueltos solo para que cargue un selector.
     */
     Route::prefix('admin')->middleware('admin')->group(function () {
-        Route::get('overview', [AdminApiController::class, 'overview']);
+        // Lo que puede el usuario actual. Sin puerta: todo el que entra al
+        // panel necesita esto para saber qué menú dibujar.
+        Route::get('me/permissions', [AreasApiController::class, 'mios']);
 
-        Route::get('users', [AdminApiController::class, 'users']);
-        Route::post('users', [AdminApiController::class, 'storeUser']);
-        Route::get('users/{id}', [AdminApiController::class, 'showUser']);
-        Route::put('users/{id}', [AdminApiController::class, 'updateUser']);
+        Route::get('overview', [AdminApiController::class, 'overview'])
+            ->middleware('modulo:panel');
 
+        Route::get('users', [AdminApiController::class, 'users'])->middleware('modulo:usuarios');
+        Route::post('users', [AdminApiController::class, 'storeUser'])->middleware('modulo:usuarios,gestionar');
+        Route::get('users/{id}', [AdminApiController::class, 'showUser'])->middleware('modulo:usuarios');
+        Route::put('users/{id}', [AdminApiController::class, 'updateUser'])->middleware('modulo:usuarios,gestionar');
+
+        // Transversal: lo consumen los formularios de negocios, conjuntos y
+        // segmentación de banners.
         Route::get('locations', [AdminApiController::class, 'locations']);
 
         // Archivos de cualquier entidad: negocios, productos, usuarios, conjuntos.
-        Route::get('storage', [AdminApiController::class, 'storageStatus']);
+        Route::get('storage', [AdminApiController::class, 'storageStatus'])->middleware('modulo:ajustes');
         Route::get('media/{entidad}/{id}', [AdminApiController::class, 'media']);
         Route::post('media/{entidad}/{id}', [AdminApiController::class, 'uploadMedia']);
         Route::delete('media/{entidad}/{id}', [AdminApiController::class, 'deleteMedia']);
         Route::put('media/{entidad}/{id}/principal', [AdminApiController::class, 'setPrimaryMedia']);
 
-        Route::get('businesses', [AdminApiController::class, 'businesses']);
-        Route::post('businesses', [AdminApiController::class, 'storeBusiness']);
-        Route::get('businesses/{id}', [AdminApiController::class, 'showBusiness']);
-        Route::put('businesses/{id}', [AdminApiController::class, 'updateBusiness']);
+        Route::get('businesses', [AdminApiController::class, 'businesses'])->middleware('modulo:negocios');
+        Route::post('businesses', [AdminApiController::class, 'storeBusiness'])->middleware('modulo:negocios,gestionar');
+        Route::get('businesses/{id}', [AdminApiController::class, 'showBusiness'])->middleware('modulo:negocios');
+        Route::put('businesses/{id}', [AdminApiController::class, 'updateBusiness'])->middleware('modulo:negocios,gestionar');
 
         // Medios en Cloudflare R2. La subida pasa por el backend porque las
         // llaves del bucket no pueden salir del servidor.
-        Route::get('businesses/{id}/media', [AdminApiController::class, 'businessMedia']);
-        Route::post('businesses/{id}/media', [AdminApiController::class, 'uploadBusinessMedia']);
-        Route::delete('businesses/{id}/media', [AdminApiController::class, 'deleteBusinessMedia']);
+        Route::get('businesses/{id}/media', [AdminApiController::class, 'businessMedia'])->middleware('modulo:negocios');
+        Route::post('businesses/{id}/media', [AdminApiController::class, 'uploadBusinessMedia'])->middleware('modulo:negocios,gestionar');
+        Route::delete('businesses/{id}/media', [AdminApiController::class, 'deleteBusinessMedia'])->middleware('modulo:negocios,gestionar');
 
-        Route::get('products', [AdminApiController::class, 'products']);
-        Route::post('products', [AdminApiController::class, 'storeProduct']);
-        Route::get('products/{id}', [AdminApiController::class, 'showProduct']);
-        Route::put('products/{id}', [AdminApiController::class, 'updateProduct']);
+        Route::get('products', [AdminApiController::class, 'products'])->middleware('modulo:productos');
+        Route::post('products', [AdminApiController::class, 'storeProduct'])->middleware('modulo:productos,gestionar');
+        Route::get('products/{id}', [AdminApiController::class, 'showProduct'])->middleware('modulo:productos');
+        Route::put('products/{id}', [AdminApiController::class, 'updateProduct'])->middleware('modulo:productos,gestionar');
 
-        Route::get('orders', [AdminApiController::class, 'orders']);
-        Route::get('orders/{id}', [AdminApiController::class, 'showOrder']);
+        Route::get('orders', [AdminApiController::class, 'orders'])->middleware('modulo:ordenes');
+        Route::get('orders/{id}', [AdminApiController::class, 'showOrder'])->middleware('modulo:ordenes');
 
-        Route::get('domiciliaries', [AdminApiController::class, 'domiciliaries']);
-        Route::post('domiciliaries', [AdminApiController::class, 'storeDomiciliary']);
-        Route::get('domiciliaries/{id}', [AdminApiController::class, 'showDomiciliary']);
-        Route::put('domiciliaries/{id}', [AdminApiController::class, 'updateDomiciliary']);
-        Route::post('domiciliaries/{id}/contrato', [AdminApiController::class, 'signContract']);
+        Route::get('domiciliaries', [AdminApiController::class, 'domiciliaries'])->middleware('modulo:domiciliarios');
+        Route::post('domiciliaries', [AdminApiController::class, 'storeDomiciliary'])->middleware('modulo:domiciliarios,gestionar');
+        Route::get('domiciliaries/{id}', [AdminApiController::class, 'showDomiciliary'])->middleware('modulo:domiciliarios');
+        Route::put('domiciliaries/{id}', [AdminApiController::class, 'updateDomiciliary'])->middleware('modulo:domiciliarios,gestionar');
+        Route::post('domiciliaries/{id}/contrato', [AdminApiController::class, 'signContract'])->middleware('modulo:domiciliarios,gestionar');
 
-        Route::get('payments', [AdminApiController::class, 'payments']);
+        Route::get('payments', [AdminApiController::class, 'payments'])->middleware('modulo:pagos');
 
-        Route::get('reviews', [AdminApiController::class, 'reviews']);
-        Route::delete('reviews', [AdminApiController::class, 'deleteReview']);
+        Route::get('reviews', [AdminApiController::class, 'reviews'])->middleware('modulo:resenas');
+        Route::delete('reviews', [AdminApiController::class, 'deleteReview'])->middleware('modulo:resenas,gestionar');
 
-        Route::get('categories', [AdminApiController::class, 'categories']);
-        Route::post('categories', [AdminApiController::class, 'storeCategory']);
-        Route::put('categories', [AdminApiController::class, 'updateCategory']);
-        Route::delete('categories', [AdminApiController::class, 'deleteCategory']);
+        Route::get('categories', [AdminApiController::class, 'categories'])->middleware('modulo:categorias');
+        Route::post('categories', [AdminApiController::class, 'storeCategory'])->middleware('modulo:categorias,gestionar');
+        Route::put('categories', [AdminApiController::class, 'updateCategory'])->middleware('modulo:categorias,gestionar');
+        Route::delete('categories', [AdminApiController::class, 'deleteCategory'])->middleware('modulo:categorias,gestionar');
 
-        Route::get('complexes', [AdminApiController::class, 'complexes']);
-        Route::post('complexes', [AdminApiController::class, 'storeComplex']);
-        Route::put('complexes/{id}', [AdminApiController::class, 'updateComplex']);
-        Route::delete('complexes/{id}', [AdminApiController::class, 'deleteComplex']);
+        Route::get('complexes', [AdminApiController::class, 'complexes'])->middleware('modulo:conjuntos');
+        Route::post('complexes', [AdminApiController::class, 'storeComplex'])->middleware('modulo:conjuntos,gestionar');
+        Route::put('complexes/{id}', [AdminApiController::class, 'updateComplex'])->middleware('modulo:conjuntos,gestionar');
+        Route::delete('complexes/{id}', [AdminApiController::class, 'deleteComplex'])->middleware('modulo:conjuntos,gestionar');
 
-        Route::get('owners', [AdminApiController::class, 'owners']);
-        Route::get('owners/options', [AdminApiController::class, 'ownerOptions']);
-        Route::post('owners', [AdminApiController::class, 'storeOwner']);
-        Route::put('owners/{id}', [AdminApiController::class, 'updateOwner']);
+        /*
+        |------------------------------------------------------------------
+        | ROLES Y ACCESOS
+        |------------------------------------------------------------------
+        | La llave que reparte todas las demás. Exige `gestionar` incluso para
+        | listar: ver el mapa completo de quién puede qué ya es información
+        | que solo le corresponde a Tecnología.
+        */
+        Route::middleware('modulo:areas,gestionar')->group(function () {
+            Route::get('areas', [AreasApiController::class, 'index']);
+            Route::post('areas', [AreasApiController::class, 'store']);
+            Route::put('areas/{id}', [AreasApiController::class, 'update']);
+            Route::delete('areas/{id}', [AreasApiController::class, 'destroy']);
 
-        Route::get('chats', [AdminApiController::class, 'chats']);
-        Route::get('chats/{chatId}/messages', [AdminApiController::class, 'chatMessages']);
+            Route::get('areas-members', [AreasApiController::class, 'miembros']);
+            Route::put('areas-members/{userId}', [AreasApiController::class, 'asignarArea']);
+        });
 
-        Route::get('audits', [AdminApiController::class, 'audits']);
+        Route::get('owners', [AdminApiController::class, 'owners'])->middleware('modulo:propietarios');
+        Route::get('owners/options', [AdminApiController::class, 'ownerOptions'])->middleware('modulo:propietarios');
+        Route::post('owners', [AdminApiController::class, 'storeOwner'])->middleware('modulo:propietarios,gestionar');
+        Route::put('owners/{id}', [AdminApiController::class, 'updateOwner'])->middleware('modulo:propietarios,gestionar');
 
-        Route::get('reports/{kind}', [AdminApiController::class, 'report']);
+        Route::get('chats', [AdminApiController::class, 'chats'])->middleware('modulo:chats');
+        Route::get('chats/{chatId}/messages', [AdminApiController::class, 'chatMessages'])->middleware('modulo:chats');
+
+        Route::get('audits', [AdminApiController::class, 'audits'])->middleware('modulo:auditoria');
+
+        Route::get('reports/{kind}', [AdminApiController::class, 'report'])->middleware('modulo:reportes');
 
         /*
         |------------------------------------------------------------------
@@ -329,42 +364,43 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         | y la web— está arriba, bajo `ads/*`.
         */
         Route::prefix('marketing')->group(function () {
-            Route::get('overview', [MarketingApiController::class, 'overview']);
+            Route::get('overview', [MarketingApiController::class, 'overview'])
+                ->middleware('modulo:marketing');
 
-            Route::get('advertisers', [MarketingApiController::class, 'advertisers']);
-            Route::post('advertisers', [MarketingApiController::class, 'storeAdvertiser']);
-            Route::put('advertisers/{id}', [MarketingApiController::class, 'updateAdvertiser']);
-            Route::delete('advertisers/{id}', [MarketingApiController::class, 'deleteAdvertiser']);
+            Route::get('advertisers', [MarketingApiController::class, 'advertisers'])->middleware('modulo:marketing.anunciantes');
+            Route::post('advertisers', [MarketingApiController::class, 'storeAdvertiser'])->middleware('modulo:marketing.anunciantes,gestionar');
+            Route::put('advertisers/{id}', [MarketingApiController::class, 'updateAdvertiser'])->middleware('modulo:marketing.anunciantes,gestionar');
+            Route::delete('advertisers/{id}', [MarketingApiController::class, 'deleteAdvertiser'])->middleware('modulo:marketing.anunciantes,gestionar');
 
-            Route::get('campaigns', [MarketingApiController::class, 'campaigns']);
-            Route::post('campaigns', [MarketingApiController::class, 'storeCampaign']);
-            Route::put('campaigns/{id}', [MarketingApiController::class, 'updateCampaign']);
-            Route::delete('campaigns/{id}', [MarketingApiController::class, 'deleteCampaign']);
+            Route::get('campaigns', [MarketingApiController::class, 'campaigns'])->middleware('modulo:marketing.campanas');
+            Route::post('campaigns', [MarketingApiController::class, 'storeCampaign'])->middleware('modulo:marketing.campanas,gestionar');
+            Route::put('campaigns/{id}', [MarketingApiController::class, 'updateCampaign'])->middleware('modulo:marketing.campanas,gestionar');
+            Route::delete('campaigns/{id}', [MarketingApiController::class, 'deleteCampaign'])->middleware('modulo:marketing.campanas,gestionar');
 
-            Route::get('banners', [MarketingApiController::class, 'banners']);
-            Route::post('banners', [MarketingApiController::class, 'storeBanner']);
-            Route::get('banners/{id}', [MarketingApiController::class, 'showBanner']);
-            Route::put('banners/{id}', [MarketingApiController::class, 'updateBanner']);
-            Route::delete('banners/{id}', [MarketingApiController::class, 'deleteBanner']);
-            Route::get('banners/{id}/metrics', [MarketingApiController::class, 'bannerMetrics']);
+            Route::get('banners', [MarketingApiController::class, 'banners'])->middleware('modulo:marketing.banners');
+            Route::post('banners', [MarketingApiController::class, 'storeBanner'])->middleware('modulo:marketing.banners,gestionar');
+            Route::get('banners/{id}', [MarketingApiController::class, 'showBanner'])->middleware('modulo:marketing.banners');
+            Route::put('banners/{id}', [MarketingApiController::class, 'updateBanner'])->middleware('modulo:marketing.banners,gestionar');
+            Route::delete('banners/{id}', [MarketingApiController::class, 'deleteBanner'])->middleware('modulo:marketing.banners,gestionar');
+            Route::get('banners/{id}/metrics', [MarketingApiController::class, 'bannerMetrics'])->middleware('modulo:marketing.banners');
 
-            Route::get('coupons', [MarketingApiController::class, 'coupons']);
-            Route::post('coupons', [MarketingApiController::class, 'storeCoupon']);
-            Route::put('coupons/{id}', [MarketingApiController::class, 'updateCoupon']);
-            Route::delete('coupons/{id}', [MarketingApiController::class, 'deleteCoupon']);
-            Route::get('coupons/{id}/redemptions', [MarketingApiController::class, 'couponRedemptions']);
+            Route::get('coupons', [MarketingApiController::class, 'coupons'])->middleware('modulo:marketing.cupones');
+            Route::post('coupons', [MarketingApiController::class, 'storeCoupon'])->middleware('modulo:marketing.cupones,gestionar');
+            Route::put('coupons/{id}', [MarketingApiController::class, 'updateCoupon'])->middleware('modulo:marketing.cupones,gestionar');
+            Route::delete('coupons/{id}', [MarketingApiController::class, 'deleteCoupon'])->middleware('modulo:marketing.cupones,gestionar');
+            Route::get('coupons/{id}/redemptions', [MarketingApiController::class, 'couponRedemptions'])->middleware('modulo:marketing.cupones');
 
-            Route::get('featured', [MarketingApiController::class, 'featured']);
-            Route::post('featured', [MarketingApiController::class, 'storeFeatured']);
-            Route::put('featured/{id}', [MarketingApiController::class, 'updateFeatured']);
-            Route::delete('featured/{id}', [MarketingApiController::class, 'deleteFeatured']);
+            Route::get('featured', [MarketingApiController::class, 'featured'])->middleware('modulo:marketing.destacados');
+            Route::post('featured', [MarketingApiController::class, 'storeFeatured'])->middleware('modulo:marketing.destacados,gestionar');
+            Route::put('featured/{id}', [MarketingApiController::class, 'updateFeatured'])->middleware('modulo:marketing.destacados,gestionar');
+            Route::delete('featured/{id}', [MarketingApiController::class, 'deleteFeatured'])->middleware('modulo:marketing.destacados,gestionar');
 
-            Route::get('push', [MarketingApiController::class, 'pushCampaigns']);
-            Route::post('push', [MarketingApiController::class, 'storePushCampaign']);
-            Route::post('push/preview', [MarketingApiController::class, 'pushPreview']);
-            Route::put('push/{id}', [MarketingApiController::class, 'updatePushCampaign']);
-            Route::post('push/{id}/send', [MarketingApiController::class, 'sendPushCampaign']);
-            Route::post('push/{id}/cancel', [MarketingApiController::class, 'cancelPushCampaign']);
+            Route::get('push', [MarketingApiController::class, 'pushCampaigns'])->middleware('modulo:marketing.notificaciones');
+            Route::post('push', [MarketingApiController::class, 'storePushCampaign'])->middleware('modulo:marketing.notificaciones,gestionar');
+            Route::post('push/preview', [MarketingApiController::class, 'pushPreview'])->middleware('modulo:marketing.notificaciones');
+            Route::put('push/{id}', [MarketingApiController::class, 'updatePushCampaign'])->middleware('modulo:marketing.notificaciones,gestionar');
+            Route::post('push/{id}/send', [MarketingApiController::class, 'sendPushCampaign'])->middleware('modulo:marketing.notificaciones,gestionar');
+            Route::post('push/{id}/cancel', [MarketingApiController::class, 'cancelPushCampaign'])->middleware('modulo:marketing.notificaciones,gestionar');
         });
     });
 });

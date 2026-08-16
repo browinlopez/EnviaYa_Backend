@@ -28,6 +28,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // Puerta del API de superadministración (rol 4). El panel de React
         // ya filtra en el cliente, pero eso no es una defensa.
         'admin'     => \App\Http\Middleware\EnsureAdmin::class,
+        // Puerta por sección: `modulo:pagos` para consultar, `modulo:pagos,gestionar`
+        // para modificar. Se aplica encima de `admin`, que ya validó que la
+        // persona sea del equipo.
+        'modulo'    => \App\Http\Middleware\EnsureModuleAccess::class,
     ]);
 })
     ->withExceptions(function (Exceptions $exceptions): void {

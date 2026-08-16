@@ -3,6 +3,7 @@
 use App\Models\Marketing\AdCampaign;
 use App\Models\Marketing\Advertiser;
 use App\Models\Marketing\Banner;
+use App\Models\Area;
 use App\Models\Marketing\Coupon;
 use App\Models\Rol;
 use App\Models\User;
@@ -21,7 +22,15 @@ function comoAdmin(): User
 {
     Rol::firstOrCreate(['rol_id' => 4], ['name' => 'admin', 'guard_name' => 'web']);
 
-    $admin = User::factory()->create(['rol' => 4]);
+    /*
+     * El rol 4 dice "es del equipo"; el ÁREA dice qué secciones le tocan. Desde
+     * que existe la puerta por módulo, un usuario sin área no entra a ninguna
+     * parte, así que estas pruebas usan Tecnología, que alcanza todo el
+     * catálogo. El reparto por área se prueba aparte, en PermisosPorAreaTest.
+     */
+    $sistema = Area::where('code', 'sistema')->firstOrFail();
+
+    $admin = User::factory()->create(['rol' => 4, 'area_id' => $sistema->id]);
     Sanctum::actingAs($admin);
 
     return $admin;
