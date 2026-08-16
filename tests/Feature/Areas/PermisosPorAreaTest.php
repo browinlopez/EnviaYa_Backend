@@ -22,7 +22,11 @@ function comoArea(string $codigo): User
     Rol::firstOrCreate(['rol_id' => 4], ['name' => 'admin', 'guard_name' => 'web']);
 
     $area = Area::where('code', $codigo)->firstOrFail();
-    $user = User::factory()->create(['rol' => 4, 'area_id' => $area->id]);
+    // Las pruebas de reparto usan gestores: lo que se comprueba acá es el
+    // ALCANCE del área, y el nivel se prueba aparte en NivelAccesoTest.
+    $user = User::factory()->create([
+        'rol' => 4, 'area_id' => $area->id, 'access_level' => 'gestor',
+    ]);
 
     Sanctum::actingAs($user);
 

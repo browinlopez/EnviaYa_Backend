@@ -42,18 +42,43 @@ class EnsureModuleAccess
             ], 403);
         }
 
+        // El nivel recorta lo que el área concede: un auxiliar ve lo mismo que
+        // su jefe y no modifica nada.
+        $nivel = $user->access_level ?? Area::NIVEL_GESTOR;
+
         $permitido = $alcance === 'gestionar'
-            ? $area->puedeGestionar($modulo)
-            : $area->puedeVer($modulo);
+            ? $area->puedeGestionar($modulo, $nivel)
+            : $area->puedeVer($modulo, $nivel);
 
         if (!$permitido) {
             return response()->json([
-                'message' => $alcance === 'gestionar'
-                    ? "Tu área ({$area->name}) puede consultar esta sección, pero no modificarla."
-                    : "Tu área ({$area->name}) no tiene acceso a esta sección.",
+                'message' => $this->explicar($area, $modulo, $alcance, $nivel),
             ], 403);
         }
 
         return $next($request);
+    }
+
+    /**
+     * Por qué se rechazó, en términos que la persona pueda accionar.
+     *
+     * Se distinguen tres casos porque llevan a tres conversaciones distintas:
+     * pedir el módulo, pedir que le suban el nivel, o entender que esa sección
+     * no es de su área. Un "403" genérico las confunde todas y termina en un
+     * mensaje a Tecnología que no dice qué hace falta.
+     */
+    private function explicar(Area $area, string $modulo, string $alcance, string $nivel): string
+    {
+        if ($alcance !== 'gestionar') {
+            return "Tu área ({$area->name}) no tiene acceso a esta sección.";
+        }
+
+        // El área sí lo gestiona; lo que falta es el nivel de la persona.
+        if ($nivel === Area::NIVEL_CONSULTA && $area->puedeGestionar($modulo)) {
+            return 'Tu acceso es de solo consulta. Para modificar esta sección '
+                . 'pídele a Tecnología que te cambie el nivel a gestor.';
+        }
+
+        return "Tu área ({$area->name}) puede consultar esta sección, pero no modificarla.";
     }
 }

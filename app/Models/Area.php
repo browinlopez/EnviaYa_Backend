@@ -14,6 +14,19 @@ class Area extends Model
 {
     protected $table = 'areas';
 
+    /**
+     * Niveles de acceso dentro de un área.
+     *
+     * `gestor` crea, edita y borra en lo que su área alcanza. `consulta` ve
+     * exactamente lo mismo y no modifica nada: es el auxiliar, el asistente o
+     * el practicante que necesita la información para trabajar pero no
+     * responde por los cambios.
+     */
+    public const NIVEL_GESTOR   = 'gestor';
+    public const NIVEL_CONSULTA = 'consulta';
+
+    public const NIVELES = [self::NIVEL_GESTOR, self::NIVEL_CONSULTA];
+
     protected $fillable = ['code', 'name', 'description', 'state'];
 
     protected $casts = [
@@ -32,36 +45,50 @@ class Area extends Model
      * El área de sistema se resuelve sin consultar la tabla: tiene todo por
      * definición, y depender de filas para eso significaría que un borrado
      * accidental deja el panel sin quien reparta permisos.
+     *
+     * `$nivel` recorta el resultado a la persona concreta: el área define el
+     * ALCANCE —qué secciones— y el nivel la PROFUNDIDAD —si además puede
+     * tocarlas—. Un auxiliar y su jefe miran lo mismo; solo uno modifica.
+     *
+     * Se aplica acá y no en cada llamador para que nadie pueda olvidarlo: el
+     * middleware, el menú y el endpoint de permisos pasan todos por este punto.
      */
-    public function permisos(): array
+    public function permisos(string $nivel = self::NIVEL_GESTOR): array
     {
-        if ($this->is_system) {
-            return array_fill_keys(
-                PanelModules::claves(),
-                ['view' => true, 'manage' => true],
+        $matriz = $this->is_system
+            ? array_fill_keys(PanelModules::claves(), ['view' => true, 'manage' => true])
+            : DB::table('area_module')
+                ->where('area_id', $this->id)
+                ->get()
+                ->mapWithKeys(fn ($f) => [
+                    $f->module => [
+                        'view'   => (bool) $f->can_view,
+                        'manage' => (bool) $f->can_manage,
+                    ],
+                ])
+                ->all();
+
+        if ($nivel === self::NIVEL_CONSULTA) {
+            // Se conserva `view` y se apaga `manage`: el alcance no cambia, la
+            // profundidad sí. Quitarle también la vista lo dejaría sin poder
+            // hacer su trabajo, que es justamente consultar.
+            $matriz = array_map(
+                fn ($p) => ['view' => $p['view'], 'manage' => false],
+                $matriz,
             );
         }
 
-        return DB::table('area_module')
-            ->where('area_id', $this->id)
-            ->get()
-            ->mapWithKeys(fn ($f) => [
-                $f->module => [
-                    'view'   => (bool) $f->can_view,
-                    'manage' => (bool) $f->can_manage,
-                ],
-            ])
-            ->all();
+        return $matriz;
     }
 
-    public function puedeVer(string $modulo): bool
+    public function puedeVer(string $modulo, string $nivel = self::NIVEL_GESTOR): bool
     {
-        return (bool) ($this->permisos()[$modulo]['view'] ?? false);
+        return (bool) ($this->permisos($nivel)[$modulo]['view'] ?? false);
     }
 
-    public function puedeGestionar(string $modulo): bool
+    public function puedeGestionar(string $modulo, string $nivel = self::NIVEL_GESTOR): bool
     {
-        return (bool) ($this->permisos()[$modulo]['manage'] ?? false);
+        return (bool) ($this->permisos($nivel)[$modulo]['manage'] ?? false);
     }
 
     /**

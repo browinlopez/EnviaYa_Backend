@@ -30,7 +30,9 @@ function comoAdmin(): User
      */
     $sistema = Area::where('code', 'sistema')->firstOrFail();
 
-    $admin = User::factory()->create(['rol' => 4, 'area_id' => $sistema->id]);
+    $admin = User::factory()->create([
+        'rol' => 4, 'area_id' => $sistema->id, 'access_level' => 'gestor',
+    ]);
     Sanctum::actingAs($admin);
 
     return $admin;

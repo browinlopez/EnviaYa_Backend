@@ -20,7 +20,9 @@ function adminSistema(): User
     Rol::firstOrCreate(['rol_id' => 4], ['name' => 'admin', 'guard_name' => 'web']);
     $sistema = Area::where('code', 'sistema')->firstOrFail();
 
-    $u = User::factory()->create(['rol' => 4, 'area_id' => $sistema->id]);
+    $u = User::factory()->create([
+        'rol' => 4, 'area_id' => $sistema->id, 'access_level' => 'gestor',
+    ]);
     Sanctum::actingAs($u);
 
     return $u;

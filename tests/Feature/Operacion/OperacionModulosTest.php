@@ -24,7 +24,9 @@ function comoArea2(string $codigo): User
     Rol::firstOrCreate(['rol_id' => 4], ['name' => 'admin', 'guard_name' => 'web']);
     $area = Area::where('code', $codigo)->firstOrFail();
 
-    $u = User::factory()->create(['rol' => 4, 'area_id' => $area->id]);
+    $u = User::factory()->create([
+        'rol' => 4, 'area_id' => $area->id, 'access_level' => 'gestor',
+    ]);
     Sanctum::actingAs($u);
 
     return $u;

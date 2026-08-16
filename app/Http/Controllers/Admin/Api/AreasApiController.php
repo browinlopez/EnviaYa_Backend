@@ -37,6 +37,7 @@ class AreasApiController extends Controller
     {
         $user = $request->user();
         $area = $user->area_id ? Area::find($user->area_id) : null;
+        $nivel = $user->access_level ?? Area::NIVEL_GESTOR;
 
         return response()->json([
             'area' => $area ? [
@@ -45,7 +46,13 @@ class AreasApiController extends Controller
                 'name'      => $area->name,
                 'is_system' => $area->is_system,
             ] : null,
-            'permissions' => $area ? $area->permisos() : [],
+            'access_level' => $nivel,
+            /*
+             * Ya vienen recortados por el nivel. El panel no necesita saber
+             * que existen los niveles: recibe menos permisos y oculta menos
+             * botones, sin una segunda regla que pueda discrepar del servidor.
+             */
+            'permissions' => $area ? $area->permisos($nivel) : [],
             'catalog'     => PanelModules::paraPanel(),
         ]);
     }
@@ -183,7 +190,8 @@ class AreasApiController extends Controller
                 ->orderBy('u.name')
                 ->get([
                     'u.user_id', 'u.name', 'u.email', 'u.state',
-                    'u.area_id', 'a.name as area_name', 'a.code as area_code',
+                    'u.area_id', 'u.access_level',
+                    'a.name as area_name', 'a.code as area_code',
                 ])
         );
     }
@@ -191,7 +199,8 @@ class AreasApiController extends Controller
     public function asignarArea(Request $request, $userId)
     {
         $datos = $request->validate([
-            'area_id' => 'nullable|integer|exists:areas,id',
+            'area_id'      => 'sometimes|nullable|integer|exists:areas,id',
+            'access_level' => 'sometimes|in:gestor,consulta',
         ]);
 
         $usuario = DB::table('user')->where('user_id', $userId)->first();
@@ -203,18 +212,41 @@ class AreasApiController extends Controller
             ], 422);
         }
 
+        $esUnoMismo = (int) $request->user()->user_id === (int) $userId;
+
         // Quitarse el área a uno mismo es cerrarse la puerta desde dentro.
-        if ((int) $request->user()->user_id === (int) $userId && empty($datos['area_id'])) {
+        if ($esUnoMismo && array_key_exists('area_id', $datos) && empty($datos['area_id'])) {
             return response()->json([
                 'message' => 'No puedes quitarte tu propia área: perderías el acceso al panel.',
             ], 422);
         }
 
-        DB::table('user')->where('user_id', $userId)->update([
-            'area_id' => $datos['area_id'] ?? null,
-        ]);
+        /*
+         * Tampoco degradarse a uno mismo. Pasar a consulta apaga la gestión de
+         * TODO, incluido este gestor: la persona quedaría sin poder devolverse
+         * el nivel, y si es la única de Tecnología nadie más podría hacerlo.
+         */
+        if ($esUnoMismo && ($datos['access_level'] ?? null) === Area::NIVEL_CONSULTA) {
+            return response()->json([
+                'message' => 'No puedes ponerte a ti mismo en solo consulta: perderías la capacidad de volver a cambiarlo.',
+            ], 422);
+        }
 
-        return response()->json(['message' => 'Área asignada.']);
+        $cambios = [];
+        if (array_key_exists('area_id', $datos)) {
+            $cambios['area_id'] = $datos['area_id'] ?? null;
+        }
+        if (array_key_exists('access_level', $datos)) {
+            $cambios['access_level'] = $datos['access_level'];
+        }
+
+        if (!$cambios) {
+            return response()->json(['message' => 'No hay nada que cambiar.'], 422);
+        }
+
+        DB::table('user')->where('user_id', $userId)->update($cambios);
+
+        return response()->json(['message' => 'Acceso actualizado.']);
     }
 
     /* ==================================================================
