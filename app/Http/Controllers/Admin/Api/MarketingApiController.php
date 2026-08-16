@@ -778,11 +778,18 @@ class MarketingApiController extends Controller
         // mientras se despachan miles de mensajes.
         // ──────────────────────────────────────────────────────────────────
 
-        $p->update([
+        /*
+         * `forceFill` y no `update`: `sent_at` y `recipients_count` quedan
+         * fuera de $fillable a propósito, porque son constancia de lo que hizo
+         * el servidor y no datos que alguien pueda mandar. Con `update` se
+         * descartaban en silencio y la campaña quedaba marcada como enviada
+         * pero sin fecha, con lo que se podía volver a enviar.
+         */
+        $p->forceFill([
             'state'            => PushCampaign::ENVIADA,
             'sent_at'          => now(),
             'recipients_count' => $destinatarios,
-        ]);
+        ])->save();
 
         return response()->json([
             'message'    => "Notificación cerrada con {$destinatarios} destinatario(s).",
