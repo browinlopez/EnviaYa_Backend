@@ -18,6 +18,7 @@
         "maatwebsite/excel": "^3.1",
         "owen-it/laravel-auditing": "^14.0",
         "pusher/pusher-php-server": "^7.2",
+        "sentry/sentry-laravel": "^4.27",
         "spatie/laravel-permission": "^6.21",
         "yajra/laravel-datatables-oracle": "^12.4"
     },

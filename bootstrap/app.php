@@ -1,8 +1,14 @@
 <?php
 
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Validation\ValidationException;
+use Sentry\Laravel\Integration;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -39,5 +45,31 @@ return Application::configure(basePath: dirname(__DIR__))
     ]);
 })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        /*
+         * Monitoreo de errores.
+         *
+         * Sin `SENTRY_LARAVEL_DSN` en el .env esto no hace nada: el paquete
+         * queda inerte y no envía ni captura. Con DSN, un 500 en producción se
+         * sabe en el momento en vez de cuando a un usuario le da por contarlo.
+         *
+         * Se registra igual —con o sin DSN— para que activarlo en el servidor
+         * sea poner una variable y no tocar código.
+         */
+        Integration::handles($exceptions);
+
+        /*
+         * Lo que NO se reporta.
+         *
+         * Un 404 o un 403 no son fallos del sistema sino su funcionamiento
+         * normal: el reparto por áreas rechaza rutas ajenas todo el día, y
+         * mandarlas al monitor ahogaría los errores de verdad en ruido. Un 422
+         * es validación: alguien escribió algo mal, no se rompió nada.
+         */
+        $exceptions->dontReport([
+            AuthenticationException::class,
+            AuthorizationException::class,
+            ValidationException::class,
+            NotFoundHttpException::class,
+            ModelNotFoundException::class,
+        ]);
     })->create();
