@@ -45,6 +45,33 @@ class MediaService
         'banners' => 'banners',
     ];
 
+    /**
+     * Qué módulo del panel manda sobre los archivos de cada entidad.
+     *
+     * Las rutas de medios eran las ÚNICAS de `/admin` sin puerta por módulo:
+     * bastaba con ser del equipo (rol 4) para subir o borrar archivos de
+     * cualquier cosa. Un auxiliar de SST en solo consulta podía borrar el logo
+     * de un negocio — todo el reparto por áreas se saltaba por ahí.
+     *
+     * Vive pegado a `RAICES` y no en el middleware por lo mismo que
+     * `nombreDe()`: son listas que tienen que cubrir las mismas entidades, y
+     * separadas derivan. Una prueba recorre las raíces para comprobarlo.
+     */
+    public const MODULOS = [
+        'negocios'   => 'negocios',
+        'productos'  => 'productos',
+        'usuarios'   => 'usuarios',
+        'conjuntos'  => 'conjuntos',
+        // Las de NEGOCIO, que es lo único que lleva imagen.
+        'categorias' => 'categorias-negocio',
+        'banners'    => 'marketing.banners',
+    ];
+
+    public function moduloDe(string $entidad): ?string
+    {
+        return self::MODULOS[$entidad] ?? null;
+    }
+
     public const TIPOS = ['logo', 'galeria', 'documentos'];
 
     /**

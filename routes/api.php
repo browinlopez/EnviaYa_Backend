@@ -278,10 +278,16 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
 
         // Archivos de cualquier entidad: negocios, productos, usuarios, conjuntos.
         Route::get('storage', [AdminApiController::class, 'storageStatus'])->middleware('modulo:ajustes');
-        Route::get('media/{entidad}/{id}', [AdminApiController::class, 'media']);
-        Route::post('media/{entidad}/{id}', [AdminApiController::class, 'uploadMedia']);
-        Route::delete('media/{entidad}/{id}', [AdminApiController::class, 'deleteMedia']);
-        Route::put('media/{entidad}/{id}/principal', [AdminApiController::class, 'setPrimaryMedia']);
+        // `medios` traduce la entidad de la URL a su módulo y exige `ver` para
+        // consultar y `gestionar` para tocar. Sin esto eran las únicas rutas de
+        // /admin sin puerta: cualquiera del equipo podía borrar el logo de un
+        // negocio, y el reparto por áreas se saltaba por acá.
+        Route::middleware('medios')->group(function () {
+            Route::get('media/{entidad}/{id}', [AdminApiController::class, 'media']);
+            Route::post('media/{entidad}/{id}', [AdminApiController::class, 'uploadMedia']);
+            Route::delete('media/{entidad}/{id}', [AdminApiController::class, 'deleteMedia']);
+            Route::put('media/{entidad}/{id}/principal', [AdminApiController::class, 'setPrimaryMedia']);
+        });
 
         Route::get('businesses', [AdminApiController::class, 'businesses'])->middleware('modulo:negocios');
         Route::post('businesses', [AdminApiController::class, 'storeBusiness'])->middleware('modulo:negocios,gestionar');

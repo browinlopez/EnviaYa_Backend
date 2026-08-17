@@ -32,6 +32,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // para modificar. Se aplica encima de `admin`, que ya validó que la
         // persona sea del equipo.
         'modulo'    => \App\Http\Middleware\EnsureModuleAccess::class,
+        // Puerta de los archivos. Aparte porque el módulo que manda depende de
+        // la entidad de la URL: los de un negocio los rige `negocios` y los de
+        // un banner, `marketing.banners`.
+        'medios'    => \App\Http\Middleware\EnsureMediaAccess::class,
     ]);
 })
     ->withExceptions(function (Exceptions $exceptions): void {

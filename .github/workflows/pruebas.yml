@@ -1,0 +1,61 @@
+# =========================================================================
+# PRUEBAS DEL BACKEND
+#
+# Corre en cada push y en cada pull request. Hasta ahora las 155 pruebas solo
+# se ejecutaban cuando alguien se acordaba, que es lo mismo que decir que no
+# protegían nada: una prueba que no corre sola es documentación, no una red.
+#
+# Sobre SQLite en memoria, igual que en local (`phpunit.xml`). Es más rápido y
+# obliga a que las consultas sean portables — que es lo que ya hizo falta con
+# GROUP_CONCAT y TIMESTAMPDIFF, ambos de MySQL, que reventaban acá y en
+# producción pasaban desapercibidos.
+# =========================================================================
+name: Pruebas
+
+on:
+  push:
+    branches: [Devs, main, master]
+  pull_request:
+
+jobs:
+  pest:
+    name: Pest sobre PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # La versión que declara composer.json y la siguiente: enterarse de que
+        # algo se rompe en 8.3 cuando toque actualizar el servidor es tarde.
+        php: ["8.2", "8.3"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Preparar PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, pdo_sqlite, sqlite3, bcmath, gd, zip
+          coverage: none
+
+      - name: Caché de dependencias
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ matrix.php }}-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ matrix.php }}-
+
+      - name: Instalar dependencias
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Preparar el entorno
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Comprobar la sintaxis de todo el código
+        run: find app config database routes tests -name "*.php" -print0 | xargs -0 -n1 php -l > /dev/null
+
+      - name: Pruebas
+        run: php artisan test
