@@ -148,7 +148,7 @@ test('crea un banner con segmentación y la devuelve como arreglo', function () 
         ->assertJsonPath('image_url', null);
 });
 
-test('las métricas de un banner nuevo salen en cero y sin dividir por cero', function () {
+test('las métricas de un banner nuevo salen en cero y el CTR queda indefinido', function () {
     comoAdmin();
     [, $c] = anuncianteConCampana();
 
@@ -158,11 +158,67 @@ test('las métricas de un banner nuevo salen en cero y sin dividir por cero', fu
         'placement'   => 'home_hero',
     ]);
 
-    $this->getJson("/v1/admin/marketing/banners/{$b->id}/metrics")
+    $r = $this->getJson("/v1/admin/marketing/banners/{$b->id}/metrics")
         ->assertOk()
-        ->assertJsonPath('impressions', 0)
-        ->assertJsonPath('clicks', 0)
-        ->assertJsonPath('ctr', 0);
+        ->assertJsonPath('totals.impressions', 0)
+        ->assertJsonPath('totals.clicks', 0)
+        /*
+         * `null`, NO cero. El CTR de una pieza que no se mostró no es "0 %"
+         * —eso afirma que no funcionó— sino que no hay con qué calcularlo. El
+         * panel lo pinta como un guion y explica que no llegó a mostrarse.
+         */
+        ->assertJsonPath('totals.ctr', null)
+        ->assertJsonPath('best_day', null);
+
+    // La serie viene rellena de ceros: sin los días vacíos la gráfica une el
+    // día 3 con el 9 en una recta y aparenta actividad donde no hubo nada.
+    expect($r->json('series'))->toHaveCount(30);
+    expect(collect($r->json('series'))->sum('impressions'))->toBe(0);
+});
+
+test('las métricas comparan contra la ventana anterior de igual tamaño', function () {
+    comoAdmin();
+    [, $c] = anuncianteConCampana();
+
+    $b = Banner::create([
+        'campaign_id' => $c->id,
+        'title'       => 'Con recorrido',
+        'placement'   => 'home_hero',
+    ]);
+
+    $evento = fn (string $tipo, int $haceDias) => [
+        'banner_id'  => $b->id,
+        'type'       => $tipo,
+        'day'        => now()->subDays($haceDias)->toDateString(),
+        'created_at' => now()->subDays($haceDias),
+    ];
+
+    // Dentro de los últimos 7 días: 3 impresiones y 1 clic.
+    DB::table('banner_events')->insert([
+        $evento('impression', 1),
+        $evento('impression', 2),
+        $evento('impression', 3),
+        $evento('click', 2),
+    ]);
+
+    // En los 7 anteriores: 2 impresiones y ningún clic.
+    DB::table('banner_events')->insert([
+        $evento('impression', 9),
+        $evento('impression', 10),
+    ]);
+
+    $r = $this->getJson("/v1/admin/marketing/banners/{$b->id}/metrics?range=7")
+        ->assertOk()
+        ->assertJsonPath('totals.impressions', 3)
+        ->assertJsonPath('totals.clicks', 1)
+        ->assertJsonPath('previous.impressions', 2)
+        ->assertJsonPath('previous.clicks', 0)
+        // Sin clics, el CTR anterior es 0 y no null: sí se mostró.
+        ->assertJsonPath('previous.ctr', 0);
+
+    // El mejor día es el del clic, no el de más impresiones: de una pieza
+    // interesa cuándo funcionó, no cuándo se mostró sin resultado.
+    expect($r->json('best_day.day'))->toBe(now()->subDays(2)->toDateString());
 });
 
 /* ------------------------------ CUPONES ------------------------------ */

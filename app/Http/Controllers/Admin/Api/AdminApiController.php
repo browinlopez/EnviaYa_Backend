@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Area;
+use App\Models\Operacion\DomiciliaryDocument;
 use App\Services\BusinessMediaService;
 use App\Services\ContratoService;
 use App\Services\MediaService;
@@ -127,7 +129,7 @@ class AdminApiController extends Controller
             'top_businesses'  => $this->topNegocios($desde),
             'couriers'        => $repartidores->sortByDesc('deliveries')->values(),
             'recent_orders'   => $this->ordenesBase()->orderByDesc('o.sale_date')->limit(10)->get(),
-        ]);
+        ] + $this->bloquesDelInicio($request));
     }
 
     /** Serie por día con el periodo anterior alineado al mismo índice. */
@@ -524,19 +526,26 @@ class AdminApiController extends Controller
        ================================================================== */
 
     /**
-     * Resuelve el nombre de la entidad para construir la carpeta.
-     * Devuelve null si el registro no existe.
+     * Nombre del registro para construir su carpeta, o corta con el 404 que
+     * corresponda.
+     *
+     * Son dos fallos distintos y antes se contaban como uno: "esta entidad no
+     * maneja archivos" es un error de quien llama, y "ese registro no existe"
+     * es un dato que se borró. Decirlos igual mandaba a buscar el registro
+     * equivocado.
      */
-    private function nombreDeEntidad(string $entidad, $id): ?string
+    private function nombreDeEntidad(string $entidad, $id, MediaService $medios): string
     {
-        return match ($entidad) {
-            'negocios'  => DB::table('business')->where('busines_id', $id)->value('name'),
-            'productos' => DB::table('products')->where('products_id', $id)->value('name'),
-            'conjuntos' => DB::table('residential_complexes')->where('complex_id', $id)->value('name'),
-            'usuarios'  => DB::table('user')->where('user_id', $id)->value('name'),
-            'categorias' => DB::table('category_business')->where('id', $id)->value('name'),
-            default     => null,
-        };
+        abort_unless(
+            $medios->admiteArchivos($entidad),
+            404,
+            "Los registros de tipo \"{$entidad}\" no manejan archivos.",
+        );
+
+        $nombre = $medios->nombreDe($entidad, $id);
+        abort_if($nombre === null, 404, 'El registro no existe.');
+
+        return $nombre;
     }
 
     /**
@@ -575,8 +584,7 @@ class AdminApiController extends Controller
 
     public function media(Request $request, string $entidad, $id, MediaService $medios)
     {
-        $nombre = $this->nombreDeEntidad($entidad, $id);
-        abort_if($nombre === null, 404, 'El registro no existe.');
+        $nombre = $this->nombreDeEntidad($entidad, $id, $medios);
 
         return response()->json([
             'folder' => $medios->carpeta($entidad, $id, $nombre),
@@ -598,8 +606,7 @@ class AdminApiController extends Controller
      */
     public function uploadMedia(Request $request, string $entidad, $id, MediaService $medios)
     {
-        $nombre = $this->nombreDeEntidad($entidad, $id);
-        abort_if($nombre === null, 404, 'El registro no existe.');
+        $nombre = $this->nombreDeEntidad($entidad, $id, $medios);
 
         $request->validate([
             'file' => 'required|file|max:8192|mimes:jpg,jpeg,png,webp,gif,pdf',
@@ -635,8 +642,7 @@ class AdminApiController extends Controller
 
     public function deleteMedia(Request $request, string $entidad, $id, MediaService $medios)
     {
-        $nombre = $this->nombreDeEntidad($entidad, $id);
-        abort_if($nombre === null, 404, 'El registro no existe.');
+        $nombre = $this->nombreDeEntidad($entidad, $id, $medios);
 
         $datos = $request->validate(['id' => 'required|integer']);
 
@@ -654,7 +660,7 @@ class AdminApiController extends Controller
     /** Marca cuál de las imágenes es la principal de la entidad. */
     public function setPrimaryMedia(Request $request, string $entidad, $id, MediaService $medios)
     {
-        abort_if($this->nombreDeEntidad($entidad, $id) === null, 404, 'El registro no existe.');
+        $this->nombreDeEntidad($entidad, $id, $medios);
 
         $datos = $request->validate(['id' => 'required|integer']);
 
@@ -2025,82 +2031,599 @@ class AdminApiController extends Controller
         );
     }
 
+
+    /* ==================================================================
+       BLOQUES DEL PANEL DE INICIO, POR ÁREA
+
+       El panel dejó de ser el mismo para todos. Dos reglas, y en este orden:
+
+       1. QUÉ se ve lo decide el permiso, no el área. Cada bloque va detrás del
+          módulo que lo alimenta, así que nadie recibe en el inicio un dato que
+          no podría abrir en su sección. Que sea el mismo permiso evita que
+          aparezca una tercera regla capaz de discrepar de las otras dos.
+
+       2. QUÉ VA PRIMERO lo decide el área. SST puede ver los pedidos, pero lo
+          que necesita al entrar es quién está rodando sin SOAT. Un panel que
+          empieza con los ingresos obliga a bajar todos los días hasta lo suyo.
+       ================================================================== */
+
+    /** Permisos ya recortados por el nivel de quien pregunta. */
+    private function permisosDe(Request $request): array
+    {
+        $user = $request->user();
+        $area = $user && $user->area_id ? Area::find($user->area_id) : null;
+
+        if (!$area || (int) $area->state !== 1) {
+            return ['area' => null, 'matriz' => []];
+        }
+
+        return [
+            'area'   => $area,
+            'matriz' => $area->permisos($user->access_level ?? Area::NIVEL_GESTOR),
+        ];
+    }
+
+    /**
+     * Lo que le toca a cada área en el panel de inicio, en su orden.
+     *
+     * Es lo único de todo esto que sabe de áreas, y a propósito: es una
+     * preferencia de presentación, no una regla de seguridad. Un área que no
+     * esté acá cae al orden general, que empieza por la operación.
+     */
+    private const ORDEN_POR_AREA = [
+        'gerencia'     => ['dinero', 'comercial', 'operacion', 'marketing', 'calidad', 'sst', 'contabilidad'],
+        'contabilidad' => ['contabilidad', 'dinero', 'operacion'],
+        'marketing'    => ['marketing', 'dinero', 'comercial'],
+        'comercial'    => ['comercial', 'dinero', 'operacion', 'calidad'],
+        'sst'          => ['sst', 'operacion'],
+        'calidad'      => ['calidad', 'operacion', 'comercial'],
+    ];
+
+    private const ORDEN_POR_DEFECTO = [
+        'dinero', 'operacion', 'contabilidad', 'comercial', 'marketing', 'sst', 'calidad',
+    ];
+
+    /**
+     * Bloques del inicio para quien pregunta.
+     *
+     * Cada bloque se calcula SOLO si su permiso lo autoriza: los que no
+     * corresponden ni se consultan, así que un auxiliar de SST no paga el
+     * costo de agregar el reporte financiero que después no vería.
+     */
+    private function bloquesDelInicio(Request $request): array
+    {
+        ['area' => $area, 'matriz' => $matriz] = $this->permisosDe($request);
+
+        $ve = fn (string ...$modulos) => (bool) array_filter(
+            $modulos,
+            fn ($m) => ($matriz[$m]['view'] ?? false) === true,
+        );
+
+        $bloques = [];
+
+        if ($ve('liquidaciones', 'pagos')) {
+            $bloques['contabilidad'] = $this->bloqueContabilidad($ve('liquidaciones'), $ve('pagos'));
+        }
+
+        if ($ve('sst.documentos', 'sst.incidentes')) {
+            $bloques['sst'] = $this->bloqueSst();
+        }
+
+        if ($ve('pqrs', 'resenas')) {
+            $bloques['calidad'] = $this->bloqueCalidad($ve('pqrs'), $ve('resenas'));
+        }
+
+        if ($ve('marketing', 'marketing.banners', 'marketing.cupones')) {
+            $bloques['marketing'] = $this->bloqueMarketing();
+        }
+
+        if ($ve('negocios', 'productos')) {
+            $bloques['comercial'] = $this->bloqueComercial($ve('negocios'), $ve('productos'));
+        }
+
+        return [
+            'focus'  => $area?->code,
+            'order'  => self::ORDEN_POR_AREA[$area?->code] ?? self::ORDEN_POR_DEFECTO,
+            'blocks' => $bloques,
+        ];
+    }
+
+    /* -------------------------- CONTABILIDAD --------------------------- */
+
+    private function bloqueContabilidad(bool $veLiquidaciones, bool $vePagos): array
+    {
+        $datos = [];
+
+        if ($veLiquidaciones) {
+            $porEstado = DB::table('settlements')
+                ->selectRaw('state, COUNT(*) as n, COALESCE(SUM(net_payable), 0) as monto')
+                ->groupBy('state')
+                ->get()
+                ->keyBy('state');
+
+            $datos += [
+                // Un corte aprobado y sin pagar es plata que se le debe a
+                // alguien: es la cifra que Contabilidad viene a mirar.
+                'settlements_draft'    => (int) ($porEstado[0]->n ?? 0),
+                'settlements_approved' => (int) ($porEstado[1]->n ?? 0),
+                'payable'              => round((float) ($porEstado[1]->monto ?? 0), 2),
+                'paid_amount'          => round((float) ($porEstado[2]->monto ?? 0), 2),
+            ];
+        }
+
+        if ($vePagos) {
+            $datos += [
+                'payments_rejected' => DB::table('payments')
+                    ->whereIn('status', ['rejected', 'failed'])
+                    ->where('payment_date', '>=', Carbon::now()->subDays(30))
+                    ->count(),
+                // Contra `payments` y no contra la bandera denormalizada del
+                // pedido, por lo mismo que el resto del panel.
+                'unpaid_orders' => DB::table('orderssales as o')
+                    ->whereIn('o.state', self::ACTIVOS)
+                    ->whereNotExists(fn ($q) => $this->pagoAprobado($q))
+                    ->count(),
+            ];
+        }
+
+        return $datos;
+    }
+
+    /* ------------------------------- SST ------------------------------- */
+
+    private function bloqueSst(): array
+    {
+        $hoy   = Carbon::today()->toDateString();
+        $aviso = Carbon::today()->addDays(DomiciliaryDocument::AVISO_DIAS)->toDateString();
+
+        $activos = DB::table('domiciliary')->where('state', 1)->count();
+
+        // Cuántos obligatorios vigentes tiene cada repartidor. Le falta la
+        // documentación a quien no llega a los cinco.
+        $completos = DB::table('domiciliary_documents')
+            ->where('state', 1)
+            ->whereIn('type', DomiciliaryDocument::OBLIGATORIOS)
+            ->whereDate('expires_at', '>=', $hoy)
+            ->groupBy('domiciliary_id')
+            ->havingRaw('COUNT(DISTINCT type) = ?', [count(DomiciliaryDocument::OBLIGATORIOS)])
+            ->pluck('domiciliary_id')
+            ->count();
+
+        return [
+            'expired' => DB::table('domiciliary_documents')
+                ->where('state', 1)->whereDate('expires_at', '<', $hoy)->count(),
+            'expiring' => DB::table('domiciliary_documents')
+                ->where('state', 1)
+                ->whereDate('expires_at', '>=', $hoy)
+                ->whereDate('expires_at', '<=', $aviso)
+                ->count(),
+            'couriers_active'     => $activos,
+            'couriers_incomplete' => max(0, $activos - $completos),
+            'without_contract'    => DB::table('domiciliary')
+                ->where('state', 1)->whereNull('contract_signed_at')->count(),
+            'incidents_open' => DB::table('safety_incidents')
+                ->whereIn('state', [0, 1])->count(),
+            'incidents_serious' => DB::table('safety_incidents')
+                ->whereIn('state', [0, 1])->where('severity', 'grave')->count(),
+            'days_off' => (int) DB::table('safety_incidents')
+                ->where('occurred_at', '>=', Carbon::now()->subDays(90))
+                ->sum('days_off'),
+        ];
+    }
+
+    /* ----------------------------- CALIDAD ----------------------------- */
+
+    private function bloqueCalidad(bool $vePqrs, bool $veResenas): array
+    {
+        $datos = [];
+
+        if ($vePqrs) {
+            $abiertas = DB::table('pqrs')->whereIn('state', [0, 1]);
+
+            $datos += [
+                'pqrs_open' => (clone $abiertas)->count(),
+                // Fuera de plazo: es la única cifra de esta pantalla que
+                // significa que alguien está esperando de más ahora mismo.
+                'pqrs_overdue' => (clone $abiertas)
+                    ->whereNotNull('due_at')
+                    ->where('due_at', '<', Carbon::now())
+                    ->count(),
+                'pqrs_resolved_30d' => DB::table('pqrs')
+                    ->whereIn('state', [2, 3])
+                    ->where('resolved_at', '>=', Carbon::now()->subDays(30))
+                    ->count(),
+            ];
+        }
+
+        if ($veResenas) {
+            $desde = Carbon::now()->subDays(30);
+
+            $negocios = DB::table('business_reviews')
+                ->where('created_at', '>=', $desde)->where('qualification', '<=', 2)->count();
+            $repartidores = DB::table('domiciliary_reviews')
+                ->where('created_at', '>=', $desde)->where('qualification', '<=', 2)->count();
+
+            $datos['negative_reviews_30d'] = $negocios + $repartidores;
+        }
+
+        return $datos;
+    }
+
+    /* ---------------------------- MARKETING ---------------------------- */
+
+    private function bloqueMarketing(): array
+    {
+        $hoy   = Carbon::today()->toDateString();
+        $desde = Carbon::today()->subDays(29)->toDateString();
+
+        $eventos = DB::table('banner_events')
+            ->where('day', '>=', $desde)
+            ->selectRaw("SUM(CASE WHEN type = 'impression' THEN 1 ELSE 0 END) as impresiones")
+            ->selectRaw("SUM(CASE WHEN type = 'click' THEN 1 ELSE 0 END) as clics")
+            ->first();
+
+        $impresiones = (int) ($eventos->impresiones ?? 0);
+        $clics       = (int) ($eventos->clics ?? 0);
+
+        return [
+            'campaigns_live' => DB::table('ad_campaigns')
+                ->where('state', 1)
+                ->whereDate('starts_at', '<=', $hoy)
+                ->whereDate('ends_at', '>=', $hoy)
+                ->count(),
+            'banners_live' => DB::table('banners as b')
+                ->join('ad_campaigns as c', 'c.id', '=', 'b.campaign_id')
+                ->where('b.state', 1)->where('c.state', 1)
+                ->whereDate('c.starts_at', '<=', $hoy)
+                ->whereDate('c.ends_at', '>=', $hoy)
+                ->count(),
+            // Una pieza sin imagen se guarda bien y no se muestra: el fallo
+            // más fácil de cometer y el más difícil de notar.
+            'banners_without_image' => DB::table('banners as b')
+                ->where('b.state', 1)
+                ->whereNotExists(fn ($q) => $q->from('media_files as m')
+                    ->whereColumn('m.entity_id', 'b.id')
+                    ->where('m.entity_type', 'banners'))
+                ->count(),
+            'impressions_30d' => $impresiones,
+            'clicks_30d'      => $clics,
+            'ctr_30d'         => $impresiones > 0 ? round($clics / $impresiones * 100, 2) : null,
+            'coupons_expiring' => DB::table('coupons')
+                ->where('state', 1)
+                ->whereDate('ends_at', '>=', $hoy)
+                ->whereDate('ends_at', '<=', Carbon::today()->addDays(7)->toDateString())
+                ->count(),
+            'featured_expiring' => DB::table('featured_businesses')
+                ->where('state', 1)
+                ->whereDate('ends_at', '>=', $hoy)
+                ->whereDate('ends_at', '<=', Carbon::today()->addDays(7)->toDateString())
+                ->count(),
+        ];
+    }
+
+    /* ---------------------------- COMERCIAL ---------------------------- */
+
+    private function bloqueComercial(bool $veNegocios, bool $veProductos): array
+    {
+        $datos = [];
+
+        if ($veNegocios) {
+            $datos += [
+                'businesses_total'   => DB::table('business')->count(),
+                'businesses_hidden'  => DB::table('business')->where('state', '!=', 1)->count(),
+                // Sin coordenadas no entra en el mapa de entregas; sin tipo no
+                // aparece en ningún carrusel de la app. Dos formas de estar
+                // dado de alta y ser invisible.
+                'without_location' => DB::table('business')
+                    ->where(fn ($q) => $q->whereNull('latitude')->orWhereNull('longitude')
+                        ->orWhere('latitude', 0)->orWhere('longitude', 0))
+                    ->count(),
+                'without_type' => DB::table('business')->whereNull('type')->count(),
+                'owners_without_business' => DB::table('owner as o')
+                    ->whereNotExists(fn ($q) => $q->from('owner_busines as ob')
+                        ->whereColumn('ob.owner_id', 'o.owner_id'))
+                    ->count(),
+            ];
+        }
+
+        if ($veProductos) {
+            $datos += [
+                'products_total'      => DB::table('products')->count(),
+                'products_no_image'   => DB::table('products')
+                    ->where(fn ($q) => $q->whereNull('image')->orWhere('image', ''))
+                    ->count(),
+                'products_out_of_stock' => DB::table('products_business')->where('amount', 0)->count(),
+                'categories_unassigned' => DB::table('category as c')
+                    ->whereNotExists(fn ($q) => $q->from('category_category_business as ccb')
+                        ->whereColumn('ccb.category_id', 'c.category_id'))
+                    ->count(),
+            ];
+        }
+
+        return $datos;
+    }
+
     /* ==================================================================
        REPORTES
+
+       Cuatro miradas del mismo periodo. Tres cosas las gobiernan y valen para
+       las cuatro:
+
+       1. La VENTANA puede ser relativa ("últimos 30 días") o dos fechas
+          concretas. Con solo la relativa no se podía cuadrar un mes cerrado
+          contra su liquidación, que es para lo que Contabilidad abre esto.
+
+       2. Toda cifra viene con la del PERIODO ANTERIOR de igual tamaño. Un
+          ingreso de $3,3 M no dice si el mes fue bueno; al lado de los $2,9 M
+          del mes pasado, sí. Es la diferencia entre un dato y una decisión.
+
+       3. Los FILTROS acotan por negocio, municipio o tipo de negocio. Antes
+          todo era agregado nacional y no había forma de responder "¿cómo va
+          La Esquina?" ni "¿cómo va Soledad?", que es lo que pregunta
+          Comercial.
        ================================================================== */
 
     public function report(Request $request, string $kind)
     {
-        $dias = $this->rango($request);
-        $desde = Carbon::now()->subDays($dias - 1)->startOfDay();
+        $ventana = $this->ventanaDelReporte($request);
+        $filtros = $this->filtrosDelReporte($request);
 
-        return match ($kind) {
-            'financial'   => response()->json($this->reporteFinanciero($desde, $dias)),
-            'commercial'  => response()->json($this->reporteComercial($desde)),
-            'operational' => response()->json($this->reporteOperacional($desde, $dias)),
-            default       => response()->json(['message' => 'Tipo de reporte no válido.'], 404),
+        $datos = match ($kind) {
+            'financial'   => $this->reporteFinanciero($ventana, $filtros),
+            'commercial'  => $this->reporteComercial($ventana, $filtros),
+            'operational' => $this->reporteOperacional($ventana, $filtros),
+            'businesses'  => $this->reportePorNegocio($ventana, $filtros),
+            default       => null,
         };
-    }
 
-    private function reporteFinanciero(Carbon $desde, int $dias): array
-    {
-        $entregadas = DB::table('orderssales')
-            ->where('state', self::ENTREGADO)
-            ->where('sale_date', '>=', $desde)
-            ->get(['total', 'subtotal', 'domicilio', 'domiciliary_fee', 'sale_date']);
-
-        $porDia = $entregadas->groupBy(fn($o) => Carbon::parse($o->sale_date)->toDateString());
-        $serie = [];
-        for ($i = 0; $i < $dias; $i++) {
-            $dia = (clone $desde)->addDays($i);
-            $delDia = $porDia[$dia->toDateString()] ?? collect();
-            $serie[] = [
-                'date'     => $dia->toDateString(),
-                'label'    => $dia->format('d M'),
-                'revenue'  => round($delDia->sum('total'), 2),
-                'delivery' => round($delDia->sum('domicilio'), 2),
-            ];
+        if ($datos === null) {
+            return response()->json(['message' => 'Tipo de reporte no válido.'], 404);
         }
 
-        $domicilios = $entregadas->sum('domicilio');
-        $comisiones = $entregadas->sum('domiciliary_fee');
+        return response()->json($datos + [
+            'period'  => [
+                'from'     => $ventana['desde']->toDateString(),
+                'to'       => $ventana['hasta']->toDateString(),
+                'days'     => $ventana['dias'],
+                'previous' => [
+                    'from' => $ventana['desde_antes']->toDateString(),
+                    'to'   => $ventana['hasta_antes']->toDateString(),
+                ],
+            ],
+            'filters' => $this->filtrosLegibles($filtros),
+        ]);
+    }
+
+    /**
+     * Rango en días, acotado para que nadie pida un año de golpe por error.
+     *
+     * Lo usa el panel de inicio, que sigue trabajando con ventanas relativas:
+     * los reportes tienen su propia `ventanaDelReporte()` porque además
+     * admiten dos fechas concretas.
+     */
+    private function rango(Request $request): int
+    {
+        $dias = (int) $request->query('range', 30);
+
+        return max(1, min($dias, 365));
+    }
+
+    /* ------------------------- VENTANA Y FILTROS ----------------------- */
+
+    /**
+     * El periodo que se pide y el inmediatamente anterior de igual tamaño.
+     *
+     * `from`/`to` mandan sobre `range`: quien escribe dos fechas quiere esas
+     * dos fechas. Si vienen al revés se enderezan en vez de devolver un
+     * periodo vacío — es un error de dedo, no una consulta legítima.
+     *
+     * @return array{desde:Carbon, hasta:Carbon, dias:int, desde_antes:Carbon, hasta_antes:Carbon}
+     */
+    private function ventanaDelReporte(Request $request): array
+    {
+        $desde = $this->fechaValida($request->query('from'));
+        $hasta = $this->fechaValida($request->query('to'));
+
+        if ($desde && $hasta) {
+            if ($desde->gt($hasta)) {
+                [$desde, $hasta] = [$hasta, $desde];
+            }
+        } else {
+            $dias  = max(1, min((int) $request->query('range', 30), 365));
+            $hasta = Carbon::today();
+            $desde = $hasta->copy()->subDays($dias - 1);
+        }
+
+        // Un año y un día de margen: pedir cinco años de golpe tumba la
+        // consulta y casi siempre es un cero de más en el formulario.
+        $dias = min($desde->diffInDays($hasta) + 1, 366);
+        $desde = $hasta->copy()->subDays($dias - 1);
 
         return [
-            'totals' => [
-                'revenue'          => round($entregadas->sum('total'), 2),
-                'subtotal'         => round($entregadas->sum('subtotal'), 2),
-                'delivery_fees'    => round($domicilios, 2),
-                'courier_earnings' => round($comisiones, 2),
-                // Lo que queda para la plataforma y el negocio una vez
-                // descontada la comisión del domiciliario.
-                'business_net'     => round($entregadas->sum('subtotal') + ($domicilios - $comisiones), 2),
-                'avg_ticket'       => $entregadas->count() ? round($entregadas->sum('total') / $entregadas->count(), 2) : 0,
-            ],
-            'series' => $serie,
+            'desde'       => $desde->copy()->startOfDay(),
+            'hasta'       => $hasta->copy()->endOfDay(),
+            'dias'        => $dias,
+            'desde_antes' => $desde->copy()->subDays($dias)->startOfDay(),
+            'hasta_antes' => $desde->copy()->subDay()->endOfDay(),
         ];
     }
 
-    private function reporteComercial(Carbon $desde): array
+    private function fechaValida(?string $valor): ?Carbon
     {
-        $productos = DB::table('orderssales_detail as od')
-            ->join('orderssales as o', 'o.orderSales_id', '=', 'od.orderSales_id')
-            ->leftJoin('products as p', 'p.products_id', '=', 'od.product_id')
+        if (!$valor) {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($valor)->startOfDay();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /** @return array{business_id:?int, municipality_id:?int, business_category:?int} */
+    private function filtrosDelReporte(Request $request): array
+    {
+        $entero = fn ($v) => ($v === null || $v === '' || (int) $v <= 0) ? null : (int) $v;
+
+        return [
+            'business_id'       => $entero($request->query('business_id')),
+            'municipality_id'   => $entero($request->query('municipality_id')),
+            'business_category' => $entero($request->query('business_category')),
+        ];
+    }
+
+    /**
+     * Los filtros con su nombre, para que la pantalla y el CSV puedan decir
+     * qué se está mirando. Un reporte filtrado que no dice que lo está es la
+     * forma más fácil de sacar una conclusión equivocada.
+     */
+    private function filtrosLegibles(array $f): array
+    {
+        return array_values(array_filter([
+            $f['business_id'] ? [
+                'key'   => 'business_id',
+                'label' => 'Negocio',
+                'value' => DB::table('business')->where('busines_id', $f['business_id'])->value('name'),
+            ] : null,
+            $f['municipality_id'] ? [
+                'key'   => 'municipality_id',
+                'label' => 'Municipio',
+                'value' => DB::table('municipalities')->where('id', $f['municipality_id'])->value('name'),
+            ] : null,
+            $f['business_category'] ? [
+                'key'   => 'business_category',
+                'label' => 'Tipo de negocio',
+                'value' => DB::table('category_business')->where('id', $f['business_category'])->value('name'),
+            ] : null,
+        ]));
+    }
+
+    /**
+     * Pedidos del periodo con los filtros aplicados.
+     *
+     * El join contra `business` solo se agrega si algún filtro lo necesita:
+     * cargarlo siempre haría más lenta la consulta más común, que es la que no
+     * filtra por nada.
+     */
+    private function pedidosDelPeriodo(array $v, array $f, bool $anterior = false)
+    {
+        $q = DB::table('orderssales as o')->whereBetween('o.sale_date', $anterior
+            ? [$v['desde_antes'], $v['hasta_antes']]
+            : [$v['desde'], $v['hasta']]);
+
+        if ($f['business_id']) {
+            $q->where('o.busines_id', $f['business_id']);
+        }
+
+        if ($f['municipality_id'] || $f['business_category']) {
+            $q->join('business as b', 'b.busines_id', '=', 'o.busines_id');
+
+            if ($f['municipality_id']) {
+                $q->where('b.municipality_id', $f['municipality_id']);
+            }
+
+            if ($f['business_category']) {
+                $q->where('b.type', $f['business_category']);
+            }
+        }
+
+        return $q;
+    }
+
+    /**
+     * Minutos entre dos marcas de tiempo, en el dialecto del motor.
+     *
+     * `TIMESTAMPDIFF` es de MySQL y las pruebas corren sobre SQLite: sin esto,
+     * el reporte funciona en producción y revienta en la única parte donde se
+     * comprobaría que funciona.
+     */
+    private function expresionMinutos(string $a, string $b): string
+    {
+        $driver = DB::connection()->getDriverName();
+
+        return in_array($driver, ['mysql', 'mariadb'], true)
+            ? "TIMESTAMPDIFF(MINUTE, {$a}, {$b})"
+            : "(julianday({$b}) - julianday({$a})) * 1440";
+    }
+
+    /* ---------------------------- FINANCIERO --------------------------- */
+
+    private function reporteFinanciero(array $v, array $f): array
+    {
+        $totales = fn (bool $antes) => $this->cifrasFinancieras(
+            $this->pedidosDelPeriodo($v, $f, $antes)
+                ->where('o.state', self::ENTREGADO)
+                ->get(['o.total', 'o.subtotal', 'o.domicilio', 'o.domiciliary_fee', 'o.discount', 'o.sale_date'])
+        );
+
+        $actual = $this->pedidosDelPeriodo($v, $f)
             ->where('o.state', self::ENTREGADO)
-            ->where('o.sale_date', '>=', $desde)
+            ->get(['o.total', 'o.subtotal', 'o.domicilio', 'o.domiciliary_fee', 'o.discount', 'o.sale_date']);
+
+        $porDia = $actual->groupBy(fn ($o) => Carbon::parse($o->sale_date)->toDateString());
+
+        $serie = [];
+        for ($d = $v['desde']->copy(); $d->lte($v['hasta']); $d->addDay()) {
+            $delDia = $porDia[$d->toDateString()] ?? collect();
+            $serie[] = [
+                'date'     => $d->toDateString(),
+                'label'    => $d->format('d M'),
+                'revenue'  => round($delDia->sum('total'), 2),
+                'delivery' => round($delDia->sum('domicilio'), 2),
+                'orders'   => $delDia->count(),
+            ];
+        }
+
+        return [
+            'totals'   => $this->cifrasFinancieras($actual),
+            'previous' => $totales(true),
+            'series'   => $serie,
+        ];
+    }
+
+    private function cifrasFinancieras($pedidos): array
+    {
+        $domicilios = $pedidos->sum('domicilio');
+        $comisiones = $pedidos->sum('domiciliary_fee');
+
+        return [
+            'orders'           => $pedidos->count(),
+            'revenue'          => round($pedidos->sum('total'), 2),
+            'subtotal'         => round($pedidos->sum('subtotal'), 2),
+            'delivery_fees'    => round($domicilios, 2),
+            'courier_earnings' => round($comisiones, 2),
+            'discounts'        => round($pedidos->sum('discount'), 2),
+            // Lo que queda para la plataforma y el negocio una vez descontada
+            // la comisión del domiciliario.
+            'business_net'     => round($pedidos->sum('subtotal') + ($domicilios - $comisiones), 2),
+            'avg_ticket'       => $pedidos->count()
+                ? round($pedidos->sum('total') / $pedidos->count(), 2)
+                : 0,
+        ];
+    }
+
+    /* ---------------------------- COMERCIAL ---------------------------- */
+
+    private function reporteComercial(array $v, array $f): array
+    {
+        $detalle = fn (bool $antes) => $this->pedidosDelPeriodo($v, $f, $antes)
+            ->join('orderssales_detail as od', 'od.orderSales_id', '=', 'o.orderSales_id')
+            ->leftJoin('products as p', 'p.products_id', '=', 'od.product_id')
+            ->where('o.state', self::ENTREGADO);
+
+        $productos = $detalle(false)
             ->groupBy('p.products_id', 'p.name')
             ->orderByDesc(DB::raw('SUM(od.amount)'))
             ->get([
-                'p.products_id', 'p.name',
+                'p.products_id',
+                'p.name',
                 DB::raw('SUM(od.amount) as sold'),
                 DB::raw('SUM(od.amount * od.unit_price) as revenue'),
             ]);
 
-        $categorias = DB::table('orderssales_detail as od')
-            ->join('orderssales as o', 'o.orderSales_id', '=', 'od.orderSales_id')
-            ->leftJoin('products as p', 'p.products_id', '=', 'od.product_id')
+        $categorias = $detalle(false)
             ->leftJoin('category as c', 'c.category_id', '=', 'p.category_id')
-            ->where('o.state', self::ENTREGADO)
-            ->where('o.sale_date', '>=', $desde)
             ->groupBy('c.category_id', 'c.name')
             ->orderByDesc(DB::raw('SUM(od.amount * od.unit_price)'))
             ->get([
@@ -2109,91 +2632,175 @@ class AdminApiController extends Controller
                 DB::raw('SUM(od.amount * od.unit_price) as revenue'),
             ]);
 
-        $pedidos = DB::table('orderssales')
-            ->where('state', self::ENTREGADO)
-            ->where('sale_date', '>=', $desde)
-            ->count();
+        $cifras = function (bool $antes) use ($v, $f, $detalle) {
+            $filas = $detalle($antes)->get([
+                DB::raw('SUM(od.amount) as units'),
+                DB::raw('COUNT(DISTINCT od.product_id) as refs'),
+            ])->first();
 
-        $unidades = $productos->sum('sold');
+            $pedidos = $this->pedidosDelPeriodo($v, $f, $antes)
+                ->where('o.state', self::ENTREGADO)
+                ->count();
+
+            $unidades = (int) ($filas->units ?? 0);
+
+            return [
+                'units'             => $unidades,
+                'distinct_products' => (int) ($filas->refs ?? 0),
+                'orders'            => $pedidos,
+                'units_per_order'   => $pedidos ? round($unidades / $pedidos, 1) : 0,
+            ];
+        };
 
         return [
-            'totals' => [
-                'units'             => (int) $unidades,
-                'distinct_products' => $productos->count(),
-                'catalog_size'      => DB::table('products')->count(),
-                'units_per_order'   => $pedidos ? round($unidades / $pedidos, 1) : 0,
-            ],
+            'totals'   => $cifras(false) + ['catalog_size' => DB::table('products')->count()],
+            'previous' => $cifras(true),
             'top_products' => $productos->take(10)->values(),
             'by_category'  => $categorias,
         ];
     }
 
-    private function reporteOperacional(Carbon $desde, int $dias): array
+    /* --------------------------- OPERACIONAL --------------------------- */
+
+    private function reporteOperacional(array $v, array $f): array
     {
-        $ordenes = DB::table('orderssales')
-            ->where('sale_date', '>=', $desde)
-            ->get(['orderSales_id', 'state', 'sale_date', 'dispatched_at', 'delivery_date', 'domiciliary_id', 'domicilio', 'domiciliary_fee']);
+        $columnas = ['o.orderSales_id', 'o.state', 'o.sale_date', 'o.dispatched_at', 'o.delivery_date'];
 
-        $entregadas = $ordenes->where('state', self::ENTREGADO);
+        $ordenes = $this->pedidosDelPeriodo($v, $f)->get($columnas);
+        $antes   = $this->pedidosDelPeriodo($v, $f, true)->get($columnas);
 
-        // Minutos entre el despacho y la entrega. Solo cuentan los pedidos
-        // que tienen las dos marcas: estimar las que faltan inventaría datos.
-        $minutos = $entregadas
-            ->filter(fn($o) => $o->dispatched_at && $o->delivery_date)
-            ->map(fn($o) => Carbon::parse($o->dispatched_at)->diffInMinutes(Carbon::parse($o->delivery_date)));
+        $porDia = $ordenes->groupBy(fn ($o) => Carbon::parse($o->sale_date)->toDateString());
 
-        $porDia = $ordenes->groupBy(fn($o) => Carbon::parse($o->sale_date)->toDateString());
         $serie = [];
-        for ($i = 0; $i < $dias; $i++) {
-            $dia = (clone $desde)->addDays($i);
-            $delDia = $porDia[$dia->toDateString()] ?? collect();
+        for ($d = $v['desde']->copy(); $d->lte($v['hasta']); $d->addDay()) {
+            $delDia = $porDia[$d->toDateString()] ?? collect();
             $serie[] = [
-                'date'      => $dia->toDateString(),
-                'label'     => $dia->format('d M'),
+                'date'      => $d->toDateString(),
+                'label'     => $d->format('d M'),
                 'delivered' => $delDia->where('state', self::ENTREGADO)->count(),
                 'cancelled' => $delDia->where('state', '!=', self::ENTREGADO)->count(),
             ];
         }
 
-        $repartidores = DB::table('orderssales as o')
+        $minutos = $this->expresionMinutos('o.dispatched_at', 'o.delivery_date');
+
+        $repartidores = $this->pedidosDelPeriodo($v, $f)
             ->join('domiciliary as d', 'd.domiciliary_id', '=', 'o.domiciliary_id')
             ->leftJoin('user as u', 'u.user_id', '=', 'd.user_id')
             ->where('o.state', self::ENTREGADO)
-            ->where('o.sale_date', '>=', $desde)
             ->groupBy('d.domiciliary_id', 'u.name')
             ->orderByDesc(DB::raw('COUNT(o.orderSales_id)'))
             ->get([
-                'd.domiciliary_id', 'u.name',
+                'd.domiciliary_id',
+                'u.name',
                 DB::raw('COUNT(o.orderSales_id) as delivered'),
                 DB::raw('COALESCE(SUM(o.domicilio), 0) as delivery_fees'),
                 DB::raw('COALESCE(SUM(o.domiciliary_fee), 0) as earnings'),
-                DB::raw('AVG(CASE WHEN o.dispatched_at IS NOT NULL AND o.delivery_date IS NOT NULL
-                          THEN TIMESTAMPDIFF(MINUTE, o.dispatched_at, o.delivery_date) END) as avg_minutes'),
+                DB::raw("AVG(CASE WHEN o.dispatched_at IS NOT NULL AND o.delivery_date IS NOT NULL
+                          THEN {$minutos} END) as avg_minutes"),
             ]);
 
-        $activos = $repartidores->count();
-
         return [
-            'totals' => [
-                'delivered'         => $entregadas->count(),
-                'avg_minutes'       => $minutos->count() ? round($minutos->avg(), 1) : null,
-                'fulfillment_rate'  => $ordenes->count() ? round(($entregadas->count() / $ordenes->count()) * 100, 1) : 0,
-                'orders_per_courier' => $activos ? round($entregadas->count() / $activos, 1) : 0,
-            ],
+            'totals'   => $this->cifrasOperacionales($ordenes, $repartidores->count()),
+            'previous' => $this->cifrasOperacionales($antes, null),
             'series'   => $serie,
             'couriers' => $repartidores,
         ];
     }
 
-    /* ==================================================================
-       AUXILIARES
-       ================================================================== */
-
-    /** Rango en días, acotado para que nadie pida un año de golpe por error. */
-    private function rango(Request $request): int
+    private function cifrasOperacionales($ordenes, ?int $repartidores): array
     {
-        $dias = (int) $request->query('range', 30);
+        $entregadas = $ordenes->where('state', self::ENTREGADO);
 
-        return max(1, min($dias, 365));
+        // Solo cuentan los pedidos con las dos marcas: estimar las que faltan
+        // inventaría datos.
+        $minutos = $entregadas
+            ->filter(fn ($o) => $o->dispatched_at && $o->delivery_date)
+            ->map(fn ($o) => Carbon::parse($o->dispatched_at)->diffInMinutes(Carbon::parse($o->delivery_date)));
+
+        return [
+            'delivered'          => $entregadas->count(),
+            'total_orders'       => $ordenes->count(),
+            'avg_minutes'        => $minutos->count() ? round($minutos->avg(), 1) : null,
+            'fulfillment_rate'   => $ordenes->count()
+                ? round(($entregadas->count() / $ordenes->count()) * 100, 1)
+                : 0,
+            'orders_per_courier' => $repartidores
+                ? round($entregadas->count() / $repartidores, 1)
+                : null,
+        ];
+    }
+
+    /* -------------------------- POR NEGOCIO ---------------------------- */
+
+    /**
+     * Qué aporta cada tienda.
+     *
+     * Es el reporte que faltaba: los otros tres agregan la plataforma entera y
+     * respondían "cómo vamos", no "quién nos está sosteniendo y quién está
+     * flojo". Los pedidos cancelados van al lado de los entregados a propósito
+     * — un negocio con mucha venta y un 30 % de cancelación no es un buen
+     * negocio, y con solo la columna de ingresos lo parecía.
+     */
+    private function reportePorNegocio(array $v, array $f): array
+    {
+        $filas = $this->pedidosDelPeriodo($v, $f)
+            ->join('business as neg', 'neg.busines_id', '=', 'o.busines_id')
+            ->leftJoin('municipalities as m', 'm.id', '=', 'neg.municipality_id')
+            ->leftJoin('category_business as cb', 'cb.id', '=', 'neg.type')
+            ->groupBy('neg.busines_id', 'neg.name', 'neg.qualification', 'm.name', 'cb.name')
+            ->get([
+                'neg.busines_id',
+                'neg.name',
+                'neg.qualification',
+                DB::raw('m.name as municipality'),
+                DB::raw('cb.name as type_name'),
+                DB::raw('COUNT(o.orderSales_id) as orders'),
+                DB::raw('SUM(CASE WHEN o.state = ' . self::ENTREGADO . ' THEN 1 ELSE 0 END) as delivered'),
+                DB::raw('SUM(CASE WHEN o.state = 5 THEN 1 ELSE 0 END) as cancelled'),
+                DB::raw('COALESCE(SUM(CASE WHEN o.state = ' . self::ENTREGADO . ' THEN o.total ELSE 0 END), 0) as revenue'),
+                DB::raw('COALESCE(SUM(CASE WHEN o.state = ' . self::ENTREGADO . ' THEN o.subtotal ELSE 0 END), 0) as subtotal'),
+                DB::raw('COUNT(DISTINCT o.buyer_id) as buyers'),
+            ])
+            ->map(function ($n) {
+                $entregados = (int) $n->delivered;
+
+                $n->revenue     = round((float) $n->revenue, 2);
+                $n->subtotal    = round((float) $n->subtotal, 2);
+                $n->avg_ticket  = $entregados ? round($n->revenue / $entregados, 2) : 0;
+                $n->cancel_rate = (int) $n->orders
+                    ? round(((int) $n->cancelled / (int) $n->orders) * 100, 1)
+                    : 0;
+
+                return $n;
+            })
+            ->sortByDesc('revenue')
+            ->values();
+
+        $ingresoAnterior = (float) $this->pedidosDelPeriodo($v, $f, true)
+            ->where('o.state', self::ENTREGADO)
+            ->sum('o.total');
+
+        $activos = $filas->where('orders', '>', 0)->count();
+
+        return [
+            'totals' => [
+                'businesses'  => $filas->count(),
+                'active'      => $activos,
+                'revenue'     => round($filas->sum('revenue'), 2),
+                'orders'      => (int) $filas->sum('orders'),
+                'cancelled'   => (int) $filas->sum('cancelled'),
+                // Cuánto del total aporta la tienda que más vende. Una
+                // plataforma donde un solo negocio hace el 70 % no tiene un
+                // buen mes: tiene un riesgo.
+                'top_share'   => $filas->sum('revenue') > 0
+                    ? round(((float) ($filas->first()->revenue ?? 0)) / $filas->sum('revenue') * 100, 1)
+                    : 0,
+            ],
+            'previous' => [
+                'revenue' => round($ingresoAnterior, 2),
+            ],
+            'businesses' => $filas,
+        ];
     }
 }

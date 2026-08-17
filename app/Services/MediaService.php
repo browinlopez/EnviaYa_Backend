@@ -85,6 +85,44 @@ class MediaService
         return self::RAICES[$entidad];
     }
 
+    public function admiteArchivos(string $entidad): bool
+    {
+        return isset(self::RAICES[$entidad]);
+    }
+
+    /**
+     * El nombre del registro, que es con lo que se arma su carpeta.
+     *
+     * Vive acá y no en el controlador porque esta lista tiene que cubrir
+     * EXACTAMENTE las mismas entidades que `RAICES`. Estaban separadas y
+     * derivaron: se dio de alta `banners` en las raíces y no en la resolución
+     * de nombres, así que la ficha de un banner pedía sus archivos y recibía
+     * "El registro no existe" — un 404 que no hablaba del banner sino de una
+     * lista incompleta.
+     *
+     * El `match` NO lleva `default` a propósito. Si mañana se agrega una raíz
+     * sin su resolución, PHP lanza `UnhandledMatchError` en la primera
+     * ejecución en vez de devolver null y disfrazarse de registro inexistente.
+     * Un error ruidoso en desarrollo vale más que un 404 plausible en
+     * producción.
+     *
+     * @return string|null null solo si la entidad es válida y el registro no está
+     */
+    public function nombreDe(string $entidad, int|string $id): ?string
+    {
+        $this->raizValida($entidad);
+
+        return match ($entidad) {
+            'negocios'   => DB::table('business')->where('busines_id', $id)->value('name'),
+            'productos'  => DB::table('products')->where('products_id', $id)->value('name'),
+            'usuarios'   => DB::table('user')->where('user_id', $id)->value('name'),
+            'conjuntos'  => DB::table('residential_complexes')->where('complex_id', $id)->value('name'),
+            'categorias' => DB::table('category_business')->where('id', $id)->value('name'),
+            // El banner no tiene columna `name`: su rótulo es el título.
+            'banners'    => DB::table('banners')->where('id', $id)->value('title'),
+        };
+    }
+
     public function carpeta(string $entidad, int|string $codigo, ?string $nombre): string
     {
         $slug = Str::slug((string) ($nombre ?? ''), '-') ?: 'sin-nombre';
