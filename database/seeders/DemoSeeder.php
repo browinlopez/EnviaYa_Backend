@@ -562,7 +562,12 @@ class DemoSeeder extends Seeder
                 'orderSales_id'       => $p->orderSales_id,
                 'methods_id'          => $p->methods_id,
                 'forms_id'            => $p->forms_id,
-                'provider'            => in_array((int) $p->methods_id, [1], true) ? 'efectivo' : 'wompi',
+                // Los nombres que escribe la aplicación de verdad: el panel
+                // separa efectivo de pasarela por este campo, y con 'efectivo'
+                // en vez de 'cash' los 23 pagos en efectivo se contaban como
+                // pasarela. Unos datos de prueba que no usan los valores reales
+                // prueban otra cosa.
+                'provider'            => (int) $p->methods_id === 1 ? 'cash' : 'bold',
                 'provider_payment_id' => 'demo-' . $p->orderSales_id,
                 'amount'              => $p->total,
                 'subtotal'            => $p->subtotal,

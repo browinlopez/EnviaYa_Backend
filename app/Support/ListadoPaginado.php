@@ -28,9 +28,34 @@ class ListadoPaginado
     private const MAXIMO = 200;
 
     /**
+     * La misma consulta, pero devolviendo SOLO los agregados que se le pidan.
+     *
+     * Hace falta porque `selectRaw` AÑADE columnas en vez de reemplazarlas: el
+     * resumen salía con el `SELECT` entero del listado delante y MySQL lo
+     * rechazaba —columnas sin agrupar en una consulta agregada—, que es un
+     * error críptico para lo que en realidad era "te olvidaste de limpiar el
+     * select".
+     *
+     * También hay que vaciar los ligados de la sección `select`: el listado de
+     * pedidos lleva un EXISTS con parámetros, y dejarlos ahí desplaza todos los
+     * demás ligados una posición. Eso no falla con un error: devuelve números
+     * equivocados, que es peor.
+     */
+    public static function soloAgregados(Builder $q, string $sql, array $ligados = []): ?object
+    {
+        $base = clone $q;
+        $base->columns = null;
+        $base->bindings['select'] = [];
+
+        return $base->selectRaw($sql, $ligados)->first();
+    }
+
+    /**
      * @param Builder $q                consulta ya construida, sin orden ni límite
      * @param list<string> $buscables   columnas calificadas donde busca `search`
      * @param array<string,string> $ordenables  alias público => columna real
+     * @param ?callable $resumen        recibe la consulta YA FILTRADA y devuelve
+     *                                  los indicadores de la pantalla
      */
     public static function responder(
         Request $request,
@@ -39,6 +64,7 @@ class ListadoPaginado
         array $ordenables = [],
         string $ordenPorDefecto = '',
         string $direccionPorDefecto = 'desc',
+        ?callable $resumen = null,
     ): array {
         /*
          * OPCIONAL A PROPÓSITO.
@@ -59,7 +85,11 @@ class ListadoPaginado
                 $q->orderBy($ordenables[$ordenPorDefecto], $direccionPorDefecto);
             }
 
-            return ['data' => $q->get(), 'meta' => null];
+            return [
+                'data'    => $q->get(),
+                'meta'    => null,
+                'summary' => $resumen ? $resumen(clone $q) : null,
+            ];
         }
 
         $porPagina = min(self::MAXIMO, max(1, (int) $request->query('per_page', 25)));
@@ -98,10 +128,25 @@ class ListadoPaginado
             $q->orderBy($columna, $direccion);
         }
 
+        /*
+         * El resumen se calcula sobre TODO lo filtrado, no sobre la página.
+         *
+         * Es lo que faltaba para poder paginar estas pantallas. Sumar en el
+         * navegador lo que llegó significaba, con una página de 25, mostrar
+         * "ingresos del periodo: $310.000" cuando el periodo llevaba tres
+         * millones. En una pantalla de dinero, un total que en realidad es el
+         * de la página visible no es un dato incompleto: es un dato falso.
+         *
+         * Va antes del `forPage` y sobre una copia, porque `forPage` muta la
+         * consulta.
+         */
+        $indicadores = $resumen ? $resumen(clone $q) : null;
+
         $filas = $q->forPage($pagina, $porPagina)->get();
 
         return [
-            'data' => $filas,
+            'data'    => $filas,
+            'summary' => $indicadores,
             'meta' => [
                 'page'      => $pagina,
                 'per_page'  => $porPagina,

@@ -295,6 +295,9 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::delete('businesses/{id}/media', [AdminApiController::class, 'deleteBusinessMedia'])->middleware('modulo:negocios,gestionar');
 
         Route::get('products', [AdminApiController::class, 'products'])->middleware('modulo:productos');
+        // Va ANTES de 'products/{id}': con el orden invertido, Laravel toma
+        // "categorias" como identificador y responde 404.
+        Route::get('products/categorias', [AdminApiController::class, 'productCategories'])->middleware('modulo:productos');
         Route::post('products', [AdminApiController::class, 'storeProduct'])->middleware('modulo:productos,gestionar');
         Route::get('products/{id}', [AdminApiController::class, 'showProduct'])->middleware('modulo:productos');
         Route::put('products/{id}', [AdminApiController::class, 'updateProduct'])->middleware('modulo:productos,gestionar');

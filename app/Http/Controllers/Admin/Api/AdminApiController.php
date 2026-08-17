@@ -39,6 +39,22 @@ class AdminApiController extends Controller
     /** Estados de `payments.status` que significan "la plata entró". */
     private const PAGO_OK = ['approved', 'paid'];
 
+    /** Cobros que no entraron. Se cuentan aparte de los pendientes. */
+    private const PAGO_FALLIDO = ['rejected', 'failed', 'cancelled'];
+
+    /** Valor de `payments.provider` para el cobro contra entrega. */
+    private const EFECTIVO = 'cash';
+
+    /**
+     * Horas sin avanzar tras las que un pedido activo "pide atención".
+     *
+     * Vivía SOLO en el navegador, así que el filtro de atascados únicamente
+     * veía lo que ya estaba cargado. Al pasar el filtrado al servidor tuvo que
+     * venirse acá, que además es donde debía estar: la regla la aplica quien
+     * consulta la base, y el panel se limita a repetirla en la insignia.
+     */
+    private const HORAS_ESTANCADO = 24;
+
     /**
      * Subconsulta: ¿esta orden tiene al menos un pago aprobado?
      *
@@ -179,16 +195,54 @@ class AdminApiController extends Controller
        USUARIOS
        ================================================================== */
 
-    public function users()
+    public function users(Request $request)
     {
-        return response()->json(
-            DB::table('user')
-                ->orderBy('user_id')
-                ->get([
-                    'user_id', 'name', 'email', 'phone', 'address', 'rol',
-                    'qualification', 'state', 'email_verified_at',
-                ])
-        );
+        $q = DB::table('user as u')->select([
+            'u.user_id', 'u.name', 'u.email', 'u.phone', 'u.address', 'u.rol',
+            'u.qualification', 'u.state', 'u.email_verified_at',
+        ]);
+
+        if ($rol = (int) $request->query('rol')) {
+            $q->where('u.rol', $rol);
+        }
+
+        return response()->json(ListadoPaginado::responder(
+            $request,
+            $q,
+            buscables: ['u.name', 'u.email', 'u.phone'],
+            ordenables: [
+                'user_id'           => 'u.user_id',
+                'name'              => 'u.name',
+                'rol'               => 'u.rol',
+                'state'             => 'u.state',
+                'qualification'     => 'u.qualification',
+                'email_verified_at' => 'u.email_verified_at',
+            ],
+            ordenPorDefecto: 'user_id',
+            direccionPorDefecto: 'asc',
+            resumen: fn ($f) => $this->resumenDeUsuarios($f),
+        ));
+    }
+
+    private function resumenDeUsuarios($q): array
+    {
+        $r = ListadoPaginado::soloAgregados($q, '
+            COUNT(*) as total,
+            SUM(CASE WHEN u.rol = 1 THEN 1 ELSE 0 END) as compradores,
+            SUM(CASE WHEN u.rol = 2 THEN 1 ELSE 0 END) as tenderos,
+            SUM(CASE WHEN u.rol = 3 THEN 1 ELSE 0 END) as domiciliarios,
+            SUM(CASE WHEN u.rol = 4 THEN 1 ELSE 0 END) as personal,
+            SUM(CASE WHEN u.email_verified_at IS NULL THEN 1 ELSE 0 END) as sin_verificar
+        ');
+
+        return [
+            'total'         => (int) ($r->total ?? 0),
+            'compradores'   => (int) ($r->compradores ?? 0),
+            'tenderos'      => (int) ($r->tenderos ?? 0),
+            'domiciliarios' => (int) ($r->domiciliarios ?? 0),
+            'personal'      => (int) ($r->personal ?? 0),
+            'sinVerificar'  => (int) ($r->sin_verificar ?? 0),
+        ];
     }
 
     /**
@@ -756,7 +810,7 @@ class AdminApiController extends Controller
        PRODUCTOS
        ================================================================== */
 
-    public function products(MediaService $medios)
+    public function products(Request $request, MediaService $medios)
     {
         // El producto vive en `products` y su precio/existencias en
         // `products_business`: la misma referencia puede aparecer varias
@@ -764,11 +818,10 @@ class AdminApiController extends Controller
         // Las unidades vendidas van por subconsulta: unir el detalle de
         // pedidos aquí duplicaría cada renglón una vez por tienda que ofrece
         // el mismo producto.
-        $filas = DB::table('products as p')
+        $q = DB::table('products as p')
                 ->leftJoin('products_business as pb', 'pb.products_id', '=', 'p.products_id')
                 ->leftJoin('business as b', 'b.busines_id', '=', 'pb.busines_id')
                 ->leftJoin('category as c', 'c.category_id', '=', 'p.category_id')
-                ->orderBy('p.name')
                 ->select([
                     'p.products_id', 'p.name', 'p.description', 'p.image', 'p.state',
                     'pb.busines_products_id', 'pb.price', 'pb.amount', 'pb.qualification',
@@ -780,11 +833,82 @@ class AdminApiController extends Controller
                         ->whereColumn('orderssales_detail.product_id', 'p.products_id'),
                     'sold',
                 )
-                ->get();
+                ;
 
-        return response()->json(
-            $this->conImagenPrincipal($filas, 'productos', 'products_id', 'image', $medios)
+        if ($categoria = trim((string) $request->query('category', ''))) {
+            $q->where('c.name', $categoria);
+        }
+
+        $r = ListadoPaginado::responder(
+            $request,
+            $q,
+            buscables: ['p.name', 'p.description', 'b.name'],
+            ordenables: [
+                'name'          => 'p.name',
+                'price'         => 'pb.price',
+                'amount'        => 'pb.amount',
+                'business_name' => 'b.name',
+                'category_name' => 'c.name',
+            ],
+            ordenPorDefecto: 'name',
+            direccionPorDefecto: 'asc',
+            resumen: fn ($f) => $this->resumenDeProductos($f),
         );
+
+        $r['data'] = $this->conImagenPrincipal(
+            collect($r['data']), 'productos', 'products_id', 'image', $medios
+        );
+
+        return response()->json($r);
+    }
+
+    /**
+     * Desglose por categoría, agregado en la base.
+     *
+     * La pantalla lo usa para su selector. Estaba resolviéndolo en el navegador
+     * recorriendo el catálogo entero — es decir, pedía las 755 ofertas ADEMÁS
+     * de la página, y con eso la paginación no ahorraba nada. Son unas decenas
+     * de filas: se calculan con un GROUP BY y se traen aparte.
+     */
+    public function productCategories()
+    {
+        return response()->json(
+            DB::table('products as p')
+                ->leftJoin('products_business as pb', 'pb.products_id', '=', 'p.products_id')
+                ->join('category as c', 'c.category_id', '=', 'p.category_id')
+                ->groupBy('c.category_id', 'c.name')
+                ->orderByDesc(DB::raw('COUNT(*)'))
+                ->get([
+                    DB::raw('c.name as name'),
+                    DB::raw('COUNT(*) as items'),
+                    DB::raw('SUM(CASE WHEN pb.amount = 0 THEN 1 ELSE 0 END) as agotados'),
+                    DB::raw('COALESCE(SUM(pb.price * pb.amount), 0) as valor'),
+                ])
+        );
+    }
+
+    /**
+     * Indicadores del catálogo, sobre todo lo filtrado.
+     *
+     * "Referencias" cuenta OFERTAS y no productos distintos: la misma
+     * referencia en tres tiendas son tres filas con tres precios y tres
+     * existencias, y es lo que se está mirando en la tabla.
+     */
+    private function resumenDeProductos($q): array
+    {
+        $r = ListadoPaginado::soloAgregados($q, "
+            COUNT(*) as total,
+            COALESCE(SUM(pb.price * pb.amount), 0) as inventario,
+            SUM(CASE WHEN pb.amount = 0 THEN 1 ELSE 0 END) as agotados,
+            SUM(CASE WHEN p.image IS NULL OR p.image = '' THEN 1 ELSE 0 END) as sin_imagen
+        ");
+
+        return [
+            'total'      => (int) ($r->total ?? 0),
+            'inventario' => round((float) ($r->inventario ?? 0), 2),
+            'agotados'   => (int) ($r->agotados ?? 0),
+            'sinImagen'  => (int) ($r->sin_imagen ?? 0),
+        ];
     }
 
     /**
@@ -899,14 +1023,22 @@ class AdminApiController extends Controller
      *
      * Es el listado que crece sin techo: cada pedido que entra se queda para
      * siempre. Devolverlos todos funcionaba con nueve y se vuelve inusable con
-     * cincuenta mil, así que la búsqueda, el orden y el corte se hacen contra
-     * la base y no en el navegador.
+     * cincuenta mil.
+     *
+     * Los FILTROS y los INDICADORES viven acá y no en el navegador. Es lo que
+     * faltaba para poder paginar de verdad: mientras el panel sumaba lo que le
+     * llegaba, servirle una página de 25 habría dejado "ingresos entregados"
+     * mostrando el total de esas 25 como si fuera el del mes. En una pantalla
+     * de dinero eso no es un dato incompleto, es un dato falso.
      */
     public function orders(Request $request)
     {
+        $q = $this->ordenesBase();
+        $this->filtrarPedidos($q, $request);
+
         return response()->json(ListadoPaginado::responder(
             $request,
-            $this->ordenesBase(),
+            $q,
             buscables: ['bu.name', 'b.name', 'du.name', 'o.orderSales_id'],
             ordenables: [
                 'orderSales_id' => 'o.orderSales_id',
@@ -917,7 +1049,77 @@ class AdminApiController extends Controller
                 'buyer_name'    => 'bu.name',
             ],
             ordenPorDefecto: 'sale_date',
+            resumen: fn ($filtrada) => $this->resumenDePedidos($filtrada),
         ));
+    }
+
+    /**
+     * Los filtros de la pantalla de pedidos.
+     *
+     * `atencion` es el único que no es una comparación directa: un pedido pide
+     * atención si está despachado sin repartidor o si lleva demasiado sin
+     * avanzar. Estaba calculado en el navegador y por eso el filtro solo veía
+     * la página cargada; acá alcanza a todo el histórico, que es donde están
+     * los que llevan días atascados.
+     */
+    private function filtrarPedidos($q, Request $request): void
+    {
+        if ($negocio = (int) $request->query('business_id')) {
+            $q->where('o.busines_id', $negocio);
+        }
+
+        $domiciliario = $request->query('domiciliary_id');
+
+        if ($domiciliario === 'sin') {
+            $q->whereNull('o.domiciliary_id');
+        } elseif ((int) $domiciliario) {
+            $q->where('o.domiciliary_id', (int) $domiciliario);
+        }
+
+        if ($dias = (int) $request->query('days')) {
+            $q->where('o.sale_date', '>=', Carbon::now()->subDays($dias));
+        }
+
+        $limite = Carbon::now()->subHours(self::HORAS_ESTANCADO);
+
+        match ($request->query('state_group')) {
+            'activos'    => $q->whereIn('o.state', self::ACTIVOS),
+            'entregados' => $q->where('o.state', self::ENTREGADO),
+            'sin_pago'   => $q->whereNotExists(fn ($sub) => $this->pagoAprobado($sub)),
+            'atencion'   => $q->whereIn('o.state', self::ACTIVOS)
+                ->where(fn ($sub) => $sub
+                    ->where(fn ($x) => $x->where('o.state', 2)->whereNull('o.domiciliary_id'))
+                    ->orWhere('o.sale_date', '<', $limite)),
+            default => null,
+        };
+    }
+
+    /** Indicadores de la pantalla, sobre TODO lo filtrado. */
+    private function resumenDePedidos($q): array
+    {
+        $entregado = self::ENTREGADO;
+        $activos   = implode(',', self::ACTIVOS);
+        $limite    = Carbon::now()->subHours(self::HORAS_ESTANCADO)->toDateTimeString();
+
+        $r = ListadoPaginado::soloAgregados($q, "
+            COUNT(*) as total,
+            SUM(CASE WHEN o.state IN ({$activos}) THEN 1 ELSE 0 END) as activas,
+            SUM(CASE WHEN o.state IN ({$activos})
+                      AND ((o.state = 2 AND o.domiciliary_id IS NULL)
+                           OR o.sale_date < ?) THEN 1 ELSE 0 END) as atencion,
+            COALESCE(SUM(CASE WHEN o.state = {$entregado} THEN o.total ELSE 0 END), 0) as ingresos,
+            COALESCE(SUM(CASE WHEN o.state = {$entregado} THEN o.domicilio ELSE 0 END), 0) as domicilios,
+            COALESCE(SUM(CASE WHEN o.state = {$entregado} THEN o.domiciliary_fee ELSE 0 END), 0) as comisiones
+        ", [$limite]);
+
+        return [
+            'total'      => (int) ($r->total ?? 0),
+            'activas'    => (int) ($r->activas ?? 0),
+            'atencion'   => (int) ($r->atencion ?? 0),
+            'ingresos'   => round((float) ($r->ingresos ?? 0), 2),
+            'domicilios' => round((float) ($r->domicilios ?? 0), 2),
+            'comisiones' => round((float) ($r->comisiones ?? 0), 2),
+        ];
     }
 
     public function showOrder($id)
@@ -1319,6 +1521,8 @@ class AdminApiController extends Controller
                 'o.state as order_state', 'o.delivery_date',
             ]);
 
+        $this->filtrarPagos($q, $request);
+
         return response()->json(ListadoPaginado::responder(
             $request,
             $q,
@@ -1331,7 +1535,74 @@ class AdminApiController extends Controller
                 'business_name' => 'b.name',
             ],
             ordenPorDefecto: 'payments_id',
+            resumen: fn ($filtrada) => $this->resumenDePagos($filtrada),
         ));
+    }
+
+    private function filtrarPagos($q, Request $request): void
+    {
+        if ($negocio = (int) $request->query('business_id')) {
+            $q->where('o.busines_id', $negocio);
+        }
+
+        if ($dias = (int) $request->query('days')) {
+            $q->where('p.payment_date', '>=', Carbon::now()->subDays($dias));
+        }
+
+        // Efectivo contra pasarela. El corte es por `provider` y no por el
+        // método declarado en el pedido: lo que importa para cuadrar la caja es
+        // por dónde entró la plata, no por dónde se dijo que iba a entrar.
+        match ($request->query('channel')) {
+            'cash'    => $q->where('p.provider', self::EFECTIVO),
+            'gateway' => $q->where(fn ($sub) => $sub
+                ->where('p.provider', '!=', self::EFECTIVO)
+                ->orWhereNull('p.provider')),
+            default => null,
+        };
+
+        match ($request->query('status_group')) {
+            'aprobados'  => $q->whereIn('p.status', self::PAGO_OK),
+            'pendientes' => $q->where('p.status', 'like', 'pending%'),
+            'fallidos'   => $q->whereIn('p.status', self::PAGO_FALLIDO),
+            default      => null,
+        };
+    }
+
+    /**
+     * Indicadores de la pantalla de pagos, sobre TODO lo filtrado.
+     *
+     * `COALESCE(total, amount)`: `total` es el campo nuevo y hay cobros viejos
+     * que solo tienen `amount`. Sumar únicamente `total` dejaba fuera la caja
+     * anterior a la migración sin avisar de nada.
+     */
+    private function resumenDePagos($q): array
+    {
+        $ok       = "'" . implode("','", self::PAGO_OK) . "'";
+        $efectivo = self::EFECTIVO;
+
+        $r = ListadoPaginado::soloAgregados($q, "
+            COALESCE(SUM(CASE WHEN p.status IN ({$ok}) THEN COALESCE(p.total, p.amount) ELSE 0 END), 0) as recaudado,
+            SUM(CASE WHEN p.status IN ({$ok}) THEN 1 ELSE 0 END) as aprobados_n,
+            COALESCE(SUM(CASE WHEN p.status LIKE 'pending%' THEN COALESCE(p.total, p.amount) ELSE 0 END), 0) as pendiente,
+            SUM(CASE WHEN p.status LIKE 'pending%' THEN 1 ELSE 0 END) as pendiente_n,
+            COALESCE(SUM(CASE WHEN p.status IN ({$ok}) AND p.provider = '{$efectivo}' THEN COALESCE(p.total, p.amount) ELSE 0 END), 0) as efectivo,
+            SUM(CASE WHEN p.status IN ({$ok}) AND p.provider = '{$efectivo}' THEN 1 ELSE 0 END) as efectivo_n,
+            COALESCE(SUM(CASE WHEN p.status IN ({$ok}) AND (p.provider <> '{$efectivo}' OR p.provider IS NULL) THEN COALESCE(p.total, p.amount) ELSE 0 END), 0) as pasarela,
+            SUM(CASE WHEN p.status IN ({$ok}) AND (p.provider <> '{$efectivo}' OR p.provider IS NULL) THEN 1 ELSE 0 END) as pasarela_n,
+            COALESCE(SUM(CASE WHEN p.status IN ({$ok}) THEN p.domiciliary_fee ELSE 0 END), 0) as comisiones
+        ");
+
+        return [
+            'recaudado'   => round((float) ($r->recaudado ?? 0), 2),
+            'aprobadosN'  => (int) ($r->aprobados_n ?? 0),
+            'pendiente'   => round((float) ($r->pendiente ?? 0), 2),
+            'pendienteN'  => (int) ($r->pendiente_n ?? 0),
+            'efectivo'    => round((float) ($r->efectivo ?? 0), 2),
+            'efectivoN'   => (int) ($r->efectivo_n ?? 0),
+            'pasarela'    => round((float) ($r->pasarela ?? 0), 2),
+            'pasarelaN'   => (int) ($r->pasarela_n ?? 0),
+            'comisiones'  => round((float) ($r->comisiones ?? 0), 2),
+        ];
     }
 
     /* ==================================================================
@@ -1405,18 +1676,64 @@ class AdminApiController extends Controller
         }
         $cols[] = DB::raw('au.name as author_name');
 
-        $filas = $q->orderByDesc('r.reviews_id')->get($cols);
+        $q->select($cols);
+
+        // Puntaje: negativas (1-2), positivas (4-5) o con comentario.
+        match ($request->query('score')) {
+            'negativas' => $q->whereBetween('r.qualification', [1, 2]),
+            'positivas' => $q->where('r.qualification', '>=', 4),
+            'comentadas' => $q->whereNotNull('r.comment')->where('r.comment', '!=', ''),
+            default => null,
+        };
+
+        $ordenables = [
+            'reviews_id'    => 'r.reviews_id',
+            'qualification' => 'r.qualification',
+            'target_name'   => 't.name',
+        ];
+
+        if ($m['has_dates']) {
+            $ordenables['created_at'] = 'r.created_at';
+        }
+
+        $r = ListadoPaginado::responder(
+            $request,
+            $q,
+            buscables: ['r.comment', 'au.name'],
+            ordenables: $ordenables,
+            ordenPorDefecto: 'reviews_id',
+            resumen: fn ($f) => $this->resumenDeResenas($f),
+        );
 
         // `user_reviews` no tiene created_at en el esquema; se envía nulo en
         // vez de omitir la clave para que el panel no tenga que adivinar.
         if (!$m['has_dates']) {
-            $filas = $filas->map(function ($f) {
+            $r['data'] = collect($r['data'])->map(function ($f) {
                 $f->created_at = null;
                 return $f;
             });
         }
 
-        return response()->json($filas);
+        return response()->json($r);
+    }
+
+    private function resumenDeResenas($q): array
+    {
+        $r = ListadoPaginado::soloAgregados($q, "
+            COUNT(*) as total,
+            AVG(r.qualification) as promedio,
+            SUM(CASE WHEN r.qualification BETWEEN 1 AND 2 THEN 1 ELSE 0 END) as negativas,
+            SUM(CASE WHEN r.comment IS NOT NULL AND r.comment <> '' THEN 1 ELSE 0 END) as comentadas
+        ");
+
+        return [
+            'total'      => (int) ($r->total ?? 0),
+            // Sin reseñas el promedio no es 0 estrellas, es que no hay: un 0,0
+            // se lee como "todo el mundo la odia".
+            'promedio'   => $r && $r->total > 0 ? round((float) $r->promedio, 2) : null,
+            'negativas'  => (int) ($r->negativas ?? 0),
+            'comentadas' => (int) ($r->comentadas ?? 0),
+        ];
     }
 
     public function deleteReview(Request $request)
@@ -2016,21 +2333,55 @@ class AdminApiController extends Controller
 
     public function audits(Request $request)
     {
-        $limite = min((int) $request->query('limit', 500), 2000);
+        $q = DB::table('audits as a')
+            ->leftJoin('user as u', 'u.user_id', '=', 'a.user_id')
+            ->select([
+                'a.id', 'a.event', 'a.auditable_type', 'a.auditable_id',
+                'a.old_values', 'a.new_values', 'a.url', 'a.ip_address', 'a.created_at',
+                'u.name as user_name', 'u.email as user_email',
+            ]);
 
-        return response()->json(
-            DB::table('audits as a')
-                ->leftJoin('user as u', 'u.user_id', '=', 'a.user_id')
-                ->orderByDesc('a.id')
-                ->limit($limite)
-                ->get([
-                    'a.id', 'a.event', 'a.auditable_type', 'a.auditable_id',
-                    'a.old_values', 'a.new_values', 'a.url', 'a.ip_address', 'a.created_at',
-                    'u.name as user_name', 'u.email as user_email',
-                ])
-        );
+        if ($evento = trim((string) $request->query('event', ''))) {
+            $q->where('a.event', $evento);
+        }
+
+        if ($dias = (int) $request->query('days')) {
+            $q->where('a.created_at', '>=', Carbon::now()->subDays($dias));
+        }
+
+        return response()->json(ListadoPaginado::responder(
+            $request,
+            $q,
+            buscables: ['u.name', 'u.email', 'a.auditable_type', 'a.url'],
+            ordenables: [
+                'id'         => 'a.id',
+                'event'      => 'a.event',
+                'created_at' => 'a.created_at',
+                'user_name'  => 'u.name',
+            ],
+            ordenPorDefecto: 'id',
+            resumen: fn ($f) => $this->resumenDeAuditoria($f),
+        ));
     }
 
+    private function resumenDeAuditoria($q): array
+    {
+        $r = ListadoPaginado::soloAgregados($q, "
+            COUNT(*) as total,
+            SUM(CASE WHEN a.event = 'created' THEN 1 ELSE 0 END) as creados,
+            SUM(CASE WHEN a.event = 'updated' THEN 1 ELSE 0 END) as actualizados,
+            SUM(CASE WHEN a.event = 'deleted' THEN 1 ELSE 0 END) as borrados,
+            COUNT(DISTINCT a.user_id) as personas
+        ");
+
+        return [
+            'total'        => (int) ($r->total ?? 0),
+            'creados'      => (int) ($r->creados ?? 0),
+            'actualizados' => (int) ($r->actualizados ?? 0),
+            'borrados'     => (int) ($r->borrados ?? 0),
+            'personas'     => (int) ($r->personas ?? 0),
+        ];
+    }
 
     /* ==================================================================
        BLOQUES DEL PANEL DE INICIO, POR ÁREA
