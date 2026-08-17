@@ -44,6 +44,23 @@ return [
         ],
 
         'mysql' => [
+            /*
+             * Dónde está `mysqldump`, que es lo que usa la copia de seguridad.
+             *
+             * En Linux suele estar en el PATH y no hace falta; en Windows casi
+             * nunca lo está, y el error que da —"no se reconoce como un
+             * comando"— no menciona la copia de seguridad en ningún momento.
+             * Se deja configurable para que el mismo repositorio sirva en las
+             * dos partes.
+             */
+            'dump' => array_filter([
+                'dump_binary_path' => env('DB_DUMP_BINARY_PATH'),
+                // Sin bloquear las tablas: en producción, un dump con LOCK
+                // TABLES deja la aplicación esperando mientras copia.
+                'use_single_transaction' => true,
+                'timeout' => 60 * 10,
+            ]),
+
             'driver' => 'mysql',
             'url' => env('DB_URL'),
             'host' => env('DB_HOST', '127.0.0.1'),
