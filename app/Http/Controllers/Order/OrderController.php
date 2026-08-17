@@ -12,6 +12,8 @@ use App\Models\Order\OrderGeolocation;
 use App\Models\Order\OrdersSales;
 use App\Models\Order\OrdersSalesDetail;
 use App\Models\Payment\Payment;
+use App\Services\FacturaService;
+use Illuminate\Support\Facades\Log;
 use App\Models\Payment\PaymentForms;
 use App\Models\Payment\PaymentIntent;
 use App\Models\Payment\PaymentMethods;
@@ -779,6 +781,28 @@ class OrderController extends Controller
         }
 
         $order->save();
+
+        /*
+         * Comprobante del pedido entregado.
+         *
+         * Va DESPUÉS de guardar y dentro de un try: la entrega ya ocurrió y no
+         * puede deshacerse porque falle el comprobante. Si algo sale mal queda
+         * en el registro y `facturas:emitir` lo recupera después — al revés, un
+         * domiciliario se quedaría sin poder cerrar su entrega por un problema
+         * de papeleo.
+         *
+         * `emitirPara` es idempotente, así que un reintento del cliente o un
+         * doble toque no producen dos comprobantes del mismo pedido.
+         */
+        if ((int) $order->state === 4) {
+            try {
+                app(FacturaService::class)->emitirPara((int) $order->orderSales_id);
+            } catch (\Throwable $e) {
+                Log::warning('No se pudo emitir el comprobante del pedido ' . $order->orderSales_id, [
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
 
         return response()->json([
             'message' => 'Estado de la orden actualizado',

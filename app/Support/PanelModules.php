@@ -28,6 +28,9 @@ class PanelModules
         'ordenes'       => ['Órdenes', 'Operación'],
         'domiciliarios' => ['Domiciliarios', 'Operación'],
         'pagos'         => ['Pagos', 'Operación'],
+        // Comprobantes de las entregas. Van junto a Pagos y no en un grupo
+        // propio: quien concilia la caja mira las dos cosas seguidas.
+        'facturas'      => ['Comprobantes', 'Operación'],
         'liquidaciones' => ['Liquidaciones', 'Operación'],
 
         // Seguridad y salud en el trabajo. Grupo propio porque responde a otra

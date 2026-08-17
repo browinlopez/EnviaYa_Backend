@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\Api\AdminApiController;
+use App\Http\Controllers\Admin\Api\FacturasApiController;
 use App\Http\Controllers\Admin\Api\AreasApiController;
 use App\Http\Controllers\Admin\Api\MarketingApiController;
 use App\Http\Controllers\Admin\Api\OperacionApiController;
@@ -288,6 +289,18 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
             Route::delete('media/{entidad}/{id}', [AdminApiController::class, 'deleteMedia']);
             Route::put('media/{entidad}/{id}/principal', [AdminApiController::class, 'setPrimaryMedia']);
         });
+
+        /*
+        | Comprobantes de entrega.
+        |
+        | Sin POST: se emiten solos cuando un pedido llega a "entregado". La
+        | única escritura es ANULAR, y pide `gestionar` porque deja constancia
+        | permanente en la contabilidad.
+        */
+        Route::get('invoices', [FacturasApiController::class, 'index'])->middleware('modulo:facturas');
+        Route::get('invoices/{id}', [FacturasApiController::class, 'show'])->middleware('modulo:facturas');
+        Route::get('invoices/{id}/pdf', [FacturasApiController::class, 'pdf'])->middleware('modulo:facturas');
+        Route::put('invoices/{id}/anular', [FacturasApiController::class, 'anular'])->middleware('modulo:facturas,gestionar');
 
         Route::get('businesses', [AdminApiController::class, 'businesses'])->middleware('modulo:negocios');
         Route::post('businesses', [AdminApiController::class, 'storeBusiness'])->middleware('modulo:negocios,gestionar');

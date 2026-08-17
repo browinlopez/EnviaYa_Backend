@@ -58,8 +58,8 @@ class AreasSemilla
                  *    información de negocio.
                  */
                 'ver'         => [
-                    'panel', 'ordenes', 'domiciliarios', 'pagos', 'liquidaciones',
-                    'sst.documentos', 'sst.incidentes', 'pqrs',
+                    'panel', 'ordenes', 'domiciliarios', 'pagos', 'facturas',
+                    'liquidaciones', 'sst.documentos', 'sst.incidentes', 'pqrs',
                     'negocios', 'productos', 'categorias', 'categorias-negocio',
                     'marketing', 'marketing.anunciantes', 'marketing.campanas',
                     'marketing.banners', 'marketing.cupones',
@@ -78,13 +78,19 @@ class AreasSemilla
                 'description' => 'Cuadra la caja: pagos, liquidaciones a negocios y domiciliarios, y lo comprometido en pauta.',
                 'is_system'   => false,
                 'ver'         => [
-                    'panel', 'ordenes', 'pagos', 'liquidaciones',
+                    'panel', 'ordenes', 'pagos', 'facturas', 'liquidaciones',
                     'negocios', 'propietarios', 'domiciliarios',
                     'reportes', 'auditoria', 'marketing',
                 ],
                 // Los pedidos los ve para cuadrar, pero cambiarles el estado es
                 // una decisión operativa que no le corresponde.
-                'gestionar'   => ['pagos', 'liquidaciones'],
+                /*
+                 * Los comprobantes se emiten SOLOS al entregar, así que
+                 * "gestionar" acá significa una sola cosa: anular el que salió
+                 * mal. Se le da a Contabilidad porque es quien detecta el error
+                 * al cuadrar, y anular deja constancia en vez de borrar.
+                 */
+                'gestionar'   => ['pagos', 'facturas', 'liquidaciones'],
             ],
 
             'marketing' => [
@@ -150,6 +156,10 @@ class AreasSemilla
                 'is_system'   => false,
                 'ver'         => [
                     'panel', 'resenas', 'chats', 'pqrs', 'ordenes',
+                    // Un reclamo de "me cobraron mal" se resuelve mirando el
+                    // comprobante de ese pedido; sin acceso hay que pedírselo a
+                    // Contabilidad y el reclamo espera un día más.
+                    'facturas',
                     'domiciliarios', 'negocios', 'reportes',
                     // Un reclamo por un accidente durante la entrega necesita
                     // mirar el incidente; registrarlo sigue siendo de SST.

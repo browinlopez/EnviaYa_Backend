@@ -16,6 +16,8 @@ class Invoice extends Audit
 
     protected $fillable = [
         'orderSales_id',
+        'busines_id',
+        'buyer_id',
         'payments_id',
         'payment_provider',
         'payment_reference',
@@ -24,18 +26,41 @@ class Invoice extends Audit
         'subtotal',
         'descuento',
         'iva',
+        'domicilio',
+        'domiciliary_fee',
         'total',
         'currency',
+        'snapshot',
+        'state',
         'notes',
     ];
 
     protected $casts = [
         'invoice_date' => 'datetime',
+        'voided_at' => 'datetime',
         'subtotal' => 'decimal:2',
         'descuento' => 'decimal:2',
+        'domicilio' => 'decimal:2',
+        'domiciliary_fee' => 'decimal:2',
         'iva' => 'decimal:2',
         'total' => 'decimal:2',
+        // La foto de los datos al emitir. Va como arreglo y no como texto para
+        // que la plantilla no tenga que decodificarla en cada renglón.
+        'snapshot' => 'array',
     ];
+
+    /*
+     * `void_reason`, `voided_at` y `voided_by` NO son asignables en masa a
+     * propósito: anular es una operación con consecuencia y pasa por
+     * `FacturaService::anular()`, que además comprueba que no esté ya anulada.
+     * Dejarlas en `$fillable` permitiría anular una factura desde cualquier
+     * `update()` que reciba esos campos.
+     */
+
+    public function estaAnulada(): bool
+    {
+        return (int) $this->state === 0;
+    }
 
     /**
      * Invoice belongs to an order.
