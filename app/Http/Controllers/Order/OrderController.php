@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Order;
 
+use App\Services\Ajustes;
 use App\Events\DomiciliaryLocationUpdated;
+use App\Events\OrderStatusUpdated;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Payment\PaymentController;
 use App\Models\Business;
@@ -854,6 +856,28 @@ class OrderController extends Controller
         }
 
         $order->save();
+
+        /*
+         * Y se avisa al teléfono del comprador.
+         *
+         * Hasta ahora este cambio no salía de la base: no había evento, y la
+         * app tampoco sondeaba ni recargaba al volver a la pantalla, así que el
+         * seguimiento se quedaba clavado en "pedido recibido" hasta que la
+         * persona cerraba la app entera. El domiciliario llegaba a la puerta
+         * mientras la pantalla decía que la tienda seguía preparando.
+         *
+         * Va después del save y no interrumpe: si el servidor de websockets
+         * está caído, el pedido ya avanzó y la app tiene su propio respaldo
+         * recargando la lista.
+         */
+        try {
+            broadcast(new OrderStatusUpdated($order));
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo anunciar el cambio de estado del pedido', [
+                'order_id' => $order->orderSales_id,
+                'error'    => $e->getMessage(),
+            ]);
+        }
 
         /*
          * Comprobante del pedido entregado.
