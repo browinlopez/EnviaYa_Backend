@@ -481,8 +481,20 @@ class OrderController extends Controller
             $subtotal = collect($request->products)
                 ->sum(fn($p) => $p['amount'] * (float) $prices[$p['product_id']]);
 
-            // Tarifa de domicilio del lado del servidor (config/services.php)
-            $domicilio = $isPickup ? 0 : (float) config('services.delivery_fee', 2000);
+            /*
+             * Tarifa de domicilio, del panel.
+             *
+             * Vivía en `config/services.php`, o sea en el `.env` del servidor,
+             * mientras la app llevaba su propia copia escrita en el código con
+             * un comentario que pedía "mantener ambas iguales". No lo estaban:
+             * subir la tarifa exigía desplegar el servidor Y publicar una
+             * versión nueva en las tiendas, y entre una cosa y otra todos los
+             * pedidos mostraban un total y cobraban otro.
+             *
+             * Se congela en el pedido al crearlo, como el reparto: cambiarla no
+             * reescribe lo ya entregado.
+             */
+            $domicilio = $isPickup ? 0 : (float) Ajustes::valor('operacion.tarifa_domicilio');
 
             /*
              * Cupón. El descuento se recalcula en el servidor a partir del
