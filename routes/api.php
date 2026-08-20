@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\Api\AreasApiController;
 use App\Http\Controllers\Admin\Api\MarketingApiController;
 use App\Http\Controllers\Admin\Api\OperacionApiController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Buyer\ResidentialComplexController;
 use App\Http\Controllers\Business\AffiliationController;
 use App\Http\Controllers\Business\BusinessController;
 use App\Http\Controllers\Business\CategoryBusinessController;
@@ -51,6 +52,12 @@ Route::middleware('throttle:5,10')->group(function () {
 Route::middleware('throttle:300,1')->group(function () {
     Route::get('categories-business/indexFree', [CategoryBusinessController::class, 'index']);
     Route::get('categories-free', [CategoryController::class, 'index']);
+    /*
+     * Los conjuntos van acá y no bajo `/admin` porque la pantalla de registro
+     * los necesita ANTES de que exista la cuenta. Solo nombre y dirección: lo
+     * justo para elegir uno.
+     */
+    Route::get('complexes-free', [ResidentialComplexController::class, 'index']);
     Route::get('top-businesses-free', [BusinessController::class, 'indexByQualification']);
     // Las reseñas de un negocio se ven sin sesión (la respuesta no expone
     // datos de contacto del reseñador).
