@@ -54,6 +54,18 @@ class ReviewController extends Controller
                         'comment' => $request->comment,
                         'state' => 1,
                     ]);
+
+                    /*
+                     * Y se vuelve a promediar.
+                     *
+                     * Este es el endpoint que usa la APP —el modal de "califica
+                     * tu pedido" pega acá— y era el único camino de creación
+                     * que no recalculaba. La reseña se guardaba y la estrella
+                     * del negocio no se movía nunca: comprobado sobre la base
+                     * local, siete reseñas activas con promedio real 4,00 y la
+                     * ficha anclada en el 3,83 de antes.
+                     */
+                    BusinessReview::recalcularPromedio((int) $request->id);
                 } else {
                     $review = DomiciliaryReview::create([
                         'domiciliary_id' => $request->id,
@@ -62,6 +74,8 @@ class ReviewController extends Controller
                         'comment' => $request->comment,
                         'state' => 1,
                     ]);
+
+                    DomiciliaryReview::recalcularPromedio((int) $request->id);
                 }
                 $reviewCreated = true;
                 break;
