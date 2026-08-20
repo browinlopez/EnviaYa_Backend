@@ -109,14 +109,18 @@ esperar_migraciones() {
   [ "$ROL" = "api" ] && return 0
 
   local intentos=0
-  until php -r '
+  # El nombre de la tabla viaja por el entorno y no escrito dentro del PHP.
+  # Entre las comillas simples que envuelven a `php -r` no caben más comillas
+  # simples, y escapar las dobles deja el código roto: así se evitan las dos.
+  until TABLA_TESTIGO=cache php -r '
     $h = getenv("DB_HOST") ?: "127.0.0.1";
     $p = getenv("DB_PORT") ?: "3306";
     $d = getenv("DB_DATABASE");
     try {
       $pdo = new PDO("mysql:host=$h;port=$p;dbname=$d", getenv("DB_USERNAME"), getenv("DB_PASSWORD"), [PDO::ATTR_TIMEOUT => 3]);
-      $n = $pdo->query("select count(*) from information_schema.tables where table_schema = database() and table_name = "cache"")->fetchColumn();
-      exit($n ? 0 : 1);
+      $c = $pdo->prepare("select count(*) from information_schema.tables where table_schema = database() and table_name = ?");
+      $c->execute([getenv("TABLA_TESTIGO")]);
+      exit($c->fetchColumn() ? 0 : 1);
     } catch (Throwable $e) { exit(1); }
   ' 2>/dev/null; do
     intentos=$((intentos + 1))
