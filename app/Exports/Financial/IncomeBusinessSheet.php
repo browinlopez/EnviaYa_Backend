@@ -3,6 +3,7 @@
 namespace App\Exports\Financial;
 
 use App\Models\Payment\Payment;
+use App\Support\SqlPortable;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithTitle;
@@ -29,7 +30,7 @@ class IncomeBusinessSheet implements FromCollection, WithStyles, WithTitle, With
     {
         return Payment::query()
             ->select(
-                DB::raw("DATE_FORMAT(payments.payment_date,'%Y-%m') as mes"),
+                DB::raw(SqlPortable::anioMes('payments.payment_date') . ' as mes'),
                 'business.name as negocio',
                 DB::raw('COUNT(DISTINCT payments.orderSales_id) as pedidos'),
                 DB::raw('SUM(payments.total) as total_ingresos')

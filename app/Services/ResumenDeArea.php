@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Services\Ajustes;
 use App\Models\Area;
 use App\Models\Operacion\DomiciliaryDocument;
 use Illuminate\Support\Carbon;
@@ -263,11 +264,16 @@ class ResumenDeArea
                 'contar'  => fn () => DB::table('orderssales')
                     ->whereIn('state', [1, 2, 3])
                     ->where(function ($q) {
+                        // El mismo umbral que usa el panel, que ahora se ajusta
+                        // desde Ajustes: si el correo y la pantalla contaran
+                        // distinto, el resumen diario perdería el sentido.
                         $q->where(fn ($s) => $s->where('state', 2)->whereNull('domiciliary_id'))
-                            ->orWhere('sale_date', '<', Carbon::now()->subDay());
+                            ->orWhere('sale_date', '<', Carbon::now()->subHours(
+                                (int) Ajustes::valor('operacion.horas_estancado'),
+                            ));
                     })
                     ->count(),
-                'detalle' => fn ($n) => "{$n} pedido(s) llevan más de un día sin avanzar o están despachados sin repartidor.",
+                'detalle' => fn ($n) => "{$n} pedido(s) llevan demasiado tiempo sin avanzar o están despachados sin repartidor.",
             ],
 
             /* -------------------------- CONTABILIDAD -------------------------- */

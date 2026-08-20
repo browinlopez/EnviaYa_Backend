@@ -8,7 +8,6 @@
     "require": {
         "php": "^8.2",
         "dompdf/dompdf": "^3.1",
-        "jeroennoten/laravel-adminlte": "^3.15",
         "laravel/framework": "^12.0",
         "laravel/octane": "^2.17",
         "laravel/reverb": "^1.6",
@@ -20,8 +19,7 @@
         "pusher/pusher-php-server": "^7.2",
         "sentry/sentry-laravel": "^4.27",
         "spatie/laravel-backup": "^9.3",
-        "spatie/laravel-permission": "^6.21",
-        "yajra/laravel-datatables-oracle": "^12.4"
+        "spatie/laravel-permission": "^6.21"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

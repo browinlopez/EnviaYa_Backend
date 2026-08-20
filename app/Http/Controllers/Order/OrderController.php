@@ -786,7 +786,7 @@ class OrderController extends Controller
                 ], 422);
             }
 
-            $maxSimultaneos = (int) config('services.max_active_deliveries', 3);
+            $maxSimultaneos = (int) Ajustes::valor('operacion.entregas_simultaneas');
 
             $enCurso = OrdersSales::where('domiciliary_id', $domiciliary->domiciliary_id)
                 ->where('state', 3)

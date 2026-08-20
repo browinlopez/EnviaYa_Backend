@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Admin\Api;
 
+use App\Services\Push\Notificador;
 use App\Http\Controllers\Controller;
+use App\Models\DeviceToken;
 use App\Models\Marketing\AdCampaign;
 use App\Models\Marketing\Advertiser;
 use App\Models\Marketing\Banner;
@@ -777,11 +779,26 @@ class MarketingApiController extends Controller
        NOTIFICACIONES SEGMENTADAS
        ================================================================== */
 
-    public function pushCampaigns()
+    public function pushCampaigns(Notificador $notificador)
     {
-        return response()->json(
-            PushCampaign::orderByDesc('id')->limit(200)->get()
-        );
+        $transporte = $notificador->transporte();
+
+        return response()->json([
+            'data' => PushCampaign::orderByDesc('id')->limit(200)->get(),
+            /*
+             * Estado del transporte, para que la pantalla pueda avisar ANTES de
+             * que alguien arme una campaña entera. Sin credenciales de Firebase
+             * el módulo funciona —se redactan, se segmentan, se cierran— y no
+             * entrega nada: decirlo al final, cuando ya se envió, es tarde.
+             */
+            'transport' => [
+                'name'  => $transporte->nombre(),
+                'ready' => $transporte->configurado(),
+            ],
+            // Cuántos teléfonos hay registrados en total. Es el techo de
+            // cualquier campaña y casi nadie lo tiene presente.
+            'devices' => DeviceToken::vivos()->count(),
+        ]);
     }
 
     /**
@@ -801,8 +818,18 @@ class MarketingApiController extends Controller
             'segment.only_with_orders' => 'sometimes|boolean',
         ])['segment'] ?? [];
 
+        $usuarios = $this->consultaSegmento($segmento)->pluck('u.user_id');
+
         return response()->json([
-            'recipients' => $this->consultaSegmento($segmento)->count(),
+            'recipients' => $usuarios->count(),
+            /*
+             * Y a cuántos TELÉFONOS llegaría de verdad. Es el número que importa
+             * y el que nadie espera: de 3.000 destinatarios pueden salir 800
+             * envíos si el resto no tiene la app instalada con sesión abierta.
+             * Verlo antes de pulsar es la diferencia entre calcular el alcance y
+             * suponerlo.
+             */
+            'devices' => DeviceToken::vivos()->whereIn('user_id', $usuarios)->count(),
         ]);
     }
 
@@ -832,15 +859,20 @@ class MarketingApiController extends Controller
     }
 
     /**
-     * Marca la campaña como enviada y congela su alcance.
+     * Envía la campaña y congela su alcance.
      *
-     * IMPORTANTE: acá NO se entrega a los dispositivos. La plataforma todavía
-     * no tiene registro de tokens de push (FCM/APNs), así que este método
-     * resuelve el segmento, guarda a cuánta gente alcanzó y deja la campaña
-     * cerrada. El transporte real se engancha en el punto marcado abajo, sin
-     * tocar nada más de este módulo.
+     * Resuelve el segmento —que son PERSONAS—, lo traduce a los DISPOSITIVOS
+     * registrados de esas personas y encola el envío por lotes. Los dos números
+     * son distintos y los dos importan: "llegó a 3.000 personas" es falso si
+     * solo 800 tienen la app instalada con sesión abierta.
+     *
+     * El envío no ocurre en esta petición. Firebase manda un mensaje por
+     * llamada, así que mil teléfonos son mil peticiones HTTP: hacerlas acá sería
+     * un tiempo de espera agotado con la campaña marcada como enviada a medias.
+     * La respuesta dice cuántos dispositivos se encolaron; lo entregado se ve
+     * después, en la propia pantalla.
      */
-    public function sendPushCampaign($id)
+    public function sendPushCampaign($id, Notificador $notificador)
     {
         $p = PushCampaign::findOr($id, fn () => abort(404, 'La notificación no existe.'));
 
@@ -852,33 +884,49 @@ class MarketingApiController extends Controller
             return response()->json(['message' => 'Esta notificación está cancelada.'], 422);
         }
 
-        $destinatarios = $this->consultaSegmento($p->segment ?? [])->count();
+        $usuarios = $this->consultaSegmento($p->segment ?? [])
+            ->pluck('u.user_id')
+            ->all();
 
-        // ── Punto de enganche del transporte ──────────────────────────────
-        // Cuando exista la tabla de tokens de dispositivo, el envío va acá,
-        // en una cola: hacerlo dentro de la petición dejaría al panel esperando
-        // mientras se despachan miles de mensajes.
-        // ──────────────────────────────────────────────────────────────────
+        $destinatarios = count($usuarios);
 
         /*
-         * `forceFill` y no `update`: `sent_at` y `recipients_count` quedan
-         * fuera de $fillable a propósito, porque son constancia de lo que hizo
-         * el servidor y no datos que alguien pueda mandar. Con `update` se
+         * `forceFill` y no `update`: `sent_at` y los contadores quedan fuera de
+         * $fillable a propósito, porque son constancia de lo que hizo el
+         * servidor y no datos que alguien pueda mandar. Con `update` se
          * descartaban en silencio y la campaña quedaba marcada como enviada
          * pero sin fecha, con lo que se podía volver a enviar.
+         *
+         * Se marca ANTES de encolar: si se encolara primero, un fallo al guardar
+         * dejaría notificaciones saliendo hacia una campaña que sigue figurando
+         * como no enviada, y volver a pulsar la mandaría dos veces.
          */
         $p->forceFill([
             'state'            => PushCampaign::ENVIADA,
             'sent_at'          => now(),
             'recipients_count' => $destinatarios,
+            'delivered_count'  => 0,
+            'failed_count'     => 0,
         ])->save();
 
+        $dispositivos = $notificador->encolar($p, $usuarios);
+
+        $p->forceFill(['devices_count' => $dispositivos])->save();
+
+        $transporte = $notificador->transporte();
+
         return response()->json([
-            'message'    => "Notificación cerrada con {$destinatarios} destinatario(s).",
+            'message' => $dispositivos === 0
+                ? "Ninguno de los {$destinatarios} destinatarios tiene un dispositivo registrado."
+                : "En camino a {$dispositivos} dispositivo(s) de {$destinatarios} destinatario(s).",
             'recipients' => $destinatarios,
+            'devices'    => $dispositivos,
             // Se dice explícitamente para que el panel no afirme algo falso.
-            'delivered'  => false,
-            'note'       => 'El envío a dispositivos requiere el registro de tokens de push, que aún no existe.',
+            'delivered'  => $transporte->configurado(),
+            'transport'  => $transporte->nombre(),
+            'note'       => $transporte->configurado()
+                ? null
+                : 'No hay transporte de push configurado en el servidor: no se entregará nada. Falta FCM_CREDENTIALS.',
         ]);
     }
 

@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Services\Push\PushEnRegistro;
+use App\Services\Push\PushFirebase;
+use App\Services\Push\TransportePush;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -15,7 +18,22 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        /*
+         * POR DÓNDE SALEN LAS NOTIFICACIONES.
+         *
+         * Con credenciales de Firebase configuradas, por Firebase; sin ellas,
+         * por el transporte que solo escribe en el registro y REPORTA FALLO —no
+         * éxito—, para que la pantalla diga "0 entregadas, sin transporte
+         * configurado" en vez de fingir un envío que no ocurrió.
+         *
+         * Se decide acá y no dentro del módulo para que el resto del código
+         * —segmentar, encolar, contar— no sepa que Firebase existe.
+         */
+        $this->app->bind(TransportePush::class, function () {
+            $firebase = new PushFirebase();
+
+            return $firebase->configurado() ? $firebase : new PushEnRegistro();
+        });
     }
 
     /**

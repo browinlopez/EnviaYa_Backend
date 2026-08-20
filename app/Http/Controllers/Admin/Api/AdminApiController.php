@@ -55,8 +55,15 @@ class AdminApiController extends Controller
      * veía lo que ya estaba cargado. Al pasar el filtrado al servidor tuvo que
      * venirse acá, que además es donde debía estar: la regla la aplica quien
      * consulta la base, y el panel se limita a repetirla en la insignia.
+     *
+     * Ya no es una constante: se ajusta desde el panel. Cuántas horas son
+     * "demasiadas" depende de la ciudad y de la hora del día, y era una decisión
+     * de operación que exigía un despliegue para cambiarse.
      */
-    private const HORAS_ESTANCADO = 24;
+    private function horasEstancado(): int
+    {
+        return (int) Ajustes::valor('operacion.horas_estancado');
+    }
 
     /**
      * Subconsulta: ¿esta orden tiene al menos un pago aprobado?
@@ -133,7 +140,7 @@ class AdminApiController extends Controller
         $totales['couriers_total'] = $repartidores->count();
         $totales['couriers_available'] = $repartidores->where('available', 1)->count();
         $totales['couriers_at_limit'] = $repartidores
-            ->where('active_deliveries', '>=', (int) config('services.max_active_deliveries', 3))
+            ->where('active_deliveries', '>=', (int) Ajustes::valor('operacion.entregas_simultaneas'))
             ->count();
 
         return response()->json([
@@ -1083,7 +1090,7 @@ class AdminApiController extends Controller
             $q->where('o.sale_date', '>=', Carbon::now()->subDays($dias));
         }
 
-        $limite = Carbon::now()->subHours(self::HORAS_ESTANCADO);
+        $limite = Carbon::now()->subHours($this->horasEstancado());
 
         match ($request->query('state_group')) {
             'activos'    => $q->whereIn('o.state', self::ACTIVOS),
@@ -1102,7 +1109,7 @@ class AdminApiController extends Controller
     {
         $entregado = self::ENTREGADO;
         $activos   = implode(',', self::ACTIVOS);
-        $limite    = Carbon::now()->subHours(self::HORAS_ESTANCADO)->toDateTimeString();
+        $limite    = Carbon::now()->subHours($this->horasEstancado())->toDateTimeString();
 
         $r = ListadoPaginado::soloAgregados($q, "
             COUNT(*) as total,

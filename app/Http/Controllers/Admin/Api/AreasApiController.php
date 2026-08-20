@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Area;
+use App\Services\Ajustes;
 use App\Support\PanelModules;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -54,6 +55,26 @@ class AreasApiController extends Controller
              */
             'permissions' => $area ? $area->permisos($nivel) : [],
             'catalog'     => PanelModules::paraPanel(),
+            /*
+             * Las REGLAS VIGENTES de la operación, para todo el panel.
+             *
+             * El panel las tenía copiadas en `lib/constants.js` porque vivían en
+             * el `.env` y no cambiaban nunca. Desde que se editan, esa copia se
+             * queda vieja en cuanto alguien las toca: la pantalla de
+             * Domiciliarios diría "máximo 3 entregas" mientras el servidor ya
+             * permite cinco, y nadie entendería por qué una fila no aparece
+             * marcada en el tope.
+             *
+             * Van acá y no en `/admin/settings` porque ese endpoint pide el
+             * módulo `ajustes`, que es solo de Tecnología, y estas cifras las
+             * necesita cualquiera que mire Domiciliarios o el panel de inicio.
+             * Solo son las de OPERACIÓN: el control de la app no lo pinta nadie.
+             */
+            'rules' => [
+                'domiciliary_share'      => (float) Ajustes::valor('operacion.reparto_domiciliario'),
+                'max_active_deliveries'  => (int) Ajustes::valor('operacion.entregas_simultaneas'),
+                'stalled_hours'          => (int) Ajustes::valor('operacion.horas_estancado'),
+            ],
         ]);
     }
 

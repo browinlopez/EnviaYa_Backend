@@ -2,9 +2,13 @@
 
 use App\Http\Controllers\Admin\Api\AdminApiController;
 use App\Http\Controllers\Admin\Api\FacturasApiController;
+use App\Http\Controllers\Admin\Api\AjustesApiController;
 use App\Http\Controllers\Admin\Api\AreasApiController;
 use App\Http\Controllers\Admin\Api\MarketingApiController;
 use App\Http\Controllers\Admin\Api\OperacionApiController;
+use App\Http\Controllers\Admin\Api\ReportesExcelController;
+use App\Http\Controllers\Admin\Api\SeguridadApiController;
+use App\Http\Controllers\AppConfigController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Buyer\ResidentialComplexController;
 use App\Http\Controllers\Business\AffiliationController;
@@ -13,6 +17,7 @@ use App\Http\Controllers\Business\CategoryBusinessController;
 use App\Http\Controllers\Business\FavoriteController;
 use App\Http\Controllers\Category\CategoryController;
 use App\Http\Controllers\Chat\ChatController;
+use App\Http\Controllers\DeviceTokenController;
 use App\Http\Controllers\Domiciliary\DomiciliaryController;
 use App\Http\Controllers\Marketing\AdsController;
 use App\Http\Controllers\Order\OrderController;
@@ -90,6 +95,21 @@ Route::post('webhooks/bold', [BoldWebhookController::class, 'handle'])
     ->middleware('throttle:120,1');
 
 /*
+ * Lo que la app pregunta ANTES de iniciar sesión: si la plataforma está en
+ * mantenimiento y si su versión sigue sirviendo.
+ *
+ * Público a propósito. Detrás del token, una app vieja que ya no puede
+ * autenticarse tampoco podría enterarse de que tiene que actualizarse: se
+ * quedaría en un error sin explicación. No devuelve nada sensible —dos banderas,
+ * dos versiones y dos mensajes escritos para leerse en pantalla—.
+ *
+ * Con throttle alto: la app lo consulta al abrir y al volver del fondo, y en
+ * producción muchos usuarios móviles comparten IP por el CGNAT del operador.
+ */
+Route::get('app/config', AppConfigController::class)
+    ->middleware('throttle:600,1');
+
+/*
 |--------------------------------------------------------------------------
 | RUTAS AUTENTICADAS (auth:sanctum)
 |--------------------------------------------------------------------------
@@ -104,6 +124,40 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
     //Auth
     Route::get('/profile', [AuthController::class, 'profile']);
     Route::post('/logout', [AuthController::class, 'logout']);
+
+    /*
+     * El teléfono se registra para poder recibir notificaciones.
+     *
+     * La app llama al POST al iniciar sesión y cada vez que el proveedor le rota
+     * el token; al DELETE al cerrar sesión. Sin esto, el módulo de
+     * Notificaciones resuelve segmentos y no le llega a nadie.
+     */
+    Route::post('devices', [DeviceTokenController::class, 'store']);
+    Route::delete('devices', [DeviceTokenController::class, 'destroy']);
+
+    /*
+    |----------------------------------------------------------------------
+    | Seguridad de la cuenta PROPIA: segundo factor y sesiones abiertas.
+    |----------------------------------------------------------------------
+    | Sin `modulo:` a propósito: no es una sección del panel, es la cuenta de
+    | quien está entrando. No hay forma de tocar el segundo factor de otra
+    | persona ni de ver sus sesiones, y eso es deliberado — quien administra
+    | accesos reparte áreas, no factores de autenticación ajenos.
+    |
+    | El throttle es estricto: probar códigos de seis dígitos a ciegas es
+    | justamente el ataque contra el que sirve el segundo factor.
+    */
+    Route::prefix('admin/security')->middleware('throttle:20,1')->group(function () {
+        Route::get('/', [SeguridadApiController::class, 'estado']);
+
+        Route::post('two-factor', [SeguridadApiController::class, 'iniciarDosFactores']);
+        Route::post('two-factor/confirm', [SeguridadApiController::class, 'confirmarDosFactores']);
+        Route::delete('two-factor', [SeguridadApiController::class, 'desactivarDosFactores']);
+        Route::post('two-factor/recovery-codes', [SeguridadApiController::class, 'regenerarCodigos']);
+
+        Route::delete('sessions/others', [SeguridadApiController::class, 'cerrarLasDemas']);
+        Route::delete('sessions/{id}', [SeguridadApiController::class, 'cerrarSesion']);
+    });
 
     //Pagos (Bold): el usuario siempre está logueado cuando paga.
     //Antes eran públicos: cualquiera podía crear intents de pago.
@@ -286,6 +340,17 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
 
         // Archivos de cualquier entidad: negocios, productos, usuarios, conjuntos.
         Route::get('storage', [AdminApiController::class, 'storageStatus'])->middleware('modulo:ajustes');
+
+        /*
+        | Ajustes de la plataforma: reglas de la operación y control de la app.
+        |
+        | Guardar mueve plata (el reparto del domicilio entra en cada pedido
+        | nuevo) y puede parar la operación entera (el mantenimiento), así que
+        | pide `gestionar` y queda auditado con autor y valor anterior.
+        */
+        Route::get('settings', [AjustesApiController::class, 'index'])->middleware('modulo:ajustes');
+        Route::put('settings', [AjustesApiController::class, 'update'])->middleware('modulo:ajustes,gestionar');
+        Route::put('settings/restablecer', [AjustesApiController::class, 'restablecer'])->middleware('modulo:ajustes,gestionar');
         // `medios` traduce la entidad de la URL a su módulo y exige `ver` para
         // consultar y `gestionar` para tocar. Sin esto eran las únicas rutas de
         // /admin sin puerta: cualquiera del equipo podía borrar el logo de un
@@ -305,9 +370,16 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         | permanente en la contabilidad.
         */
         Route::get('invoices', [FacturasApiController::class, 'index'])->middleware('modulo:facturas');
+        // Recupera las entregas que se quedaron sin comprobante. No crea nada
+        // nuevo —solo emite lo que ya está entregado— pero escribe, así que pide
+        // `gestionar`.
+        Route::post('invoices/emitir-pendientes', [FacturasApiController::class, 'emitirPendientes'])->middleware('modulo:facturas,gestionar');
         Route::get('invoices/{id}', [FacturasApiController::class, 'show'])->middleware('modulo:facturas');
         Route::get('invoices/{id}/pdf', [FacturasApiController::class, 'pdf'])->middleware('modulo:facturas');
         Route::put('invoices/{id}/anular', [FacturasApiController::class, 'anular'])->middleware('modulo:facturas,gestionar');
+        // En lote, con un motivo compartido: el error que lleva a anular casi
+        // nunca es de un solo comprobante. Tope de 50 por petición.
+        Route::put('invoices/anular-lote', [FacturasApiController::class, 'anularLote'])->middleware('modulo:facturas,gestionar');
 
         Route::get('businesses', [AdminApiController::class, 'businesses'])->middleware('modulo:negocios');
         Route::post('businesses', [AdminApiController::class, 'storeBusiness'])->middleware('modulo:negocios,gestionar');
@@ -341,6 +413,9 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
 
         Route::get('reviews', [AdminApiController::class, 'reviews'])->middleware('modulo:resenas');
         Route::delete('reviews', [AdminApiController::class, 'deleteReview'])->middleware('modulo:resenas,gestionar');
+        // En lote: moderar es un trabajo por tandas, y de a una son cuatro clics
+        // por reseña. Con tope de 100 por petición.
+        Route::delete('reviews/lote', [AdminApiController::class, 'deleteReviews'])->middleware('modulo:resenas,gestionar');
 
         Route::get('categories', [AdminApiController::class, 'categories'])->middleware('modulo:categorias');
         Route::post('categories', [AdminApiController::class, 'storeCategory'])->middleware('modulo:categorias,gestionar');
@@ -381,6 +456,9 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::get('audits', [AdminApiController::class, 'audits'])->middleware('modulo:auditoria');
 
         Route::get('reports/{kind}', [AdminApiController::class, 'report'])->middleware('modulo:reportes');
+        // El libro de Excel multi-hoja. Vivía en el panel anterior en Blade, con
+        // sesión web y sin autorización por área; acá queda detrás del módulo.
+        Route::get('reports/{kind}/excel', ReportesExcelController::class)->middleware('modulo:reportes');
 
         /*
         |------------------------------------------------------------------

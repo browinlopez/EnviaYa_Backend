@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Services\Totp;
 use App\Http\Controllers\Controller;
 use App\Models\Buyer\Buyer;
 use App\Models\Buyer\BuyerComplex;
@@ -206,7 +207,48 @@ class AuthController extends Controller
             ], 403);
         }
 
+        /*
+         * SEGUNDO FACTOR.
+         *
+         * Va DESPUÉS de comprobar la contraseña, no antes: pedir el código a
+         * quien no acertó la clave confirmaría que esa cuenta existe y que tiene
+         * segundo factor, que es información que no hay por qué regalar.
+         *
+         * Si falta el código se responde 401 con `two_factor_required`, y el
+         * cliente vuelve a llamar con `two_factor_code`. Un código de
+         * recuperación también sirve, y se gasta al usarlo.
+         */
+        if ($user->tieneSegundoFactor()) {
+            $codigo = trim((string) $request->input('two_factor_code', ''));
+
+            if ($codigo === '') {
+                return response()->json([
+                    'message' => 'Escribe el código de tu aplicación de autenticación.',
+                    'reason'  => 'two_factor_required',
+                ], 401);
+            }
+
+            if (!$this->segundoFactorValido($user, $codigo)) {
+                return response()->json([
+                    'message' => 'El código no es válido o ya se usó.',
+                    'reason'  => 'two_factor_invalid',
+                ], 401);
+            }
+        }
+
         $token = $user->createToken('auth_token')->plainTextToken;
+
+        /*
+         * De dónde salió esta sesión.
+         *
+         * Se guarda para que la lista de sesiones abiertas sirva de algo: sin
+         * esto dice "token #3, token #7" y nadie puede reconocer la que no es
+         * suya, que es lo único para lo que existe esa lista.
+         */
+        $user->tokens()->latest('id')->limit(1)->update([
+            'ip'         => $request->ip(),
+            'user_agent' => substr((string) $request->userAgent(), 0, 255),
+        ]);
 
         if ($user->rol == 1) {
             $user->load('buyer');
@@ -220,6 +262,36 @@ class AuthController extends Controller
             'user'  => $user,
             'token' => $token,
         ]);
+    }
+
+    /**
+     * ¿Es válido el código? Vale el del teléfono o uno de recuperación.
+     *
+     * El de recuperación SE GASTA: sirve una vez y se borra de la lista. Un
+     * código de recuperación reutilizable es una segunda contraseña permanente
+     * escrita en un papel.
+     */
+    private function segundoFactorValido($user, string $codigo): bool
+    {
+        if (Totp::verificar($user->two_factor_secret, $codigo)) {
+            return true;
+        }
+
+        $codigos = $user->two_factor_recovery_codes ?? [];
+
+        foreach ($codigos as $i => $resumen) {
+            if (Hash::check($codigo, $resumen)) {
+                unset($codigos[$i]);
+
+                $user->forceFill([
+                    'two_factor_recovery_codes' => array_values($codigos),
+                ])->save();
+
+                return true;
+            }
+        }
+
+        return false;
     }
 
     // Logout

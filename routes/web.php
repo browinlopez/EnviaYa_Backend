@@ -1,48 +1,82 @@
 <?php
 
-use App\Exports\Comercials\ReportGeneralComercial;
-use App\Http\Controllers\Admin\BusinessController;
-use App\Http\Controllers\Admin\BuyerController;
-use App\Http\Controllers\Admin\CategoryBusinessController;
-use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\DomiciliaryController;
-use App\Http\Controllers\Admin\ProductController;
-use App\Http\Controllers\Admin\ReportController;
-use App\Http\Controllers\Admin\ResidentialComplexController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\EmailVerificationPromptController;
 use App\Http\Controllers\Auth\VerifyEmailController;
-use App\Http\Controllers\Admin\Owner\OwnerController;
 use App\Http\Controllers\ProfileController;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
+
+/*
+|--------------------------------------------------------------------------
+| RUTAS WEB
+|--------------------------------------------------------------------------
+|
+| Acá queda MUY poco a propósito. La administración vive entera en el panel de
+| React contra `/v1/admin/*`, y la aplicación móvil contra el resto del API.
+| Lo que sobrevive en el servidor web son tres cosas que necesitan una página
+| de verdad: la portada pública, la verificación de correo y la recuperación de
+| contraseña (el enlace del correo tiene que abrir en algún sitio).
+|
+| POR QUÉ SE RETIRÓ EL PANEL ANTERIOR EN BLADE
+|
+| Había un segundo administrador completo colgado de acá —negocios,
+| domiciliarios, categorías, conjuntos, productos, propietarios y reportes— y
+| su único guardia era `auth`. Ni rol ni módulo ni área: toda la autorización
+| que se construyó (`admin` + `modulo:<clave>` + nivel de acceso) protege
+| `/v1/admin/*` y no llegaba hasta acá.
+|
+| El login web autentica con `Auth::attempt` contra la tabla `user` sin filtrar
+| por rol, y en esa tabla están también los compradores y los domiciliarios. El
+| resultado era que cualquier comprador, con su propio correo y su clave, podía
+| entrar a `/admin/negocios`, editar y borrar registros, y descargarse el
+| reporte financiero de la plataforma.
+|
+| No se le puso el middleware que le faltaba: se retiró. Todo lo que hacía está
+| en el panel nuevo, así que mantener dos administradores en paralelo era
+| duplicar el trabajo de cada cambio y dejar abierta una puerta que nadie mira.
+| Los libros de Excel, que era lo único que solo existía acá, se movieron a
+| `/v1/admin/reports/{kind}/excel`, detrás de `modulo:reportes`.
+|
+| Los controladores (`App\Http\Controllers\Admin\*`, sin contar `Admin\Api`) y
+| las vistas (`resources/views/admin`) se borraron en el mismo cambio.
+*/
 
 Route::get('/', function () {
     return view('home/index');
 });
-// --- Ruta de verificación para la app móvil (token personalizado) ---
+
+// --- Verificación de correo de la app móvil (token propio, no el firmado de
+//     Laravel: la app abre este enlace desde el correo). ---
 Route::get('/verify-email', [AuthController::class, 'verify'])
     ->name('verify.email');
 
-Route::get('/clear-session', function () {
-    auth()->logout(); // cerrar sesión
-    session()->flush(); // borrar toda la sesión
-    return redirect('/'); // redirige a inicio
-});
-
-// --- Dashboard protegido con middleware verified de Laravel ---
-Route::get('/dashboard', [DashboardController::class, 'index'])
-    ->middleware(['auth'])
+/*
+ * `dashboard` sobrevive solo como señal, sin vista ni controlador.
+ *
+ * Aquí estaba la portada del panel viejo, y la usan como destino todos los
+ * controladores de sesión de Breeze (`redirect()->intended(route('dashboard'))`)
+ * y su barra de navegación. Borrar el nombre habría hecho estallar el login con
+ * un "route not found" en vez de arreglar nada.
+ *
+ * Así que se queda apuntando a donde de verdad está la administración: quien
+ * llegue buscándola acaba en el panel.
+ */
+Route::get('/dashboard', fn () => redirect(config('app.panel_url') ?: '/'))
+    ->middleware('auth')
     ->name('dashboard');
 
-
 Route::middleware('auth')->group(function () {
-
+    /*
+     * La cuenta PROPIA y nada más.
+     *
+     * Es lo único que queda detrás de una sesión web. No hay administración
+     * acá: un usuario puede ver y cambiar sus datos, que son los suyos.
+     */
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // --- Rutas nativas de Laravel para email verification (solo web) ---
+    // --- Verificación nativa de Laravel (solo web) ---
     Route::get('laravel-verify-email', EmailVerificationPromptController::class)
         ->name('verification.notice');
 
@@ -53,86 +87,6 @@ Route::middleware('auth')->group(function () {
     Route::post('email/verification-notification', [AuthController::class, 'resendVerificationEmail'])
         ->middleware('throttle:6,1')
         ->name('verification.send');
-
-    Route::prefix('admin')->name('admin.')->group(function () {
-        // Aquí van todas tus rutas de admin como ya las tenías
-        // Compradores
-        Route::resource('compradores', BuyerController::class);
-
-        // Negocios
-        Route::prefix('negocios')->group(function () {
-            Route::get('/', [BusinessController::class, 'index'])->name('negocios.index');
-            Route::get('create', [BusinessController::class, 'create'])->name('negocios.create');
-            Route::post('/', [BusinessController::class, 'store'])->name('negocios.store');
-            Route::get('/{business}', [BusinessController::class, 'show'])->name('negocios.show');
-            Route::get('/{business}/edit', [BusinessController::class, 'edit'])->name('negocios.edit');
-            Route::put('/{business}', [BusinessController::class, 'update'])->name('negocios.update');
-            Route::delete('/{business}', [BusinessController::class, 'destroy'])->name('negocios.destroy');
-        });
-
-        // Domiciliarios
-        Route::prefix('domiciliarios')->group(function () {
-            Route::get('/', [DomiciliaryController::class, 'index'])->name('domiciliarios.index');
-            Route::get('/create', [DomiciliaryController::class, 'create'])->name('domiciliarios.create');
-            Route::post('/', [DomiciliaryController::class, 'store'])->name('domiciliarios.store');
-            Route::get('/{id}', [DomiciliaryController::class, 'show'])->name('domiciliarios.show');
-            Route::get('/{id}/edit', [DomiciliaryController::class, 'edit'])->name('domiciliarios.edit');
-            Route::put('/{id}', [DomiciliaryController::class, 'update'])->name('domiciliarios.update');
-            Route::delete('/{id}', [DomiciliaryController::class, 'destroy'])->name('domiciliarios.destroy');
-        });
-        // Categorías de negocio
-        Route::prefix('category-business')->group(function () {
-            Route::get('/', [CategoryBusinessController::class, 'index'])->name('category-business.index');
-            Route::get('/create', [CategoryBusinessController::class, 'create'])->name('category-business.create');
-            Route::post('/', [CategoryBusinessController::class, 'store'])->name('category-business.store');
-            Route::get('/{id}/edit', [CategoryBusinessController::class, 'edit'])->name('category-business.edit');
-            Route::put('/{id}', [CategoryBusinessController::class, 'update'])->name('category-business.update');
-            Route::delete('/{id}', [CategoryBusinessController::class, 'destroy'])->name('category-business.destroy');
-        });
-        // Conjuntos residenciales
-        Route::prefix('conjuntos')->group(function () {
-            Route::get('/', [ResidentialComplexController::class, 'index'])->name('conjuntos.index');
-            Route::get('/create', [ResidentialComplexController::class, 'create'])->name('conjuntos.create');
-            Route::post('/', [ResidentialComplexController::class, 'store'])->name('conjuntos.store');
-            Route::get('/{id}/edit', [ResidentialComplexController::class, 'edit'])->name('conjuntos.edit');
-            Route::put('/{id}', [ResidentialComplexController::class, 'update'])->name('conjuntos.update');
-            Route::delete('/{id}', [ResidentialComplexController::class, 'destroy'])->name('conjuntos.destroy');
-        });
-        // Productos
-        Route::prefix('productos')->group(function () {
-            Route::get('/', [ProductController::class, 'index'])->name('products.index');
-            Route::get('/ajax', [ProductController::class, 'indexAjax'])->name('product.ajax');
-            Route::get('/create', [ProductController::class, 'create'])->name('products.create');
-            Route::post('/store', [ProductController::class, 'store'])->name('products.store');
-            Route::get('/edit/{id}', [ProductController::class, 'edit'])->name('products.edit');
-            Route::put('/update/{id}', [ProductController::class, 'update'])->name('products.update');
-            Route::delete('/destroy/{id}', [ProductController::class, 'destroy'])->name('products.destroy');
-        });
-        // Importación productos
-        Route::prefix('admin/products')->group(function () {
-            Route::post('/import', [ProductController::class, 'import'])->name('admin.products.import');
-            Route::get('/import/preview', [ProductController::class, 'importPreview'])->name('admin.products.importPreview');
-            Route::post('/import/store', [ProductController::class, 'importStore'])->name('admin.products.importStore');
-        });
-        // Relación propietarios - negocios
-        Route::prefix('owners')->group(function () {
-            Route::get('/', [OwnerController::class, 'index'])->name('owners.index');
-            Route::get('/create', [OwnerController::class, 'create'])->name('owners.create');
-            Route::post('/', [OwnerController::class, 'store'])->name('owners.store');
-            Route::get('/{owner}/edit', [OwnerController::class, 'edit'])->name('owners.edit');
-            Route::put('/{owner}', [OwnerController::class, 'update'])->name('owners.update');
-            Route::post('/{owner}/businesses', [OwnerController::class, 'syncBusinesses'])->name('admin.owners.businesses.sync');
-        });
-        // Reportes
-        Route::prefix('reportes')->group(function () {
-            Route::get('/financieros', [ReportController::class, 'generalFinancial'])->name('report.general');
-            Route::get('/financieros/export', [ReportController::class, 'exportFinancial'])->name('report.export');
-            Route::get('/comerciales', [ReportController::class, 'generalCommercials'])->name('reportes.comerciales');
-            Route::get('/comerciales/export', [ReportController::class, 'exportComercial'])->name('reportes.comerciales.export');
-            Route::get('/operacional', [ReportController::class, 'OperationalCommercials'])->name('reportes.operacional');
-            Route::get('/operacional/export', [ReportController::class, 'exportOperational'])->name('reportes.operacional.export');
-        });
-    });
 });
 
 require __DIR__ . '/auth.php';

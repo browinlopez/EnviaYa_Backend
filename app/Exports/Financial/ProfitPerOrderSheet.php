@@ -3,6 +3,7 @@
 namespace App\Exports\Financial;
 
 use App\Models\Payment\Payment;
+use App\Support\SqlPortable;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithTitle;
@@ -25,7 +26,7 @@ class ProfitPerOrderSheet implements FromCollection, WithStyles, WithTitle,  Wit
     {
         return Payment::query()
             ->select(
-                DB::raw("DATE_FORMAT(payments.payment_date,'%Y-%m') as mes"),
+                DB::raw(SqlPortable::anioMes('payments.payment_date') . ' as mes'),
                 'payments.orderSales_id as pedido_id',
                 'business.name as negocio',
                 DB::raw('SUM(payments.total - payments.domicilio - payments.valor_promocion) as rentabilidad')

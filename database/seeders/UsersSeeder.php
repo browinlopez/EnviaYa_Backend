@@ -2,31 +2,77 @@
 
 namespace Database\Seeders;
 
+use App\Models\Domiciliary;
+use App\Models\User;
+use App\Support\ClaveDeSemilla;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
-use App\Models\User;
-use App\Models\Domiciliary;
 use Illuminate\Support\Facades\Hash;
 
+/**
+ * USUARIOS DE PRUEBA DEL ENTORNO DE DESARROLLO
+ *
+ * Un administrador, un comprador, un domiciliario y un tendero, con sus fichas y
+ * una tienda vinculada, para que el flujo completo funcione en una base recién
+ * creada.
+ *
+ * DOS COSAS QUE CAMBIARON, las dos por el mismo motivo:
+ *
+ * 1. La clave ya no está en el código. Eran `password123` para los cuatro, uno de
+ *    ellos `admin@gmail.com` con rol 4 — es decir, la clave del administrador
+ *    publicada en el repositorio. Ahora sale de `SEED_PASSWORD` o se genera al
+ *    azar y se imprime una vez. Ver `ClaveDeSemilla`.
+ *
+ * 2. No corre en producción. Son usuarios FALSOS: `admin@gmail.com`,
+ *    `tendero@gmail.com`, "Tienda de prueba". Nada de eso tiene sentido en el
+ *    servidor de verdad, y un `db:seed --force` dentro de un despliegue los
+ *    habría creado sin que nadie se enterara. Quien de verdad los necesite ahí,
+ *    pone `SEED_ALLOW_PRODUCTION=true` y sabe lo que está haciendo.
+ */
 class UsersSeeder extends Seeder
 {
     public function run(): void
     {
+        if (app()->isProduction() && !config('semillas.permitir_en_produccion')) {
+            $this->command?->warn(
+                'UsersSeeder no corre en producción: crea usuarios de prueba. '
+                . 'Si de verdad hacen falta, SEED_ALLOW_PRODUCTION=true.',
+            );
+
+            return;
+        }
+
+        $clave = Hash::make(ClaveDeSemilla::resolver($this->command));
+
         // updateOrCreate por email: el seeder se puede correr las veces
         // que haga falta sin duplicar usuarios ni reventar por el unique.
         $users = [
             [
                 'name' => 'browin',
                 'email' => 'admin@gmail.com',
-                'email_verified_at' => null,
+                /*
+                 * Verificado. El login exige el correo confirmado, y este usuario
+                 * no tiene bandeja de entrada donde recibir nada: sembrarlo sin
+                 * verificar dejaba un administrador que no podía entrar y sin
+                 * forma de arreglarlo desde la aplicación.
+                 */
+                'email_verified_at' => now(),
                 'email_verification_token' => null,
                 'email_verification_expires_at' => null,
-                'password' => Hash::make('password123'),
+                'password' => $clave,
                 'phone' => null,
                 'address' => null,
                 'rol' => 4,
                 'qualification' => 0.00,
-                'state' => null,
+                /*
+                 * Activo, como los demás. Estaba en `null` y el login rechaza eso
+                 * —`if (!$user->state)` responde "tu cuenta está deshabilitada"—,
+                 * así que una base recién sembrada creaba un administrador que no
+                 * podía entrar. No se notaba porque en las bases ya existentes
+                 * alguien lo había activado a mano, y `updateOrCreate` solo lo
+                 * volvía a apagar al reejecutar el seeder.
+                 */
+                'state' => 1,
             ],
             [
                 'name' => 'Browin smith Lopez Santiago',
@@ -34,7 +80,7 @@ class UsersSeeder extends Seeder
                 'email_verified_at' => '2026-02-12 13:08:18',
                 'email_verification_token' => '11h0cv9HF7jZMDQ1Cb7pBx2xtHHVmwgmm4YYYPQe37xGFwRtw7e6POcu3aWh',
                 'email_verification_expires_at' => '2026-02-12 15:37:09',
-                'password' => Hash::make('password123'),
+                'password' => $clave,
                 'phone' => null,
                 'address' => null,
                 'rol' => 1,
@@ -47,7 +93,7 @@ class UsersSeeder extends Seeder
                 'email_verified_at' => '2026-02-12 13:08:18',
                 'email_verification_token' => null,
                 'email_verification_expires_at' => null,
-                'password' => Hash::make('password123'),
+                'password' => $clave,
                 'phone' => '3002464977',
                 'address' => 'calle 20',
                 'rol' => 3,
@@ -60,7 +106,7 @@ class UsersSeeder extends Seeder
                 'email_verified_at' => '2026-02-12 13:08:18',
                 'email_verification_token' => null,
                 'email_verification_expires_at' => null,
-                'password' => Hash::make('password123'),
+                'password' => $clave,
                 'phone' => null,
                 'address' => null,
                 'rol' => 2,

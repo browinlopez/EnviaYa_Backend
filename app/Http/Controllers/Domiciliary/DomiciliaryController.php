@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Domiciliary;
 
+use App\Services\Ajustes;
 use App\Http\Controllers\Controller;
 use App\Models\Domiciliary;
 use App\Models\Payment\Payment;
@@ -36,7 +37,7 @@ class DomiciliaryController extends Controller
             'orders as active_orders' => fn($q) => $q->where('state', 3),
         ]);
 
-        $maxSimultaneos = (int) config('services.max_active_deliveries', 3);
+        $maxSimultaneos = (int) Ajustes::valor('operacion.entregas_simultaneas');
 
         $domiciliaries = $business->domiciliaries->map(function ($domiciliary) use ($maxSimultaneos) {
             $enCurso = (int) ($domiciliary->active_orders ?? 0);

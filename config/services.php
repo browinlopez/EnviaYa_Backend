@@ -63,6 +63,23 @@ return [
      * Si el NIT o el representante están vacíos, el contrato sale con la
      * línea en blanco, tal cual la plantilla en papel.
      */
+    /*
+     * NOTIFICACIONES A LOS TELÉFONOS (Firebase Cloud Messaging).
+     *
+     * Sin `FCM_CREDENTIALS` el módulo de Notificaciones sigue funcionando —se
+     * arman las campañas, se resuelve el segmento, se cuentan los dispositivos—
+     * pero no entrega nada, y la pantalla lo DICE. Nunca finge haber enviado.
+     *
+     * `credentials` es la ruta al JSON de la cuenta de servicio que da Firebase
+     * (Configuración del proyecto → Cuentas de servicio → Generar nueva clave).
+     * Va fuera del repositorio: es una credencial que permite mandarle una
+     * notificación a cualquier usuario de la plataforma.
+     */
+    'fcm' => [
+        'credentials' => env('FCM_CREDENTIALS', ''),
+        'project_id'  => env('FCM_PROJECT_ID', ''),
+    ],
+
     'contrato' => [
         'empresa'        => env('CONTRATO_EMPRESA', 'MARCAVA GROUP S.A.S.'),
         'nit'            => env('CONTRATO_NIT', ''),

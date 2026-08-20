@@ -43,6 +43,24 @@ class DemoSeeder extends Seeder
 
     public function run(): void
     {
+        /*
+         * NO en producción, y sin excepción por descuido.
+         *
+         * Crea catorce personas con clave conocida, seis negocios y noventa
+         * pedidos falsos. Metido en el servidor de verdad, la clave compartida
+         * son catorce puertas abiertas y los pedidos falsos ensucian toda la
+         * contabilidad. Un `db:seed --force` en un despliegue lo haría sin que
+         * nadie se enterara.
+         */
+        if (app()->isProduction() && !config('semillas.permitir_en_produccion')) {
+            $this->command?->warn(
+                'DemoSeeder no corre en producción: son datos y usuarios falsos, '
+                . 'con una clave compartida y conocida.',
+            );
+
+            return;
+        }
+
         // Semilla fija: sin esto, cada ejecución cambiaría los importes y no se
         // podría comparar una pantalla con la de ayer.
         mt_srand(20260816);

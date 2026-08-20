@@ -1,9 +1,16 @@
 {{--
     COMPROBANTE DE UN PEDIDO ENTREGADO
 
-    Media carta y en una sola página: es un comprobante de entrega, no un
-    contrato. Si no cabe, se recorta la lista de renglones antes que partirlo en
-    dos hojas — un comprobante de dos páginas se imprime a medias.
+    Media carta: es un comprobante de entrega, no un contrato. Con la escala de
+    abajo caben unos veinte renglones en la hoja; un pedido más largo pasa a una
+    segunda página, que es preferible a esconderle renglones a un documento que
+    sirve de constancia de lo que se cobró.
+
+    LA ESCALA IMPORTA. Estuvo en 8,5 px de cuerpo y 7 px en los rótulos, que
+    sobre una hoja de 5,5 pulgadas es ilegible en pantalla —el visor la encaja al
+    60 % y no se distingue el importe— y justo en el límite de lo imprimible.
+    Cabía más información por hoja y no servía de nada, porque nadie podía
+    leerla. Ahora el cuerpo va en 11 px: ocupa más y se lee.
 
     Todo sale del `snapshot`, que es la foto de los datos al emitir. Nada de
     consultas vivas: si el negocio cambió de nombre en junio, la factura de
@@ -25,45 +32,47 @@
 <head>
     <meta charset="utf-8">
     <style>
-        @page { margin: 18px 20px; }
+        @page { margin: 20px 22px; }
         body {
             font-family: 'DejaVu Sans', sans-serif;
-            font-size: 8.5px;
+            font-size: 11px;
             color: #1f2333;
             line-height: 1.45;
         }
-        .encabezado { border-bottom: 1.5px solid #1f2333; padding-bottom: 8px; }
-        .marca { font-size: 13px; font-weight: bold; letter-spacing: -0.2px; }
-        .numero { font-size: 12px; font-weight: bold; }
+        .encabezado { border-bottom: 1.5px solid #1f2333; padding-bottom: 10px; }
+        .marca { font-size: 17px; font-weight: bold; letter-spacing: -0.3px; }
+        .numero { font-size: 16px; font-weight: bold; }
         .tenue { color: #6b7189; }
-        .micro { font-size: 7.5px; }
+        .micro { font-size: 9px; }
         table { width: 100%; border-collapse: collapse; }
-        .partes td { vertical-align: top; padding: 8px 0 0; width: 50%; }
+        .partes td { vertical-align: top; padding: 11px 0 0; width: 50%; }
         .rotulo {
-            font-size: 7px; text-transform: uppercase; letter-spacing: .07em;
-            color: #8a90a6; font-weight: bold; padding-bottom: 2px;
+            font-size: 8.5px; text-transform: uppercase; letter-spacing: .07em;
+            color: #8a90a6; font-weight: bold; padding-bottom: 3px;
         }
-        .items { margin-top: 10px; }
+        .items { margin-top: 13px; }
         .items th {
-            text-align: left; font-size: 7px; text-transform: uppercase;
+            text-align: left; font-size: 9px; text-transform: uppercase;
             letter-spacing: .06em; color: #6b7189;
-            border-bottom: 1px solid #c9cde0; padding: 4px 3px;
+            border-bottom: 1px solid #c9cde0; padding: 4px;
         }
-        .items td { padding: 4px 3px; border-bottom: 1px solid #eef0f7; }
+        /* El relleno de la fila es lo que decide cuántos renglones caben en la
+           hoja: cada píxel de arriba y abajo cuesta un renglón cada seis. */
+        .items td { padding: 4px; border-bottom: 1px solid #eef0f7; }
         .der { text-align: right; }
-        .totales { margin-top: 8px; }
-        .totales td { padding: 2px 3px; }
+        .totales { margin-top: 11px; }
+        .totales td { padding: 3px 4px; }
         .total-final td {
             border-top: 1.5px solid #1f2333; font-weight: bold;
-            font-size: 11px; padding-top: 5px;
+            font-size: 15px; padding-top: 6px;
         }
         .anulada {
-            margin-top: 10px; padding: 6px 8px;
+            margin-top: 13px; padding: 8px 10px;
             border: 1.5px solid #c02626; color: #c02626;
             font-weight: bold; text-align: center;
         }
         .pie {
-            margin-top: 14px; padding-top: 8px;
+            margin-top: 18px; padding-top: 10px;
             border-top: 1px solid #eef0f7; color: #8a90a6;
         }
     </style>
@@ -122,9 +131,12 @@
     <thead>
         <tr>
             <th>Producto</th>
-            <th class="der" style="width:38px;">Cant.</th>
-            <th class="der" style="width:70px;">Precio</th>
-            <th class="der" style="width:78px;">Importe</th>
+            {{-- Anchos en px de CSS: la hoja mide 528 px de ancho (5,5 pulgadas
+                 a 96 ppp) y con los márgenes quedan 484 útiles. Con la letra en
+                 11 px, "$ 199.817" no cabía en las columnas de antes. --}}
+            <th class="der" style="width:46px;">Cant.</th>
+            <th class="der" style="width:86px;">Precio</th>
+            <th class="der" style="width:95px;">Importe</th>
         </tr>
     </thead>
     <tbody>

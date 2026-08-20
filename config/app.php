@@ -56,6 +56,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Dónde vive el panel de administración
+    |--------------------------------------------------------------------------
+    |
+    | El panel es una aplicación de React aparte, así que no está en `app.url`
+    | —esa es la del API—. Se usa para los enlaces de los correos (el resumen
+    | diario) y para mandar al panel a quien llegue al servidor web buscándolo.
+    |
+    | Estaba declarado en `.env.example` y se leía con `config('app.panel_url')`,
+    | pero no existía la clave: caía en la del API, así que los enlaces del
+    | resumen diario llevaban al backend en vez de a la pantalla.
+    |
+    */
+    'panel_url' => env('PANEL_URL', env('APP_URL')),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

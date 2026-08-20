@@ -230,6 +230,80 @@ it('el PDF se genera y es un PDF', function () {
     expect(substr($r->getContent(), 0, 5))->toBe('%PDF-');
 });
 
+it('el resumen dice cuántas entregas se quedaron SIN comprobante', function () {
+    comoAreaFactura('contabilidad');
+
+    app(FacturaService::class)->emitirPara(pedidoConEntrega(50000));
+    pedidoConEntrega(30000);          // entregado y sin comprobante
+    pedidoConEntrega(20000, 3);       // en camino: todavía no le toca
+
+    $r = $this->getJson('/v1/admin/invoices?page=1&per_page=10')->assertOk();
+
+    /*
+     * Es el dato que no se puede sacar del listado: lo que falta no aparece en
+     * una lista de comprobantes. Sin esto, un pedido cobrado sin constancia es
+     * invisible desde esta pantalla.
+     */
+    expect($r->json('summary.sin_comprobante'))->toBe(1);
+    expect((float) $r->json('summary.sin_comprobante_valor'))->toBe(30000.0);
+});
+
+it('el panel emite lo pendiente y no duplica al repetir', function () {
+    comoAreaFactura('contabilidad');
+
+    pedidoConEntrega();
+    pedidoConEntrega();
+    pedidoConEntrega(40000, 3); // en camino: no le toca
+
+    $r = $this->postJson('/v1/admin/invoices/emitir-pendientes')->assertOk();
+
+    expect($r->json('emitidas'))->toBe(2);
+    expect($r->json('faltan'))->toBe(0);
+    expect(Invoice::count())->toBe(2);
+
+    // Volver a pulsarlo no puede producir un comprobante más: es la misma
+    // idempotencia en la que se apoya la emisión al entregar.
+    $this->postJson('/v1/admin/invoices/emitir-pendientes')
+        ->assertOk()
+        ->assertJsonPath('message', 'Todas las entregas ya tienen su comprobante.');
+
+    expect(Invoice::count())->toBe(2);
+});
+
+it('emite solo el negocio filtrado, que es lo que la pantalla contó', function () {
+    comoAreaFactura('contabilidad');
+
+    $unPedido = pedidoConEntrega();
+    pedidoConEntrega();
+
+    $negocio = DB::table('orderssales')
+        ->where('orderSales_id', $unPedido)
+        ->value('busines_id');
+
+    /*
+     * Si el botón emitiera todo lo pendiente de la plataforma mientras la
+     * pantalla dice "1 entrega sin comprobante de este negocio", el mensaje de
+     * vuelta hablaría de un número que no corresponde a nada de lo que se veía.
+     */
+    $this->postJson("/v1/admin/invoices/emitir-pendientes?business_id={$negocio}")
+        ->assertOk()
+        ->assertJsonPath('emitidas', 1);
+
+    expect(Invoice::count())->toBe(1);
+    expect(Invoice::first()->orderSales_id)->toBe($unPedido);
+});
+
+it('quien solo consulta no puede emitir lo pendiente', function () {
+    pedidoConEntrega();
+
+    comoAreaFactura('contabilidad', Area::NIVEL_CONSULTA);
+
+    // Escribe en la contabilidad, así que no basta con ver la pantalla.
+    $this->postJson('/v1/admin/invoices/emitir-pendientes')->assertForbidden();
+
+    expect(Invoice::count())->toBe(0);
+});
+
 it('el comando recupera las entregas sin comprobante', function () {
     pedidoConEntrega();
     pedidoConEntrega();
@@ -246,4 +320,59 @@ it('el comando recupera las entregas sin comprobante', function () {
         ->assertExitCode(0);
 
     expect(Invoice::count())->toBe(2);
+});
+
+it('anula VARIOS con el mismo motivo y salta los ya anulados', function () {
+    comoAreaFactura('contabilidad');
+    $facturas = app(FacturaService::class);
+
+    $uno = $facturas->emitirPara(pedidoConEntrega(50000));
+    $dos = $facturas->emitirPara(pedidoConEntrega(30000));
+    $tres = $facturas->emitirPara(pedidoConEntrega(20000));
+
+    // Uno ya estaba anulado: no puede tumbar el lote entero.
+    $facturas->anular($tres, 'Anulado antes.', null);
+
+    $r = $this->putJson('/v1/admin/invoices/anular-lote', [
+        'ids'    => [$uno->invoice_id, $dos->invoice_id, $tres->invoice_id],
+        'motivo' => 'Se facturó dos veces el corte del 12.',
+    ])->assertOk();
+
+    expect($r->json('voided'))->toBe(2);
+    expect($r->json('skipped'))->toBe(1);
+
+    expect($uno->fresh()->estaAnulada())->toBeTrue();
+    expect($dos->fresh()->void_reason)->toBe('Se facturó dos veces el corte del 12.');
+    // El que ya estaba anulado conserva SU motivo: sobrescribirlo borraría la
+    // explicación original, que es lo único que permite entenderlo después.
+    expect($tres->fresh()->void_reason)->toBe('Anulado antes.');
+});
+
+it('el lote también exige un motivo y tiene techo', function () {
+    comoAreaFactura('contabilidad');
+    $f = app(FacturaService::class)->emitirPara(pedidoConEntrega());
+
+    $this->putJson('/v1/admin/invoices/anular-lote', [
+        'ids' => [$f->invoice_id], 'motivo' => 'abc',
+    ])->assertStatus(422);
+
+    // Sin techo, un identificador de más por descuido anula sin límite.
+    $this->putJson('/v1/admin/invoices/anular-lote', [
+        'ids'    => range(1, 51),
+        'motivo' => 'Un motivo suficientemente largo.',
+    ])->assertStatus(422);
+
+    expect($f->fresh()->estaAnulada())->toBeFalse();
+});
+
+it('quien solo consulta no puede anular en lote', function () {
+    $f = app(FacturaService::class)->emitirPara(pedidoConEntrega());
+
+    comoAreaFactura('contabilidad', Area::NIVEL_CONSULTA);
+
+    $this->putJson('/v1/admin/invoices/anular-lote', [
+        'ids' => [$f->invoice_id], 'motivo' => 'No deberia poder.',
+    ])->assertForbidden();
+
+    expect($f->fresh()->estaAnulada())->toBeFalse();
 });

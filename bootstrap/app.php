@@ -29,6 +29,19 @@ return Application::configure(basePath: dirname(__DIR__))
     // a la app (ver comentario del middleware); en producción no hace nada.
     $middleware->append(\App\Http\Middleware\SetContentLengthForDevServer::class);
 
+    /*
+     * Modo mantenimiento de la app móvil, encendido desde el panel.
+     *
+     * Va en el grupo `api` completo y no ruta por ruta: el objetivo es parar la
+     * operación, y una lista de rutas a proteger se queda incompleta el día que
+     * alguien agrega un endpoint. El middleware lleva su propia lista de
+     * EXENTAS —el panel, los avisos de la pasarela y el inicio de sesión—, que
+     * es la lista que sí se puede razonar.
+     */
+    $middleware->api(append: [
+        \App\Http\Middleware\AppEnMantenimiento::class,
+    ]);
+
     $middleware->alias([
         'audit.api' => \App\Http\Middleware\AuditApiRequest::class,
         // Puerta del API de superadministración (rol 4). El panel de React
