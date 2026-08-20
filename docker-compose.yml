@@ -35,11 +35,23 @@ x-app: &app
   image: enviaya-api:latest
   restart: unless-stopped
   working_dir: /var/www
-  # El resto de las variables las inyecta Dokploy en el entorno del servicio.
-  # No se lee ningún .env: no hay ninguno dentro de la imagen (.dockerignore).
-  environment:
-    APP_ENV: production
-    APP_DEBUG: "false"
+  # DE DÓNDE SALEN LAS VARIABLES
+  #
+  # Dokploy escribe lo que se pone en su pestaña Environment en un archivo
+  # `.env` junto a este compose. Ese archivo compose lo usa por su cuenta para
+  # sustituir ${VARIABLES} dentro del propio YAML, pero NO se lo pasa a los
+  # contenedores: para eso hay que pedirlo con `env_file`.
+  #
+  # Aquí había en su lugar un bloque `environment` con dos variables sueltas, y
+  # eso lo empeoraba: declararlo convierte esas dos en el entorno COMPLETO del
+  # contenedor. La aplicación arrancaba sin base de datos, sin claves y sin
+  # nada, y el síntoma era «Esperando a la base de datos… sin DB_HOST».
+  #
+  # `required: false` para que un `docker compose` en una máquina sin ese
+  # archivo —al probar en local, por ejemplo— no falle antes de empezar.
+  env_file:
+    - path: .env
+      required: false
   # CÓMO LLEGAR A LA BASE DE DATOS CUANDO VIVE EN EL MISMO SERVIDOR
   #
   # Un contenedor NO puede salir a la IP pública de su propio anfitrión: el
