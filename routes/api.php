@@ -17,6 +17,7 @@ use App\Http\Controllers\Business\CategoryBusinessController;
 use App\Http\Controllers\Business\FavoriteController;
 use App\Http\Controllers\Category\CategoryController;
 use App\Http\Controllers\Chat\ChatController;
+use App\Http\Controllers\CoberturaController;
 use App\Http\Controllers\DeviceTokenController;
 use App\Http\Controllers\Domiciliary\DomiciliaryController;
 use App\Http\Controllers\Marketing\AdsController;
@@ -64,6 +65,12 @@ Route::middleware('throttle:300,1')->group(function () {
      */
     Route::get('complexes-free', [ResidentialComplexController::class, 'index']);
     Route::get('top-businesses-free', [BusinessController::class, 'indexByQualification']);
+    /*
+     * Los puntos del mapa de cobertura de la web pública. Va acá y no bajo
+     * `/admin` porque lo consume un sitio sin cuenta; devuelve lo justo
+     * para pintar un pin y nada de personas. Ver CoberturaController.
+     */
+    Route::get('cobertura-free', CoberturaController::class);
     // Las reseñas de un negocio se ven sin sesión (la respuesta no expone
     // datos de contacto del reseñador).
     Route::post('reviews/business/by', [ReviewController::class, 'listReviewsByBusiness']);

@@ -76,16 +76,26 @@ class BusinessController extends Controller
                     'name' => $business->municipality->name,
                 ] : null,
                 'owner_count'   => $business->owners->count(),
+                /*
+                 * DEL PROPIETARIO SOLO SALE LO QUE HACE FALTA PARA COMPRAR.
+                 *
+                 * Acá salían también su número de documento, su fecha de nacimiento, su
+                 * teléfono secundario y las notas internas que le haya puesto el
+                 * equipo. (Iba además un `document_type` que siempre valía null:
+                 * la columna real es `document_type_id`.) Nada de eso lo usa la
+                 * app —solo lee
+                 * `user_id`, para abrir el chat— y `indexByQualification` es un
+                 * endpoint PÚBLICO: cualquiera sin cuenta podía listar la cédula de
+                 * todos los tenderos aliados.
+                 *
+                 * Si algún día el panel necesita esos campos, van por la API de
+                 * administración, que ya exige rol 4 y módulo.
+                 */
                 'owners'        => $business->owners->map(function ($owner) {
                     return [
                         'owner_id'          => $owner->owner_id,
                         'user_id'           => $owner->user_id,
                         'profile_photo'     => $owner->profile_photo ?? 'https://example.com/default-user.png',
-                        'document_type'     => $owner->document_type,
-                        'document_number'   => $owner->document_number,
-                        'birthdate'         => $owner->birthdate,
-                        'contact_secondary' => $owner->contact_secondary,
-                        'notes'             => $owner->notes,
                         'state'             => (bool) $owner->state,
                     ];
                 }),
@@ -169,16 +179,26 @@ class BusinessController extends Controller
                     'name' => $business->municipality->name,
                 ] : null,
                 'owner_count'   => $business->owners->count(),
+                /*
+                 * DEL PROPIETARIO SOLO SALE LO QUE HACE FALTA PARA COMPRAR.
+                 *
+                 * Acá salían también su número de documento, su fecha de nacimiento, su
+                 * teléfono secundario y las notas internas que le haya puesto el
+                 * equipo. (Iba además un `document_type` que siempre valía null:
+                 * la columna real es `document_type_id`.) Nada de eso lo usa la
+                 * app —solo lee
+                 * `user_id`, para abrir el chat— y `indexByQualification` es un
+                 * endpoint PÚBLICO: cualquiera sin cuenta podía listar la cédula de
+                 * todos los tenderos aliados.
+                 *
+                 * Si algún día el panel necesita esos campos, van por la API de
+                 * administración, que ya exige rol 4 y módulo.
+                 */
                 'owners'        => $business->owners->map(function ($owner) {
                     return [
                         'owner_id'          => $owner->owner_id,
                         'user_id'           => $owner->user_id,
                         'profile_photo'     => $owner->profile_photo ?? 'https://example.com/default-user.png',
-                        'document_type'     => $owner->document_type,
-                        'document_number'   => $owner->document_number,
-                        'birthdate'         => $owner->birthdate,
-                        'contact_secondary' => $owner->contact_secondary,
-                        'notes'             => $owner->notes,
                         'state'             => (bool) $owner->state,
                     ];
                 }),
@@ -300,16 +320,26 @@ class BusinessController extends Controller
                 'name' => $business->municipality->name,
             ] : null,
             'owner_count'   => $business->owners->count(),
+            /*
+             * DEL PROPIETARIO SOLO SALE LO QUE HACE FALTA PARA COMPRAR.
+             *
+             * Acá salían también su número de documento, su fecha de nacimiento, su
+             * teléfono secundario y las notas internas que le haya puesto el
+             * equipo. (Iba además un `document_type` que siempre valía null:
+             * la columna real es `document_type_id`.) Nada de eso lo usa la
+             * app —solo lee
+             * `user_id`, para abrir el chat— y `indexByQualification` es un
+             * endpoint PÚBLICO: cualquiera sin cuenta podía listar la cédula de
+             * todos los tenderos aliados.
+             *
+             * Si algún día el panel necesita esos campos, van por la API de
+             * administración, que ya exige rol 4 y módulo.
+             */
             'owners'        => $business->owners->map(function ($owner) {
                 return [
                     'owner_id'          => $owner->owner_id,
                     'user_id'           => $owner->user_id,
                     'profile_photo'     => $owner->profile_photo ?? 'https://example.com/default-user.png',
-                    'document_type'     => $owner->document_type,
-                    'document_number'   => $owner->document_number,
-                    'birthdate'         => $owner->birthdate,
-                    'contact_secondary' => $owner->contact_secondary,
-                    'notes'             => $owner->notes,
                     'state'             => (bool) $owner->state,
                 ];
             }),

@@ -88,4 +88,19 @@ return [
         'representante_cc' => env('CONTRATO_REPRESENTANTE_CC', ''),
         'ciudad'         => env('CONTRATO_CIUDAD', 'Barranquilla'),
     ],
+
+    /*
+     * MAPA DE COBERTURA DE LA WEB PÚBLICA
+     *
+     * Los conjuntos residenciales se publican con su coordenada exacta, igual
+     * que los comercios. Es lo que hace útil al mapa, pero es una decisión de
+     * producto: si algún día se prefiere no señalar dónde vive la gente, se
+     * apaga acá y el mapa sigue funcionando solo con los comercios.
+     */
+    'cobertura' => [
+        'incluir_conjuntos' => filter_var(
+            env('COBERTURA_INCLUIR_CONJUNTOS', true),
+            FILTER_VALIDATE_BOOLEAN,
+        ),
+    ],
 ];
