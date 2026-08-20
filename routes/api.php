@@ -232,6 +232,9 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::post('IncomeBusiness', [OrderController::class, 'incomeBusiness']); // Tendero / negocio
         Route::post('orders', [OrderController::class, 'store']); // Crear orden
         Route::put('update', [OrderController::class, 'updateStatus']); // Crear orden
+        // Cancelar es del comprador dueño del pedido y solo antes de que la
+        // tienda lo acepte; la comprobación va dentro del controlador.
+        Route::put('{id}/cancel', [OrderController::class, 'cancel']);
         Route::post('geolocation', [OrderController::class, 'storeGeolocation']);
         Route::get('geolocation/latest', [OrderController::class, 'latest']);
         Route::get('/pending-review', [OrderController::class, 'ordersPendingReview']);

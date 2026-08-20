@@ -743,6 +743,67 @@ class OrderController extends Controller
         return response()->json($forms);
     }
 
+    /**
+     * CANCELAR UN PEDIDO
+     *
+     * La app pintaba un botón "Cancelar" con estilo destructivo y SIN
+     * `onPress`: el comprador creía que había cancelado y el pedido seguía su
+     * curso. Del lado del servidor tampoco había por dónde: `updateStatus`
+     * solo admite los estados 2, 3 y 4, así que el 5 —Cancelado, que existe en
+     * el modelo— era inalcanzable.
+     *
+     * Va aparte de `updateStatus` a propósito, por dos motivos:
+     *
+     *  · Aquel no comprueba pertenencia de ninguna clase, y cancelar el pedido
+     *    de otra persona con solo saber su identificador no es aceptable.
+     *  · La regla de cuándo se puede cancelar es propia de esta acción y no
+     *    tiene sentido mezclarla con las transiciones de la operación.
+     *
+     * SOLO MIENTRAS NADIE LO HAYA TOCADO. Estado 1 es "en preparación": la
+     * tienda todavía no lo aceptó. En cuanto lo acepta hay comida preparándose
+     * o un domiciliario en camino, y eso ya no lo deshace el cliente solo.
+     */
+    public function cancel(Request $request, $id)
+    {
+        $usuario = $request->user();
+
+        $order = OrdersSales::with('buyer')->find($id);
+
+        if (!$order) {
+            return response()->json(['message' => 'Pedido no encontrado'], 404);
+        }
+
+        if (!$order->buyer || (int) $order->buyer->user_id !== (int) $usuario->user_id) {
+            return response()->json(['message' => 'Este pedido no es tuyo.'], 403);
+        }
+
+        if ((int) $order->state !== 1) {
+            return response()->json([
+                'message' => 'Ya no se puede cancelar: la tienda empezó a prepararlo. '
+                    . 'Escríbele por el chat del pedido.',
+            ], 422);
+        }
+
+        $order->state = 5;
+        $order->save();
+
+        // Se avisa por el canal del pedido, igual que cualquier otro cambio de
+        // estado: la tienda tiene que enterarse de que ya no lo prepare.
+        try {
+            broadcast(new OrderStatusUpdated($order));
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo anunciar la cancelación', [
+                'order_id' => $order->orderSales_id,
+                'error'    => $e->getMessage(),
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Pedido cancelado.',
+            'order'   => $order->fresh()->toApi(),
+        ]);
+    }
+
     // Actualizar estado de la orden (números)
     public function updateStatus(Request $request)
     {
