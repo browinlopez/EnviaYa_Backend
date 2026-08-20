@@ -47,13 +47,22 @@ class FavoriteController extends Controller
 
         $userId = $request->user_id;
 
-        // Traemos favoritos con todas las relaciones del negocio
+        /*
+         * Favoritos de negocios ACTIVOS, y con sus productos activos.
+         *
+         * Esta era la puerta de atrás: el listado del catálogo sí filtraba por
+         * `state`, pero acá no, así que desactivar una tienda desde el panel la
+         * sacaba del inicio y la dejaba intacta en la pestaña de favoritos de
+         * quien ya la tenía guardada — con su catálogo, sus precios y el botón
+         * de pedir.
+         */
         $favorites = BusinessUserFavorite::where('user_id', $userId)
+            ->whereHas('business', fn ($q) => $q->where('state', 1))
             ->with([
                 'business.owners',
                 'business.municipality',
-                'business.products',
-                'business.reviews'
+                'business.reviews',
+                'business.products' => fn ($q) => $q->where('products.state', 1),
             ])
             ->get();
 

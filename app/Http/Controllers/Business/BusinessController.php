@@ -36,7 +36,18 @@ class BusinessController extends Controller
          * app como si nada. Desactivar tiene que sacarla del catálogo o no
          * sirve de nada.
          */
-        $businesses = Business::with(['owners', 'municipality', 'products', 'reviews'])
+        /*
+         * Solo productos activos.
+         *
+         * `products.state` se devolvía pero no se filtraba en ningún sitio, así
+         * que retirar un producto desde el panel lo dejaba a la venta en la
+         * app. Se filtra al cargar la relación y no al mapear, para no traerlos
+         * siquiera.
+         */
+        $businesses = Business::with([
+            'owners', 'municipality', 'reviews',
+            'products' => fn ($q) => $q->where('products.state', 1),
+        ])
             ->where('state', 1)
             ->when(count($affiliatedIds) > 0, function ($q) use ($affiliatedIds) {
                 // Ordena los negocios afiliados primero
@@ -128,7 +139,11 @@ class BusinessController extends Controller
         }
 
         // Ídem que en index(): un negocio desactivado no se publica.
-        $businesses = Business::with(['owners', 'municipality', 'products.category', 'reviews'])
+        // Ver la nota de `index`: los productos retirados no salen del panel.
+        $businesses = Business::with([
+            'owners', 'municipality', 'reviews', 'products.category',
+            'products' => fn ($q) => $q->where('products.state', 1),
+        ])
             ->where('state', 1)
             ->orderByDesc('qualification')
             ->get();
@@ -256,7 +271,17 @@ class BusinessController extends Controller
             'busines_id' => 'required|integer|exists:business,busines_id'
         ]);
 
-        $business = Business::with(['owners', 'products', 'reviews', 'municipality'])
+        /*
+         * Un negocio desactivado no se muestra ni entrando por su identificador.
+         * El listado sí filtraba por `state`, pero acá se hacía un findOrFail
+         * pelado: bastaba conservar el id —de un favorito, de un pedido viejo,
+         * de un enlace— para seguir viendo la tienda y su catálogo como si nada.
+         */
+        $business = Business::with([
+            'owners', 'reviews', 'municipality',
+            'products' => fn ($q) => $q->where('products.state', 1),
+        ])
+            ->where('state', 1)
             ->findOrFail($request->busines_id);
 
         return response()->json([

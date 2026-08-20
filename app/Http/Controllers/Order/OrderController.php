@@ -409,6 +409,20 @@ class OrderController extends Controller
             return response()->json(['message' => 'Negocio no encontrado'], 404);
         }
 
+        /*
+         * Y que siga abierto.
+         *
+         * Filtrar los listados no basta: basta con conservar el identificador
+         * —de un favorito guardado, de un pedido anterior, de una pantalla que
+         * quedó abierta— para pedirle a una tienda que la operación creía
+         * apagada. Acá es donde de verdad se cierra.
+         */
+        if (!$business->state) {
+            return response()->json([
+                'message' => 'Este negocio no está recibiendo pedidos ahora mismo.',
+            ], 422);
+        }
+
         $isPickup = (bool) ($request->pickup ?? false);
 
         // La dirección solo aplica (y solo se exige) para domicilio, y debe
@@ -429,12 +443,18 @@ class OrderController extends Controller
 
         $prices = ProductBusiness::where('busines_id', $business->busines_id)
             ->whereIn('products_id', $productIds)
+            // Y que el producto siga activo: uno retirado desde el panel no se
+            // vende, aunque el carrito del cliente todavía lo lleve dentro.
+            ->whereHas('product', fn ($q) => $q->where('state', 1))
             ->pluck('price', 'products_id');
 
         $missing = collect($productIds)->reject(fn($id) => $prices->has($id));
         if ($missing->isNotEmpty()) {
             return response()->json([
-                'message' => 'Hay productos que no pertenecen a este negocio',
+                // El mensaje no distingue "no es de este negocio" de "ya no se
+                // vende" a propósito: para quien pide son el mismo problema, y
+                // la app tiene que reaccionar igual — quitarlo del carrito.
+                'message' => 'Hay productos que ya no están disponibles en este negocio',
                 'product_ids' => $missing->values(),
             ], 422);
         }
