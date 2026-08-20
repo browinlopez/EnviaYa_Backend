@@ -1,25 +1,24 @@
 # =========================
-# Stage 1: Build frontend assets
+# Etapa 1: assets del frontend
 # =========================
+# Las vistas Blade que quedan —verificación de correo, recuperar contraseña,
+# el PDF del acuerdo— usan @vite, así que hay que compilarlas aunque el panel
+# viva en otro proyecto.
 FROM node:20-alpine AS node-builder
 WORKDIR /app
 
-# Copiar y instalar dependencias de Node
 COPY package*.json ./
 RUN npm ci
 
-# Copiar el código y generar assets
 COPY . .
 RUN npm run build
 
 # =========================
-# Stage 2: PHP base con extensiones
+# Etapa 2: PHP con sus extensiones
 # =========================
-# Usamos FPM para mejor compatibilidad con Swoole y extensiones PCNTL/POSIX
 FROM php:8.2-fpm-bullseye AS php-base
 
-# Instalar extensiones necesarias y Swoole
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     curl \
     libzip-dev \
@@ -33,6 +32,12 @@ RUN apt-get update && apt-get install -y \
     autoconf \
     build-essential \
     pkg-config \
+    # mysqldump: lo necesita spatie/laravel-backup. Sin el cliente de MySQL la
+    # copia de seguridad diaria falla todas las noches y solo se descubre el
+    # día que hay que restaurar.
+    default-mysql-client \
+    # procps: el pgrep con que el contenedor de la cola comprueba su salud.
+    procps \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install pdo pdo_mysql zip gd mbstring pcntl posix \
     && pecl channel-update pecl.php.net \
@@ -44,61 +49,55 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /var/www
 
 # =========================
-# Stage 3: Instalar dependencias Composer
+# Etapa 3: dependencias de Composer
 # =========================
 FROM php-base AS composer-builder
 
 COPY composer.json composer.lock ./
 
-# Instalar Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-# Instalar dependencias de Laravel
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 
-# Copiar el resto del código y optimizar autoload
 COPY . .
 RUN composer dump-autoload --optimize
 
 # =========================
-# Stage 4: Imagen final de producción
+# Etapa 4: imagen final
 # =========================
 FROM php-base
 
 WORKDIR /var/www
 
-# Configurar directorio como seguro para Git (evita 'dubious ownership')
 RUN git config --global --add safe.directory /var/www
 
-# Copiar código, vendor y assets frontend
 COPY --chown=www-data:www-data . .
 COPY --from=composer-builder --chown=www-data:www-data /var/www/vendor ./vendor
 COPY --from=node-builder --chown=www-data:www-data /app/public/build ./public/build
 
-# Configurar permisos
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
 RUN mkdir -p storage/framework/{sessions,views,cache} \
     && mkdir -p bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
-# Octane ya viene instalado: es una dependencia declarada en composer.json, así
-# que el stage 3 lo resuelve desde composer.lock junto al resto y config/octane.php
-# está versionado en el repositorio.
+# Octane viene de composer.lock, resuelto en la etapa 3 junto al resto: el
+# build es reproducible y no consulta Packagist en vivo.
 #
-# Antes se hacía aquí un `composer require laravel/octane --with-all-dependencies`,
-# lo cual traía cuatro problemas: el build dejaba de ser reproducible (resolvía
-# contra Packagist en vivo, no contra el lock), `--with-all-dependencies` podía
-# subir otros paquetes solo en producción, al no llevar `--no-dev` metía las
-# dependencias de desarrollo en la imagen final, y obligaba a instalar Composer
-# aquí para poder ejecutarlo.
+# NO se cachean configuración, rutas ni vistas aquí.
+#
+# `php artisan config:cache` congela el valor de cada env() dentro de un
+# archivo. Durante el build las variables del servidor todavía no existen —las
+# inyecta Dokploy al arrancar el contenedor— así que la caché se generaba con
+# la configuración de desarrollo y en producción GANABA sobre el entorno real:
+# el contenedor intentaba conectarse a 127.0.0.1 y a la base local. Ahora lo
+# hace el entrypoint, ya con el entorno puesto.
 
-# Cache de configuraciones y rutas
-RUN php artisan config:cache \
-    && php artisan route:cache \
-    && php artisan view:cache
+EXPOSE 8000 8080
 
-# Puerto HTTP expuesto (Traefik se comunica aquí)
-EXPOSE 8000
-
-# Iniciar servidor Octane con Swoole
-CMD ["php", "artisan", "octane:start", "--server=swoole", "--host=0.0.0.0", "--port=8000", "--workers=auto"]
+# Ese `api` es solo el valor por defecto: docker-compose se lo cambia a cada
+# servicio (reverb, worker, scheduler).
+ENTRYPOINT ["entrypoint.sh"]
+CMD ["api"]

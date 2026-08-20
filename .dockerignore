@@ -1,0 +1,47 @@
+# QUÉ NO ENTRA EN LA IMAGEN
+#
+# Sin este archivo, `COPY . .` metía dentro de la imagen de producción el .env
+# de desarrollo — con la contraseña de la base local y SEED_PASSWORD— además de
+# node_modules, vendor y todo el historial de git. Una imagen se puede
+# descargar y abrir: lo que entra aquí, se publica.
+
+# Secretos y configuración local. En el servidor las variables las inyecta
+# Dokploy en el entorno del contenedor, no un archivo dentro de la imagen.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+storage/app/firebase*.json
+
+# Se reinstalan dentro del build, con el lock, en sus propias etapas.
+vendor/
+node_modules/
+
+# Historial y herramientas de desarrollo
+.git/
+.github/
+.idea/
+.vscode/
+.editorconfig
+.gitattributes
+.gitignore
+
+# Basura de ejecución local: los logs y las cachés del contenedor son suyos.
+storage/logs/*
+storage/framework/cache/data/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/framework/testing/*
+bootstrap/cache/*.php
+public/build/
+public/hot
+public/storage
+
+# Pruebas y documentación: no se ejecutan en producción y engordan el contexto.
+tests/
+phpunit.xml
+README.md
+docker-compose*.yml
+Dockerfile
+.dockerignore

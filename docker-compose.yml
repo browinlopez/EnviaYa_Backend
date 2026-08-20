@@ -1,29 +1,112 @@
+# =============================================================================
+# DESPLIEGUE EN DOKPLOY
+#
+# Cuatro procesos, una sola imagen. El primer argumento del entrypoint decide
+# qué es cada contenedor.
+#
+#   api        Octane/Swoole en el 8000. Es el único que migra la base.
+#   reverb     El websocket en el 8080. Sin él, el seguimiento del pedido no
+#              avanza solo en el teléfono.
+#   worker     La cola. Acá se ENTREGAN los avisos por websocket, las
+#              notificaciones al teléfono y los correos: sin este contenedor el
+#              pedido cambia de estado igual, pero nadie se entera.
+#   scheduler  El resumen diario de las 7:00 y las copias de seguridad.
+#
+# Un proceso por contenedor y no todos bajo supervisor: si la cola se atasca,
+# Dokploy la reinicia sola sin tumbar la API.
+#
+# --- LO QUE HAY QUE HACER EN DOKPLOY ---
+#
+# 1. Variables de entorno: las de .env.example, en la pestaña Environment.
+#    NO se copia ningún .env dentro de la imagen (ver .dockerignore).
+# 2. Dominios, en la pestaña Domains:
+#      api     → servicio "api",    puerto 8000   (p. ej. api.tudominio.com)
+#      reverb  → servicio "reverb", puerto 8080   (p. ej. ws.tudominio.com)
+#    Dokploy pone los certificados y las etiquetas de Traefik; por eso acá no
+#    se publica ningún puerto al host.
+# 3. La base de datos y Redis se crean como servicios propios de Dokploy y se
+#    conectan a esta misma red.
+# =============================================================================
+
+x-app: &app
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: enviaya-api:latest
+  restart: unless-stopped
+  working_dir: /var/www
+  # El resto de las variables las inyecta Dokploy en el entorno del servicio.
+  # No se lee ningún .env: no hay ninguno dentro de la imagen (.dockerignore).
+  environment:
+    APP_ENV: production
+    APP_DEBUG: "false"
+  volumes:
+    # Lo que tiene que sobrevivir a un redespliegue: los PDF y los medios que
+    # aún no viven en R2, y los registros. La imagen se reemplaza entera en
+    # cada despliegue; esto no.
+    - storage_data:/var/www/storage/app
+    - storage_logs:/var/www/storage/logs
+  networks:
+    - dokploy-network
+
 services:
   api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: enviaya_api
-    restart: unless-stopped
-    working_dir: /var/www
-    environment:
-      - APP_ENV=production
-      - APP_KEY=${APP_KEY}
-      - DB_CONNECTION=mysql
-      - DB_HOST=db
-      - DB_PORT=3306
-      - DB_DATABASE=${DB_DATABASE:-laravel}
-      - DB_USERNAME=${DB_USERNAME:-laravel}
-      - DB_PASSWORD=${DB_PASSWORD:-password}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-    ports:
-      - "8000:8000" # Cambiado a 8000
-    networks:
-      - dokploy-network # Usar la misma red overlay que Traefik
+    <<: *app
+    command: ["api"]
+    expose:
+      - "8000"
+    healthcheck:
+      # /up es la ruta de salud de Laravel, y está exenta del modo
+      # mantenimiento: si respondiera 503 con el mantenimiento encendido,
+      # Dokploy daría el contenedor por muerto y lo reiniciaría en bucle.
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/up"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+
+  reverb:
+    <<: *app
+    command: ["reverb"]
+    expose:
+      - "8080"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      # Reverb responde 404 a una petición HTTP normal, y eso ya demuestra que
+      # está escuchando. Por eso se comprueba que la conexión se establezca y
+      # no el código de respuesta.
+      test: ["CMD-SHELL", "curl -s -o /dev/null http://127.0.0.1:8080 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  worker:
+    <<: *app
+    command: ["worker"]
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      # Que el proceso siga vivo. `queue:work` no expone nada por HTTP.
+      test: ["CMD-SHELL", "pgrep -f 'queue:work' > /dev/null || exit 1"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+  scheduler:
+    <<: *app
+    command: ["scheduler"]
+    depends_on:
+      api:
+        condition: service_healthy
 
 volumes:
   storage_data:
+  storage_logs:
 
 networks:
   dokploy-network:
