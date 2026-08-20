@@ -87,9 +87,49 @@ migrar_si_toca() {
   php artisan storage:link --force || true
 }
 
+# ---------------------------------------------------------------------------
+# Los demás esperan a que la API haya migrado
+#
+# Antes esto lo resolvía `depends_on: service_healthy` en el compose, pero eso
+# ata el despliegue entero a que la API pase su comprobación de salud dentro
+# del plazo que decida quien lance el `compose up`. Dokploy se cansaba de
+# esperar y daba el despliegue por fallido —"dependency failed to start"—
+# aunque la API estuviera arrancando perfectamente.
+#
+# Ahora cada contenedor se espera solo, y lo que espera es lo único que de
+# verdad necesita: que exista la tabla `cache`. Es la que crea la primera
+# migración, así que su presencia significa "las migraciones ya corrieron".
+# Sin ella el trabajador de la cola muere al arrancar.
+# ---------------------------------------------------------------------------
+esperar_migraciones() {
+  [ "$ROL" = "api" ] && return 0
+
+  local intentos=0
+  until php -r '
+    $h = getenv("DB_HOST") ?: "127.0.0.1";
+    $p = getenv("DB_PORT") ?: "3306";
+    $d = getenv("DB_DATABASE");
+    try {
+      $pdo = new PDO("mysql:host=$h;port=$p;dbname=$d", getenv("DB_USERNAME"), getenv("DB_PASSWORD"), [PDO::ATTR_TIMEOUT => 3]);
+      $n = $pdo->query("select count(*) from information_schema.tables where table_schema = database() and table_name = "cache"")->fetchColumn();
+      exit($n ? 0 : 1);
+    } catch (Throwable $e) { exit(1); }
+  ' 2>/dev/null; do
+    intentos=$((intentos + 1))
+    if [ "$intentos" -ge 150 ]; then
+      log "Las migraciones no terminaron en 5 minutos. Se arranca igual."
+      return 0
+    fi
+    log "Esperando a que la API termine de migrar… ($intentos)"
+    sleep 2
+  done
+  log "Migraciones aplicadas."
+}
+
 # Solo la API migra. Si lo hicieran los cuatro contenedores a la vez, dos
 # podrían aplicar la misma migración y dejar la tabla a medias.
 migrar_si_toca
+esperar_migraciones
 cachear
 
 case "$ROL" in

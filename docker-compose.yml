@@ -81,9 +81,18 @@ services:
     command: ["reverb"]
     expose:
       - "8080"
+    # `service_started` y no `service_healthy`.
+    #
+    # Con la condición de salud, el despliegue entero quedaba atado a que la
+    # API pasara su comprobación dentro del plazo que decidiera quien lanza el
+    # `compose up`: Dokploy se cansaba de esperar y lo daba por fallido con
+    # "dependency failed to start", aunque la API estuviera arrancando bien.
+    #
+    # Lo que estos contenedores necesitan —que las migraciones hayan corrido—
+    # lo esperan ellos mismos en el entrypoint, mirando si existe la tabla
+    # `cache`. Es una espera más precisa y no bloquea el despliegue.
     depends_on:
-      api:
-        condition: service_healthy
+      - api
     healthcheck:
       # Reverb responde 404 a una petición HTTP normal, y eso ya demuestra que
       # está escuchando. Por eso se comprueba que la conexión se establezca y
@@ -97,9 +106,18 @@ services:
   worker:
     <<: *app
     command: ["worker"]
+    # `service_started` y no `service_healthy`.
+    #
+    # Con la condición de salud, el despliegue entero quedaba atado a que la
+    # API pasara su comprobación dentro del plazo que decidiera quien lanza el
+    # `compose up`: Dokploy se cansaba de esperar y lo daba por fallido con
+    # "dependency failed to start", aunque la API estuviera arrancando bien.
+    #
+    # Lo que estos contenedores necesitan —que las migraciones hayan corrido—
+    # lo esperan ellos mismos en el entrypoint, mirando si existe la tabla
+    # `cache`. Es una espera más precisa y no bloquea el despliegue.
     depends_on:
-      api:
-        condition: service_healthy
+      - api
     healthcheck:
       # Que el proceso siga vivo. `queue:work` no expone nada por HTTP.
       test: ["CMD-SHELL", "pgrep -f 'queue:work' > /dev/null || exit 1"]
@@ -111,9 +129,18 @@ services:
   scheduler:
     <<: *app
     command: ["scheduler"]
+    # `service_started` y no `service_healthy`.
+    #
+    # Con la condición de salud, el despliegue entero quedaba atado a que la
+    # API pasara su comprobación dentro del plazo que decidiera quien lanza el
+    # `compose up`: Dokploy se cansaba de esperar y lo daba por fallido con
+    # "dependency failed to start", aunque la API estuviera arrancando bien.
+    #
+    # Lo que estos contenedores necesitan —que las migraciones hayan corrido—
+    # lo esperan ellos mismos en el entrypoint, mirando si existe la tabla
+    # `cache`. Es una espera más precisa y no bloquea el despliegue.
     depends_on:
-      api:
-        condition: service_healthy
+      - api
 
 volumes:
   storage_data:
