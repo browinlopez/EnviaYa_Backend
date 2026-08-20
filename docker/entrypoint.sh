@@ -36,7 +36,11 @@ esperar_base() {
   ' 2>/dev/null; do
     intentos=$((intentos + 1))
     if [ "$intentos" -ge 60 ]; then
-      log "La base de datos no respondió en 120 s. Se abandona."
+      log "La base de datos no respondió en 120 s."
+      log "  Intentado: ${DB_HOST:-sin DB_HOST}:${DB_PORT:-3306}, base '${DB_DATABASE:-sin DB_DATABASE}'."
+      log "  Si la base vive en este mismo servidor, DB_HOST no puede ser su IP"
+      log "  pública: un contenedor no puede salir y volver a entrar por ella."
+      log "  Usar host.docker.internal, o el nombre del servicio de la base."
       exit 1
     fi
     log "Esperando a la base de datos… ($intentos)"

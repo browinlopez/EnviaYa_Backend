@@ -40,6 +40,22 @@ x-app: &app
   environment:
     APP_ENV: production
     APP_DEBUG: "false"
+  # CÓMO LLEGAR A LA BASE DE DATOS CUANDO VIVE EN EL MISMO SERVIDOR
+  #
+  # Un contenedor NO puede salir a la IP pública de su propio anfitrión: el
+  # paquete sale por el puente de Docker, vuelve a entrar por la interfaz
+  # pública y el cortafuegos lo descarta. El síntoma es exactamente este —
+  # "Esperando a la base de datos…" hasta rendirse— aunque MySQL acepte
+  # conexiones desde cualquier host y desde fuera se conecte sin problema.
+  #
+  # `host-gateway` resuelve `host.docker.internal` a la puerta de enlace del
+  # puente, que es el anfitrión visto desde dentro. Poniendo
+  # DB_HOST=host.docker.internal el tráfico se queda en la máquina y no toca
+  # internet: más rápido y sin exponer nada.
+  #
+  # Con la base en un servicio de Dokploy, esto sobra y se usa su nombre.
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
   volumes:
     # Lo que tiene que sobrevivir a un redespliegue: los PDF y los medios que
     # aún no viven en R2, y los registros. La imagen se reemplaza entera en
