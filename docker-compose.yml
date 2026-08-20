@@ -60,10 +60,21 @@ services:
       # mantenimiento: si respondiera 503 con el mantenimiento encendido,
       # Dokploy daría el contenedor por muerto y lo reiniciaría en bucle.
       test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/up"]
-      interval: 30s
+      interval: 15s
       timeout: 5s
-      retries: 3
-      start_period: 90s
+      retries: 5
+      # Cinco minutos, y no noventa segundos.
+      #
+      # El PRIMER despliegue no es como los siguientes: espera a que la base
+      # acepte conexiones, aplica un centenar de migraciones y recién entonces
+      # abre el puerto. Con la ventana corta, Docker daba el contenedor por
+      # enfermo mientras todavía estaba migrando, y como los otros tres
+      # servicios dependen de que esté sano, se caía el despliegue entero con
+      # "dependency failed to start".
+      #
+      # Durante start_period los fallos no cuentan: no retrasa nada cuando el
+      # arranque es rápido, solo evita rendirse antes de tiempo.
+      start_period: 300s
 
   reverb:
     <<: *app
