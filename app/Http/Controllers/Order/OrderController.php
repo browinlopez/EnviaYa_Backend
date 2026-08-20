@@ -395,6 +395,14 @@ class OrderController extends Controller
             // Opcional: el código que el usuario escribió en el carrito. El
             // descuento NO llega desde el cliente, se recalcula acá.
             'coupon_code' => 'sometimes|nullable|string|max:40',
+            /*
+             * El total que la app le PROMETIÓ al usuario. No se usa para
+             * cobrar —el importe lo calcula el servidor— sino para detectar
+             * que ya no coinciden y no cobrar algo que nadie aceptó. Opcional
+             * por compatibilidad: las versiones que no lo manden se comportan
+             * como antes.
+             */
+            'expected_total' => 'sometimes|nullable|numeric|min:0',
         ]);
 
         /* ========= VALIDACIONES REALES ========= */
@@ -516,11 +524,44 @@ class OrderController extends Controller
 
             $total = $subtotal + $domicilio - $descuento;
 
+            /*
+             * ¿Sigue valiendo lo que la app prometió?
+             *
+             * El servidor siempre calculó bien —ignora los precios que manda el
+             * cliente y usa los suyos— pero nadie comparaba, así que un cambio
+             * de precio o de tarifa entre armar el carrito y tocar "Pagar" se
+             * cobraba en silencio: la pantalla decía $18.400 y el pedido salía
+             * por $21.900.
+             *
+             * Se responde 409 con el desglose real y NO se crea el pedido. Un
+             * pedido por un importe que el usuario no aceptó es peor que un
+             * pedido no creado: con el 409 la app puede enseñar la diferencia y
+             * dejar que decida.
+             *
+             * El margen de un peso es por el redondeo de la app al pintar.
+             */
+            $esperado = $request->input('expected_total');
+
+            if ($esperado !== null && abs((float) $esperado - $total) > 1) {
+                DB::rollBack();
+
+                return response()->json([
+                    'message'  => 'El precio cambió mientras armabas el pedido.',
+                    'expected' => (float) $esperado,
+                    'total'    => $total,
+                    'breakdown' => [
+                        'subtotal'  => $subtotal,
+                        'delivery'  => $domicilio,
+                        'discount'  => $descuento,
+                    ],
+                ], 409);
+            }
+
             // Del domicilio, una porción es del domiciliario y el resto de la
             // plataforma. Se congela acá: si la comisión cambia después, esta
             // orden conserva lo que se pactó al crearla.
             $domiciliaryFee = round(
-                $domicilio * (float) config('services.domiciliary_share', 0.25)
+                $domicilio * (float) Ajustes::valor('operacion.reparto_domiciliario')
             );
 
             $order = OrdersSales::create([
