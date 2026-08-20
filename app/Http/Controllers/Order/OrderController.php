@@ -907,30 +907,6 @@ class OrderController extends Controller
         ]);
     }
 
-    public function updateLocation(Request $request)
-    {
-        $data = $request->validate([
-            'domiciliary_id' => 'required|exists:domiciliary,domiciliary_id',
-            'orderSales_id'  => 'required|exists:orderssales,orderSales_id',
-            'latitude'       => 'required|numeric',
-            'longitude'      => 'required|numeric',
-            'state'          => 'nullable|integer'
-        ]);
-
-        // Emitimos directamente al servidor Node.js sin guardar en DB
-        Http::post('http://192.168.20.29:3000/location', [
-            'order_id'       => $data['orderSales_id'],
-            'latitude'       => $data['latitude'],
-            'longitude'      => $data['longitude'],
-            'domiciliary_id' => $data['domiciliary_id'],
-        ]);
-
-        return response()->json([
-            'message' => 'Ubicación enviada al socket exitosamente',
-            'data'    => $data
-        ]);
-    }
-
     public function storeGeolocation(Request $request)
     {
         // Validar los datos recibidos
@@ -944,6 +920,27 @@ class OrderController extends Controller
 
         // Crear registro en la base de datos
         $geo = OrderGeolocation::create($data);
+
+        /*
+         * Y se anuncia por el canal del pedido.
+         *
+         * El evento existía y estaba importado en este archivo desde hacía
+         * tiempo, pero no se emitía en ningún sitio: el mapa en vivo no tenía
+         * de dónde alimentarse y la app del comprador terminaba preguntando
+         * por HTTP cada pocos segundos.
+         *
+         * No interrumpe la respuesta: la ubicación ya quedó guardada, y si el
+         * servidor de websockets está caído el domiciliario no tiene por qué
+         * enterarse ni reintentar.
+         */
+        try {
+            broadcast(new DomiciliaryLocationUpdated($geo));
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo anunciar la ubicación del domiciliario', [
+                'order_id' => $geo->orderSales_id,
+                'error'    => $e->getMessage(),
+            ]);
+        }
 
         // Retornar respuesta JSON
         return response()->json([

@@ -45,4 +45,23 @@ class DomiciliaryLocationUpdated implements ShouldBroadcast
     {
         return 'location.updated';
     }
+
+    /**
+     * Solo lo que el mapa necesita.
+     *
+     * Sin este método Laravel serializa la propiedad pública entera, y el
+     * cliente recibía el registro completo —con sus identificadores internos y
+     * sus fechas— envuelto en `geolocation`. Acá se declara qué se publica, que
+     * además es lo que hace el contrato estable: cambiar una columna de la
+     * tabla deja de cambiar lo que reciben los teléfonos.
+     */
+    public function broadcastWith(): array
+    {
+        return [
+            'order_id'  => (int) $this->geolocation->orderSales_id,
+            'latitude'  => (float) $this->geolocation->latitude,
+            'longitude' => (float) $this->geolocation->longitude,
+            'at'        => optional($this->geolocation->created_at)->toIso8601String(),
+        ];
+    }
 }
