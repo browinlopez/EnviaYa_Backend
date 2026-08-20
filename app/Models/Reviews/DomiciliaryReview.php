@@ -32,4 +32,26 @@ class DomiciliaryReview extends Audit
     {
         return $this->belongsTo(Buyer::class, 'buyer_id', 'buyer_id');
     }
+
+    /**
+     * Vuelve a promediar y lo guarda en `domiciliary.qualification`.
+     *
+     * Gemelo de BusinessReview::recalcularPromedio, con una diferencia que se
+     * conserva a propósito: acá el suelo es 1.00 y no 0. Es lo que ya hacía el
+     * camino de creación, y bajar a alguien a 0 por quedarse sin reseñas
+     * activas lo dejaría peor que a quien nunca recibió ninguna.
+     */
+    public static function recalcularPromedio(int $domiciliaryId): float
+    {
+        $promedio = static::where('domiciliary_id', $domiciliaryId)
+            ->where('state', true)
+            ->avg('qualification');
+
+        $promedio = max(1.00, min(round((float) $promedio, 2), 5.00));
+
+        Domiciliary::where('domiciliary_id', $domiciliaryId)
+            ->update(['qualification' => $promedio]);
+
+        return $promedio;
+    }
 }

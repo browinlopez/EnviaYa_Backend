@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers\Admin\Api;
 
+use App\Services\Ajustes;
 use App\Http\Controllers\Controller;
 use App\Models\Area;
 use App\Models\Operacion\DomiciliaryDocument;
+use App\Models\Reviews\BusinessReview;
+use App\Models\Reviews\DomiciliaryReview;
 use App\Services\BusinessMediaService;
 use App\Services\ContratoService;
 use App\Services\MediaService;
@@ -1736,6 +1739,32 @@ class AdminApiController extends Controller
         ];
     }
 
+    /**
+     * Vuelve a promediar la calificación de quien recibió las reseñas.
+     *
+     * Sin esto, moderar desde el panel quitaba la reseña de la lista y dejaba
+     * la nota intacta: borrar una difamatoria de una estrella la hacía
+     * desaparecer de la ficha y el negocio se quedaba con el 2,8 que esa misma
+     * reseña había provocado, hasta que un cliente nuevo publicara otra.
+     *
+     * El ámbito `user` queda fuera a propósito. Los dos caminos que hoy
+     * calculan esa nota no coinciden entre sí —al crear se guarda en `buyer` y
+     * al editar en `user`— así que recalcular acá exigiría antes decidir cuál
+     * de los dos es el bueno, y eso es una corrección aparte.
+     *
+     * @param  list<int>  $destinos  ids de negocio o domiciliario
+     */
+    private function recalcularCalificacion(string $scope, array $destinos): void
+    {
+        foreach (array_filter($destinos) as $id) {
+            match ($scope) {
+                'business'    => BusinessReview::recalcularPromedio($id),
+                'domiciliary' => DomiciliaryReview::recalcularPromedio($id),
+                default       => null,
+            };
+        }
+    }
+
     public function deleteReview(Request $request)
     {
         $datos = $request->validate([
@@ -1745,10 +1774,70 @@ class AdminApiController extends Controller
 
         $m = $this->mapaResenas($datos['scope']);
 
+        // A quién pertenece la reseña, ANTES de borrarla: después ya no hay de
+        // dónde sacarlo para volver a promediar.
+        $destino = DB::table($m['table'])
+            ->where('reviews_id', $datos['reviews_id'])
+            ->value($m['target_key']);
+
         $borradas = DB::table($m['table'])->where('reviews_id', $datos['reviews_id'])->delete();
         abort_if(!$borradas, 404, 'La reseña no existe.');
 
+        $this->recalcularCalificacion($datos['scope'], $destino ? [(int) $destino] : []);
+
         return response()->json(['message' => 'Reseña eliminada.']);
+    }
+
+    /**
+     * Retira VARIAS reseñas de una vez.
+     *
+     * Moderar es un trabajo por lotes: cuando aparece una tanda de comentarios
+     * del mismo tipo —insultos, spam de un competidor— hay que quitarlos todos,
+     * y de a uno son cuatro clics por cada uno.
+     *
+     * TOPE de 100 por petición. No es por rendimiento: es porque una acción
+     * destructiva sin techo, con un identificador de más por descuido, borra sin
+     * límite. Cien es más de lo que nadie selecciona a mano en una pantalla.
+     */
+    public function deleteReviews(Request $request)
+    {
+        $datos = $request->validate([
+            'scope' => 'required|in:business,domiciliary,user',
+            'ids'   => 'required|array|min:1|max:100',
+            'ids.*' => 'integer',
+        ]);
+
+        $m = $this->mapaResenas($datos['scope']);
+
+        // Los destinos afectados, antes del borrado. Un lote de diez reseñas
+        // puede tocar diez negocios distintos o uno solo.
+        $destinos = DB::table($m['table'])
+            ->whereIn('reviews_id', $datos['ids'])
+            ->pluck($m['target_key'])
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->all();
+
+        $borradas = DB::table($m['table'])
+            ->whereIn('reviews_id', $datos['ids'])
+            ->delete();
+
+        $this->recalcularCalificacion($datos['scope'], $destinos);
+
+        /*
+         * Se dice cuántas se borraron DE VERDAD y no cuántas se pidieron. Si
+         * alguien ya había quitado dos desde otra pestaña, "se eliminaron 8" con
+         * diez seleccionadas es la única respuesta honesta.
+         */
+        $pedidas = count($datos['ids']);
+
+        return response()->json([
+            'message' => $borradas === $pedidas
+                ? ($borradas === 1 ? 'Reseña eliminada.' : "Se eliminaron {$borradas} reseñas.")
+                : "Se eliminaron {$borradas} de {$pedidas}: el resto ya no existía.",
+            'deleted'   => $borradas,
+            'requested' => $pedidas,
+        ]);
     }
 
     /* ==================================================================

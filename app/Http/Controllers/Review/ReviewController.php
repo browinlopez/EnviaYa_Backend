@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Review;
 
 use App\Http\Controllers\Controller;
-use App\Models\Business;
 use App\Models\Buyer\Buyer;
 use App\Models\Domiciliary;
 use App\Models\Order\OrdersSales;
@@ -155,8 +154,15 @@ class ReviewController extends Controller
 
         // Las más recientes primero; las que no tienen fecha (reseñas viejas,
         // creadas cuando el modelo no guardaba timestamps) quedan al final.
+        /*
+         * Solo las activas. El promedio ya se calculaba con `state = true`,
+         * pero el listado devolvía todas, así que la app promediaba por su
+         * cuenta sobre reseñas ocultas y la ficha del negocio mostraba dos
+         * notas distintas en la misma pantalla.
+         */
         $reviews = BusinessReview::with('business', 'buyer.user')
             ->where('busines_id', $request->business_id)
+            ->where('state', true)
             ->orderByRaw('created_at IS NULL, created_at DESC')
             ->get();
 
@@ -175,7 +181,8 @@ class ReviewController extends Controller
                     'state' => $review->buyer->state,
                 ] : null,
                 'business' => $review->business ? [
-                    'business_id' => $review->business->business_id,
+                    // `business_id` no existe en la tabla: devolvía null.
+                    'business_id' => $review->business->busines_id,
                     'name' => $review->business->name,
                     'phone' => $review->business->phone,
                     'address' => $review->business->address,
@@ -219,18 +226,7 @@ class ReviewController extends Controller
                 'busines_id', 'buyer_id', 'qualification', 'comment', 'state',
             ]));
 
-            // Recalcular el promedio de calificaciones activas
-            $average = BusinessReview::where('busines_id', $review->busines_id)
-                ->where('state', true)
-                ->avg('qualification');
-
-
-            // Limitar el promedio a máximo 5.00
-            $average = min(round($average, 2), 5.00);
-
-            // Actualizar el campo qualification en la tabla business
-            Business::where('busines_id', $review->busines_id)
-                ->update(['qualification' => $average]);
+            $average = BusinessReview::recalcularPromedio($review->busines_id);
 
             DB::commit();
 
@@ -267,15 +263,13 @@ class ReviewController extends Controller
 
             $review->update($request->only(['qualification', 'comment', 'state']));
 
-            // Recalcular promedio de calificaciones activas
-            $average = BusinessReview::where('business_id', $review->busines_id)
-                ->where('state', true)
-                ->avg('qualification');
-
-            $average = min(round($average, 2), 5.00);
-
-            Business::where('business_id', $review->busines_id)
-                ->update(['qualification' => $average]);
+            /*
+             * La columna es `busines_id`, con una sola "s". Acá decía
+             * `business_id` —que no existe— y el QueryException caía en el
+             * catch de abajo, que hace rollBack: editar la propia reseña
+             * desde la app devolvía 500 y no cambiaba nada.
+             */
+            $average = BusinessReview::recalcularPromedio($review->busines_id);
 
             DB::commit();
 
@@ -311,15 +305,9 @@ class ReviewController extends Controller
 
             $review->delete();
 
-            // Recalcular promedio después de eliminar
-            $average = BusinessReview::where('business_id', $busines_id)
-                ->where('state', true)
-                ->avg('qualification');
-
-            $average = min(round($average, 2), 5.00);
-
-            Business::where('business_id', $busines_id)
-                ->update(['qualification' => $average]);
+            // Mismo error de columna que en la edición: el borrado se
+            // deshacía entero por el rollBack del catch.
+            $average = BusinessReview::recalcularPromedio($busines_id);
 
             DB::commit();
 
