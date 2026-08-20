@@ -247,6 +247,42 @@ class UserController extends Controller
         return response()->json($address, 201);
     }
 
+    /**
+     * RETIRAR UNA DIRECCIÓN
+     *
+     * La app ofrecía el botón de borrar desde hacía tiempo —con su diálogo de
+     * confirmación y todo— y al aceptar no ocurría nada, porque este endpoint
+     * no existía.
+     *
+     * Se marca como inactiva en vez de borrarla: los pedidos ya hechos
+     * apuntan a ella, y eliminarla de verdad dejaría el histórico sin poder
+     * decir a dónde se entregó.
+     *
+     * La comprobación de pertenencia es lo importante: sin ella, cualquiera
+     * con sesión podría retirar la dirección de otra persona probando
+     * identificadores.
+     */
+    public function deleteAddress(Request $request, $id)
+    {
+        $request->validate([
+            'user_id' => 'required|integer|exists:user,user_id',
+        ]);
+
+        $address = UserAddress::where('address_id', $id)
+            ->where('user_id', $request->user_id)
+            ->first();
+
+        if (!$address) {
+            return response()->json([
+                'message' => 'La dirección no existe o no es tuya.',
+            ], 404);
+        }
+
+        $address->update(['state' => false]);
+
+        return response()->json(['message' => 'Dirección eliminada.']);
+    }
+
     // Obtener perfil buyer del usuario
     public function getBuyerProfile(Request $request)
     {

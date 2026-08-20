@@ -191,6 +191,9 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         // Direcciones
         Route::post('/addresses', [UserController::class, 'getAddresses']);
         Route::post('/addresses/add', [UserController::class, 'addAddress']);
+        // La comprobación de que la dirección es de quien pide va dentro del
+        // controlador: el identificador solo no basta para autorizar.
+        Route::delete('/addresses/{id}', [UserController::class, 'deleteAddress']);
         // Perfil buyer
         Route::post('/buyer', [UserController::class, 'getBuyerProfile']);
     });
