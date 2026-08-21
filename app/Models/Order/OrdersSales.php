@@ -77,14 +77,35 @@ class OrdersSales extends Audit
      * aceptar y preparar es de la tienda y se mide aparte.
      */
 
-    /** Minutos reales entre el despacho y la entrega. Null si falta alguna marca. */
+    /** Estado 4: entregado. */
+    private const ENTREGADO = 4;
+
+    /**
+     * Minutos reales entre el despacho y la entrega. Null si no se puede saber.
+     *
+     * Se exige que el pedido esté ENTREGADO, y no solo que tenga las dos
+     * marcas. Hasta hace poco `delivery_date` se rellenaba con `now()` al crear
+     * el pedido —ya no, pero los pedidos anteriores lo arrastran—, así que uno
+     * en camino tenía fecha de entrega anterior a su despacho y esto devolvía
+     * un tiempo negativo. En pantalla se leía "Entregado a tiempo · -1392 min"
+     * sobre un pedido que todavía iba de camino.
+     *
+     * La duración negativa se rechaza igualmente: si la entrega precede al
+     * despacho, el dato está mal y la respuesta honesta es "no se sabe".
+     */
     public function getDeliveryMinutesAttribute(): ?int
     {
+        if ((int) $this->state !== self::ENTREGADO) {
+            return null;
+        }
+
         if (!$this->dispatched_at || !$this->delivery_date) {
             return null;
         }
 
-        return (int) $this->dispatched_at->diffInMinutes($this->delivery_date);
+        $minutos = (int) $this->dispatched_at->diffInMinutes($this->delivery_date);
+
+        return $minutos >= 0 ? $minutos : null;
     }
 
     /**

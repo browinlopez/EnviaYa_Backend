@@ -825,6 +825,75 @@ class OrderController extends Controller
         ]);
     }
 
+    /**
+     * ¿ESTE USUARIO ES DUEÑO DE ESTE NEGOCIO?
+     *
+     * La cadena es user → owner → owner_busines → business. Se resuelve con una
+     * consulta directa en vez de cargar relaciones porque acá solo interesa el
+     * sí o el no, y esto se llama en el camino caliente de la operación.
+     */
+    private function esDuenoDelNegocio(?int $userId, $businessId): bool
+    {
+        if (!$userId || !$businessId) {
+            return false;
+        }
+
+        return DB::table('owner_busines as ob')
+            ->join('owner as o', 'o.owner_id', '=', 'ob.owner_id')
+            ->where('o.user_id', $userId)
+            ->where('ob.busines_id', $businessId)
+            ->exists();
+    }
+
+    /**
+     * QUIÉN PUEDE MOVER EL PEDIDO, Y HASTA DÓNDE
+     *
+     * Hasta ahora `updateStatus` solo exigía estar autenticado: validaba el
+     * formato y a partir de ahí operaba sobre el pedido que le dijeran. Como el
+     * identificador es un entero correlativo, cualquier sesión válida —la de un
+     * comprador recién registrado— podía aceptar, despachar y dar por entregado
+     * el pedido de otra persona probando números.
+     *
+     * Por esta misma ruta pasan las tres transiciones de la operación, así que
+     * no es un rincón oscuro: es el camino principal.
+     *
+     * Devuelve null si puede, o el mensaje del rechazo si no.
+     */
+    private function puedeMoverPedido($usuario, OrdersSales $order, int $destino, $userIdDomiciliario): ?string
+    {
+        $userId = (int) ($usuario->user_id ?? 0);
+
+        return match ($destino) {
+            // Aceptar el pedido es decisión de la tienda que lo va a preparar.
+            2 => $this->esDuenoDelNegocio($userId, $order->busines_id)
+                ? null
+                : 'Solo la tienda del pedido puede aceptarlo.',
+
+            /*
+             * Despachar tiene dos caminos legítimos y los dos pasan por acá: el
+             * tendero asignándole el pedido a alguien, y el domiciliario
+             * tomándolo de la lista. En el segundo caso, quien pide tiene que
+             * ser el mismo que se está asignando — si no, cualquiera podría
+             * cargarle pedidos a otro y llenarle el cupo.
+             */
+            3 => ($this->esDuenoDelNegocio($userId, $order->busines_id)
+                    || (int) $userIdDomiciliario === $userId)
+                ? null
+                : 'Solo la tienda o el domiciliario que lo toma pueden despacharlo.',
+
+            /*
+             * Entregar solo lo puede declarar quien lo lleva. Es la transición
+             * que mueve dinero —registra el cobro en efectivo y la ganancia del
+             * domiciliario—, así que acá no se admite ni el tendero.
+             */
+            4 => ($order->domiciliary && (int) $order->domiciliary->user_id === $userId)
+                ? null
+                : 'Solo el domiciliario asignado puede marcar la entrega.',
+
+            default => 'Transición no reconocida.',
+        };
+    }
+
     // Actualizar estado de la orden (números)
     public function updateStatus(Request $request)
     {
@@ -834,10 +903,23 @@ class OrderController extends Controller
             'user_id' => 'nullable|integer|exists:user,user_id'
         ]);
 
-        $order = OrdersSales::with('details')->find($request->order_id);
+        $order = OrdersSales::with('details', 'domiciliary')->find($request->order_id);
 
         if (!$order) {
             return response()->json(['message' => 'Orden no encontrada'], 404);
+        }
+
+        // Quién es antes de qué hace: sin esto bastaba con saber el número del
+        // pedido, que es correlativo.
+        $motivo = $this->puedeMoverPedido(
+            $request->user(),
+            $order,
+            (int) $request->state,
+            $request->user_id,
+        );
+
+        if ($motivo !== null) {
+            return response()->json(['message' => $motivo], 403);
         }
 
         // Acepta pedido

@@ -101,3 +101,44 @@ test('una entrega anterior al compromiso tampoco se juzga', function () {
 
     expect($order->fresh()->on_time)->toBeNull();
 });
+
+test('un pedido en camino no reporta tiempo de entrega', function () {
+    /*
+     * El caso que apareció en pantalla: hasta hace poco `delivery_date` se
+     * rellenaba con `now()` al CREAR el pedido. Los creados así siguen
+     * arrastrándolo, así que uno todavía en camino tenía fecha de entrega
+     * anterior a su despacho y el historial decía "Entregado a tiempo · -1392
+     * min de 20" sobre un pedido que iba de camino.
+     */
+    $id = DB::table('orderssales')->insertGetId([
+        'total'            => 12000,
+        'sale_date'        => now()->subDay(),
+        // La marca vieja: anterior al despacho.
+        'delivery_date'    => now()->subDay(),
+        'dispatched_at'    => now()->subHour(),
+        'promised_minutes' => 20,
+        'state'            => 3,
+    ], 'orderSales_id');
+
+    $order = OrdersSales::find($id);
+
+    expect($order->delivery_minutes)->toBeNull()
+        ->and($order->on_time)->toBeNull()
+        ->and($order->delay_minutes)->toBeNull();
+});
+
+test('una entrega anterior a su despacho no se juzga', function () {
+    // Datos incoherentes: la respuesta honesta es "no se sabe", no un negativo.
+    $despacho = now()->subHour();
+
+    $id = DB::table('orderssales')->insertGetId([
+        'total'            => 12000,
+        'sale_date'        => $despacho->copy()->subMinutes(30),
+        'delivery_date'    => $despacho->copy()->subMinutes(10),
+        'dispatched_at'    => $despacho,
+        'promised_minutes' => 20,
+        'state'            => 4,
+    ], 'orderSales_id');
+
+    expect(OrdersSales::find($id)->delivery_minutes)->toBeNull();
+});
