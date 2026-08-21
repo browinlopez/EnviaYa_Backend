@@ -57,7 +57,7 @@ class BusinessController extends Controller
             ->get();
 
         // Mapeamos y formateamos la respuesta
-        $formatted = $businesses->map(function ($business) use ($affiliatedIds, $userId) {
+        $formatted = $businesses->map(function ($business) use ($affiliatedIds, $userId, $ligero) {
             $isAffiliated = in_array($business->busines_id, $affiliatedIds);
 
             return [
@@ -148,18 +148,44 @@ class BusinessController extends Controller
             $userAuthenticated = true;
         }
 
+        /*
+         * MODO LIGERO
+         *
+         * Este listado llevaba dentro el CATÁLOGO ENTERO de cada negocio. Con la
+         * base de demostración eso son 111 productos en un negocio, 24 KB de
+         * JSON, y la respuesta completa pasaba de 96 KB para pintar unas
+         * tarjetas que solo enseñan nombre, logo, nota y tipo.
+         *
+         * El coste no es teórico: en el emulador Android la respuesta se cortaba
+         * a media descarga —`unexpected end of stream`— y la pantalla de inicio
+         * se quedaba sin negocios. En un teléfono con datos móviles es medio
+         * megabyte por cada vez que alguien abre la app.
+         *
+         * Va como bandera y no por defecto a propósito: las versiones de la app
+         * que ya están instaladas leen `products` de acá para pintar la ficha
+         * del negocio, y quitárselo las dejaría con el catálogo vacío. Piden el
+         * modo ligero las versiones que saben pedir el detalle aparte.
+         */
+        $ligero = $request->boolean('light');
+
+        $relaciones = ['owners', 'municipality'];
+
+        if (!$ligero) {
+            $relaciones = array_merge($relaciones, [
+                'reviews', 'products.category',
+                'products' => fn ($q) => $q->where('products.state', 1),
+            ]);
+        }
+
         // Ídem que en index(): un negocio desactivado no se publica.
         // Ver la nota de `index`: los productos retirados no salen del panel.
-        $businesses = Business::with([
-            'owners', 'municipality', 'reviews', 'products.category',
-            'products' => fn ($q) => $q->where('products.state', 1),
-        ])
+        $businesses = Business::with($relaciones)
             ->where('state', 1)
             ->orderByDesc('qualification')
             ->get();
 
         // Mapeamos los datos
-        $formatted = $businesses->map(function ($business) use ($affiliatedIds, $userId) {
+        $formatted = $businesses->map(function ($business) use ($affiliatedIds, $userId, $ligero) {
             $isAffiliated = in_array($business->busines_id, $affiliatedIds);
 
             return [
@@ -203,7 +229,7 @@ class BusinessController extends Controller
                     ];
                 }),
                 // productos del negocio
-                'products' => $business->products->map(function ($product) use ($isAffiliated, $userId) {
+                'products' => $ligero ? [] : $business->products->map(function ($product) use ($isAffiliated, $userId) {
                     return [
                         'product_id'  => $product->products_id,
                         'name'        => $product->name,
@@ -217,7 +243,7 @@ class BusinessController extends Controller
                     ];
                 }),
                 // reviews del negocio
-                'reviews' => $business->reviews->map(function ($review) {
+                'reviews' => $ligero ? [] : $business->reviews->map(function ($review) {
                     return [
                         'review_id'  => $review->reviews_id ?? null,
                         'buyer_id'   => $review->buyer_id,
@@ -288,8 +314,31 @@ class BusinessController extends Controller
     public function show(Request $request)
     {
         $request->validate([
-            'busines_id' => 'required|integer|exists:business,busines_id'
+            'busines_id' => 'required|integer|exists:business,busines_id',
+            'user_id'    => 'sometimes|nullable|integer|exists:user,user_id',
         ]);
+
+        /*
+         * EL PRECIO SOLO LO VE QUIEN ESTÁ AFILIADO.
+         *
+         * El listado ya aplicaba esta regla —sin afiliación los productos salen
+         * en 0 y la app los pinta con un candado— y acá no: se devolvía
+         * `$product->pivot->price` tal cual. Bastaba con llamar a este endpoint
+         * con el identificador del negocio para leer todos sus precios sin estar
+         * afiliado a él, saltándose lo que la otra ruta protege.
+         *
+         * Sin `user_id` se responde como a un invitado: todo en 0.
+         */
+        $userId = $request->input('user_id');
+
+        $estaAfiliado = false;
+
+        if ($userId) {
+            $estaAfiliado = User::with('affiliatedBusinesses')
+                ->findOrFail($userId)
+                ->affiliatedBusinesses
+                ->contains('busines_id', (int) $request->busines_id);
+        }
 
         /*
          * Un negocio desactivado no se muestra ni entrando por su identificador.
@@ -298,7 +347,7 @@ class BusinessController extends Controller
          * de un enlace— para seguir viendo la tienda y su catálogo como si nada.
          */
         $business = Business::with([
-            'owners', 'reviews', 'municipality',
+            'owners', 'reviews', 'municipality', 'products.category',
             'products' => fn ($q) => $q->where('products.state', 1),
         ])
             ->where('state', 1)
@@ -343,15 +392,19 @@ class BusinessController extends Controller
                     'state'             => (bool) $owner->state,
                 ];
             }),
-            'products' => $business->products->map(function ($product) {
+            'is_affiliated' => $estaAfiliado,
+            'products' => $business->products->map(function ($product) use ($estaAfiliado) {
                 return [
                     'product_id' => $product->products_id,
                     'name'       => $product->name,
                     'description' => $product->description,
                     'category_id' => $product->category_id,
+                    // La ficha agrupa por nombre de categoría, igual que el
+                    // listado; con solo el id no podía pintar las secciones.
+                    'category'   => $product->category?->name,
                     'image'      => $product->image,
                     'state'      => (bool) $product->state,
-                    'price'      => $product->pivot->price ?? null,
+                    'price'      => $estaAfiliado ? ($product->pivot->price ?? 0) : 0,
                 ];
             }),
             'reviews' => $business->reviews->map(function ($review) {
