@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Buyer\Buyer;
 use App\Models\User;
 use App\Models\User\UserAddress;
+use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
@@ -323,50 +324,61 @@ class UserController extends Controller
     // Notificaciones del usuario
     // ----------------------------
 
-    // Listar notificaciones
-    /*  public function getNotifications(Request $request)
+    /*
+     * LA CAMPANA
+     *
+     * Estos tres métodos estaban comentados enteros y no había ruta que llevara
+     * a ellos, así que la tabla `notifications` llevaba desde el principio sin
+     * usar y la pantalla de avisos de la app tenía la lista escrita a mano en
+     * blanco.
+     *
+     * Se piden por el usuario en sesión y no por un `user_id` recibido: tal
+     * como estaba escrito, bastaba mandar el número de otra persona para leer
+     * sus avisos.
+     */
+    public function getNotifications(Request $request)
     {
-        $request->validate([
-            'user_id' => 'required|integer|exists:user,user_id',
+        $avisos = Notification::where('user_id', $request->user()->user_id)
+            ->where('state', true)
+            ->orderByDesc('date')
+            ->limit(50)
+            ->get();
+
+        return response()->json([
+            'notifications' => $avisos,
+            // El número que va en la burbuja de la campana.
+            'unread' => $avisos->where('read', false)->count(),
         ]);
-
-        $notifications = Notification::where('user_id', $request->user_id)
-                            ->orderBy('date', 'desc')
-                            ->get();
-
-        return response()->json($notifications);
     }
 
-    // Crear notificación
-    public function createNotification(Request $request)
+    public function markNotificationAsRead(Request $request)
     {
-        $request->validate([
-            'user_id' => 'required|integer|exists:user,user_id',
-            'message' => 'required|string',
+        $datos = $request->validate([
+            'notification_id' => 'required|integer',
         ]);
 
-        $notification = Notification::create([
-            'user_id' => $request->user_id,
-            'message' => $request->message,
-            'read'    => false,
-            'date'    => now(),
-            'state'   => true
-        ]);
+        $aviso = Notification::where('notification_id', $datos['notification_id'])
+            ->where('user_id', $request->user()->user_id)
+            ->first();
 
-        return response()->json($notification, 201);
+        // Un aviso ajeno se responde igual que uno inexistente: no hay por qué
+        // confirmarle a nadie que el número acertó.
+        if (!$aviso) {
+            return response()->json(['message' => 'Aviso no encontrado'], 404);
+        }
+
+        $aviso->read = true;
+        $aviso->save();
+
+        return response()->json(['message' => 'Aviso marcado como leído']);
     }
 
-    // Marcar notificación como leída
-    public function markAsRead(Request $request)
+    public function markAllNotificationsAsRead(Request $request)
     {
-        $request->validate([
-            'notification_id' => 'required|integer|exists:notifications,notification_id',
-        ]);
+        $cuantos = Notification::where('user_id', $request->user()->user_id)
+            ->where('read', false)
+            ->update(['read' => true]);
 
-        $notification = Notification::findOrFail($request->notification_id);
-        $notification->read = true;
-        $notification->save();
-
-        return response()->json(['message' => 'Notificación marcada como leída']);
-    } */
+        return response()->json(['message' => 'Avisos marcados', 'count' => $cuantos]);
+    }
 }

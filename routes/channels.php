@@ -3,6 +3,7 @@
 use App\Models\Chat\ChatParticipant;
 use App\Models\Order\OrdersSales;
 use Illuminate\Support\Facades\Broadcast;
+use Illuminate\Support\Facades\DB;
 
 // routes/channels.php
 Broadcast::routes([
@@ -81,3 +82,43 @@ Broadcast::channel('order.{orderSalesId}', function ($user, $orderSalesId) {
     return false;
 });
 
+
+/*
+ * EL CANAL DEL NEGOCIO
+ *
+ * Por acá viaja lo que todavía no tiene pedido al que agarrarse: sobre todo,
+ * que ENTRÓ uno nuevo.
+ *
+ * El canal `order.{id}` no sirve para eso, y no es un detalle: para escucharlo
+ * hay que saber el número del pedido, y un pedido que aún no existe no tiene
+ * número. Sin este canal, la tienda solo se enteraba de un pedido nuevo al
+ * entrar a la pantalla o tirando hacia abajo —hasta minutos de retraso con la
+ * comida enfriándose— y ningún domiciliario sabía que había trabajo hasta que
+ * alguno refrescaba por su cuenta.
+ *
+ * Escuchan los dos, y por eso es UN canal y no dos: el domiciliario saca sus
+ * pedidos disponibles del mismo negocio (`getOrderStore(business_id)`), así que
+ * tienda y repartidores necesitan exactamente la misma información.
+ */
+Broadcast::channel('business.{businessId}', function ($user, $businessId) {
+    $suyo = (int) $user->user_id;
+
+    // Los dueños de la tienda. Una tienda puede tener varios.
+    $esDuenio = DB::table('owner_busines as ob')
+        ->join('owner as o', 'o.owner_id', '=', 'ob.owner_id')
+        ->where('o.user_id', $suyo)
+        ->where('ob.busines_id', $businessId)
+        ->exists();
+
+    if ($esDuenio) {
+        return true;
+    }
+
+    // Los domiciliarios asignados a esa tienda. No se comprueba el rol sino la
+    // pertenencia: lo que decide es si ESTE negocio es suyo.
+    return DB::table('business_domiciliary as bd')
+        ->join('domiciliary as d', 'd.domiciliary_id', '=', 'bd.domiciliary_id')
+        ->where('d.user_id', $suyo)
+        ->where('bd.busines_id', $businessId)
+        ->exists();
+});

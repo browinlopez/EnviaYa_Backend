@@ -2,6 +2,7 @@
 
 namespace App\Events;
 
+use App\Models\Chat\ChatParticipant;
 use App\Models\Chat\Message;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
@@ -18,6 +19,9 @@ class MessageSent implements ShouldBroadcastNow
 
     public $message;
 
+    /** Participantes del chat menos el autor. */
+    public $destinatarios = [];
+
     public function __construct(Message $message)
     {
         /*
@@ -31,11 +35,38 @@ class MessageSent implements ShouldBroadcastNow
          */
         $this->message = $message->fresh() ?? $message;
         $this->message->load('user');
+
+        // Se resuelve acá y no en `broadcastOn()` porque ese método puede
+        // llamarse más de una vez y esto es una consulta a la base.
+        $this->destinatarios = ChatParticipant::where('chat_id', $this->message->chat_id)
+            ->where('user_id', '!=', $this->message->user_id)
+            ->pluck('user_id')
+            ->all();
     }
 
-    public function broadcastOn()
+    /*
+     * Dos destinos: la conversación abierta y la bandeja de quien no la tiene
+     * abierta.
+     *
+     * El canal del chat solo lo escucha quien está DENTRO de esa conversación.
+     * La pantalla de Mensajes, que es la lista de todas, no puede escucharlo:
+     * tendría que suscribirse a un canal por chat y aun así se perdería el
+     * primer mensaje de un cliente nuevo —ese chat todavía no está en la lista,
+     * así que no hay canal al que suscribirse—. Por eso el mensaje viaja
+     * también al canal personal de cada participante.
+     *
+     * Se excluye al autor: ya tiene el mensaje en pantalla, y recibirlo de
+     * vuelta le subiría el contador de no leídos de su propio mensaje.
+     */
+    public function broadcastOn(): array
     {
-        return new PrivateChannel('chat.' . $this->message->chat_id);
+        $canales = [new PrivateChannel('chat.' . $this->message->chat_id)];
+
+        foreach ($this->destinatarios as $userId) {
+            $canales[] = new PrivateChannel('App.Models.User.' . $userId);
+        }
+
+        return $canales;
     }
 
     /*

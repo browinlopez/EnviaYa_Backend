@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Order;
 
 use App\Services\Ajustes;
+use App\Services\Avisos;
 use App\Events\DomiciliaryLocationUpdated;
+use App\Events\OrderCreated;
 use App\Events\OrderStatusUpdated;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Payment\PaymentController;
@@ -708,6 +710,27 @@ class OrderController extends Controller
 
             DB::commit();
 
+            /*
+             * Avisar a la tienda de que le entró un pedido.
+             *
+             * Va DESPUÉS del commit a propósito: si se emitiera dentro de la
+             * transacción, el tendero podría recibir el aviso de un pedido que
+             * termina revirtiéndose y buscarlo en una lista donde no está.
+             *
+             * Y en un try, como los demás: si Reverb está caído, el pedido ya
+             * está creado y cobrado. Perder el aviso significa que la tienda lo
+             * verá al refrescar; hacer fallar la compra por no poder avisar
+             * sería mucho peor.
+             */
+            try {
+                broadcast(new OrderCreated($order->load('buyer.user')));
+            } catch (\Throwable $e) {
+                Log::warning('No se pudo anunciar el pedido nuevo', [
+                    'order_id' => $order->orderSales_id,
+                    'error'    => $e->getMessage(),
+                ]);
+            }
+
             return response()->json([
                 'message' => 'Orden creada',
                 'order' => $order->load('details.product.category', 'business', 'address', 'promotions', 'payments')->toApi(),
@@ -807,6 +830,18 @@ class OrderController extends Controller
 
         $order->state = 5;
         $order->save();
+
+        // Si lo canceló el propio comprador ya lo sabe, pero el aviso deja
+        // constancia en su campana: es un pedido que existió y desapareció, y
+        // conviene que quede rastro de por qué.
+        if ($order->buyer?->user_id) {
+            Avisos::para(
+                $order->buyer->user_id,
+                'pedido_cancelado',
+                "Tu pedido #{$order->orderSales_id} fue cancelado.",
+                ['order_id' => $order->orderSales_id],
+            );
+        }
 
         // Se avisa por el canal del pedido, igual que cualquier otro cambio de
         // estado: la tienda tiene que enterarse de que ya no lo prepare.
@@ -980,6 +1015,26 @@ class OrderController extends Controller
              * `domiciliary_fee`.
              */
             $order->promised_minutes = (int) Ajustes::valor('operacion.tiempo_entrega_min');
+
+            /*
+             * Avisar al domiciliario, y solo a él.
+             *
+             * Por esta transición pasan dos caminos: el repartidor tomando el
+             * pedido —que ya sabe que lo tomó— y el tendero asignándoselo, que
+             * es el caso donde el aviso importa: alguien decide por él y hay que
+             * decírselo. Se manda en ambos porque distinguirlos aquí complicaría
+             * el código para ahorrar un aviso que, en el primer caso, confirma
+             * lo que acaba de hacer.
+             *
+             * No puede ir por el canal del negocio: ahí lo verían los cinco
+             * repartidores de la tienda como si fuera de cada uno.
+             */
+            Avisos::para(
+                $domiciliary->user_id,
+                'entrega_asignada',
+                "Tienes una entrega nueva: pedido #{$order->orderSales_id}.",
+                ['order_id' => $order->orderSales_id],
+            );
 
             // Pedido entregado
         } elseif ($order->state == 3 && $request->state == 4) {

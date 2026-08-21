@@ -177,6 +177,15 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
     Route::get('payment/status', [PaymentController::class, 'checkStatusByReference']);
 
     Route::prefix('users')->group(function () {
+        /*
+         * La campana. Los métodos existían comentados y sin ruta, así que la
+         * tabla `notifications` llevaba desde el principio sin usar. Siempre
+         * del usuario en sesión: no reciben `user_id`.
+         */
+        Route::get('/notifications', [UserController::class, 'getNotifications']);
+        Route::put('/notifications/read', [UserController::class, 'markNotificationAsRead']);
+        Route::put('/notifications/read-all', [UserController::class, 'markAllNotificationsAsRead']);
+
         // Listar usuarios
         Route::get('/', [UserController::class, 'index']);
         // Detalle usuario
