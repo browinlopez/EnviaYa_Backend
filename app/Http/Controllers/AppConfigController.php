@@ -49,6 +49,15 @@ class AppConfigController extends Controller
              */
             'operation' => [
                 'delivery_fee' => (int) Ajustes::valor('operacion.tarifa_domicilio'),
+                /*
+                 * El plazo prometido. La app lo pintaba como "15min" en las
+                 * fichas y arrancaba el reloj del seguimiento en 20, dos
+                 * constantes escritas a mano que ningún dato respaldaba: el
+                 * campo `estimated_time` que leía no existe en el servidor.
+                 * Ahora es un compromiso de la operación, se ajusta en el
+                 * panel y contra él se mide cada entrega.
+                 */
+                'delivery_time_minutes' => (int) Ajustes::valor('operacion.tiempo_entrega_min'),
             ],
             'version' => [
                 // Con `?platform=` viene la que toca; sin él, las dos, para que

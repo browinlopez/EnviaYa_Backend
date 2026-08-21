@@ -50,6 +50,9 @@ class OrdersSales extends Audit
         'pickup',
         'pickup_time',
         'has_review',
+        // Plazo prometido, congelado al despachar. Ver la migración
+        // `add_promised_minutes_to_orderssales` para el porqué.
+        'promised_minutes',
         'state'
     ];
 
@@ -57,7 +60,63 @@ class OrdersSales extends Audit
         'is_scheduled' => 'boolean',
         'sale_date' => 'datetime',
         'delivery_date' => 'datetime',
+        'dispatched_at' => 'datetime',
+        'promised_minutes' => 'integer',
     ];
+
+    /**
+     * CUMPLIMIENTO DE LA ENTREGA
+     *
+     * Tres cosas que se preguntan siempre juntas y que hasta ahora cada
+     * consumidor calculaba por su cuenta —o no calculaba en absoluto—: cuánto
+     * tardó, cuánto se había prometido y si se cumplió.
+     *
+     * El reloj corre desde `dispatched_at`, no desde que se hizo el pedido: lo
+     * que se mide es el trabajo del domiciliario, y hasta que la tienda no
+     * despacha no hay nada que entregar. El tiempo que la tienda tarda en
+     * aceptar y preparar es de la tienda y se mide aparte.
+     */
+
+    /** Minutos reales entre el despacho y la entrega. Null si falta alguna marca. */
+    public function getDeliveryMinutesAttribute(): ?int
+    {
+        if (!$this->dispatched_at || !$this->delivery_date) {
+            return null;
+        }
+
+        return (int) $this->dispatched_at->diffInMinutes($this->delivery_date);
+    }
+
+    /**
+     * ¿Llegó dentro del plazo prometido?
+     *
+     * Null —y no `false`— cuando no se puede saber: pedidos sin entregar,
+     * entregas anteriores a que existiera el compromiso, o pedidos que el
+     * cliente recogió en tienda. Un `false` ahí sería contar como incumplida
+     * una entrega sobre la que no hay nada que decir.
+     */
+    public function getOnTimeAttribute(): ?bool
+    {
+        $minutos = $this->delivery_minutes;
+
+        if ($minutos === null || !$this->promised_minutes) {
+            return null;
+        }
+
+        return $minutos <= $this->promised_minutes;
+    }
+
+    /** Minutos de retraso, o 0 si llegó a tiempo. Null si no se puede saber. */
+    public function getDelayMinutesAttribute(): ?int
+    {
+        $minutos = $this->delivery_minutes;
+
+        if ($minutos === null || !$this->promised_minutes) {
+            return null;
+        }
+
+        return max(0, $minutos - $this->promised_minutes);
+    }
 
     public function paymentIntents()
     {
@@ -137,6 +196,13 @@ class OrdersSales extends Audit
             'is_scheduled' => $this->is_scheduled,
             'has_review' => $this->has_review,
             'dispatched_at' => $this->dispatched_at,
+            // Compromiso y cumplimiento. `promised_minutes` es lo que el reloj
+            // del seguimiento tiene que contar: antes la app usaba un 20 fijo
+            // porque leía un campo que el servidor nunca mandó.
+            'promised_minutes' => $this->promised_minutes,
+            'delivery_minutes' => $this->delivery_minutes,
+            'on_time' => $this->on_time,
+            'delay_minutes' => $this->delay_minutes,
             'domiciliary' => $this->domiciliary ? [
                 'domiciliary_id' => $this->domiciliary->domiciliary_id,
                 'user_id' => $this->domiciliary->user->user_id ?? null,

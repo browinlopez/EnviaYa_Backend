@@ -62,6 +62,16 @@ class CatalogoDeAjustes
                 'reglas'   => 'required|integer|min:0|max:100000',
             ],
 
+            'operacion.tiempo_entrega_min' => [
+                'grupo'    => 'operacion',
+                'etiqueta' => 'Plazo de entrega prometido',
+                'tipo'     => 'entero',
+                'sufijo'   => 'minutos',
+                'ayuda'    => 'El estándar que la operación se compromete a cumplir, contado desde que la tienda despacha. La app lo muestra al cliente y el reloj del seguimiento corre contra él. Se congela en cada pedido al despacharlo, así que subirlo no convierte en "a tiempo" entregas pasadas que llegaron tarde: el rendimiento de cada domiciliario se mide contra el plazo que regía ese día.',
+                'defecto'  => 20,
+                'reglas'   => 'required|integer|min:5|max:240',
+            ],
+
             'operacion.entregas_simultaneas' => [
                 'grupo'    => 'operacion',
                 'etiqueta' => 'Entregas a la vez por domiciliario',

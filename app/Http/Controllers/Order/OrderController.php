@@ -74,6 +74,13 @@ class OrderController extends Controller
                 'pickup_time' => $order->pickup_time,
                 'has_review' => $order->has_review,
                 'dispatched_at' => $order->dispatched_at,
+                // Compromiso y cumplimiento del plazo. Se mandan resueltos
+                // desde acá para que la app no tenga que reimplementar la
+                // regla y contarla distinto que el informe del panel.
+                'promised_minutes' => $order->promised_minutes,
+                'delivery_minutes' => $order->delivery_minutes,
+                'on_time' => $order->on_time,
+                'delay_minutes' => $order->delay_minutes,
                 'state' => $order->state,
                 'business' => [
                     'business_id' => $order->business->busines_id,
@@ -192,6 +199,11 @@ class OrderController extends Controller
                 'delivery_type' => $order->pickup ? 'pickup' : 'delivery',
                 'pickup' => (bool) $order->pickup,
                 'pickup_time' => $order->pickup_time,
+                'dispatched_at' => $order->dispatched_at,
+                'promised_minutes' => $order->promised_minutes,
+                'delivery_minutes' => $order->delivery_minutes,
+                'on_time' => $order->on_time,
+                'delay_minutes' => $order->delay_minutes,
                 'state' => $order->state,
                 'buyer' => $order->buyer ? [
                     'buyer_id' => $order->buyer->buyer_id,
@@ -578,7 +590,16 @@ class OrderController extends Controller
                 'coupon_id' => $cupon?->id,
                 'domiciliary_fee' => $domiciliaryFee,
                 'sale_date' => now(),
-                'delivery_date' => $isScheduled ? $deliveryDate : now(),
+                /*
+                 * Solo los programados nacen con fecha: ahí `delivery_date` es
+                 * la hora PEDIDA por el cliente. En el resto es la hora REAL de
+                 * entrega y se sella al pasar a estado 4, así que ponerla en
+                 * `now()` al crear daba por entregado todo pedido nuevo. Los
+                 * informes que filtran por `delivery_date IS NOT NULL` contaban
+                 * esos pedidos con un tiempo de entrega de cero minutos y se
+                 * llevaban el promedio al suelo.
+                 */
+                'delivery_date' => $isScheduled ? $deliveryDate : null,
                 'is_scheduled' => $isScheduled,
                 'pickup' => $isPickup,
                 'pickup_time' => $isPickup && $request->pickup_time
@@ -867,6 +888,16 @@ class OrderController extends Controller
             $order->domiciliary_id = $domiciliary->domiciliary_id;
             // Ancla del cronómetro de entrega en la app
             $order->dispatched_at = now();
+
+            /*
+             * El plazo prometido se CONGELA acá, no se lee del ajuste cuando
+             * alguien mira el informe. Si se leyera al consultar, subir el
+             * estándar en el panel convertiría en "a tiempo" entregas pasadas
+             * que llegaron tarde, y nadie podría saber contra qué se midió a
+             * cada domiciliario. Mismo criterio que `domicilio` y
+             * `domiciliary_fee`.
+             */
+            $order->promised_minutes = (int) Ajustes::valor('operacion.tiempo_entrega_min');
 
             // Pedido entregado
         } elseif ($order->state == 3 && $request->state == 4) {

@@ -3111,7 +3111,8 @@ class AdminApiController extends Controller
 
     private function reporteOperacional(array $v, array $f): array
     {
-        $columnas = ['o.orderSales_id', 'o.state', 'o.sale_date', 'o.dispatched_at', 'o.delivery_date'];
+        $columnas = ['o.orderSales_id', 'o.state', 'o.sale_date', 'o.dispatched_at',
+                     'o.delivery_date', 'o.promised_minutes'];
 
         $ordenes = $this->pedidosDelPeriodo($v, $f)->get($columnas);
         $antes   = $this->pedidosDelPeriodo($v, $f, true)->get($columnas);
@@ -3145,7 +3146,37 @@ class AdminApiController extends Controller
                 DB::raw('COALESCE(SUM(o.domiciliary_fee), 0) as earnings'),
                 DB::raw("AVG(CASE WHEN o.dispatched_at IS NOT NULL AND o.delivery_date IS NOT NULL
                           THEN {$minutos} END) as avg_minutes"),
+                /*
+                 * Cumplimiento del plazo. Se mide contra `promised_minutes`,
+                 * que quedó congelado en el pedido al despacharlo, y no contra
+                 * el ajuste de hoy: cambiar el estándar en el panel no debe
+                 * reescribir el rendimiento de nadie.
+                 *
+                 * `measured` cuenta solo las entregas que se PUEDEN juzgar —con
+                 * las dos marcas y con plazo—; las anteriores al compromiso no
+                 * cuentan ni a favor ni en contra, así que el porcentaje sale
+                 * sobre esa base y no sobre el total entregado.
+                 */
+                DB::raw("SUM(CASE WHEN o.dispatched_at IS NOT NULL AND o.delivery_date IS NOT NULL
+                          AND o.promised_minutes IS NOT NULL THEN 1 ELSE 0 END) as measured"),
+                DB::raw("SUM(CASE WHEN o.dispatched_at IS NOT NULL AND o.delivery_date IS NOT NULL
+                          AND o.promised_minutes IS NOT NULL
+                          AND {$minutos} <= o.promised_minutes THEN 1 ELSE 0 END) as on_time"),
             ]);
+
+        $repartidores = $repartidores->map(function ($r) {
+            $r->avg_minutes  = $r->avg_minutes === null ? null : round((float) $r->avg_minutes, 1);
+            $r->measured     = (int) $r->measured;
+            $r->on_time      = (int) $r->on_time;
+            $r->late         = $r->measured - $r->on_time;
+            // Null y no 0 cuando no hay nada medido: "0 % a tiempo" y "todavía
+            // no se le puede medir" son cosas muy distintas para quien lo lee.
+            $r->on_time_rate = $r->measured
+                ? round(($r->on_time / $r->measured) * 100, 1)
+                : null;
+
+            return $r;
+        });
 
         return [
             'totals'   => $this->cifrasOperacionales($ordenes, $repartidores->count()),
@@ -3165,10 +3196,26 @@ class AdminApiController extends Controller
             ->filter(fn ($o) => $o->dispatched_at && $o->delivery_date)
             ->map(fn ($o) => Carbon::parse($o->dispatched_at)->diffInMinutes(Carbon::parse($o->delivery_date)));
 
+        // Cumplimiento del plazo en el periodo, sobre las entregas que se
+        // pueden juzgar (con las dos marcas y con plazo prometido).
+        $medibles = $entregadas->filter(
+            fn ($o) => $o->dispatched_at && $o->delivery_date && $o->promised_minutes
+        );
+
+        $aTiempo = $medibles->filter(
+            fn ($o) => Carbon::parse($o->dispatched_at)->diffInMinutes(Carbon::parse($o->delivery_date))
+                <= $o->promised_minutes
+        );
+
         return [
             'delivered'          => $entregadas->count(),
             'total_orders'       => $ordenes->count(),
             'avg_minutes'        => $minutos->count() ? round($minutos->avg(), 1) : null,
+            'measured'           => $medibles->count(),
+            'on_time'            => $aTiempo->count(),
+            'on_time_rate'       => $medibles->count()
+                ? round(($aTiempo->count() / $medibles->count()) * 100, 1)
+                : null,
             'fulfillment_rate'   => $ordenes->count()
                 ? round(($entregadas->count() / $ordenes->count()) * 100, 1)
                 : 0,
