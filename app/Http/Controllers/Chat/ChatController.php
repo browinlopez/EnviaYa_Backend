@@ -10,6 +10,7 @@ use App\Models\Chat\ChatParticipant;
 use App\Models\Chat\Message;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 
@@ -91,11 +92,29 @@ class ChatController extends Controller
                 'content' => $request->content,
             ]);
 
-            // -----------------------------
-            // Usar ReverbClient para enviar mensaje
-            // -----------------------------
-            // Disparar evento para broadcasting
-            /* event(new MessageSent($message)); */
+            /*
+             * El mensaje sale por el websocket, además de guardarse.
+             *
+             * Esta línea llevaba comentada desde siempre, así que el chat no
+             * era en tiempo real: la app preguntaba al servidor cada 10
+             * segundos. Eso significaba hasta 10 s de retraso para ver una
+             * respuesta y una petición constante por cada persona con el chat
+             * abierto, cliente, tienda o domiciliario.
+             *
+             * Se emite dentro de la transacción a propósito NO: va después de
+             * guardar, y si el envío por socket falla —Reverb caído, red
+             * intermitente— el mensaje ya está en la base y la app lo verá en
+             * la siguiente consulta. Perder el aviso es tolerable; perder el
+             * mensaje no.
+             */
+            try {
+                broadcast(new MessageSent($message));
+            } catch (\Throwable $e) {
+                Log::warning('No se pudo anunciar el mensaje de chat', [
+                    'message_id' => $message->message_id,
+                    'error'      => $e->getMessage(),
+                ]);
+            }
 
             return response()->json([
                 'message' => 'Mensaje enviado',
