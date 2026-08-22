@@ -456,3 +456,73 @@ test('el reporte de otro conjunto no existe: cada quien ve el suyo', function ()
         ->assertOk()
         ->assertJsonPath('totales.pedidos', 0);
 });
+
+test('un codigo sirve UNA vez: el segundo intento se rechaza', function () {
+    $c = conjuntoConPersonal();
+    $domi = repartidorConPedidoEn($c['complexId']);
+
+    $codigo = app(AccesoAlConjunto::class)->generar($domi)['code'];
+
+    Sanctum::actingAs($c['user']);
+
+    $this->postJson('/v1/conjunto/porteria/verificar', ['code' => $codigo])
+        ->assertOk()
+        ->assertJsonPath('allowed', true);
+
+    /*
+     * Dos motivos, y el segundo se descubrió construyendo el tablero:
+     *
+     *  · quien alcance a ver el QR por encima del hombro entraría también;
+     *  · cada verificación anota OTRA entrada, así que verificar dos veces
+     *    dejaba dos filas idénticas y el conteo del conjunto contaba visitas
+     *    que no ocurrieron.
+     */
+    $this->postJson('/v1/conjunto/porteria/verificar', ['code' => $codigo])
+        ->assertStatus(404)
+        ->assertJsonPath('allowed', false);
+
+    expect(DB::table('complex_entries')->count())->toBe(1);
+});
+
+test('gastar un codigo no impide sacar otro', function () {
+    $c = conjuntoConPersonal();
+    $domi = repartidorConPedidoEn($c['complexId']);
+
+    $acceso = app(AccesoAlConjunto::class);
+
+    $primero = $acceso->generar($domi)['code'];
+
+    Sanctum::actingAs($c['user']);
+    $this->postJson('/v1/conjunto/porteria/verificar', ['code' => $primero])->assertOk();
+
+    // Al gastarlo se olvida también el índice inverso; si `generar` diera por
+    // hecho que sigue ahí, el segundo código no se emitiría.
+    $segundo = $acceso->generar($domi)['code'];
+
+    expect($segundo)->not->toBe($primero);
+
+    $this->postJson('/v1/conjunto/porteria/verificar', ['code' => $segundo])
+        ->assertOk()
+        ->assertJsonPath('allowed', true);
+});
+
+test('la cedula si sirve varias veces', function () {
+    $c = conjuntoConPersonal();
+    $domi = repartidorConPedidoEn($c['complexId'], '1090555444');
+
+    Sanctum::actingAs($c['user']);
+
+    /*
+     * La cédula no es un secreto que se gasta: es un dato permanente. Un
+     * domiciliario que sale y vuelve a entrar con dos pedidos distintos tiene
+     * que poder pasar las dos veces, y quien controla que eso sea legítimo es
+     * el celador que lo tiene delante.
+     */
+    foreach ([1, 2] as $vez) {
+        $this->postJson('/v1/conjunto/porteria/verificar', ['document' => '1090555444'])
+            ->assertOk()
+            ->assertJsonPath('allowed', true);
+    }
+
+    expect(DB::table('complex_entries')->count())->toBe(2);
+});

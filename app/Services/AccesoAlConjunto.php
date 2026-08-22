@@ -62,11 +62,40 @@ class AccesoAlConjunto
     }
 
     /** El domiciliario detrás de un código vigente, o null. */
+    /**
+     * Quién es el dueño de este código. DE UN SOLO USO.
+     *
+     * `pull` y no `get`: lee y borra en la misma operación. Antes sólo leía, y
+     * el código servía todas las veces que hiciera falta durante sus cinco
+     * minutos. Dos problemas, y el segundo apareció al construir el tablero:
+     *
+     *  · Quien alcanzara a ver el QR por encima del hombro entraba también.
+     *    Los cinco minutos acotan cuánto dura el riesgo, no que exista.
+     *
+     *  · Cada verificación anotaba OTRA entrada. Verificar dos veces el mismo
+     *    código —porque el celador dudó, o porque se recargó la pantalla—
+     *    dejaba dos filas idénticas, y el conteo de entradas del conjunto
+     *    contaba visitas que no ocurrieron.
+     *
+     * Es el mismo argumento que ya justificaba invalidar el anterior al
+     * generar uno nuevo: si valieran varios a la vez, uno filtrado seguiría
+     * sirviendo. Que valga varias veces es la otra mitad del mismo agujero.
+     *
+     * También se olvida el índice inverso, o el próximo `generar()` intentaría
+     * borrar una llave que ya no está.
+     */
     public function resolverCodigo(string $codigo): ?Domiciliary
     {
-        $id = Cache::get($this->llave(strtoupper(trim($codigo))));
+        $limpio = strtoupper(trim($codigo));
+        $id     = Cache::pull($this->llave($limpio));
 
-        return $id ? Domiciliary::find($id) : null;
+        if (!$id) {
+            return null;
+        }
+
+        Cache::forget('acceso_conjunto_de:' . $id);
+
+        return Domiciliary::find($id);
     }
 
     /** El domiciliario por su cédula, o null. */
