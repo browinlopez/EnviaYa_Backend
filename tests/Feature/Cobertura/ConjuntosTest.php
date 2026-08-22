@@ -175,3 +175,51 @@ test('quien no vive en conjunto queda con la bandera en cero', function () {
 
     expect((int) $buyer->belongs_to_complex)->toBe(0);
 });
+
+test('registrarse con torre y apartamento crea la primera direccion', function () {
+    /*
+     * Sin esto, quien declara su conjunto al registrarse tendría que volver a
+     * escribirlo todo la primera vez que pide: el conjunto quedaba anotado en
+     * el pivote y su dirección no existía.
+     */
+    Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
+
+    $complexId = conjunto(['address' => 'Calle 84 #51-20', 'latitude' => 11.01, 'longitude' => -74.80]);
+
+    $this->postJson('/v1/register', [
+        'name' => 'Camila Restrepo',
+        'email' => 'camila2@ejemplo.test',
+        'password' => 'ClaveDePrueba1*',
+        'belongs_to_complex' => 1,
+        'complex_id' => $complexId,
+        'tower' => '3',
+        'apartment' => '502',
+    ])->assertCreated();
+
+    $user = User::where('email', 'camila2@ejemplo.test')->first();
+    $d = UserAddress::where('user_id', $user->user_id)->first();
+
+    expect($d)->not->toBeNull()
+        ->and((int) $d->complex_id)->toBe($complexId)
+        ->and($d->tower)->toBe('3')
+        ->and($d->apartment)->toBe('502')
+        // Hereda las coordenadas del conjunto: son las buenas hasta que las
+        // edite en el mapa.
+        ->and((float) $d->latitude)->toBe(11.01);
+});
+
+test('sin torre no se inventa una direccion', function () {
+    Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
+
+    $this->postJson('/v1/register', [
+        'name' => 'Sin Torre',
+        'email' => 'sintorre@ejemplo.test',
+        'password' => 'ClaveDePrueba1*',
+        'belongs_to_complex' => 1,
+        'complex_id' => conjunto(),
+    ])->assertCreated();
+
+    $user = User::where('email', 'sintorre@ejemplo.test')->first();
+
+    expect(UserAddress::where('user_id', $user->user_id)->exists())->toBeFalse();
+});

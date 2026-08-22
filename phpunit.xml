@@ -18,6 +18,11 @@
         </include>
     </source>
     <php>
+        <!-- El generador de Excel arma el libro en memoria con zipstream y se
+             pasa de los 128 MB que trae PHP por defecto en consola. No es una
+             fuga: son varias hojas de detalle a la vez. Sin esto la suite falla
+             de forma intermitente, según cuántos datos tenga el caso. -->
+        <ini name="memory_limit" value="512M"/>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>

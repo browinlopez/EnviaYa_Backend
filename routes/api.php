@@ -504,6 +504,13 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
 
         Route::get('audits', [AdminApiController::class, 'audits'])->middleware('modulo:auditoria');
 
+        /*
+         * Va ANTES que `reports/{kind}`: si fuera después, `{kind}` se comería
+         * "desglose" y respondería "tipo de reporte no válido".
+         */
+        Route::get('reports-desglose', [AdminApiController::class, 'desglose'])
+            ->middleware('modulo:reportes');
+
         Route::get('reports/{kind}', [AdminApiController::class, 'report'])->middleware('modulo:reportes');
         // El libro de Excel multi-hoja. Vivía en el panel anterior en Blade, con
         // sesión web y sin autorización por área; acá queda detrás del módulo.

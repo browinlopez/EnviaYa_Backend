@@ -173,3 +173,47 @@ test('los domiciliarios se filtran por negocio', function () {
     expect(count($this->getJson('/v1/admin/domiciliaries')->json()))->toBe(2);
     expect(count($this->getJson("/v1/admin/domiciliaries?business_id={$negocio}")->json()))->toBe(1);
 });
+
+test('el desglose dice que negocio aporta cuanto', function () {
+    // Las tarjetas del panel eran callejones sin salida: decían el total y no
+    // de dónde salía.
+    $a = negocioParaFiltro('Tienda A');
+    $b = negocioParaFiltro('Tienda B');
+
+    pedidoParaFiltro(compradorDeConjunto(null), $a, 50000);
+    pedidoParaFiltro(compradorDeConjunto(null), $b, 20000);
+
+    Sanctum::actingAs(staffReportes());
+
+    $r = $this->getJson('/v1/admin/reports-desglose?metric=revenue')->assertOk();
+
+    expect($r->json('businesses.0.name'))->toBe('Tienda A')
+        ->and((float) $r->json('businesses.0.revenue'))->toBe(50000.0)
+        ->and((float) $r->json('businesses.1.revenue'))->toBe(20000.0);
+});
+
+test('el desglose respeta los mismos filtros que la tarjeta', function () {
+    // Si el desglose no sumara lo que dice la tarjeta, sería peor que no
+    // tenerlo.
+    $complexId = DB::table('residential_complexes')->insertGetId([
+        'name' => 'Los Almendros', 'state' => 1, 'people_count' => 0,
+    ], 'complex_id');
+
+    $negocio = negocioParaFiltro('Tienda');
+
+    pedidoParaFiltro(compradorDeConjunto($complexId), $negocio, 20000);
+    pedidoParaFiltro(compradorDeConjunto(null), $negocio, 50000);
+
+    Sanctum::actingAs(staffReportes());
+
+    expect((float) $this->getJson("/v1/admin/reports-desglose?metric=revenue&complex_id={$complexId}")
+        ->json('businesses.0.revenue'))->toBe(20000.0);
+});
+
+test('una cifra sin desglose responde 404 y dice cuales hay', function () {
+    Sanctum::actingAs(staffReportes());
+
+    $this->getJson('/v1/admin/reports-desglose?metric=inventada')
+        ->assertStatus(404)
+        ->assertJsonStructure(['message', 'metrics']);
+});

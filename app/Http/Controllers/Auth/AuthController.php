@@ -6,6 +6,8 @@ use App\Services\Totp;
 use App\Http\Controllers\Controller;
 use App\Models\Buyer\Buyer;
 use App\Models\Buyer\BuyerComplex;
+use App\Models\Buyer\ResidentialComplex;
+use App\Models\User\UserAddress;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -30,6 +32,18 @@ class AuthController extends Controller
             'phone'              => 'nullable|string|max:20',
             'belongs_to_complex' => 'boolean',
             'complex_id'         => 'nullable|integer|exists:residential_complexes,complex_id',
+            /*
+             * Dónde vive dentro del conjunto.
+             *
+             * Se piden en el registro porque es cuando la persona ya declaró
+             * su conjunto; pedirlos después obliga a volver a preguntarle por
+             * el contexto entero.
+             *
+             * Texto y no número: hay conjuntos con "Torre A" y apartamentos
+             * como "502B".
+             */
+            'tower'              => 'nullable|string|max:40',
+            'apartment'          => 'nullable|string|max:40',
         ]);
 
         try {
@@ -68,6 +82,35 @@ class AuthController extends Controller
                         'buyer_id' => $buyer->buyer_id,
                         'complex_id' => $validated['complex_id'],
                     ]);
+
+                    /*
+                     * Y su primera dirección, si dijo torre y apartamento.
+                     *
+                     * Sin esto, quien se registra declarando su conjunto
+                     * tendría que volver a escribirlo todo la primera vez que
+                     * pide: el conjunto quedaba anotado en el pivote y su
+                     * dirección no existía.
+                     *
+                     * Hereda las coordenadas del conjunto. Son las buenas
+                     * hasta que la edite en el mapa, y bastante mejores que
+                     * dejarla sin punto: sin coordenadas el domiciliario no
+                     * puede abrir la ruta.
+                     */
+                    if (!empty($validated['tower']) && !empty($validated['apartment'])) {
+                        $conjunto = ResidentialComplex::find($validated['complex_id']);
+
+                        UserAddress::create([
+                            'user_id'         => $user->user_id,
+                            'address'         => $conjunto?->address ?: ($conjunto?->name ?: 'Conjunto'),
+                            'complex_id'      => $validated['complex_id'],
+                            'tower'           => $validated['tower'],
+                            'apartment'       => $validated['apartment'],
+                            'latitude'        => $conjunto?->latitude,
+                            'longitude'       => $conjunto?->longitude,
+                            'municipality_id' => $conjunto?->municipality_id,
+                            'state'           => true,
+                        ]);
+                    }
                 }
 
                 $this->sendVerificationEmail($user);
