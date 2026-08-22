@@ -7,6 +7,7 @@ use App\Models\Buyer\Buyer;
 use App\Models\User;
 use App\Models\User\UserAddress;
 use App\Models\Notification;
+use App\Services\MunicipioPorNombre;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
@@ -238,17 +239,39 @@ class UserController extends Controller
              * y la que de verdad permite llegar a la puerta.
              */
             'street' => 'nullable|string|max:150',
-            //'municipality_id' => 'required|integer|exists:municipalities,id',
+            /*
+             * El municipio llega por NOMBRE, no por identificador.
+             *
+             * El teléfono resuelve las coordenadas a ciudad y departamento para
+             * escribir la dirección en pantalla; no conoce nuestros ids. Antes
+             * esto pedía `municipality_id` y estaba comentado, así que ninguna
+             * dirección creada desde la app tenía municipio.
+             *
+             * Se sigue admitiendo el id por si algún día lo manda el panel.
+             */
+            'municipality' => 'nullable|string|max:120',
+            'department' => 'nullable|string|max:120',
+            'municipality_id' => 'nullable|integer|exists:municipalities,id',
             'alias_id' => 'nullable|integer|exists:alias,alias_id',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric'
         ]);
 
+        /*
+         * Si no se reconoce el municipio se guarda igual, sin él.
+         *
+         * Rechazar la dirección por eso dejaría a alguien sin poder pedir por
+         * vivir en un municipio que todavía no está en la tabla —y la dirección
+         * del mapa, que es la que usa el domiciliario, ya está completa—.
+         */
+        $municipioId = $request->municipality_id
+            ?? MunicipioPorNombre::resolver($request->municipality, $request->department);
+
         $address = UserAddress::create([
             'user_id' => $request->user_id,
             'address' => $request->address,
             'street' => $request->street,
-            //'municipality_id' => $request->municipality_id,
+            'municipality_id' => $municipioId,
             'alias_id' => $request->alias_id,
             'latitude' => $request->latitude,
             'longitude' => $request->longitude,
