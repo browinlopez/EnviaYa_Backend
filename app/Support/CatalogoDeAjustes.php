@@ -62,6 +62,15 @@ class CatalogoDeAjustes
                 'reglas'   => 'required|integer|min:0|max:100000',
             ],
 
+            'operacion.comision_plataforma' => [
+                'grupo'    => 'operacion',
+                'etiqueta' => 'Comisión de la plataforma sobre la venta',
+                'tipo'     => 'porcentaje',
+                'ayuda'    => 'De lo que vende un negocio, cuánto retiene la plataforma al liquidarle. Se calcula sobre el subtotal de productos menos los descuentos —el domicilio va aparte, con su propio reparto— y se congela en cada pedido al crearlo: subirla no rehace liquidaciones ya emitidas ni le cambia a nadie lo que se le pagó el mes pasado.',
+                'defecto'  => (float) config('services.platform_commission', 0.03),
+                'reglas'   => 'required|numeric|min:0|max:1',
+            ],
+
             'operacion.tiempo_entrega_min' => [
                 'grupo'    => 'operacion',
                 'etiqueta' => 'Plazo de entrega prometido',

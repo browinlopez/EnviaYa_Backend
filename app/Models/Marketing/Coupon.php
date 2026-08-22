@@ -12,6 +12,20 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Coupon extends Model
 {
+    /*
+     * Los tres tipos.
+     *
+     * `percent` y `fixed` rebajan el SUBTOTAL DE PRODUCTOS. `free_shipping`
+     * rebaja el DOMICILIO, y por eso no lo interpreta `descuentoPara()` sino
+     * `PoliticaDeDomicilio`: son dos bolsillos distintos, y mezclarlos fue
+     * justo lo que se evitó desde el principio.
+     */
+    public const TIPO_PORCENTAJE   = 'percent';
+    public const TIPO_FIJO         = 'fixed';
+    public const TIPO_ENVIO_GRATIS = 'free_shipping';
+
+    public const TIPOS = [self::TIPO_PORCENTAJE, self::TIPO_FIJO, self::TIPO_ENVIO_GRATIS];
+
     protected $table = 'coupons';
 
     protected $fillable = [
@@ -96,7 +110,14 @@ class Coupon extends Model
      */
     public function descuentoPara(float $subtotal): float
     {
-        $bruto = $this->type === 'percent'
+        // El envío gratis no rebaja productos: su efecto está en el domicilio
+        // y lo aplica PoliticaDeDomicilio. Sin esta salida, un cupón de envío
+        // gratis con `value` en 0 devolvería 0 igual, pero por accidente.
+        if ($this->type === self::TIPO_ENVIO_GRATIS) {
+            return 0.0;
+        }
+
+        $bruto = $this->type === self::TIPO_PORCENTAJE
             ? $subtotal * ((float) $this->value / 100)
             : (float) $this->value;
 

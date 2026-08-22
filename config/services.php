@@ -53,6 +53,17 @@ return [
     // Porción de la tarifa de domicilio que le corresponde al domiciliario.
     // El resto queda para la plataforma. Se calcula al crear la orden y se
     // guarda ahí, así que cambiar este valor no reescribe lo ya entregado.
+    /*
+     * Comisión de la plataforma sobre la venta del negocio.
+     *
+     * Es el valor de fábrica: el vigente lo publica el panel y lo lee
+     * `Ajustes::valor('operacion.comision_plataforma')`. Hasta ahora la
+     * plataforma no le retenía NADA al negocio —`LiquidacionService` daba
+     * `platform_fee = 0` siempre— y su único ingreso era su porción del
+     * domicilio.
+     */
+    'platform_commission' => (float) env('PLATFORM_COMMISSION', 0.03),
+
     'domiciliary_share' => env('DOMICILIARY_SHARE', 0.25),
 
     /*

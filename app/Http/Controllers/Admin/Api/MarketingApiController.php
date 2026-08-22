@@ -654,7 +654,7 @@ class MarketingApiController extends Controller
         return $request->validate([
             'code'              => "{$regla}|string|max:40|{$unico}",
             'description'       => 'sometimes|nullable|string|max:255',
-            'type'              => 'sometimes|in:percent,fixed',
+            'type'              => 'sometimes|in:percent,fixed,free_shipping',
             'value'             => "{$regla}|numeric|min:0",
             'max_discount'      => 'sometimes|nullable|numeric|min:0',
             'min_order'         => 'sometimes|numeric|min:0',

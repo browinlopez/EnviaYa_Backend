@@ -44,6 +44,13 @@ class OrdersSales extends Audit
         // Parte del domicilio que le queda al domiciliario (el resto es de la
         // plataforma). Se calcula al crear la orden y no se recalcula después.
         'domiciliary_fee',
+        // Lo que la plataforma le retiene al negocio de esta venta.
+        'platform_fee',
+        // Lo que la plataforma puso para que el cliente pagara menos domicilio
+        // sin que el repartidor cobrara menos. Es el costo de la promoción.
+        'delivery_subsidy',
+        // Lo que el domiciliario quedó debiendo por cobrar en efectivo.
+        'cash_due',
         'sale_date',
         'delivery_date',
         'is_scheduled',
@@ -81,6 +88,9 @@ class OrdersSales extends Audit
         'delivery_date' => 'datetime',
         'dispatched_at' => 'datetime',
         'promised_minutes' => 'integer',
+        'platform_fee' => 'decimal:2',
+        'delivery_subsidy' => 'decimal:2',
+        'cash_due' => 'decimal:2',
     ];
 
     /**

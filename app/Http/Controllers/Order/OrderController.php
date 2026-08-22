@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Order;
 
 use App\Services\Ajustes;
+use App\Services\PoliticaDeDomicilio;
 use App\Services\ConfirmacionDePago;
 use App\Services\Avisos;
 use App\Events\DomiciliaryLocationUpdated;
@@ -554,16 +555,16 @@ class OrderController extends Controller
              * Se congela en el pedido al crearlo, como el reparto: cambiarla no
              * reescribe lo ya entregado.
              */
-            $domicilio = $isPickup ? 0 : (float) Ajustes::valor('operacion.tarifa_domicilio');
+            $tarifaBase = $isPickup ? 0.0 : (float) Ajustes::valor('operacion.tarifa_domicilio');
 
             /*
              * Cupón. El descuento se recalcula en el servidor a partir del
              * código: aceptar el monto que mande el cliente sería dejar que
              * cualquiera se ponga el descuento que quiera.
              *
-             * Solo aplica sobre el subtotal de productos, nunca sobre el
-             * domicilio: esa tarifa es del domiciliario, y descontarla saldría
-             * de su bolsillo y no de la promoción.
+             * Se resuelve ANTES del domicilio porque ahora también puede
+             * afectarlo: un cupón de envío gratis no toca el subtotal, rebaja
+             * la tarifa.
              */
             $cupon = app(CouponService::class)->resolver(
                 $request->input('coupon_code'),
@@ -573,6 +574,24 @@ class OrderController extends Controller
             );
 
             $descuento = $cupon ? $cupon->descuentoPara($subtotal) : 0.0;
+
+            /*
+             * EL DOMICILIO SE PARTE EN TRES.
+             *
+             * Antes era una sola cifra y por eso no había forma de regalarlo:
+             * `domiciliary_fee` salía de lo que pagaba el cliente, así que un
+             * domicilio gratis era un viaje gratis para quien lo hace.
+             *
+             *   tarifa base   lo que cuesta el servicio
+             *   domicilio     lo que PAGA el cliente (puede ser 0)
+             *   subsidio      lo que pone la plataforma para cubrir la rebaja
+             *
+             * La rebaja sale del bolsillo de la plataforma, nunca del
+             * repartidor. El costo de la promoción queda anotado en su propia
+             * columna para poder medir cuánto cuesta la campaña.
+             */
+            $rebajaDomicilio = app(PoliticaDeDomicilio::class)->rebajaPara($tarifaBase, $cupon);
+            $domicilio       = $tarifaBase - $rebajaDomicilio;
 
             $total = $subtotal + $domicilio - $descuento;
 
@@ -609,11 +628,31 @@ class OrderController extends Controller
                 ], 409);
             }
 
-            // Del domicilio, una porción es del domiciliario y el resto de la
-            // plataforma. Se congela acá: si la comisión cambia después, esta
-            // orden conserva lo que se pactó al crearla.
+            /*
+             * Lo que gana el domiciliario sale de la TARIFA BASE, no de lo que
+             * pagó el cliente. Es la línea que hace posible el domicilio
+             * gratis: con `$domicilio` acá, una promoción le habría bajado el
+             * pago a quien hace el viaje.
+             *
+             * Se congela: si el reparto cambia después, esta orden conserva lo
+             * que se pactó al crearla.
+             */
             $domiciliaryFee = round(
-                $domicilio * (float) Ajustes::valor('operacion.reparto_domiciliario')
+                $tarifaBase * (float) Ajustes::valor('operacion.reparto_domiciliario')
+            );
+
+            /*
+             * Comisión de la plataforma sobre la venta del negocio.
+             *
+             * Sobre el subtotal MENOS el descuento, que es lo que el negocio
+             * va a cobrar de verdad: cobrarle comisión sobre un dinero que no
+             * recibió sería cobrarle dos veces la promoción. El domicilio no
+             * entra: no es venta suya.
+             */
+            $platformFee = round(
+                max(0.0, $subtotal - $descuento)
+                * (float) Ajustes::valor('operacion.comision_plataforma'),
+                2
             );
 
             /*
@@ -649,6 +688,9 @@ class OrderController extends Controller
                 'discount' => $descuento,
                 'coupon_id' => $cupon?->id,
                 'domiciliary_fee' => $domiciliaryFee,
+                // Congeladas al crear, como todo lo que decide dinero.
+                'platform_fee'     => $platformFee,
+                'delivery_subsidy' => $rebajaDomicilio,
                 'sale_date' => now(),
                 /*
                  * Solo los programados nacen con fecha: ahí `delivery_date` es
