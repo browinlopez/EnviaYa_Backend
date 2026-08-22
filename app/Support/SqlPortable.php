@@ -27,6 +27,26 @@ class SqlPortable
             : "strftime('%Y-%m', {$columna})";
     }
 
+    /** La hora del día (0-23) de una columna de fecha. */
+    public static function hora(string $columna): string
+    {
+        // SQLite devuelve el texto '08', no el número 8: se convierte para que
+        // el agrupado y la clave del resultado sean iguales en los dos
+        // motores. Sin el CAST, el panel busca la hora 8 y encuentra '08'.
+        return self::esMysql()
+            ? "HOUR({$columna})"
+            : "CAST(strftime('%H', {$columna}) AS INTEGER)";
+    }
+
+    /** Sólo la fecha, sin la hora. */
+    public static function soloFecha(string $columna): string
+    {
+        // `DATE()` existe en los dos, pero se expone acá igual: tenerlo junto a
+        // las demás evita que la próxima consulta lo escriba a mano y falle el
+        // día que cambie algo.
+        return "DATE({$columna})";
+    }
+
     /** Minutos entre dos instantes. */
     public static function minutosEntre(string $desde, string $hasta): string
     {

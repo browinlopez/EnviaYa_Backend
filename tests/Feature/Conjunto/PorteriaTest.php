@@ -344,3 +344,115 @@ test('el celador no ve quien vive donde', function () {
 
     $this->getJson('/v1/conjunto/residentes')->assertStatus(403);
 });
+
+/* ---------------------- RESUMEN Y REPORTES ---------------------------- */
+
+test('el resumen trae las 24 horas aunque casi todas esten en cero', function () {
+    $c = conjuntoConPersonal();
+    repartidorConPedidoEn($c['complexId']);
+
+    Sanctum::actingAs($c['user']);
+
+    $r = $this->getJson('/v1/conjunto/resumen')->assertOk();
+
+    /*
+     * Las 24 siempre. Una gráfica que sólo pinta las horas con movimiento
+     * miente sobre la forma del día: tres barras seguidas se leen como
+     * "de 8 a 10" cuando en realidad son las 8, las 14 y las 21.
+     */
+    expect($r->json('por_hora'))->toHaveCount(24)
+        ->and($r->json('por_hora.0.etiqueta'))->toBe('00:00')
+        ->and($r->json('por_hora.23.etiqueta'))->toBe('23:00');
+});
+
+test('la serie rellena con cero los dias sin movimiento', function () {
+    $c = conjuntoConPersonal();
+
+    Sanctum::actingAs($c['user']);
+
+    $r = $this->getJson('/v1/conjunto/resumen?dias=14')->assertOk();
+
+    // Sin rellenar, la gráfica une el lunes con el jueves en una línea recta
+    // y un fin de semana muerto parece actividad constante.
+    expect($r->json('series'))->toHaveCount(14)
+        ->and(collect($r->json('series'))->every(fn ($d) => isset($d['pedidos'])))->toBeTrue();
+});
+
+test('la ventana de la serie se acota: 365 dias no pasan', function () {
+    $c = conjuntoConPersonal();
+
+    Sanctum::actingAs($c['user']);
+
+    // Con un año la gráfica no se lee y la consulta agrupa 365 grupos para
+    // pintar una línea de un píxel por día.
+    $this->getJson('/v1/conjunto/resumen?dias=365')
+        ->assertOk()
+        ->assertJsonPath('dias', 90);
+
+    $this->getJson('/v1/conjunto/resumen?dias=1')
+        ->assertOk()
+        ->assertJsonPath('dias', 7);
+});
+
+test('un celador NO llega a los reportes del edificio', function () {
+    $c = conjuntoConPersonal(ComplexStaff::CELADOR);
+
+    Sanctum::actingAs($c['user']);
+
+    // Tiene delante a quien pasa por la puerta; el histórico de qué torre pide
+    // más no le corresponde.
+    $this->getJson('/v1/conjunto/reportes')->assertStatus(403);
+    $this->getJson('/v1/conjunto/reportes/excel')->assertStatus(403);
+
+    // El resumen sí: necesita saber cuánto movimiento lleva el turno.
+    $this->getJson('/v1/conjunto/resumen')->assertOk();
+});
+
+test('el dueno si, y el reporte no lleva nombres de residentes', function () {
+    $c = conjuntoConPersonal(ComplexStaff::DUENO);
+    repartidorConPedidoEn($c['complexId']);
+
+    Sanctum::actingAs($c['user']);
+
+    $r = $this->getJson('/v1/conjunto/reportes')->assertOk();
+
+    expect($r->json('totales.pedidos'))->toBe(1)
+        ->and($r->json('por_torre.0.torre'))->toBe('3');
+
+    /*
+     * El reporte dice cuántos pedidos llegaron a la torre 3, no quién pidió
+     * qué. Son datos personales de terceros y la relación de cada vecino es
+     * con la plataforma, no con la administración del edificio.
+     */
+    $crudo = $r->getContent();
+    expect($crudo)->not->toContain('buyer')
+        ->and($crudo)->not->toContain('apartment');
+});
+
+test('unas fechas al reves se corrigen en vez de devolver cero filas', function () {
+    $c = conjuntoConPersonal(ComplexStaff::DUENO);
+
+    Sanctum::actingAs($c['user']);
+
+    // Es un error de dedo, y cero filas se lee como "no hubo movimiento".
+    $r = $this->getJson('/v1/conjunto/reportes?desde=2026-08-20&hasta=2026-08-01')
+        ->assertOk();
+
+    expect($r->json('periodo.desde'))->toBe('2026-08-01')
+        ->and($r->json('periodo.hasta'))->toBe('2026-08-20');
+});
+
+test('el reporte de otro conjunto no existe: cada quien ve el suyo', function () {
+    $mio  = conjuntoConPersonal(ComplexStaff::DUENO);
+    $otro = conjuntoConPersonal(ComplexStaff::DUENO);
+
+    // Pedido en el conjunto del vecino.
+    repartidorConPedidoEn($otro['complexId']);
+
+    Sanctum::actingAs($mio['user']);
+
+    // No hay parámetro que cambiar: el conjunto sale de la sesión.
+    $this->getJson('/v1/conjunto/reportes')
+        ->assertOk()
+        ->assertJsonPath('totales.pedidos', 0);
+});

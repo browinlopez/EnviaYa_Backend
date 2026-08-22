@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Conjunto;
 use App\Http\Controllers\Controller;
 use App\Models\Domiciliary;
 use App\Services\AccesoAlConjunto;
+use App\Services\PulsoDelConjunto;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -22,8 +23,10 @@ use Illuminate\Support\Facades\DB;
  */
 class PorteriaController extends Controller
 {
-    public function __construct(private AccesoAlConjunto $acceso)
-    {
+    public function __construct(
+        private AccesoAlConjunto $acceso,
+        private PulsoDelConjunto $pulso,
+    ) {
     }
 
     public function verificar(Request $request)
@@ -58,7 +61,7 @@ class PorteriaController extends Controller
             return response()->json([
                 'message' => 'Este domiciliario no tiene pedidos en el conjunto',
                 'allowed' => false,
-                'domiciliary' => $this->ficha($domiciliario),
+                'domiciliary' => $this->ficha($domiciliario, $complexId),
             ]);
         }
 
@@ -79,7 +82,7 @@ class PorteriaController extends Controller
             'message'     => 'Puede entrar.',
             'allowed'     => true,
             'entry_id'    => $entrada,
-            'domiciliary' => $this->ficha($domiciliario),
+            'domiciliary' => $this->ficha($domiciliario, $complexId),
             'orders'      => $pedidos,
         ]);
     }
@@ -89,27 +92,79 @@ class PorteriaController extends Controller
     {
         $complexId = (int) $request->attributes->get('complex_id');
 
-        $filas = DB::table('complex_entries as e')
+        $consulta = DB::table('complex_entries as e')
             ->where('e.complex_id', $complexId)
             ->leftJoin('domiciliary as d', 'd.domiciliary_id', '=', 'e.domiciliary_id')
             ->leftJoin('user as u', 'u.user_id', '=', 'd.user_id')
+            // Quién estaba en la portería cuando pasó. Es la mitad del valor
+            // de un registro de entradas: sin eso dice qué ocurrió y no bajo
+            // la responsabilidad de quién.
+            ->leftJoin('user as c', 'c.user_id', '=', 'e.registered_by');
+
+        if ($buscar = trim((string) $request->query('search'))) {
+            $consulta->where(function ($q) use ($buscar) {
+                $q->where('u.name', 'like', "%{$buscar}%")
+                    ->orWhere('d.document', 'like', "%{$buscar}%");
+            });
+        }
+
+        if ($metodo = $request->query('method')) {
+            if (in_array($metodo, ['codigo', 'cedula'], true)) {
+                $consulta->where('e.method', $metodo);
+            }
+        }
+
+        if ($desde = $request->query('desde')) {
+            $consulta->whereDate('e.created_at', '>=', $desde);
+        }
+
+        if ($hasta = $request->query('hasta')) {
+            $consulta->whereDate('e.created_at', '<=', $hasta);
+        }
+
+        $filas = $consulta
             ->orderByDesc('e.created_at')
-            ->limit(200)
+            ->limit(300)
             ->get([
                 'e.id', 'e.method', 'e.orders_count', 'e.created_at',
-                'u.name as domiciliary_name',
+                // El detalle guardado al entrar: a qué torre y apartamento iba
+                // cada pedido. Se congeló en ese momento a propósito — si se
+                // recalculara, un pedido entregado después ya no aparecería y
+                // el registro de una entrada pasada cambiaría solo.
+                'e.orders',
+                'u.name as domiciliary_name', 'd.document',
+                'c.name as registered_by_name',
             ]);
 
         return response()->json(['data' => $filas]);
     }
 
-    private function ficha(Domiciliary $d): array
+    /**
+     * Quién es quien está en la puerta.
+     *
+     * Lleva más de lo que hace falta para decidir si pasa —eso ya lo decidió
+     * la consulta de pedidos— porque la decisión no siempre es automática. Un
+     * celador que ve «primera vez que entra» mira con más cuidado que uno que
+     * ve «lleva 40 entradas», y sin el dato las dos situaciones se ven
+     * exactamente igual.
+     *
+     * La calificación y el historial son del DOMICILIARIO, no del comprador:
+     * acá no se expone nada de quien pidió.
+     */
+    private function ficha(Domiciliary $d, int $complexId): array
     {
         return [
             'domiciliary_id' => $d->domiciliary_id,
             'name'           => $d->user->name ?? null,
             'document'       => $d->document,
             'phone'          => $d->user->phone ?? null,
+            'qualification'  => $d->qualification !== null ? (float) $d->qualification : null,
+            // Si se marcó disponible en su app. No impide entrar —ya tiene los
+            // pedidos encima— pero explica por qué a veces no aparece en la
+            // lista del tendero.
+            'available'      => (bool) $d->available,
+            'activo'         => (bool) $d->state,
+            'historial'      => $this->pulso->historialEnElConjunto($complexId, (int) $d->domiciliary_id),
         ];
     }
 }

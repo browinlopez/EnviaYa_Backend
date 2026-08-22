@@ -23,6 +23,7 @@ use App\Http\Controllers\Domiciliary\DomiciliaryController;
 use App\Http\Controllers\Operacion\EfectivoController;
 use App\Http\Controllers\Conjunto\PorteriaController;
 use App\Http\Controllers\Conjunto\MiConjuntoController;
+use App\Http\Controllers\Conjunto\ResumenDelConjuntoController;
 use App\Http\Controllers\Negocio\MiNegocioController;
 use App\Http\Controllers\Negocio\ProductosDelNegocioController;
 use App\Http\Controllers\LandingRequestController;
@@ -314,6 +315,20 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
      */
     Route::prefix('conjunto')->middleware('conjunto')->group(function () {
         Route::get('me', [MiConjuntoController::class, 'mio']);
+
+        // El tablero lo ven los dos: el celador también necesita saber cuánto
+        // movimiento lleva el turno.
+        Route::get('resumen', [ResumenDelConjuntoController::class, 'resumen']);
+
+        /*
+         * Los reportes son del ADMINISTRADOR. Un celador tiene delante a quien
+         * entra; no le corresponde el histórico del edificio ni con qué
+         * frecuencia pide cada torre.
+         */
+        Route::get('reportes', [ResumenDelConjuntoController::class, 'reporte'])
+            ->middleware('conjunto:dueno');
+        Route::get('reportes/excel', [ResumenDelConjuntoController::class, 'excel'])
+            ->middleware('conjunto:dueno');
 
         Route::post('porteria/verificar', [PorteriaController::class, 'verificar']);
         Route::get('porteria/entradas', [PorteriaController::class, 'entradas']);

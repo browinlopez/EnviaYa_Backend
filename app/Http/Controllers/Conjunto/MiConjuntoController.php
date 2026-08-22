@@ -27,14 +27,26 @@ class MiConjuntoController extends Controller
     /** Qué puede hacer cada rol. Dos roles, sin matriz configurable. */
     private const PERMISOS = [
         ComplexStaff::DUENO => [
+            'resumen'   => ['view' => true, 'manage' => false],
             'porteria'  => ['view' => true, 'manage' => true],
             'entradas'  => ['view' => true, 'manage' => false],
-            'celadores' => ['view' => true, 'manage' => true],
             'residentes' => ['view' => true, 'manage' => false],
+            'celadores' => ['view' => true, 'manage' => true],
+            // El histórico del edificio es suyo: cuánto pide cada torre, qué
+            // domiciliarios entran, cómo se identifican.
+            'reportes'  => ['view' => true, 'manage' => false],
         ],
         ComplexStaff::CELADOR => [
-            // El celador registra entradas; no ve quién vive dónde ni
-            // administra cuentas. Su trabajo es la puerta.
+            /*
+             * El celador registra entradas; no ve quién vive dónde, ni
+             * administra cuentas, ni tiene el histórico del edificio. Su
+             * trabajo es la puerta.
+             *
+             * El resumen sí: necesita saber cuánto movimiento lleva el turno y
+             * a qué horas suele apretarse. Es lo mismo que tiene delante, en
+             * cifras.
+             */
+            'resumen'   => ['view' => true, 'manage' => false],
             'porteria'  => ['view' => true, 'manage' => true],
             'entradas'  => ['view' => true, 'manage' => false],
         ],
