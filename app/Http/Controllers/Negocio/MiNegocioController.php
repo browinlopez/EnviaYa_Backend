@@ -86,7 +86,21 @@ class MiNegocioController extends Controller
             'NIT'             => 'nullable|string|max:40',
             'razonSocial_DCD' => 'nullable|string|max:255',
             'municipality_id' => 'nullable|integer|exists:municipalities,id',
+            /*
+             * Cuánto efectivo deja que su domiciliario lleve encima. Vacío =
+             * sin tope, que es como funciona si nadie lo toca.
+             *
+             * `nullable` de verdad: un cero significaría «no le despaches ni un
+             * pedido contra entrega», que es una decisión legítima pero muy
+             * distinta de no haber puesto tope. Se distinguen.
+             */
+            'max_courier_cash' => 'nullable|numeric|min:0|max:99999999',
         ]);
+
+        // Cadena vacía desde un formulario es «sin tope», no cero.
+        if (array_key_exists('max_courier_cash', $datos) && $datos['max_courier_cash'] === '') {
+            $datos['max_courier_cash'] = null;
+        }
 
         $negocio->fill($datos)->save();
 
@@ -110,6 +124,7 @@ class MiNegocioController extends Controller
             'type'            => (int) $b->type,
             'state'           => (int) $b->state,
             'qualification'   => $b->qualification !== null ? (float) $b->qualification : null,
+            'max_courier_cash' => $b->max_courier_cash !== null ? (float) $b->max_courier_cash : null,
             'municipality_id' => $b->municipality_id !== null ? (int) $b->municipality_id : null,
             'latitude'        => $b->latitude !== null ? (float) $b->latitude : null,
             'longitude'       => $b->longitude !== null ? (float) $b->longitude : null,

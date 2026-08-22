@@ -39,9 +39,23 @@ class DomiciliaryController extends Controller
 
         $maxSimultaneos = (int) Ajustes::valor('operacion.entregas_simultaneas');
 
-        $domiciliaries = $business->domiciliaries->map(function ($domiciliary) use ($maxSimultaneos) {
+        /*
+         * Cuánto efectivo lleva encima cada uno.
+         *
+         * El tendero lo necesita ANTES de despachar: si el negocio puso tope y
+         * el pedido es contra entrega, el servidor va a rechazar la asignación.
+         * Sin este dato, el tendero lo intenta, recibe un error y no entiende
+         * por qué — la lista le decía que esa persona estaba disponible.
+         */
+        $custodia = app(\App\Services\CustodiaDeEfectivo::class);
+        $tope = $business->max_courier_cash !== null
+            ? (float) $business->max_courier_cash
+            : null;
+
+        $domiciliaries = $business->domiciliaries->map(function ($domiciliary) use ($maxSimultaneos, $custodia, $tope) {
             $enCurso = (int) ($domiciliary->active_orders ?? 0);
             $disponible = (bool) $domiciliary->available;
+            $efectivo = round($custodia->saldo($domiciliary->domiciliary_id), 2);
 
             return [
                 'domiciliary_id' => $domiciliary->domiciliary_id,
@@ -58,6 +72,15 @@ class DomiciliaryController extends Controller
                 'max_active_orders' => $maxSimultaneos,
                 // Mismas condiciones que valida orders/update al despachar.
                 'can_take'          => $disponible && $enCurso < $maxSimultaneos,
+                'cash_on_hand'      => $efectivo,
+                'cash_limit'        => $tope,
+                /*
+                 * Cuánto le cabe todavía en efectivo. Se manda calculado y no
+                 * se deja al cliente: la app y el panel harían la misma resta
+                 * cada uno por su lado, y el día que el tope cambie de forma
+                 * habría que acordarse de los dos.
+                 */
+                'cash_room'         => $tope === null ? null : max(0, round($tope - $efectivo, 2)),
             ];
         });
 

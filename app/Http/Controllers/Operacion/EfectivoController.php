@@ -8,6 +8,7 @@ use App\Models\Operacion\CashDeposit;
 use App\Models\Operacion\CashMovement;
 use App\Services\CustodiaDeEfectivo;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 /**
@@ -47,8 +48,26 @@ class EfectivoController extends Controller
             ->limit(50)
             ->get(['id', 'type', 'amount', 'order_id', 'deposit_id', 'created_at']);
 
+        /*
+         * El tope MÁS BAJO de los negocios a los que reparte.
+         *
+         * Su saldo es uno solo, pero cada negocio pone el suyo: el que manda en
+         * la práctica es el más estricto, porque es el primero que deja de
+         * despacharle. Enseñarle el más alto le haría creer que tiene margen
+         * cuando ya hay una tienda que no le va a dar más pedidos en efectivo.
+         */
+        $tope = DB::table('business_domiciliary as bd')
+            ->join('business as b', 'b.busines_id', '=', 'bd.busines_id')
+            ->where('bd.domiciliary_id', $domiciliario->domiciliary_id)
+            ->whereNotNull('b.max_courier_cash')
+            ->min('b.max_courier_cash');
+
+        $saldo = $this->custodia->saldo($domiciliario->domiciliary_id);
+
         return response()->json([
-            'balance'     => $this->custodia->saldo($domiciliario->domiciliary_id),
+            'balance'     => $saldo,
+            'cash_limit'  => $tope !== null ? (float) $tope : null,
+            'cash_room'   => $tope !== null ? max(0, round((float) $tope - $saldo, 2)) : null,
             'movements'   => $movimientos,
             'deposits'    => CashDeposit::where('domiciliary_id', $domiciliario->domiciliary_id)
                 ->latest('created_at')->limit(20)->get(),

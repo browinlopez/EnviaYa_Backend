@@ -1144,6 +1144,42 @@ class OrderController extends Controller
                 ], 422);
             }
 
+            /*
+             * CUÁNTO EFECTIVO PUEDE LLEVAR ENCIMA.
+             *
+             * Sólo cuenta para los pedidos contra entrega: uno ya pagado por la
+             * app no le pone un peso más en el bolsillo, y bloquearlo por el
+             * saldo sería castigarlo por deber dinero que no tiene que ver.
+             *
+             * El tope es del NEGOCIO que despacha, aunque el saldo del
+             * domiciliario sea global —cobra para varias tiendas—. Es lo
+             * correcto: quien decide si le confía otro pedido en efectivo es
+             * quien se lo está entregando.
+             *
+             * Se valida acá y no en la app porque por esta transición pasan los
+             * dos caminos: el tendero despachando y el domiciliario tomando el
+             * pedido de su lista. En el cliente, cualquiera de los dos se la
+             * saltaría.
+             */
+            $tope = $order->business?->max_courier_cash;
+
+            if ($tope !== null && (int) $order->methods_id === 1) {
+                $encima = app(CustodiaDeEfectivo::class)
+                    ->saldo($domiciliary->domiciliary_id);
+
+                $quedaria = $encima + (float) $order->total;
+
+                if ($quedaria > (float) $tope) {
+                    return response()->json([
+                        'message' => 'Con este pedido pasaría el máximo de efectivo que puede llevar encima. Tiene que consignar antes.',
+                        'reason'  => 'cash_limit_reached',
+                        'cash_now'   => round($encima, 2),
+                        'cash_after' => round($quedaria, 2),
+                        'cash_limit' => (float) $tope,
+                    ], 422);
+                }
+            }
+
             $order->state = 3;
             $order->domiciliary_id = $domiciliary->domiciliary_id;
             // Ancla del cronómetro de entrega en la app

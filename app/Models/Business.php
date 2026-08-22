@@ -32,7 +32,13 @@ class Business extends Audit
         'logo',
         'city',
         'type',
-        'state'
+        'state',
+        /*
+         * Cuánto efectivo deja que un domiciliario lleve encima. Sin esto en
+         * `fillable`, `fill()` lo descartaba EN SILENCIO: el tendero guardaba
+         * el tope, la pantalla decía «actualizado» y la columna seguía nula.
+         */
+        'max_courier_cash',
     ];
 
     public function owners()
