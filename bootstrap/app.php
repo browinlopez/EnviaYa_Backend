@@ -55,6 +55,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // edificios distintos y compartir la puerta ampliaría en silencio
         // quién llega a la administración de la plataforma.
         'conjunto'  => \App\Http\Middleware\EnsureComplexStaff::class,
+        // Puerta del panel del tendero, hermana de la anterior. Deja puesto el
+        // negocio de quien pide, ya comprobado contra la cadena de propiedad,
+        // para que ningún controlador tenga que creerle un `business_id` al
+        // cuerpo de la petición.
+        'negocio'   => \App\Http\Middleware\EnsureBusinessOwner::class,
         // Puerta de los archivos. Aparte porque el módulo que manda depende de
         // la entidad de la URL: los de un negocio los rige `negocios` y los de
         // un banner, `marketing.banners`.

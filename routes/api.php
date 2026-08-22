@@ -23,6 +23,8 @@ use App\Http\Controllers\Domiciliary\DomiciliaryController;
 use App\Http\Controllers\Operacion\EfectivoController;
 use App\Http\Controllers\Conjunto\PorteriaController;
 use App\Http\Controllers\Conjunto\MiConjuntoController;
+use App\Http\Controllers\Negocio\MiNegocioController;
+use App\Http\Controllers\Negocio\ProductosDelNegocioController;
 use App\Http\Controllers\LandingRequestController;
 use App\Http\Controllers\Marketing\AdsController;
 use App\Http\Controllers\Order\OrderController;
@@ -327,6 +329,49 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
             ->middleware('conjunto:dueno');
         Route::put('celadores/{id}', [MiConjuntoController::class, 'cambiarCelador'])
             ->middleware('conjunto:dueno');
+    });
+
+    /*
+     * PANEL DEL TENDERO. Vive en el mismo panel de aliados que los conjuntos:
+     * las dos son gente que trabaja CON la plataforma y no EN ella.
+     *
+     * Todas estas rutas apuntan a los MISMOS controladores que ya atienden a
+     * la app movil. La diferencia esta en la puerta: `negocio` resuelve el
+     * local de quien pide contra la cadena de propiedad y lo escribe en la
+     * peticion, pisando lo que haya mandado el cliente.
+     *
+     * Eso importa porque los endpoints originales (`/orders/business`,
+     * `/product/index`, `/businesses/update`) reciben el `business_id` en el
+     * cuerpo y le creen: con el numero de otra tienda devuelven sus pedidos,
+     * con nombre, telefono y direccion de cada comprador. Aca ese numero no se
+     * puede elegir.
+     */
+    Route::prefix('negocio')->middleware('negocio')->group(function () {
+        Route::get('me', [MiNegocioController::class, 'mio']);
+        Route::put('me', [MiNegocioController::class, 'actualizar']);
+
+        // Pedidos. `updateStatus` ya comprobaba pertenencia por su cuenta
+        // —es la unica del grupo que lo hacia— y se reutiliza tal cual.
+        Route::get('pedidos', [OrderController::class, 'ordersBusiness']);
+        Route::put('pedidos/estado', [OrderController::class, 'updateStatus']);
+        Route::get('ingresos', [OrderController::class, 'incomeBusiness']);
+
+        /*
+         * El catalogo tiene controlador propio: un producto puede estar en
+         * varias tiendas y `ProductController@update` escribe la fila
+         * compartida sin mirar con quien. Ver el porque en
+         * ProductosDelNegocioController.
+         */
+        Route::get('productos', [ProductosDelNegocioController::class, 'index']);
+        Route::put('productos/{id}', [ProductosDelNegocioController::class, 'update']);
+        // Crear si es seguro reutilizarlo: nace una fila nueva en `products`,
+        // que no comparte con nadie todavia.
+        Route::post('productos', [ProductController::class, 'store']);
+        Route::get('productos/esquema', [ProductController::class, 'schema']);
+
+        Route::get('domiciliarios', [DomiciliaryController::class, 'listDomiciliariesByBusiness']);
+
+        Route::get('resenas', [ReviewController::class, 'listReviewsByBusiness']);
     });
 
     //Domiciliario
