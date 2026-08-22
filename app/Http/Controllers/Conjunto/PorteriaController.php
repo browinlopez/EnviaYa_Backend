@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Conjunto;
 
+use App\Events\CodigoDeAccesoUsado;
 use App\Http\Controllers\Controller;
 use App\Models\Domiciliary;
 use App\Services\AccesoAlConjunto;
@@ -57,6 +58,10 @@ class PorteriaController extends Controller
 
         $pedidos = $this->acceso->pedidosEnElConjunto($domiciliario, $complexId);
 
+        $conjunto = DB::table('residential_complexes')
+            ->where('complex_id', $complexId)
+            ->first(['name']);
+
         if ($pedidos->isEmpty()) {
             return response()->json([
                 'message' => 'Este domiciliario no tiene pedidos en el conjunto',
@@ -77,6 +82,30 @@ class PorteriaController extends Controller
             'created_at'     => now(),
             'updated_at'     => now(),
         ]);
+
+        /*
+         * Se le avisa a SU app, y sólo cuando entró por código.
+         *
+         * Con la cédula no hay nada que gastar —sirve siempre— así que un aviso
+         * de «tu código se usó» sobre una entrada por cédula sería falso.
+         *
+         * Va después de registrar la entrada: si el aviso falla —Reverb caído,
+         * red del servidor— la entrada ya está anotada. Al revés, un fallo de
+         * notificación dejaría a alguien pasando sin registro.
+         */
+        if ($porCodigo) {
+            try {
+                CodigoDeAccesoUsado::dispatch(
+                    (int) $domiciliario->user_id,
+                    (string) ($conjunto?->name ?? 'el conjunto'),
+                    $pedidos->count(),
+                );
+            } catch (\Throwable $e) {
+                // Que no se pueda avisar no puede tumbar la portería: la
+                // persona está en la puerta y el celador espera una respuesta.
+                report($e);
+            }
+        }
 
         return response()->json([
             'message'     => 'Puede entrar.',
