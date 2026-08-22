@@ -376,3 +376,45 @@ it('quien solo consulta no puede anular en lote', function () {
 
     expect($f->fresh()->estaAnulada())->toBeFalse();
 });
+
+/* -------------------------------------------------------------------------
+   QUÉ DICE EL PAPEL
+   ------------------------------------------------------------------------- */
+
+test('el comprobante no lleva la marca ni el NIT de la plataforma', function () {
+    // Quien vende es el negocio. Encabezar el documento con el nombre de la
+    // plataforma sugiere que la venta es suya, y no lo es: solo intermedia.
+    $factura = app(FacturaService::class)->emitirPara(pedidoConEntrega());
+
+    $html = view('documentos.factura', [
+        'f'         => $factura,
+        'negocio'   => $factura->snapshot['negocio'] ?? [],
+        'comprador' => $factura->snapshot['comprador'] ?? [],
+        'entrega'   => $factura->snapshot['entrega'] ?? [],
+        'renglones' => $factura->snapshot['renglones'] ?? [],
+        'empresa'   => config('services.contrato'),
+    ])->render();
+
+    expect($html)->not->toContain("VeciPa'Ya")
+        ->and($html)->not->toContain('MARCAVA');
+});
+
+test('dice vendido y no entregado', function () {
+    $factura = app(FacturaService::class)->emitirPara(pedidoConEntrega());
+
+    $html = view('documentos.factura', [
+        'f'         => $factura,
+        'negocio'   => $factura->snapshot['negocio'] ?? [],
+        'comprador' => $factura->snapshot['comprador'] ?? [],
+        'entrega'   => $factura->snapshot['entrega'] ?? [],
+        'renglones' => $factura->snapshot['renglones'] ?? [],
+        'empresa'   => config('services.contrato'),
+    ])->render();
+
+    expect($html)->toContain('Comprobante de venta')
+        ->and($html)->toContain('Vendido a')
+        ->and($html)->not->toContain('Entregado a')
+        // El del negocio sí se conserva: es quien vende y su identificación
+        // tributaria es lo que le da valor al documento.
+        ->and($html)->toContain('Vendido por');
+});

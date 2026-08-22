@@ -81,15 +81,20 @@
 
 <table class="encabezado">
     <tr>
-        <td style="width:58%;">
-            <div class="marca">{{ $empresa['plataforma'] ?? "VeciPa'Ya" }}</div>
-            <div class="tenue micro">
-                {{ $empresa['nombre'] ?? '' }}
-                @if (!empty($empresa['nit'])) · NIT {{ $empresa['nit'] }} @endif
-            </div>
-        </td>
+        {{--
+            SIN EL ENCABEZADO DE LA PLATAFORMA.
+
+            Acá iban la marca, la razón social y el NIT de VeciPa'Ya, y no
+            corresponden: quien vende es el negocio, y sus datos están abajo
+            en "Vendido por". La plataforma solo intermedia; encabezar el
+            documento con su nombre sugiere que la venta es suya.
+
+            La celda se queda vacía y no se borra para no descuadrar la tabla:
+            la de la derecha depende de este 58 % para alinearse.
+        --}}
+        <td style="width:58%;"></td>
         <td class="der">
-            <div class="rotulo">Comprobante de entrega</div>
+            <div class="rotulo">Comprobante de venta</div>
             <div class="numero">{{ $f->invoice_number }}</div>
             <div class="tenue micro">
                 {{ optional($f->invoice_date)->format('d/m/Y H:i') }}
@@ -115,7 +120,9 @@
             @endif
         </td>
         <td>
-            <div class="rotulo">Entregado a</div>
+            {{-- "Vendido a" y no "Entregado a": lo que constata este
+                 documento es una compra, no un trayecto. --}}
+            <div class="rotulo">Vendido a</div>
             <div><strong>{{ $comprador['nombre'] ?? '—' }}</strong></div>
             @if (!empty($comprador['telefono']))
                 <div class="tenue micro">{{ $comprador['telefono'] }}</div>

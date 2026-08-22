@@ -52,3 +52,21 @@ Schedule::command('backup:run')
 Schedule::command('backup:monitor')
     ->dailyAt('08:00')
     ->timezone('America/Bogota');
+
+/*
+| Liquidaciones del día anterior, en borrador.
+|
+| A las 3 de la mañana: después de la copia de seguridad —para que el respaldo
+| no incluya un corte a medias— y antes del resumen de las 7, para que quien lo
+| abra ya vea el saldo del día.
+|
+| Ayer y no hoy: a esa hora el día de hoy sigue abierto, y liquidar un día a
+| medias obligaría a un segundo corte por los pedidos de la tarde.
+|
+| El comando es idempotente: descarta los pedidos que ya estén en otro corte
+| vivo, así que un reintento no duplica nada.
+*/
+Schedule::command('liquidaciones:diarias')
+    ->dailyAt('03:00')
+    ->timezone('America/Bogota')
+    ->withoutOverlapping();

@@ -44,6 +44,16 @@ class LiquidacionService
             $pedidos = DB::table('orderssales as o')
                 ->where("o.{$columna}", $destinatarioId)
                 ->where('o.state', 4) // entregado
+                /*
+                 * Y CON EL PAGO CONFIRMADO.
+                 *
+                 * Antes solo miraba el estado, así que un pedido entregado
+                 * cuyo pago en línea fue rechazado entraba igual al corte: se
+                 * le transfería al negocio dinero que nadie llegó a cobrar.
+                 * `confirmados()` es el mismo criterio que usa el resto del
+                 * sistema para saber si un pedido está pagado.
+                 */
+                ->whereNotIn('o.payment_state', \App\Models\Order\OrdersSales::SIN_PAGO)
                 ->whereDate('o.sale_date', '>=', $desde)
                 ->whereDate('o.sale_date', '<=', $hasta)
                 // Ya liquidados en otro corte vivo del mismo tipo.
@@ -61,6 +71,10 @@ class LiquidacionService
                     'o.domicilio',
                     'o.domiciliary_fee',
                     'o.discount',
+                    // Congeladas al crear el pedido. Ver la migración
+                    // `add_dinero_congelado_to_orderssales`.
+                    'o.platform_fee',
+                    'o.cash_due',
                 ]);
 
             if ($pedidos->isEmpty()) {
@@ -79,10 +93,13 @@ class LiquidacionService
                 'created_by'     => $creadoPor,
             ]);
 
-            $totales = ['gross' => 0.0, 'delivery' => 0.0, 'discounts' => 0.0, 'net' => 0.0];
+            $totales = [
+                'gross' => 0.0, 'delivery' => 0.0, 'discounts' => 0.0,
+                'net' => 0.0, 'retenido' => 0.0,
+            ];
 
             foreach ($pedidos as $p) {
-                [$bruto, $domicilio, $descuento, $neto] = $this->repartir($tipo, $p);
+                [$bruto, $domicilio, $descuento, $neto, $retenido] = $this->repartir($tipo, $p);
 
                 SettlementItem::create([
                     'settlement_id' => $liq->id,
@@ -97,6 +114,7 @@ class LiquidacionService
                 $totales['delivery']  += $domicilio;
                 $totales['discounts'] += $descuento;
                 $totales['net']       += $neto;
+                $totales['retenido']  += $retenido;
             }
 
             $liq->update([
@@ -104,9 +122,15 @@ class LiquidacionService
                 'gross'         => round($totales['gross'], 2),
                 'delivery_fees' => round($totales['delivery'], 2),
                 'discounts'     => round($totales['discounts'], 2),
-                // Lo que retiene la plataforma es la diferencia entre lo que
-                // generó el periodo y lo que se transfiere.
-                'platform_fee'  => round($totales['gross'] + $totales['delivery'] - $totales['net'] - $totales['discounts'], 2),
+                /*
+                 * Lo retenido se SUMA de lo congelado en cada pedido, ya no se
+                 * deduce restando totales. Antes salía como residuo y para un
+                 * negocio daba siempre 0 —o sea, la plataforma no cobraba
+                 * comisión— y para un domiciliario daba la parte del domicilio
+                 * que no era suya. Con el efectivo de por medio esa resta ya no
+                 * significaría nada.
+                 */
+                'platform_fee'  => round($totales['retenido'], 2),
                 'net_payable'   => round($totales['net'], 2),
             ]);
 
@@ -117,15 +141,18 @@ class LiquidacionService
     /**
      * Qué le toca a cada quien de un pedido.
      *
-     * NEGOCIO: el subtotal de productos menos el descuento del cupón. El
-     * domicilio no es suyo, y el descuento se le resta porque la promoción se
-     * aplicó sobre su venta.
+     * NEGOCIO: el subtotal de productos, menos el descuento del cupón y menos
+     * la comisión de la plataforma. El domicilio no es suyo. La comisión sale
+     * congelada del pedido y NO se recalcula con el porcentaje de hoy: subirlo
+     * del 3 % al 5 % no puede cambiarle lo que ya se le liquidó el mes pasado.
      *
-     * DOMICILIARIO: solo `domiciliary_fee`, que ya quedó congelado al crear el
-     * pedido con el reparto pactado ese día. Recalcularlo con la comisión de
-     * hoy cambiaría lo que se le debe por entregas que ya hizo.
+     * DOMICILIARIO: su comisión, MENOS el efectivo que recaudó y todavía no ha
+     * consignado. Por eso el neto puede ser NEGATIVO, y entonces el corte no es
+     * un pago: es una deuda. Recauda el total del pedido y gana una fracción
+     * del domicilio, así que lo normal es que deba.
      *
-     * @return array{0: float, 1: float, 2: float, 3: float} bruto, domicilio, descuento, neto
+     * @return array{0: float, 1: float, 2: float, 3: float, 4: float}
+     *         bruto, domicilio, descuento, neto, retenido
      */
     private function repartir(string $tipo, object $p): array
     {
@@ -133,11 +160,18 @@ class LiquidacionService
         $domicilio = (float) ($p->domicilio ?? 0);
         $descuento = (float) ($p->discount ?? 0);
         $comision  = (float) ($p->domiciliary_fee ?? 0);
+        $retencion = (float) ($p->platform_fee ?? 0);
+        $efectivo  = (float) ($p->cash_due ?? 0);
 
         if ($tipo === 'business') {
-            return [$subtotal, 0.0, $descuento, max(0, $subtotal - $descuento)];
+            $neto = max(0, $subtotal - $descuento - $retencion);
+
+            return [$subtotal, 0.0, $descuento, $neto, $retencion];
         }
 
-        return [0.0, $domicilio, 0.0, $comision];
+        // Sin `max(0, ...)` a propósito: si debe más de lo que ganó, el saldo
+        // tiene que poder salir en rojo. Taparlo con un cero sería perder la
+        // deuda.
+        return [0.0, $domicilio, 0.0, $comision - $efectivo, 0.0];
     }
 }
