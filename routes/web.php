@@ -41,8 +41,20 @@ use Illuminate\Support\Facades\Route;
 | las vistas (`resources/views/admin`) se borraron en el mismo cambio.
 */
 
+/*
+ * LA RAÍZ REDIRIGE AL SITIO PÚBLICO.
+ *
+ * Acá vivía la landing vieja en Blade, la de la plantilla comprada. Ya no:
+ * el sitio público es `EnviaYa_Landing`, un proyecto aparte que se despliega
+ * solo. Mantener dos landings significaba que cambiar un texto obligaba a
+ * acordarse de las dos, y la de acá se quedó atrás hace meses.
+ *
+ * Se redirige en vez de devolver 404 porque quien llega a la raíz del API por
+ * un enlace viejo o escribiendo el dominio a mano debería acabar donde está el
+ * contenido, no en una página de error.
+ */
 Route::get('/', function () {
-    return view('home/index');
+    return redirect()->away(config('services.sitio.url'));
 });
 
 // --- Verificación de correo de la app móvil (token propio, no el firmado de

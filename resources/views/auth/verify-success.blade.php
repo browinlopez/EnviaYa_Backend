@@ -76,7 +76,7 @@
 
     <div class="container">
         <div class="logo">
-            <img src="{{ asset('landing/assets/img/logo.png') }}" alt="VeciPa’Ya">
+            <img src="{{ rtrim(config('services.sitio.url'), '/') }}/logotipo.png" alt="VeciPa’Ya">
         </div>
 
         <div class="success-icon">✅</div>
