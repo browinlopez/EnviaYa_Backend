@@ -229,6 +229,15 @@ class UserController extends Controller
         $request->validate([
             'user_id' => 'required|integer|exists:user,user_id',
             'address' => 'required|string|max:225',
+            /*
+             * La calle que escribe la persona. La app ya la mandaba y acá no se
+             * miraba: se perdía en silencio.
+             *
+             * Es opcional porque la dirección del mapa por sí sola ya sirve
+             * para pedir; pero cuando viene, es la que lleva el número de casa
+             * y la que de verdad permite llegar a la puerta.
+             */
+            'street' => 'nullable|string|max:150',
             //'municipality_id' => 'required|integer|exists:municipalities,id',
             'alias_id' => 'nullable|integer|exists:alias,alias_id',
             'latitude' => 'nullable|numeric',
@@ -238,6 +247,7 @@ class UserController extends Controller
         $address = UserAddress::create([
             'user_id' => $request->user_id,
             'address' => $request->address,
+            'street' => $request->street,
             //'municipality_id' => $request->municipality_id,
             'alias_id' => $request->alias_id,
             'latitude' => $request->latitude,

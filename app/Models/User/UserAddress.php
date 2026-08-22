@@ -21,6 +21,9 @@ class UserAddress extends Audit
     protected $fillable = [
         'user_id',
         'address',
+        // Sin esto Eloquent lo descarta en silencio, igual que pasó con
+        // `payment_state` en los pedidos.
+        'street',
         'municipality_id',
         'alias_id',
         'latitude',

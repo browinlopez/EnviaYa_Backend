@@ -100,7 +100,20 @@ class OrderController extends Controller
                 ],
                 'delivery_address' => !$order->pickup && $order->address ? [
                     'address_id' => $order->address->address_id,
-                    'address' => $order->address->address,
+                    /*
+                     * La calle va JUNTO a la dirección del mapa, no en vez de
+                     * ella.
+                     *
+                     * La del mapa sitúa la cuadra; la que escribió la persona
+                     * lleva el número de casa o apartamento. El domiciliario
+                     * necesita las dos para llegar a la puerta, y hasta ahora
+                     * solo le llegaba la primera.
+                     */
+                    'address' => trim(implode(', ', array_filter([
+                        $order->address->street,
+                        $order->address->address,
+                    ]))),
+                    'street' => $order->address->street,
                     'alias' => $order->address->alias?->name,
                     'municipality' => $order->address->municipality?->name,
                     'department' => $order->address->department?->name,
@@ -245,7 +258,20 @@ class OrderController extends Controller
                 ],
                 'delivery_address' => !$order->pickup && $order->address ? [
                     'address_id' => $order->address->address_id,
-                    'address' => $order->address->address,
+                    /*
+                     * La calle va JUNTO a la dirección del mapa, no en vez de
+                     * ella.
+                     *
+                     * La del mapa sitúa la cuadra; la que escribió la persona
+                     * lleva el número de casa o apartamento. El domiciliario
+                     * necesita las dos para llegar a la puerta, y hasta ahora
+                     * solo le llegaba la primera.
+                     */
+                    'address' => trim(implode(', ', array_filter([
+                        $order->address->street,
+                        $order->address->address,
+                    ]))),
+                    'street' => $order->address->street,
                     'alias' => $order->address->alias?->name,
                     'municipality' => $order->address->municipality?->name,
                     'department' => $order->address->department?->name,
