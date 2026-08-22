@@ -20,6 +20,7 @@ use App\Http\Controllers\Chat\ChatController;
 use App\Http\Controllers\CoberturaController;
 use App\Http\Controllers\DeviceTokenController;
 use App\Http\Controllers\Domiciliary\DomiciliaryController;
+use App\Http\Controllers\Operacion\EfectivoController;
 use App\Http\Controllers\LandingRequestController;
 use App\Http\Controllers\Marketing\AdsController;
 use App\Http\Controllers\Order\OrderController;
@@ -310,6 +311,16 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::post('/assignToBusiness', [DomiciliaryController::class, 'assignToBusiness']);
         Route::post('/listbussiness', [DomiciliaryController::class, 'listBusinessesByDomiciliary']);
         Route::post('/incomeDomiciliary', [DomiciliaryController::class, 'incomeDomiciliary']);
+
+        /*
+         * El efectivo que ESTE domiciliario tiene encima.
+         *
+         * Sin identificador en la ruta a propósito: sale de la sesión. Con un
+         * parámetro, cualquiera podría consultar —o intentar saldar— el saldo
+         * de otro.
+         */
+        Route::get('/cash-balance', [EfectivoController::class, 'miSaldo']);
+        Route::post('/deposits', [EfectivoController::class, 'declararDeposito']);
     });
 
     //reviews
@@ -535,6 +546,18 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
             Route::get('{id}', [OperacionApiController::class, 'showSolicitud'])->middleware('modulo:solicitudes');
             Route::put('{id}', [OperacionApiController::class, 'updateSolicitud'])->middleware('modulo:solicitudes,gestionar');
         });
+
+        /*
+         * Efectivo en la calle. `saldos` responde la pregunta que antes no se
+         * podía hacer: cuánto dinero nuestro tiene encima cada domiciliario.
+         */
+        Route::middleware('modulo:efectivo')->group(function () {
+            Route::get('cash-deposits', [EfectivoController::class, 'index']);
+            Route::get('cash-balances', [EfectivoController::class, 'saldos']);
+        });
+
+        Route::put('cash-deposits/{id}', [EfectivoController::class, 'resolver'])
+            ->middleware('modulo:efectivo,gestionar');
 
         Route::prefix('settlements')->group(function () {
             Route::get('/', [OperacionApiController::class, 'liquidaciones'])->middleware('modulo:liquidaciones');

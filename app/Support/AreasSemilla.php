@@ -91,7 +91,7 @@ class AreasSemilla
                  * mal. Se le da a Contabilidad porque es quien detecta el error
                  * al cuadrar, y anular deja constancia en vez de borrar.
                  */
-                'gestionar'   => ['pagos', 'facturas', 'liquidaciones'],
+                'gestionar'   => ['pagos', 'facturas', 'liquidaciones', 'efectivo'],
             ],
 
             'marketing' => [

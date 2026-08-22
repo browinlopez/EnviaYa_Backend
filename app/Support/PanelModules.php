@@ -32,6 +32,8 @@ class PanelModules
         // propio: quien concilia la caja mira las dos cosas seguidas.
         'facturas'      => ['Comprobantes', 'Operación'],
         'liquidaciones' => ['Liquidaciones', 'Operación'],
+        // El efectivo que los domiciliarios tienen encima y sus consignaciones.
+        'efectivo'      => ['Efectivo', 'Operación'],
 
         // Seguridad y salud en el trabajo. Grupo propio porque responde a otra
         // pregunta que el resto del panel: no "cómo va la operación" sino
