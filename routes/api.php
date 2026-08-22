@@ -20,6 +20,7 @@ use App\Http\Controllers\Chat\ChatController;
 use App\Http\Controllers\CoberturaController;
 use App\Http\Controllers\DeviceTokenController;
 use App\Http\Controllers\Domiciliary\DomiciliaryController;
+use App\Http\Controllers\LandingRequestController;
 use App\Http\Controllers\Marketing\AdsController;
 use App\Http\Controllers\Order\OrderController;
 use App\Http\Controllers\Payment\PaymentController;
@@ -74,6 +75,21 @@ Route::middleware('throttle:300,1')->group(function () {
     // Las reseñas de un negocio se ven sin sesión (la respuesta no expone
     // datos de contacto del reseñador).
     Route::post('reviews/business/by', [ReviewController::class, 'listReviewsByBusiness']);
+});
+
+/*
+ * --- Los formularios de la web pública ---
+ *
+ * Van fuera del grupo de arriba porque su límite es otro: aquello son
+ * lecturas de catálogo que la app dispara a decenas por pantalla, y esto es
+ * una persona escribiendo una vez. Seis por minuto deja margen para
+ * reintentar cuando falla la red y corta el envío automático.
+ *
+ * No exige token a propósito: quien escribe todavía no tiene cuenta, que es
+ * justamente el punto. Las defensas están en el controlador.
+ */
+Route::middleware('throttle:6,1')->group(function () {
+    Route::post('solicitudes-free', [LandingRequestController::class, 'store']);
 });
 
 /*
@@ -507,6 +523,17 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
             Route::get('{id}', [OperacionApiController::class, 'showPqrs'])->middleware('modulo:pqrs');
             Route::put('{id}', [OperacionApiController::class, 'updatePqrs'])->middleware('modulo:pqrs,gestionar');
             Route::post('{id}/notes', [OperacionApiController::class, 'addPqrsNote'])->middleware('modulo:pqrs,gestionar');
+        });
+
+        /*
+         * Las solicitudes de la web. Sin `store`: nacen en el formulario
+         * público y no tiene sentido crear una a mano desde el panel; lo que
+         * se hace acá es atenderlas.
+         */
+        Route::prefix('solicitudes')->group(function () {
+            Route::get('/', [OperacionApiController::class, 'solicitudes'])->middleware('modulo:solicitudes');
+            Route::get('{id}', [OperacionApiController::class, 'showSolicitud'])->middleware('modulo:solicitudes');
+            Route::put('{id}', [OperacionApiController::class, 'updateSolicitud'])->middleware('modulo:solicitudes,gestionar');
         });
 
         Route::prefix('settlements')->group(function () {

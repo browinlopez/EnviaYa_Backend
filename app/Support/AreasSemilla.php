@@ -65,6 +65,7 @@ class AreasSemilla
                     'marketing.banners', 'marketing.cupones',
                     'marketing.destacados', 'marketing.notificaciones',
                     'usuarios', 'propietarios', 'conjuntos', 'resenas', 'chats',
+                    'solicitudes',
                     'reportes', 'auditoria',
                 ],
                 // Deliberadamente vacío. Gerencia necesita la foto completa,
@@ -125,11 +126,14 @@ class AreasSemilla
                     // Las quejas sobre un negocio son información comercial:
                     // se ven, pero atenderlas es de Calidad.
                     'pqrs',
+                    // Un tendero que pide entrar por la web es exactamente el
+                    // trabajo de Comercial, así que acá se ven y se atienden.
+                    'solicitudes',
                     'marketing', 'marketing.destacados',
                 ],
                 'gestionar'   => [
                     'negocios', 'productos', 'categorias', 'categorias-negocio',
-                    'propietarios', 'conjuntos',
+                    'propietarios', 'conjuntos', 'solicitudes',
                     // El destaque lo vende Comercial aunque el módulo viva en
                     // Marketing: quien negocia el precio es quien lo carga.
                     'marketing.destacados',
@@ -161,13 +165,19 @@ class AreasSemilla
                     // Contabilidad y el reclamo espera un día más.
                     'facturas',
                     'domiciliarios', 'negocios', 'reportes',
+                    /*
+                     * Las solicitudes de eliminación de cuenta entran por la
+                     * web y tienen plazo legal. No son un asunto comercial:
+                     * son de quien responde por el tratamiento de datos.
+                     */
+                    'solicitudes',
                     // Un reclamo por un accidente durante la entrega necesita
                     // mirar el incidente; registrarlo sigue siendo de SST.
                     'sst.incidentes',
                 ],
                 // Puede retirar una reseña que incumple las normas y lleva los
                 // PQRS de punta a punta; no edita pedidos ni negocios.
-                'gestionar'   => ['resenas', 'pqrs'],
+                'gestionar'   => ['resenas', 'pqrs', 'solicitudes'],
             ],
         ];
     }

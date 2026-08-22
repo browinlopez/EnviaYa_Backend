@@ -58,6 +58,10 @@ class PanelModules
         'resenas'      => ['Reseñas', 'Comunidad'],
         'chats'        => ['Conversaciones', 'Comunidad'],
         'pqrs'         => ['PQRS', 'Comunidad'],
+        // Lo que llega por los formularios de la web pública. Va en Comunidad
+        // y no en Catálogo porque quien escribe todavía no es un negocio ni un
+        // domiciliario: es alguien de fuera pidiendo entrar.
+        'solicitudes'  => ['Solicitudes de la web', 'Comunidad'],
 
         'reportes'  => ['Reportes', 'Control'],
         'auditoria' => ['Auditoría', 'Control'],
