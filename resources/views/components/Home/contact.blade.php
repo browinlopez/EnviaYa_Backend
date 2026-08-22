@@ -109,7 +109,7 @@
                             </div>
                             <div class="info">
                                 <h5 class="title">Correo oficial</h5>
-                                <a href="mailto:contacto@vecipaya.com">contacto@vecipaya.com</a>
+                                <a href="mailto:{{ config('services.sitio.correo') }}">{{ config('services.sitio.correo') }}</a>
                             </div>
                         </li>
                     </ul>

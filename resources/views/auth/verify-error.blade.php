@@ -103,7 +103,7 @@
             Volver a VeciPa’Ya
         </a>
 
-        <a href="mailto:soporte@vecipaya.com" class="secondary">
+        <a href="mailto:{{ config('services.sitio.correo_soporte') }}" class="secondary">
             Contactar soporte
         </a>
 

@@ -81,7 +81,7 @@
                             <li>
                                 <i class="fas fa-envelope"></i>
                                 <strong>Email:</strong>
-                                <a href="mailto:contacto@vecipaya.com">contacto@vecipaya.com</a>
+                                <a href="mailto:{{ config('services.sitio.correo') }}">{{ config('services.sitio.correo') }}</a>
                             </li>
                             <li>
                                 <i class="fas fa-phone"></i>

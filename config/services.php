@@ -90,6 +90,21 @@ return [
     ],
 
     /*
+     * LA WEB PÚBLICA
+     *
+     * De acá salen los enlaces que el backend manda hacia fuera: a dónde va
+     * el usuario después de confirmar su correo y qué logotipo se pinta en los
+     * correos de aviso. Estaba escrito a mano en tres archivos apuntando a
+     * vecipaya.com, que dejó de responder; el enlace de confirmación llevaba
+     * a un dominio caído y a una ruta que la landing ni siquiera tenía.
+     */
+    'sitio' => [
+        'url' => rtrim(env('SITIO_URL', 'https://enviaya.com.co'), '/'),
+        'correo'         => env('SITIO_CORREO', 'contacto@enviaya.com.co'),
+        'correo_soporte' => env('SITIO_CORREO_SOPORTE', 'soporte@enviaya.com.co'),
+    ],
+
+    /*
      * MAPA DE COBERTURA DE LA WEB PÚBLICA
      *
      * Los conjuntos residenciales se publican con su coordenada exacta, igual
