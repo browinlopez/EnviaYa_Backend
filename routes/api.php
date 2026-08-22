@@ -318,6 +318,9 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
 
         // Los celadores los administra el dueño, no el equipo interno: es
         // quien sabe quién trabaja en su portería.
+        Route::get('residentes', [MiConjuntoController::class, 'residentes'])
+            ->middleware('conjunto:dueno');
+
         Route::get('celadores', [MiConjuntoController::class, 'celadores'])
             ->middleware('conjunto:dueno');
         Route::post('celadores', [MiConjuntoController::class, 'crearCelador'])

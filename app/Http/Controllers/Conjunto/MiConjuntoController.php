@@ -171,4 +171,38 @@ class MiConjuntoController extends Controller
                 : 'Celador desactivado. Ya no puede entrar al panel.',
         ]);
     }
+
+    /* --------------------------- RESIDENTES --------------------------- */
+
+    /**
+     * Quién vive en el conjunto, según lo que declararon al registrarse.
+     *
+     * Sin correo ni teléfono a propósito. El dueño necesita saber cuánta gente
+     * de su edificio usa la plataforma y en qué torres, no una lista de
+     * contactos de sus residentes: eso son datos personales de terceros y su
+     * relación es con la plataforma, no con la administración.
+     */
+    public function residentes(Request $request)
+    {
+        $complexId = (int) $request->attributes->get('complex_id');
+
+        $filas = DB::table('buyer_complex as bc')
+            ->where('bc.complex_id', $complexId)
+            ->join('buyer as b', 'b.buyer_id', '=', 'bc.buyer_id')
+            ->leftJoin('user_address as ua', function ($j) use ($complexId) {
+                $j->on('ua.user_id', '=', 'b.user_id')
+                    ->where('ua.complex_id', '=', $complexId);
+            })
+            ->groupBy('ua.tower')
+            ->orderByRaw('ua.tower IS NULL, ua.tower')
+            ->get([
+                'ua.tower',
+                DB::raw('COUNT(DISTINCT b.buyer_id) as residentes'),
+            ]);
+
+        return response()->json([
+            'data'  => $filas,
+            'total' => (int) $filas->sum('residentes'),
+        ]);
+    }
 }

@@ -302,3 +302,45 @@ test('un dueno no puede tocar celadores de otro conjunto', function () {
 
     expect($ajeno->fresh()->state)->toBeTrue();
 });
+
+test('el dueno ve cuanta gente de su conjunto usa la plataforma', function () {
+    $c = conjuntoConPersonal(ComplexStaff::DUENO);
+
+    // `user.rol` es clave foránea: sin la fila 1 el insert falla.
+    Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
+
+    // Dos residentes en la torre 3, uno sin torre declarada.
+    foreach ([['3'], ['3'], [null]] as [$torre]) {
+        $u = User::factory()->create(['rol' => 1]);
+        $buyerId = DB::table('buyer')->insertGetId([
+            'user_id' => $u->user_id, 'qualification' => 0,
+            'belongs_to_complex' => 1, 'state' => 1,
+        ]);
+        DB::table('buyer_complex')->insert([
+            'buyer_id' => $buyerId, 'complex_id' => $c['complexId'],
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        if ($torre) {
+            DB::table('user_address')->insert([
+                'user_id' => $u->user_id, 'address' => 'Calle 84',
+                'complex_id' => $c['complexId'], 'tower' => $torre,
+                'apartment' => '101', 'state' => 1,
+            ]);
+        }
+    }
+
+    Sanctum::actingAs($c['user']);
+
+    $r = $this->getJson('/v1/conjunto/residentes')->assertOk();
+
+    expect($r->json('total'))->toBe(3);
+});
+
+test('el celador no ve quien vive donde', function () {
+    // Son datos personales de terceros: su relación es con la plataforma, no
+    // con la portería.
+    $c = conjuntoConPersonal(ComplexStaff::CELADOR);
+    Sanctum::actingAs($c['user']);
+
+    $this->getJson('/v1/conjunto/residentes')->assertStatus(403);
+});
