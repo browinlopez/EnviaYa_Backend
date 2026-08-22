@@ -441,4 +441,27 @@ class DomiciliaryController extends Controller
             'total_income' => (float) $totalIncome,
         ]);
     }
+
+    /**
+     * SU CÓDIGO DE ENTRADA A LOS CONJUNTOS.
+     *
+     * La app lo pinta como QR y el celador lo escanea en la portería. Caduca
+     * en cinco minutos: es lo que se tarda en llegar de la moto a la puerta, y
+     * un código que no caduca deja de probar que quien está ahí es él.
+     *
+     * El domiciliario sale de la SESIÓN. Con un identificador por parámetro,
+     * cualquiera podría pedir el código de otro y entrar en su nombre.
+     */
+    public function codigoDeAcceso(Request $request)
+    {
+        $domiciliario = Domiciliary::where('user_id', $request->user()->user_id)->first();
+
+        if (!$domiciliario) {
+            return response()->json(['message' => 'Esta cuenta no es de un domiciliario.'], 403);
+        }
+
+        return response()->json(
+            app(\App\Services\AccesoAlConjunto::class)->generar($domiciliario)
+        );
+    }
 }

@@ -21,6 +21,7 @@ use App\Http\Controllers\CoberturaController;
 use App\Http\Controllers\DeviceTokenController;
 use App\Http\Controllers\Domiciliary\DomiciliaryController;
 use App\Http\Controllers\Operacion\EfectivoController;
+use App\Http\Controllers\Conjunto\PorteriaController;
 use App\Http\Controllers\LandingRequestController;
 use App\Http\Controllers\Marketing\AdsController;
 use App\Http\Controllers\Order\OrderController;
@@ -300,6 +301,19 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::post('index', [FavoriteController::class, 'myFavorites']);
     });
 
+    /*
+     * PANEL DE ALIADOS: dueños de conjunto y celadores.
+     *
+     * Puerta propia (`conjunto`) y no `admin`: son dos edificios distintos.
+     * El middleware deja el conjunto de quien pide en la petición, así que
+     * ningún controlador de acá tiene que acordarse de acotar leyendo un
+     * parámetro — que es justo como se filtran los datos de otro sin querer.
+     */
+    Route::prefix('conjunto')->middleware('conjunto')->group(function () {
+        Route::post('porteria/verificar', [PorteriaController::class, 'verificar']);
+        Route::get('porteria/entradas', [PorteriaController::class, 'entradas']);
+    });
+
     //Domiciliario
     Route::prefix('domiciliaries')->group(function () {
         Route::get('/listDomiciliary', [DomiciliaryController::class, 'listDomiciliary']);      // Listar todos
@@ -320,6 +334,12 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
          * de otro.
          */
         Route::get('/cash-balance', [EfectivoController::class, 'miSaldo']);
+
+        /*
+         * Su código de entrada a los conjuntos. Caduca en cinco minutos: lo
+         * que se tarda en llegar de la moto a la portería.
+         */
+        Route::post('/access-code', [DomiciliaryController::class, 'codigoDeAcceso']);
         Route::post('/deposits', [EfectivoController::class, 'declararDeposito']);
     });
 

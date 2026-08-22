@@ -51,6 +51,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // para modificar. Se aplica encima de `admin`, que ya validó que la
         // persona sea del equipo.
         'modulo'    => \App\Http\Middleware\EnsureModuleAccess::class,
+        // Puerta del panel de aliados. Aparte de `admin` a propósito: son dos
+        // edificios distintos y compartir la puerta ampliaría en silencio
+        // quién llega a la administración de la plataforma.
+        'conjunto'  => \App\Http\Middleware\EnsureComplexStaff::class,
         // Puerta de los archivos. Aparte porque el módulo que manda depende de
         // la entidad de la URL: los de un negocio los rige `negocios` y los de
         // un banner, `marketing.banners`.
