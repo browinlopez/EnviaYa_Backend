@@ -20,7 +20,7 @@ use RuntimeException;
  * distingue del normal.
  *
  * TODO lo que crea queda marcado:
- *   · las personas, por el dominio del correo (@demo.enviaya.test);
+ *   · las personas, por el dominio del correo (@demo.example.com);
  *   · los negocios, por el NIT (DEMO-…);
  *   · el resto, porque cuelga de esos dos.
  *
@@ -32,7 +32,21 @@ use RuntimeException;
  */
 class DemoSeeder extends Seeder
 {
-    public const DOMINIO = 'demo.enviaya.test';
+    /*
+     * `example.com`, no `.test`.
+     *
+     * Los dos están reservados y ninguno puede recibir correo de verdad, que es
+     * lo que hace falta para datos de prueba. La diferencia está en la
+     * pasarela: Bold rechaza `.test` —`PI_001: value is not a valid email
+     * address`— y no crea la orden de pago, así que con las cuentas de
+     * demostración era imposible probar un pago de principio a fin. Se
+     * comprobó contra la API: `.test` lo rechaza y `example.com` lo acepta.
+     *
+     * Sigue siendo la marca por la que `DemoPurgeSeeder` distingue lo de
+     * mentira de lo real, así que el dominio tiene que quedarse siendo uno
+     * imposible de registrar.
+     */
+    public const DOMINIO = 'demo.example.com';
     public const CLAVE   = 'Demo2026*';
     public const NIT     = 'DEMO-';
 

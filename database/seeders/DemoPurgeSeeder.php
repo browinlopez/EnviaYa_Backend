@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
  * forma de quitarlos no son datos de prueba: son datos, y a la semana ya nadie
  * sabe cuáles eran de verdad.
  *
- * Borra únicamente lo que lleva la marca —correos @demo.enviaya.test y NIT
+ * Borra únicamente lo que lleva la marca —correos @demo.example.com y NIT
  * DEMO-…— y lo que cuelga de ello. Nada más: si un pedido apunta a un negocio
  * real, se queda.
  *

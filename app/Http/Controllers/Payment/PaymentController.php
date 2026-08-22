@@ -32,20 +32,35 @@ class PaymentController extends Controller
                 "phone" => $order->buyer->user->phone ?? "3000000000",
                 "email" => $order->buyer->user->email ?? "test@test.com",
 
+                /*
+                 * `->name`, no la relación entera.
+                 *
+                 * `municipality` es un belongsTo y `department` un
+                 * hasOneThrough: sin `->name` acá iba el MODELO COMPLETO
+                 * serializado —id, department_id, created_at y todo—, y Bold
+                 * responde `PI_001: customer: str type expected` y no crea la
+                 * orden de pago.
+                 *
+                 * Estuvo así desde que se añadió este bloque y parecía
+                 * funcionar porque las direcciones de prueba no tenían
+                 * municipio: la relación resolvía a null, y null sí lo acepta.
+                 * En cuanto una dirección está bien rellenada —que es el caso
+                 * de cualquier cliente real— el pago falla.
+                 *
+                 * Se deja pasar el null cuando no hay municipio, que es lo que
+                 * la pasarela ya venía admitiendo.
+                 */
                 "billing_address" => [
                     "street1" => $order->address->address,
                     "street2" => "",
-                    "city" => $order->address->municipality,
+                    "city" => $order->address->municipality?->name,
                     "postal_code" => "130001", // ⚠️ IMPORTANTE
-                    "province" => $order->address->department,
+                    "province" => $order->address->department?->name,
                     "country_code" => "CO",
                     "phone" => $order->buyer->user->phone ?? "3000000000"
                 ]
             ]
         ];
-
-        // 👉 AQUÍ VA EL LOG
-        \Log::info('BOLD PAYMENT BODY', $body);
 
         $response = $bold->createIntent($body);
 
