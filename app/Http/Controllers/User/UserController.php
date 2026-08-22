@@ -240,6 +240,16 @@ class UserController extends Controller
              */
             'street' => 'nullable|string|max:150',
             /*
+             * Dónde vive quien está en un conjunto.
+             *
+             * Van como texto y no como número: hay conjuntos con "Torre A" y
+             * apartamentos como "502B". Guardarlos como enteros obligaría a
+             * inventar una traducción y perdería lo que la persona escribió.
+             */
+            'complex_id' => 'nullable|integer|exists:residential_complexes,complex_id',
+            'tower' => 'nullable|string|max:40',
+            'apartment' => 'nullable|string|max:40',
+            /*
              * El municipio llega por NOMBRE, no por identificador.
              *
              * El teléfono resuelve las coordenadas a ciudad y departamento para
@@ -271,6 +281,9 @@ class UserController extends Controller
             'user_id' => $request->user_id,
             'address' => $request->address,
             'street' => $request->street,
+            'complex_id' => $request->complex_id,
+            'tower' => $request->tower,
+            'apartment' => $request->apartment,
             'municipality_id' => $municipioId,
             'alias_id' => $request->alias_id,
             'latitude' => $request->latitude,

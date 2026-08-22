@@ -504,6 +504,12 @@ class OperacionApiController extends Controller
             $q->where('settlements.state', (int) $request->query('state'));
         }
 
+        // El join a `business` ya estaba para el nombre: filtrar por negocio
+        // no cuesta nada más.
+        if ($request->filled('business_id')) {
+            $q->where('settlements.business_id', (int) $request->query('business_id'));
+        }
+
         return response()->json([
             'data' => $q->get([
                 'settlements.*',

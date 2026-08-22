@@ -849,6 +849,12 @@ class AdminApiController extends Controller
             $q->where('c.name', $categoria);
         }
 
+        // El join a `business` ya estaba —se usa para el nombre y para
+        // ordenar—, así que filtrar por negocio no cuesta una consulta más.
+        if ($negocio = (int) $request->query('business_id')) {
+            $q->where('b.busines_id', $negocio);
+        }
+
         $r = ListadoPaginado::responder(
             $request,
             $q,
@@ -1149,7 +1155,7 @@ class AdminApiController extends Controller
        DOMICILIARIOS
        ================================================================== */
 
-    private function resumenDomiciliarios()
+    private function resumenDomiciliarios(?int $negocioId = null)
     {
         // Mismo criterio que en `businesses()`: agregados por subconsulta.
         // Unir a la vez `orderssales` y `business_domiciliary` multiplicaba
@@ -1160,6 +1166,20 @@ class AdminApiController extends Controller
 
         return DB::table('domiciliary as d')
             ->leftJoin('user as u', 'u.user_id', '=', 'd.user_id')
+            /*
+             * Los del negocio pedido, si se pide uno.
+             *
+             * Con EXISTS y no con un join: `business_domiciliary` admite que
+             * un repartidor esté en varios negocios, y unirla multiplicaría su
+             * fila una vez por cada uno. Ya pasó con las ganancias, y por eso
+             * los agregados de acá van por subconsulta.
+             */
+            ->when($negocioId, fn ($q) => $q->whereExists(
+                fn ($sub) => $sub->from('business_domiciliary as bd')
+                    ->whereColumn('bd.domiciliary_id', 'd.domiciliary_id')
+                    ->where('bd.busines_id', $negocioId)
+                    ->selectRaw('1'),
+            ))
             ->orderBy('u.name')
             ->select([
                 'd.domiciliary_id', 'd.user_id', 'd.available', 'd.document',
@@ -1219,9 +1239,11 @@ class AdminApiController extends Controller
             ->get();
     }
 
-    public function domiciliaries()
+    public function domiciliaries(Request $request)
     {
-        return response()->json($this->resumenDomiciliarios());
+        return response()->json($this->resumenDomiciliarios(
+            (int) $request->query('business_id') ?: null,
+        ));
     }
 
     /**
@@ -1688,6 +1710,17 @@ class AdminApiController extends Controller
 
         $q->select($cols);
 
+        /*
+         * Negocio.
+         *
+         * Solo tiene sentido en el ámbito de negocios: en el de domiciliarios
+         * el destino de la reseña es una persona, no una tienda. Aplicarlo ahí
+         * devolvería vacío sin explicar por qué, así que simplemente se ignora.
+         */
+        if ($scope !== 'domiciliary' && ($negocio = (int) $request->query('business_id'))) {
+            $q->where("r.{$m['target_key']}", $negocio);
+        }
+
         // Puntaje: negativas (1-2), positivas (4-5) o con comentario.
         match ($request->query('score')) {
             'negativas' => $q->whereBetween('r.qualification', [1, 2]),
@@ -2080,13 +2113,16 @@ class AdminApiController extends Controller
             DB::table('residential_complexes as rc')
                 ->leftJoin('buyer_complex as bc', 'bc.complex_id', '=', 'rc.complex_id')
                 ->groupBy('rc.complex_id', 'rc.name', 'rc.address', 'rc.state', 'rc.people_count',
-                    'rc.latitude', 'rc.longitude', 'rc.municipality_id', 'm.name', 'dp.id', 'dp.name')
+                    'rc.latitude', 'rc.longitude', 'rc.municipality_id',
+                    'rc.towers_count', 'rc.apartments_per_tower',
+                    'm.name', 'dp.id', 'dp.name')
                 ->orderBy('rc.name')
                 ->leftJoin('municipalities as m', 'm.id', '=', 'rc.municipality_id')
                 ->leftJoin('departments as dp', 'dp.id', '=', 'm.department_id')
                 ->get([
                     'rc.complex_id', 'rc.name', 'rc.address', 'rc.state', 'rc.people_count',
                     'rc.latitude', 'rc.longitude', 'rc.municipality_id',
+                    'rc.towers_count', 'rc.apartments_per_tower',
                     'm.name as municipality_name', 'dp.id as department_id', 'dp.name as department_name',
                     DB::raw('COUNT(bc.buyer_id) as residents_count'),
                 ])
@@ -2105,6 +2141,15 @@ class AdminApiController extends Controller
             'latitude'        => 'nullable|numeric|between:-90,90',
             'longitude'       => 'nullable|numeric|between:-180,180',
             'municipality_id' => 'nullable|integer|exists:municipalities,id',
+            /*
+             * Cuántas torres y cuántos apartamentos tiene cada una.
+             *
+             * Se asume que todas son iguales. Es una simplificación consciente:
+             * sirve para dimensionar el conjunto y para ofrecer listas en el
+             * registro, no para validar que una dirección exista.
+             */
+            'towers_count'         => 'nullable|integer|min:1|max:500',
+            'apartments_per_tower' => 'nullable|integer|min:1|max:2000',
         ]);
 
         $id = DB::table('residential_complexes')->insertGetId([
@@ -2115,6 +2160,8 @@ class AdminApiController extends Controller
             'latitude'        => $datos['latitude'] ?? null,
             'longitude'       => $datos['longitude'] ?? null,
             'municipality_id' => $datos['municipality_id'] ?? null,
+            'towers_count'         => $datos['towers_count'] ?? null,
+            'apartments_per_tower' => $datos['apartments_per_tower'] ?? null,
         ]);
 
         return response()->json(['message' => 'Conjunto creado.', 'complex_id' => $id], 201);
@@ -2130,6 +2177,8 @@ class AdminApiController extends Controller
             'latitude'        => 'sometimes|nullable|numeric|between:-90,90',
             'longitude'       => 'sometimes|nullable|numeric|between:-180,180',
             'municipality_id' => 'sometimes|nullable|integer|exists:municipalities,id',
+            'towers_count'         => 'sometimes|nullable|integer|min:1|max:500',
+            'apartments_per_tower' => 'sometimes|nullable|integer|min:1|max:2000',
         ]);
 
         $n = DB::table('residential_complexes')->where('complex_id', $id)->update($datos);
@@ -2366,7 +2415,7 @@ class AdminApiController extends Controller
        CONVERSACIONES
        ================================================================== */
 
-    public function chats()
+    public function chats(Request $request)
     {
         $chats = DB::table('chats as c')
             ->leftJoin('messages as m', 'm.chat_id', '=', 'c.chat_id')
@@ -2908,7 +2957,9 @@ class AdminApiController extends Controller
         }
     }
 
-    /** @return array{business_id:?int, municipality_id:?int, business_category:?int} */
+    /**
+     * @return array{business_id:?int, municipality_id:?int, business_category:?int, complex_id:?int}
+     */
     private function filtrosDelReporte(Request $request): array
     {
         $entero = fn ($v) => ($v === null || $v === '' || (int) $v <= 0) ? null : (int) $v;
@@ -2917,6 +2968,7 @@ class AdminApiController extends Controller
             'business_id'       => $entero($request->query('business_id')),
             'municipality_id'   => $entero($request->query('municipality_id')),
             'business_category' => $entero($request->query('business_category')),
+            'complex_id'        => $entero($request->query('complex_id')),
         ];
     }
 
@@ -2942,6 +2994,12 @@ class AdminApiController extends Controller
                 'key'   => 'business_category',
                 'label' => 'Tipo de negocio',
                 'value' => DB::table('category_business')->where('id', $f['business_category'])->value('name'),
+            ] : null,
+            $f['complex_id'] ? [
+                'key'   => 'complex_id',
+                'label' => 'Conjunto',
+                'value' => DB::table('residential_complexes')
+                    ->where('complex_id', $f['complex_id'])->value('name'),
             ] : null,
         ]));
     }
@@ -2973,6 +3031,30 @@ class AdminApiController extends Controller
             if ($f['business_category']) {
                 $q->where('b.type', $f['business_category']);
             }
+        }
+
+        /*
+         * CONJUNTO RESIDENCIAL.
+         *
+         * No es un `where` más: `orderssales` no tiene columna de conjunto. Se
+         * llega por el comprador, `o.buyer_id → buyer_complex`.
+         *
+         * Alias propio (`bcx`) y no `b`, que ya lo usa el join CONDICIONAL de
+         * arriba, ni `neg`/`d`, que los usan los generadores. Reutilizar un
+         * alias acá haría que el reporte fallara solo cuando se combinan dos
+         * filtros, que es el tipo de error que aparece en producción.
+         *
+         * Se usa EXISTS y no un join para no multiplicar filas: `buyer_complex`
+         * no tiene índice único, así que un comprador con la pareja duplicada
+         * contaría su pedido dos veces y el total saldría inflado.
+         */
+        if ($f['complex_id']) {
+            $q->whereExists(function ($sub) use ($f) {
+                $sub->from('buyer_complex as bcx')
+                    ->whereColumn('bcx.buyer_id', 'o.buyer_id')
+                    ->where('bcx.complex_id', $f['complex_id'])
+                    ->selectRaw('1');
+            });
         }
 
         return $q;

@@ -29,7 +29,15 @@ class ResidentialComplexController extends Controller
         $conjuntos = ResidentialComplex::query()
             ->where('state', 1)
             ->orderBy('name')
-            ->get(['complex_id', 'name', 'address', 'municipality_id']);
+            /*
+             * Van también las torres y los apartamentos por torre: es lo que
+             * permite que el registro de la app ofrezca listas en vez de pedir
+             * que la persona escriba "Torre 3" a mano y se equivoque.
+             */
+            ->get([
+                'complex_id', 'name', 'address', 'municipality_id',
+                'towers_count', 'apartments_per_tower',
+            ]);
 
         return response()->json([
             'status'  => true,

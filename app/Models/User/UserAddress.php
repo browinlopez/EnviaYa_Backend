@@ -24,12 +24,26 @@ class UserAddress extends Audit
         // Sin esto Eloquent lo descarta en silencio, igual que pasó con
         // `payment_state` en los pedidos.
         'street',
+        // Dónde vive de verdad quien está en un conjunto. Antes esto era texto
+        // libre dentro de `street`, si acaso, y no se podía filtrar nada.
+        'complex_id',
+        'tower',
+        'apartment',
         'municipality_id',
         'alias_id',
         'latitude',
         'longitude',
         'state'
     ];
+
+    public function complex()
+    {
+        return $this->belongsTo(
+            \App\Models\Buyer\ResidentialComplex::class,
+            'complex_id',
+            'complex_id',
+        );
+    }
 
     public function user()
     {

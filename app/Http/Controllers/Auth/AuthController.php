@@ -50,6 +50,17 @@ class AuthController extends Controller
                     'user_id' => $user->user_id,
                     'qualification' => 0.00,
                     'state' => true,
+                    /*
+                     * ESTA BANDERA NUNCA SE PONÍA.
+                     *
+                     * Se validaba, se usaba para decidir si crear la fila en
+                     * `buyer_complex`… y no se guardaba. Todo comprador que
+                     * declaraba vivir en un conjunto quedaba con la bandera en
+                     * 0 mientras el pivote decía que sí. Dos fuentes que se
+                     * contradicen desde siempre, y `AffiliationController` le
+                     * mostraba al tendero la equivocada.
+                     */
+                    'belongs_to_complex' => $validated['belongs_to_complex'] ? 1 : 0,
                 ]);
 
                 if ($validated['belongs_to_complex'] && !empty($validated['complex_id'])) {
