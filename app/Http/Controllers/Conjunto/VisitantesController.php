@@ -46,9 +46,16 @@ class VisitantesController extends Controller
         ]);
 
         /*
-         * El conjunto puede exigir que alguien autorice. Se comprueba acá y no
-         * en el navegador: la regla es del edificio y tiene que valer aunque
-         * la petición venga de otro sitio.
+         * El conjunto puede exigir que quede CONSTANCIA de quién dio permiso.
+         *
+         * Ojo con el nombre de la columna, `require_authorization`: esto no
+         * autoriza nada. Obliga al celador a escribir un nombre, y nada
+         * comprueba que esa persona dijera que sí — es el registro de una
+         * llamada al citófono. Una autorización de verdad exige que el
+         * residente actúe, y eso está diseñado y sin construir.
+         *
+         * Se comprueba acá y no en el navegador: la regla es del edificio y
+         * tiene que valer aunque la petición venga de otro sitio.
          */
         $exige = (bool) DB::table('residential_complexes')
             ->where('complex_id', $complexId)
@@ -56,8 +63,8 @@ class VisitantesController extends Controller
 
         if ($exige && empty($datos['authorized_by'])) {
             return response()->json([
-                'message' => 'Este conjunto exige que un residente autorice cada visita. Anota quién autorizó.',
-                'errors'  => ['authorized_by' => ['Falta quién autorizó la entrada.']],
+                'message' => 'Este conjunto exige dejar constancia de quién dio permiso. Anota quién autorizó.',
+                'errors'  => ['authorized_by' => ['Falta anotar quién dio permiso.']],
             ], 422);
         }
 
