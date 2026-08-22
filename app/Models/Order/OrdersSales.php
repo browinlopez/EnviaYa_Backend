@@ -53,7 +53,26 @@ class OrdersSales extends Audit
         // Plazo prometido, congelado al despachar. Ver la migración
         // `add_promised_minutes_to_orderssales` para el porqué.
         'promised_minutes',
-        'state'
+        'state',
+        /*
+         * `payment_state` FALTABA, y no era un olvido inocuo.
+         *
+         * Sin estar acá, Eloquent descarta el valor en silencio: ni
+         * `create([...])` ni `update([...])` lo escriben. El webhook de la
+         * pasarela marca el pago con `$order->update(['payment_state' => ...])`,
+         * así que NUNCA llegó a confirmar un pedido —solo funcionaba el camino
+         * que asigna el campo directamente—.
+         *
+         * También explica los pedidos con `payment_state = 'pending'` en la
+         * base: es el valor por defecto de la columna, el que queda cuando lo
+         * que se pidió al crear se tira a la basura.
+         *
+         * Ahora que un pedido sin pagar no se le enseña a nadie, esto pasaría
+         * de rareza a fallo grave: alguien paga, el webhook confirma, el campo
+         * no cambia y el pedido se queda escondido para siempre.
+         */
+        'payment_state',
+        'currency',
     ];
 
     protected $casts = [
@@ -79,6 +98,47 @@ class OrdersSales extends Audit
 
     /** Estado 4: entregado. */
     private const ENTREGADO = 4;
+
+    /**
+     * Un pago en línea que todavía no se ha confirmado.
+     *
+     * Mientras el pedido esté así NO es un pedido: es un intento de compra.
+     */
+    public const ESPERANDO_PAGO = 'pending_online';
+
+    /** El pago en línea se intentó y la pasarela lo rechazó. */
+    public const PAGO_RECHAZADO = 'rejected';
+
+    /** Estados en los que el pedido todavía no es —o ya no será— un pedido. */
+    public const SIN_PAGO = [self::ESPERANDO_PAGO, self::PAGO_RECHAZADO];
+
+    /**
+     * Los pedidos de verdad. Deja fuera los que esperan un pago en línea.
+     *
+     * El pedido se crea ANTES de cobrar, porque la pasarela necesita una
+     * referencia y porque si el dinero llegara a moverse tiene que haber dónde
+     * apuntarlo —un cobro sin registro no se puede devolver ni reconciliar—.
+     * Pero hasta que el pago se confirma no debe existir para nadie: la tienda
+     * lo veía en su lista y podía ponerse a preparar comida que nadie pagó.
+     *
+     * Se descartan solo dos estados: el que espera confirmación y el que la
+     * pasarela rechazó. Los pagos contra entrega nacen pendientes por
+     * definición y son pedidos perfectamente válidos, y los históricos traen
+     * valores antiguos (`approved`, `pending`) que no hay que tocar. Cualquier
+     * regla del tipo "solo los pagados" los escondería todos.
+     */
+    public function scopeConfirmados($query)
+    {
+        // La columna es NOT NULL y con valor por defecto, así que basta con
+        // excluir: no hay pedidos sin estado de pago que rescatar.
+        return $query->whereNotIn('payment_state', self::SIN_PAGO);
+    }
+
+    /** ¿Sigue esperando que se confirme un pago en línea? */
+    public function esperandoPago(): bool
+    {
+        return $this->payment_state === self::ESPERANDO_PAGO;
+    }
 
     /**
      * Minutos reales entre el despacho y la entrega. Null si no se puede saber.

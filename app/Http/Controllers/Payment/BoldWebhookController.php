@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Payment;
 use App\Events\PaymentStatusUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Order\OrdersSales;
+use App\Services\ConfirmacionDePago;
 use App\Models\Payment\Payment;
 use App\Models\Payment\PaymentEvent;
 use App\Models\Payment\PaymentIntent;
@@ -145,9 +146,20 @@ class BoldWebhookController extends Controller
         $order = OrdersSales::find($payment->orderSales_id);
 
         if ($order) {
-            $order->update([
-                'payment_state' => $isApproved ? 'paid' : 'rejected',
-            ]);
+            if ($isApproved) {
+                /*
+                 * Acá es donde el pedido nace cuando la persona ya cerró la app.
+                 *
+                 * Sin esto, un cobro que se resuelve tarde dejaba el pedido
+                 * escondido para siempre: la tienda nunca se enteraba y el
+                 * cliente había pagado.
+                 */
+                ConfirmacionDePago::confirmar($order);
+            } else {
+                $order->update([
+                    'payment_state' => OrdersSales::PAGO_RECHAZADO,
+                ]);
+            }
         }
 
         PaymentStatusUpdated::dispatch($payment->fresh());

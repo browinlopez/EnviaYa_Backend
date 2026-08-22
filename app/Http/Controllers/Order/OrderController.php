@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Order;
 
 use App\Services\Ajustes;
+use App\Services\ConfirmacionDePago;
 use App\Services\Avisos;
 use App\Events\DomiciliaryLocationUpdated;
 use App\Events\OrderCreated;
@@ -50,6 +51,7 @@ class OrderController extends Controller
         }
 
         $orders = OrdersSales::where('buyer_id', $buyer->buyer_id)
+            ->confirmados()
             ->with('details.product.category', 'business', 'promotions', 'payments', 'address.municipality.department.country', 'address.alias', 'domiciliary.user')
             ->get();
 
@@ -154,7 +156,15 @@ class OrderController extends Controller
         }
 
         // Precargamos relaciones necesarias
+        /*
+         * Sin los que esperan un pago en línea.
+         *
+         * No filtraba nada: un pago rechazado dejaba el pedido en la lista de
+         * la tienda —y con aviso en vivo—, así que el tendero podía ponerse a
+         * preparar comida que nadie pagó. Y cada reintento dejaba otro.
+         */
         $orders = OrdersSales::where('busines_id', $business->busines_id)
+            ->confirmados()
             ->with([
                 'business',
                 'details.product',
@@ -580,7 +590,29 @@ class OrderController extends Controller
                 $domicilio * (float) Ajustes::valor('operacion.reparto_domiciliario')
             );
 
-            $order = OrdersSales::create([
+            /*
+             * REINTENTAR NO CREA OTRO PEDIDO.
+             *
+             * Cuando el cobro se rechazaba, la app avisaba y la persona volvía
+             * a darle a pagar: eso repetía esta petición entera y dejaba OTRO
+             * pedido. Tres intentos, tres pedidos —y con la lista de la tienda
+             * sin filtrar, tres veces el mismo encargo esperando a que alguien
+             * lo preparara—.
+             *
+             * Se reutiliza el que quedó a medias si es del mismo comprador, la
+             * misma tienda y el mismo importe, y es reciente. Fuera de esa
+             * ventana se asume que es una compra nueva que casualmente cuesta
+             * lo mismo, y se crea aparte.
+             */
+            $aMedias = OrdersSales::where('buyer_id', $buyer->buyer_id)
+                ->where('busines_id', $business->busines_id)
+                ->whereIn('payment_state', OrdersSales::SIN_PAGO)
+                ->where('total', $total)
+                ->where('created_at', '>=', now()->subMinutes(30))
+                ->latest('orderSales_id')
+                ->first();
+
+            $datosDelPedido = [
                 'buyer_id' => $buyer->buyer_id,
                 'busines_id' => $business->busines_id,
                 'address_id' => $address?->address_id,
@@ -609,9 +641,29 @@ class OrderController extends Controller
                     : null,
                 'state' => 1,
                 'payment_state' => in_array($request->methods_id, [2, 5])
-                    ? 'pending_online'
+                    ? OrdersSales::ESPERANDO_PAGO
                     : 'pending_cash'
-            ]);
+            ];
+
+            /*
+             * Se REUTILIZA la fila, no se borra.
+             *
+             * Ese pedido a medias puede tener un cobro todavía en curso apuntando
+             * a él. Si se borrara y ese cobro acabara aprobándose, el webhook no
+             * encontraría dónde apuntarlo: la persona habría pagado y no habría
+             * pedido. Reutilizando la fila, ese aviso tardío sigue cayendo en el
+             * sitio correcto.
+             */
+            if ($aMedias) {
+                $aMedias->update($datosDelPedido);
+                $order = $aMedias;
+
+                // El detalle se reescribe abajo con lo que hay ahora en el
+                // carrito, que puede no ser lo mismo que en el primer intento.
+                OrdersSalesDetail::where('orderSales_id', $order->orderSales_id)->delete();
+            } else {
+                $order = OrdersSales::create($datosDelPedido);
+            }
 
             foreach ($request->products as $p) {
                 OrdersSalesDetail::create([
@@ -700,12 +752,20 @@ class OrderController extends Controller
                     $bold
                 );
 
-                // 6️⃣ Estado
-                $order->payment_state = $payment->payment_status
-                    ? 'paid'
-                    : 'pending_online';
-
-                $order->save();
+                /*
+                 * 6️⃣ Estado del pago.
+                 *
+                 * Si la pasarela aprobó en el momento, el pedido pasa a existir
+                 * ya —y ahí se anuncia a la tienda—. Si no, se queda esperando:
+                 * puede que el cobro siga procesándose y lo confirme el webhook
+                 * más tarde, o puede que lo rechace.
+                 */
+                if ($payment->payment_status) {
+                    ConfirmacionDePago::confirmar($order);
+                } else {
+                    $order->payment_state = OrdersSales::ESPERANDO_PAGO;
+                    $order->save();
+                }
             }
 
             DB::commit();
@@ -723,7 +783,20 @@ class OrderController extends Controller
              * sería mucho peor.
              */
             try {
-                broadcast(new OrderCreated($order->load('buyer.user')));
+                /*
+                 * Nada de avisar un pedido que aún no está pagado.
+                 *
+                 * El aviso hace sonar la tienda y le pinta el pedido en la
+                 * pantalla al instante. Con un pago rechazado eso era llamar al
+                 * tendero a preparar algo que nadie compró —y cada reintento
+                 * volvía a llamarle—.
+                 *
+                 * Cuando el pago se confirme, `confirmarPagoDelPedido()` emite
+                 * el aviso: llega unos segundos más tarde y ya es de verdad.
+                 */
+                if (!$order->esperandoPago()) {
+                    broadcast(new OrderCreated($order->load('buyer.user')));
+                }
             } catch (\Throwable $e) {
                 Log::warning('No se pudo anunciar el pedido nuevo', [
                     'order_id' => $order->orderSales_id,
@@ -988,6 +1061,7 @@ class OrderController extends Controller
             $maxSimultaneos = (int) Ajustes::valor('operacion.entregas_simultaneas');
 
             $enCurso = OrdersSales::where('domiciliary_id', $domiciliary->domiciliary_id)
+                ->confirmados()
                 ->where('state', 3)
                 ->where('orderSales_id', '!=', $order->orderSales_id)
                 ->count();
