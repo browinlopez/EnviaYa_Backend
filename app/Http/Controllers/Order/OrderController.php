@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Order;
 
 use App\Services\Ajustes;
 use App\Services\PoliticaDeDomicilio;
+use App\Services\CustodiaDeEfectivo;
 use App\Services\ConfirmacionDePago;
 use App\Services\Avisos;
 use App\Events\DomiciliaryLocationUpdated;
@@ -1195,6 +1196,16 @@ class OrderController extends Controller
             if ($order->methods_id == 1) {
                 $valorPromocion = 0; // pendiente: descuentos y promociones
 
+                /*
+                 * El pago, el apunte del efectivo y el estado del pedido, o
+                 * ninguno de los tres.
+                 *
+                 * Sin la transacción, un fallo al apuntar el recaudo dejaría un
+                 * pago registrado y aprobado sin nadie responsable del dinero
+                 * —que es exactamente el agujero que este cambio viene a
+                 * cerrar—.
+                 */
+                DB::transaction(function () use ($order, $request, $valorPromocion) {
                 Payment::create([
                     'orderSales_id' => $order->orderSales_id,
                     'methods_id' => $order->methods_id,
@@ -1221,6 +1232,27 @@ class OrderController extends Controller
                 // cobrados que en los tableros aparecían como pendientes de
                 // pago, contradiciendo a la tabla de pagos.
                 $order->payment_state = 'paid';
+
+                /*
+                 * Y SE APUNTA QUIÉN TIENE ESE DINERO.
+                 *
+                 * Hasta ahora acá terminaba todo: se creaba un pago
+                 * `approved` y el pedido quedaba `paid`, como si la plata
+                 * hubiera llegado a la plataforma. No había llegado a ninguna
+                 * parte — estaba en el bolsillo del domiciliario, sin un solo
+                 * registro—, y la liquidación encima le PAGABA su comisión sin
+                 * COBRARLE lo recaudado.
+                 *
+                 * Recauda el total del pedido, no su comisión: cobra 32.000 y
+                 * gana 500. El resto lo debe.
+                 */
+                app(CustodiaDeEfectivo::class)->registrarRecaudo(
+                    $order,
+                    $request->user()?->user_id,
+                );
+
+                    $order->save();
+                });
             }
         } else {
             return response()->json(['message' => 'Transición de estado no permitida.'], 400);
