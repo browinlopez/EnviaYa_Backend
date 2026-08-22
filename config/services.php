@@ -81,14 +81,27 @@ return [
      * arman las campañas, se resuelve el segmento, se cuentan los dispositivos—
      * pero no entrega nada, y la pantalla lo DICE. Nunca finge haber enviado.
      *
-     * `credentials` es la ruta al JSON de la cuenta de servicio que da Firebase
-     * (Configuración del proyecto → Cuentas de servicio → Generar nueva clave).
-     * Va fuera del repositorio: es una credencial que permite mandarle una
-     * notificación a cualquier usuario de la plataforma.
+     * La cuenta de servicio la da Firebase en Configuración del proyecto →
+     * Cuentas de servicio → Generar nueva clave. NUNCA va al repositorio: su
+     * clave privada da acceso de administrador al proyecto —mandarle una
+     * notificación a cualquier usuario de la plataforma, entre otras cosas— y
+     * este repositorio es público. Subida una vez, queda en el historial
+     * aunque después se borre el archivo.
+     *
+     * DOS FORMAS DE DÁRSELA, y con despliegue desde GitHub sólo sirve la
+     * primera:
+     *
+     *  · `FCM_CREDENTIALS_JSON` — el contenido del archivo, en la variable de
+     *    entorno del servidor. En base64 preferiblemente: es una sola línea, y
+     *    así el panel no estropea los saltos de línea de la clave privada.
+     *
+     *  · `FCM_CREDENTIALS` — la ruta a un archivo puesto a mano en el
+     *    servidor, fuera de `public/`.
      */
     'fcm' => [
-        'credentials' => env('FCM_CREDENTIALS', ''),
-        'project_id'  => env('FCM_PROJECT_ID', ''),
+        'credentials'      => env('FCM_CREDENTIALS', ''),
+        'credentials_json' => env('FCM_CREDENTIALS_JSON', ''),
+        'project_id'       => env('FCM_PROJECT_ID', ''),
     ],
 
     'contrato' => [

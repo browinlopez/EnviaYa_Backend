@@ -22,3 +22,15 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Credenciales de cuentas de servicio de Google/Firebase.
+#
+# Su clave privada da acceso de administrador al proyecto, y este repositorio
+# es publico. Se ignoran por patron y no por nombre exacto porque el archivo
+# que descarga Firebase trae un nombre distinto cada vez
+# (`<proyecto>-firebase-adminsdk-<hash>.json`), asi que confiar en recordarlo
+# es confiar en no equivocarse nunca.
+*firebase-adminsdk*.json
+*-service-account*.json
+service-account*.json
+/storage/app/firebase/

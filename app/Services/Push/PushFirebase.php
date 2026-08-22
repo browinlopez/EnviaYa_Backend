@@ -38,9 +38,65 @@ class PushFirebase implements TransportePush
 
     public function configurado(): bool
     {
+        return $this->cuenta() !== null && (string) config('services.fcm.project_id') !== '';
+    }
+
+    /**
+     * La cuenta de servicio, venga de donde venga.
+     *
+     * DOS ORÍGENES, y el orden importa:
+     *
+     *  1. `FCM_CREDENTIALS_JSON` — el contenido del archivo, en la variable de
+     *     entorno. Es el que hay que usar cuando el despliegue se hace desde
+     *     GitHub, porque la clave privada de una cuenta de servicio NO puede
+     *     vivir en el repositorio: da acceso de administrador al proyecto de
+     *     Firebase, y este repositorio además es público. Una vez subida, ni
+     *     borrándola después desaparece del historial.
+     *
+     *  2. `FCM_CREDENTIALS` — la ruta a un archivo en el servidor. Sigue
+     *     valiendo para quien monte el archivo a mano o por volumen.
+     *
+     * El JSON se acepta tal cual o en base64. En base64 es una sola línea, y
+     * eso evita el problema real de pegarlo: la clave privada lleva saltos de
+     * línea escapados y muchos paneles de variables los estropean al guardar,
+     * con lo que la firma falla con un error que no dice nada.
+     */
+    private function cuenta(): ?array
+    {
+        $crudo = trim((string) config('services.fcm.credentials_json'));
+
+        if ($crudo !== '') {
+            // Si no empieza por `{`, se asume base64.
+            $texto = str_starts_with($crudo, '{')
+                ? $crudo
+                : (string) base64_decode($crudo, true);
+
+            $datos = json_decode($texto, true);
+
+            if (is_array($datos) && isset($datos['client_email'], $datos['private_key'])) {
+                return $datos;
+            }
+
+            Log::error('FCM_CREDENTIALS_JSON no es una cuenta de servicio válida.');
+
+            return null;
+        }
+
         $ruta = (string) config('services.fcm.credentials');
 
-        return $ruta !== '' && is_readable($ruta) && config('services.fcm.project_id');
+        if ($ruta === '' || !is_readable($ruta)) {
+            return null;
+        }
+
+        $datos = json_decode((string) file_get_contents($ruta), true);
+
+        if (is_array($datos) && isset($datos['client_email'], $datos['private_key'])) {
+            return $datos;
+        }
+
+        Log::error('El archivo de credenciales de Firebase no tiene el formato esperado.');
+
+        return null;
     }
 
     public function enviar(array $tokens, string $titulo, string $cuerpo, array $datos = []): array
@@ -135,11 +191,9 @@ class PushFirebase implements TransportePush
     private function accessToken(): ?string
     {
         return Cache::remember('fcm.access_token', self::VIDA_TOKEN, function () {
-            $cuenta = json_decode((string) file_get_contents(config('services.fcm.credentials')), true);
+            $cuenta = $this->cuenta();
 
-            if (!isset($cuenta['client_email'], $cuenta['private_key'])) {
-                Log::error('El archivo de credenciales de Firebase no tiene el formato esperado.');
-
+            if (!$cuenta) {
                 return null;
             }
 
