@@ -100,8 +100,22 @@ return [
      */
     'sitio' => [
         'url' => rtrim(env('SITIO_URL', 'https://enviaya.com.co'), '/'),
-        'correo'         => env('SITIO_CORREO', 'contacto@enviaya.com.co'),
-        'correo_soporte' => env('SITIO_CORREO_SOPORTE', 'soporte@enviaya.com.co'),
+
+        /*
+         * EL BUZÓN SIGUE EN vecipaya.com A PROPÓSITO. No es un descuido del
+         * barrido de dominios.
+         *
+         * El sitio web de vecipaya.com está caído y por eso se retiró de todo
+         * lo demás, pero el correo es independiente: ese dominio tiene MX
+         * activos (mx1 y mx2.hostinger.com) y enviaya.com.co NO tiene ninguno
+         * —comprobado el 2026-08-22 contra 8.8.8.8—. Publicar una dirección
+         * en el dominio nuevo la deja rebotando, y un correo que rebota es
+         * peor que uno viejo: quien escribe cree que llegó.
+         *
+         * Se cambia el día que enviaya.com.co tenga correo configurado.
+         */
+        'correo'         => env('SITIO_CORREO', 'gerencia@vecipaya.com'),
+        'correo_soporte' => env('SITIO_CORREO_SOPORTE', 'gerencia@vecipaya.com'),
     ],
 
     /*
