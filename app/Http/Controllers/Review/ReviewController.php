@@ -127,7 +127,15 @@ class ReviewController extends Controller
 
     public function listBusinessReviews()
     {
-        $reviews = BusinessReview::with('business', 'buyer', 'user')->get();
+        /*
+         * `buyer.user`, no `user`.
+         *
+         * `BusinessReview` no tiene relación `user`: se llega a la persona por
+         * el comprador. Tal como estaba, este listado respondía 500 en TODAS
+         * las llamadas —Eloquent revienta al no encontrar la relación—, o sea
+         * que nunca funcionó.
+         */
+        $reviews = BusinessReview::with('business', 'buyer.user')->get();
 
         $formatted = $reviews->map(function ($review) {
             return [
@@ -147,13 +155,21 @@ class ReviewController extends Controller
                     'city' => $review->business->city,
                     'state' => $review->business->state,
                 ],
-                'user' => [
-                    'user_id' => $review->user->user_id,
-                    'name' => $review->user->name,
-                    'email' => $review->user->email,
-                    'qualification' => $review->user->qualification,
-                    'state' => $review->user->state,
-                ]
+                /*
+                 * Sin el correo de quien reseñó.
+                 *
+                 * Esto lo puede pedir cualquier cuenta con sesión, y una reseña
+                 * se muestra con el nombre: el correo no lo pinta nadie y
+                 * entregarlo convierte el listado en una lista de direcciones
+                 * de todos los clientes. Es la misma fuga que ya se cerró en la
+                 * ficha del negocio y en el listado del inicio.
+                 */
+                'user' => $review->buyer?->user ? [
+                    'user_id'       => $review->buyer->user->user_id,
+                    'name'          => $review->buyer->user->name,
+                    'qualification' => $review->buyer->user->qualification,
+                    'state'         => $review->buyer->user->state,
+                ] : null,
             ];
         });
 
@@ -358,17 +374,14 @@ class ReviewController extends Controller
                     'user' => [
                         'user_id' => $review->domiciliary->user->user_id,
                         'name' => $review->domiciliary->user->name,
-                        'email' => $review->domiciliary->user->email,
                         'qualification' => $review->domiciliary->user->qualification,
                         'state' => $review->domiciliary->user->state,
                     ]
                 ],
                 'buyer' => [
-                    'user_id' => $review->buyer->buyer_id,
-                    'name' => $review->buyer->name,
-                    'email' => $review->buyer->email,
+                    'user_id'       => $review->buyer->buyer_id,
                     'qualification' => $review->buyer->qualification,
-                    'state' => $review->buyer->state,
+                    'state'         => $review->buyer->state,
                 ]
             ];
         });
@@ -561,7 +574,6 @@ class ReviewController extends Controller
                     'user' => [
                         'user_id' => $review->domiciliary->user->user_id,
                         'name' => $review->domiciliary->user->name,
-                        'email' => $review->domiciliary->user->email,
                         'qualification' => $review->domiciliary->user->qualification,
                         'state' => $review->domiciliary->user->state,
                     ]
@@ -587,12 +599,13 @@ class ReviewController extends Controller
                 'qualification' => $review->qualification,
                 'comment' => $review->comment,
                 'state' => $review->state,
+                // Sin el correo: una reseña se enseña con el nombre, y estos
+                // listados los puede pedir cualquier cuenta con sesión.
                 'user' => [
-                    'user_id' => $review->user->user_id,
-                    'name' => $review->user->name,
-                    'email' => $review->user->email,
+                    'user_id'       => $review->user->user_id,
+                    'name'          => $review->user->name,
                     'qualification' => $review->user->qualification,
-                    'state' => $review->user->state,
+                    'state'         => $review->user->state,
                 ],
                 'domiciliary' => [
                     'domiciliary_id' => $review->domiciliary->domiciliary_id,
@@ -626,12 +639,13 @@ class ReviewController extends Controller
                 'qualification' => $review->qualification,
                 'comment' => $review->comment,
                 'state' => $review->state,
+                // Sin el correo: una reseña se enseña con el nombre, y estos
+                // listados los puede pedir cualquier cuenta con sesión.
                 'user' => [
-                    'user_id' => $review->user->user_id,
-                    'name' => $review->user->name,
-                    'email' => $review->user->email,
+                    'user_id'       => $review->user->user_id,
+                    'name'          => $review->user->name,
                     'qualification' => $review->user->qualification,
-                    'state' => $review->user->state,
+                    'state'         => $review->user->state,
                 ],
                 'domiciliary' => [
                     'domiciliary_id' => $review->domiciliary->domiciliary_id,

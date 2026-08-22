@@ -108,3 +108,30 @@ test('la ficha trae el nombre de la categoría, que es como agrupa la pantalla',
         ->assertOk()
         ->assertJsonStructure(['products' => [['product_id', 'name', 'category', 'price']]]);
 });
+
+test('el listado completo responde a un comprador con sesión', function () {
+    /*
+     * Este es el que abre el inicio de la app cuando hay sesión.
+     *
+     * Su closure capturaba `$ligero`, que solo existe en el otro listado: PHP
+     * no se queja de eso hasta que ejecuta la closure, así que respondía 500 en
+     * TODAS las llamadas y ningún comprador identificado veía un solo negocio.
+     * El listado sin sesión, que no pasa por ahí, seguía funcionando —por eso
+     * no saltaba a la vista—.
+     */
+    $e = negocioConCatalogo();
+    Sanctum::actingAs($e['user']);
+
+    $r = test()->getJson('/v1/businesses/index?user_id=' . $e['user']->user_id)
+        ->assertOk();
+
+    expect($r->json('user_authenticated'))->toBeTrue()
+        ->and($r->json('businesses'))->not->toBeEmpty();
+});
+
+test('el listado completo también responde sin user_id', function () {
+    $e = negocioConCatalogo();
+    Sanctum::actingAs($e['user']);
+
+    test()->getJson('/v1/businesses/index')->assertOk();
+});

@@ -56,8 +56,16 @@ class BusinessController extends Controller
             ->orderBy('name')
             ->get();
 
-        // Mapeamos y formateamos la respuesta
-        $formatted = $businesses->map(function ($business) use ($affiliatedIds, $userId, $ligero) {
+        /*
+         * Sin `$ligero`: acá no existe.
+         *
+         * La bandera `light` es de `indexByQualification`, y este `use` se
+         * quedó con la variable de una copia. PHP no avisa de eso hasta que
+         * ejecuta la closure, así que el método reventaba con 500 en cada
+         * llamada: todo comprador con sesión iniciada abría el inicio y no veía
+         * un solo negocio.
+         */
+        $formatted = $businesses->map(function ($business) use ($affiliatedIds, $userId) {
             $isAffiliated = in_array($business->busines_id, $affiliatedIds);
 
             return [
