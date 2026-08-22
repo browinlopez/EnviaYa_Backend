@@ -383,6 +383,10 @@ class MediaService
             'negocios'  => DB::table('business')->where('busines_id', $codigo)->update(['logo' => $url]),
             'productos' => DB::table('products')->where('products_id', $codigo)->update(['image' => $url]),
             'categorias' => DB::table('category_business')->where('id', $codigo)->update(['image' => $url]),
+            // La fachada del conjunto. Es lo que responde de un vistazo «¿estoy
+            // en el conjunto correcto?» en un panel donde el celador de un
+            // edificio y el de otro ven la misma pantalla azul.
+            'conjuntos' => DB::table('residential_complexes')->where('complex_id', $codigo)->update(['photo' => $url]),
             default     => null,
         };
     }

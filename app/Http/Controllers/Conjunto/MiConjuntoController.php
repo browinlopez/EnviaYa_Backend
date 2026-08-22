@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use App\Services\MediaService;
 use Illuminate\Validation\Rules\Password;
 
 /**
@@ -35,6 +36,8 @@ class MiConjuntoController extends Controller
             // El histórico del edificio es suyo: cuánto pide cada torre, qué
             // domiciliarios entran, cómo se identifican.
             'reportes'  => ['view' => true, 'manage' => false],
+            // La ficha del conjunto y sus reglas de portería.
+            'perfil'    => ['view' => true, 'manage' => true],
         ],
         ComplexStaff::CELADOR => [
             /*
@@ -49,6 +52,13 @@ class MiConjuntoController extends Controller
             'resumen'   => ['view' => true, 'manage' => false],
             'porteria'  => ['view' => true, 'manage' => true],
             'entradas'  => ['view' => true, 'manage' => false],
+            /*
+             * Ve la ficha del conjunto pero no la edita: las notas de portería
+             * son instrucciones que tiene que tener a la vista, y el nombre y
+             * el teléfono de la administración son a quién llamar cuando algo
+             * pasa en la puerta. Cambiarlos es del administrador.
+             */
+            'perfil'    => ['view' => true, 'manage' => false],
         ],
     ];
 
@@ -60,13 +70,7 @@ class MiConjuntoController extends Controller
         $conjunto = ResidentialComplex::find($complexId);
 
         return response()->json([
-            'complex' => $conjunto ? [
-                'complex_id'           => $conjunto->complex_id,
-                'name'                 => $conjunto->name,
-                'address'              => $conjunto->address,
-                'towers_count'         => $conjunto->towers_count,
-                'apartments_per_tower' => $conjunto->apartments_per_tower,
-            ] : null,
+            'complex' => $conjunto ? $this->ficha($conjunto) : null,
             'role'        => $rol,
             'permissions' => self::PERMISOS[$rol] ?? [],
             'stats'       => [
@@ -81,6 +85,117 @@ class MiConjuntoController extends Controller
                     ->where('state', true)
                     ->count(),
             ],
+        ]);
+    }
+
+    /**
+     * La ficha del conjunto.
+     *
+     * `gate_notes` va aca y no en una pantalla aparte a proposito: son las
+     * instrucciones permanentes de la porteria —«despues de las 10 p.m. no se
+     * reciben domicilios», «la torre 7 no tiene ascensor»— y el celador tiene
+     * que verlas sin ir a buscarlas.
+     */
+    private function ficha($c): array
+    {
+        return [
+            'complex_id'           => (int) $c->complex_id,
+            'name'                 => $c->name,
+            'photo'                => $c->photo,
+            'address'              => $c->address,
+            'phone'                => $c->phone,
+            'email'                => $c->email,
+            'admin_name'           => $c->admin_name,
+            'nit'                  => $c->nit,
+            'gate_notes'           => $c->gate_notes,
+            'require_authorization' => (bool) $c->require_authorization,
+            'towers_count'         => $c->towers_count,
+            'apartments_per_tower' => $c->apartments_per_tower,
+            'latitude'             => $c->latitude !== null ? (float) $c->latitude : null,
+            'longitude'            => $c->longitude !== null ? (float) $c->longitude : null,
+        ];
+    }
+
+    /* ---------------------- PERFIL Y AJUSTES ------------------------- */
+
+    /**
+     * El administrador corrige la ficha de su conjunto.
+     *
+     * NO puede tocar `towers_count` ni `apartments_per_tower`: de ahi salen
+     * las unidades, y de las unidades sale la penetracion con la que la
+     * plataforma dimensiona el edificio. Que el propio conjunto pueda cambiar
+     * el denominador de su propia metrica la vuelve un dato declarado.
+     *
+     * Tampoco `latitude`/`longitude`: de ahi se heredan las coordenadas de
+     * cada direccion al registrarse, asi que moverlas mueve entregas de gente
+     * que ya vive ahi.
+     */
+    public function actualizar(Request $request)
+    {
+        $complexId = (int) $request->attributes->get('complex_id');
+
+        $datos = $request->validate([
+            'name'       => 'required|string|max:255',
+            'address'    => 'nullable|string|max:255',
+            'phone'      => 'nullable|string|max:40',
+            'email'      => 'nullable|email|max:120',
+            'admin_name' => 'nullable|string|max:120',
+            'nit'        => 'nullable|string|max:40',
+            'gate_notes' => 'nullable|string|max:2000',
+            'require_authorization' => 'nullable|boolean',
+        ]);
+
+        DB::table('residential_complexes')
+            ->where('complex_id', $complexId)
+            ->update($datos);
+
+        return response()->json([
+            'message' => 'Datos del conjunto actualizados.',
+            'complex' => $this->ficha(ResidentialComplex::find($complexId)),
+        ]);
+    }
+
+    /**
+     * La foto de la fachada.
+     *
+     * Pasa por `MediaService`, que es el mismo camino que usan los logos de
+     * negocio: sube al bucket, registra el archivo y —desde ahora— escribe la
+     * URL en `residential_complexes.photo`. Una segunda forma de subir
+     * imagenes solo para esto seria otra cosa que mantener sin ganar nada.
+     */
+    public function subirFoto(Request $request, MediaService $medios)
+    {
+        $request->validate([
+            // Solo imagenes: es una fachada, no un plano. El servicio corta a
+            // 8 MB de todas formas.
+            'file' => 'required|file|image|max:8192',
+        ]);
+
+        $complexId = (int) $request->attributes->get('complex_id');
+        $conjunto  = ResidentialComplex::find($complexId);
+
+        if (!$medios->configurado()) {
+            return response()->json([
+                'message' => 'El almacenamiento de archivos no esta configurado en el servidor.',
+            ], 503);
+        }
+
+        try {
+            $archivo = $medios->subir(
+                'conjuntos',
+                $complexId,
+                $conjunto->name ?? null,
+                $request->file('file'),
+                'logo',
+                $request->user()->user_id,
+            );
+        } catch (\Throwable $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'message' => 'Foto actualizada.',
+            'photo'   => $archivo['url'],
         ]);
     }
 
@@ -194,6 +309,78 @@ class MiConjuntoController extends Controller
      * contactos de sus residentes: eso son datos personales de terceros y su
      * relación es con la plataforma, no con la administración.
      */
+    /**
+     * Quiénes son, no cuántos: el detalle por torre y apartamento.
+     *
+     * SIN CORREO NI TELÉFONO, y no es un olvido. Una administración lleva
+     * legítimamente el registro de quién vive en su edificio —eso es lo que se
+     * enseña acá—, pero los datos de CONTACTO de cada vecino son de su
+     * relación con la plataforma, no con el conjunto. Un listado con teléfonos
+     * de 2.000 hogares es una base de datos de mercadeo, no un registro de
+     * residentes.
+     *
+     * Paginado desde el servidor: un conjunto de 2.000 unidades no cabe en una
+     * respuesta, y traerlo entero para enseñar veinte filas es tráfico y
+     * memoria por nada.
+     */
+    public function residentesDetalle(Request $request)
+    {
+        $complexId = (int) $request->attributes->get('complex_id');
+
+        $porPagina = min(100, max(10, (int) $request->query('per_page', 20)));
+
+        $consulta = DB::table('buyer_complex as bc')
+            ->where('bc.complex_id', $complexId)
+            ->join('buyer as b', 'b.buyer_id', '=', 'bc.buyer_id')
+            ->join('user as u', 'u.user_id', '=', 'b.user_id')
+            ->leftJoin('user_address as ua', function ($j) use ($complexId) {
+                $j->on('ua.user_id', '=', 'b.user_id')
+                    ->where('ua.complex_id', '=', $complexId);
+            });
+
+        if ($torre = $request->query('tower')) {
+            // `sin` es la torre de quienes se registraron antes de que el
+            // campo existiera: no es un valor, es su ausencia.
+            if ($torre === 'sin') {
+                $consulta->whereNull('ua.tower');
+            } else {
+                $consulta->where('ua.tower', $torre);
+            }
+        }
+
+        if ($buscar = trim((string) $request->query('search'))) {
+            $consulta->where(function ($q) use ($buscar) {
+                $q->where('u.name', 'like', "%{$buscar}%")
+                    ->orWhere('ua.apartment', 'like', "%{$buscar}%");
+            });
+        }
+
+        $pagina = $consulta
+            ->orderByRaw('ua.tower IS NULL, ua.tower')
+            ->orderByRaw('CAST(ua.apartment AS UNSIGNED), ua.apartment')
+            ->select([
+                'b.buyer_id',
+                'u.name',
+                'ua.tower',
+                'ua.apartment',
+                // Desde cuándo usa la plataforma. Es lo que distingue a un
+                // residente de siempre de uno que acaba de llegar.
+                'b.state',
+            ])
+            ->distinct()
+            ->paginate($porPagina);
+
+        return response()->json([
+            'data' => $pagina->items(),
+            'meta' => [
+                'page'      => $pagina->currentPage(),
+                'per_page'  => $pagina->perPage(),
+                'total'     => $pagina->total(),
+                'last_page' => $pagina->lastPage(),
+            ],
+        ]);
+    }
+
     public function residentes(Request $request)
     {
         $complexId = (int) $request->attributes->get('complex_id');

@@ -84,7 +84,19 @@ class PulsoDelConjunto
             // Cuántas personas distintas, no cuántas veces. Un domiciliario que
             // entra tres veces es una sola persona en la portería.
             'domiciliarios' => (int) (clone $entradasHoy)
+                ->where('e.kind', 'domiciliario')
                 ->distinct()->count('e.domiciliary_id'),
+            /*
+             * Todo lo que no es domiciliario de la plataforma: visitas,
+             * servicio, domicilios de otras apps. Se cuenta aparte porque son
+             * dos flujos distintos —uno lo verifica el sistema y el otro lo
+             * anota el celador— y sumarlos escondería justo eso.
+             */
+            'externos' => (int) (clone $entradasHoy)
+                ->where('e.kind', '!=', 'domiciliario')->count(),
+            // Entraron hoy y no han salido. Es la cifra que convierte el libro
+            // en control de acceso.
+            'adentro' => (int) (clone $entradasHoy)->whereNull('e.exited_at')->count(),
             'en_camino' => (int) (clone $this->pedidos($complexId))
                 ->where('o.state', 3)->count(),
         ];
@@ -195,6 +207,13 @@ class PulsoDelConjunto
     {
         $filas = $this->entradas($complexId)
             ->where('e.created_at', '>=', $desde->startOfDay())
+            /*
+             * Sólo domiciliarios de la plataforma. Un visitante no tiene
+             * código que generar ni cédula que verificar contra nada: lo anota
+             * el celador. Meterlos en esta proporción la haría caer sin que
+             * nadie hubiera dejado de pedir el código.
+             */
+            ->where('e.kind', 'domiciliario')
             ->selectRaw('e.method, COUNT(*) as total')
             ->groupBy('e.method')
             ->pluck('total', 'method');

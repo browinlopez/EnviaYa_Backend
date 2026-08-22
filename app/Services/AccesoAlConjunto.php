@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Domiciliary;
 use App\Models\Order\OrdersSales;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
@@ -113,10 +114,24 @@ class AccesoAlConjunto
      * comprador. Alguien puede vivir en un conjunto y pedir a la oficina, o al
      * revés; lo que le da derecho a entrar es a dónde va el paquete.
      */
+    /**
+     * Los pedidos que este domiciliario lleva a ESTE conjunto.
+     *
+     * Devuelve además de dónde viene cada uno y qué trae dentro.
+     *
+     * SOBRE EL CONTENIDO: lo pidió expresamente el producto, para que el
+     * celador pueda comprobar que lo que entra coincide con lo que se anunció.
+     * Va aparte —`items`— y la interfaz lo enseña plegado, porque no hace
+     * falta para dejar entrar y hay negocios donde sí es delicado: este mismo
+     * conjunto recibe pedidos de una droguería, y la lista de medicamentos de
+     * un apartamento no es asunto de la portería. Quien lo despliega deja
+     * constancia de que lo hizo a propósito.
+     */
     public function pedidosEnElConjunto(Domiciliary $domiciliario, int $complexId)
     {
-        return OrdersSales::query()
+        $pedidos = OrdersSales::query()
             ->join('user_address as ua', 'ua.address_id', '=', 'orderssales.address_id')
+            ->leftJoin('business as b', 'b.busines_id', '=', 'orderssales.busines_id')
             ->where('orderssales.domiciliary_id', $domiciliario->domiciliary_id)
             // En camino: ya lo recogió y todavía no lo entregó.
             ->where('orderssales.state', 3)
@@ -124,8 +139,35 @@ class AccesoAlConjunto
             ->get([
                 'orderssales.orderSales_id',
                 'orderssales.total',
+                'orderssales.methods_id',
                 'ua.tower',
                 'ua.apartment',
+                'b.name as business_name',
+                'b.logo as business_logo',
             ]);
+
+        if ($pedidos->isEmpty()) {
+            return $pedidos;
+        }
+
+        $detalles = DB::table('orderssales_detail as d')
+            ->join('products as p', 'p.products_id', '=', 'd.product_id')
+            ->whereIn('d.orderSales_id', $pedidos->pluck('orderSales_id'))
+            ->get(['d.orderSales_id', 'd.amount', 'd.unit_price', 'p.name'])
+            ->groupBy('orderSales_id');
+
+        return $pedidos->map(function ($o) use ($detalles) {
+            $items = $detalles->get($o->orderSales_id, collect());
+
+            $o->items = $items->map(fn ($i) => [
+                'name'       => $i->name,
+                'amount'     => (int) $i->amount,
+                'unit_price' => (float) $i->unit_price,
+            ])->values();
+
+            $o->items_count = $items->sum('amount');
+
+            return $o;
+        });
     }
 }

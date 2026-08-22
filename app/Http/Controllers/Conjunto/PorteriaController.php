@@ -109,9 +109,25 @@ class PorteriaController extends Controller
         }
 
         if ($metodo = $request->query('method')) {
-            if (in_array($metodo, ['codigo', 'cedula'], true)) {
+            if (in_array($metodo, ['codigo', 'cedula', 'manual'], true)) {
                 $consulta->where('e.method', $metodo);
             }
+        }
+
+        // Domiciliarios de la plataforma o gente de fuera. Son dos libros
+        // distintos que comparten tabla, y casi siempre se consulta uno.
+        if ($clase = $request->query('kind')) {
+            if ($clase === 'externos') {
+                $consulta->where('e.kind', '!=', 'domiciliario');
+            } else {
+                $consulta->where('e.kind', $clase);
+            }
+        }
+
+        // Quien sigue adentro. Es la consulta que convierte el libro en
+        // control de acceso.
+        if ($request->boolean('dentro')) {
+            $consulta->whereNull('e.exited_at');
         }
 
         if ($desde = $request->query('desde')) {
@@ -126,7 +142,13 @@ class PorteriaController extends Controller
             ->orderByDesc('e.created_at')
             ->limit(300)
             ->get([
-                'e.id', 'e.method', 'e.orders_count', 'e.created_at',
+                'e.id', 'e.kind', 'e.method', 'e.orders_count', 'e.created_at',
+                'e.exited_at',
+                // Los del visitante. Van junto a los del domiciliario porque
+                // el listado es uno solo: la portería no lleva dos libros.
+                'e.visitor_name', 'e.visitor_document', 'e.visitor_phone',
+                'e.visitor_company', 'e.vehicle_plate',
+                'e.tower', 'e.apartment', 'e.authorized_by', 'e.notes',
                 // El detalle guardado al entrar: a qué torre y apartamento iba
                 // cada pedido. Se congeló en ese momento a propósito — si se
                 // recalculara, un pedido entregado después ya no aparecería y

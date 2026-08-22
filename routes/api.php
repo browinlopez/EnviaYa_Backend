@@ -24,6 +24,7 @@ use App\Http\Controllers\Operacion\EfectivoController;
 use App\Http\Controllers\Conjunto\PorteriaController;
 use App\Http\Controllers\Conjunto\MiConjuntoController;
 use App\Http\Controllers\Conjunto\ResumenDelConjuntoController;
+use App\Http\Controllers\Conjunto\VisitantesController;
 use App\Http\Controllers\Negocio\MiNegocioController;
 use App\Http\Controllers\Negocio\ProductosDelNegocioController;
 use App\Http\Controllers\LandingRequestController;
@@ -333,9 +334,33 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::post('porteria/verificar', [PorteriaController::class, 'verificar']);
         Route::get('porteria/entradas', [PorteriaController::class, 'entradas']);
 
+        /*
+         * CONTROL DE ACCESO DE QUIEN NO ES USUARIO DE LA PLATAFORMA.
+         *
+         * Visitas, personal de servicio y domicilios de otras plataformas. No
+         * se crea ninguna cuenta: quien viene hoy a ver a su hermana no tiene
+         * por que ser usuario de VeciPa'Ya. Sus datos viven en la entrada, que
+         * es el hecho que importa.
+         *
+         * Las registra el CELADOR, que es quien esta en la puerta, asi que no
+         * llevan `conjunto:dueno`.
+         */
+        Route::post('porteria/visitantes', [VisitantesController::class, 'registrar']);
+        Route::put('porteria/entradas/{id}/salida', [VisitantesController::class, 'salida']);
+        Route::get('porteria/adentro', [VisitantesController::class, 'adentro']);
+
         // Los celadores los administra el dueño, no el equipo interno: es
         // quien sabe quién trabaja en su portería.
         Route::get('residentes', [MiConjuntoController::class, 'residentes'])
+            ->middleware('conjunto:dueno');
+        // El detalle: quienes son, no cuantos. Sin correo ni telefono.
+        Route::get('residentes/detalle', [MiConjuntoController::class, 'residentesDetalle'])
+            ->middleware('conjunto:dueno');
+
+        // La ficha del conjunto y su foto: del administrador.
+        Route::put('perfil', [MiConjuntoController::class, 'actualizar'])
+            ->middleware('conjunto:dueno');
+        Route::post('perfil/foto', [MiConjuntoController::class, 'subirFoto'])
             ->middleware('conjunto:dueno');
 
         Route::get('celadores', [MiConjuntoController::class, 'celadores'])
