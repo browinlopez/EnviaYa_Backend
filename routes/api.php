@@ -22,6 +22,7 @@ use App\Http\Controllers\DeviceTokenController;
 use App\Http\Controllers\Domiciliary\DomiciliaryController;
 use App\Http\Controllers\Operacion\EfectivoController;
 use App\Http\Controllers\Conjunto\PorteriaController;
+use App\Http\Controllers\Conjunto\MiConjuntoController;
 use App\Http\Controllers\LandingRequestController;
 use App\Http\Controllers\Marketing\AdsController;
 use App\Http\Controllers\Order\OrderController;
@@ -310,8 +311,19 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
      * parámetro — que es justo como se filtran los datos de otro sin querer.
      */
     Route::prefix('conjunto')->middleware('conjunto')->group(function () {
+        Route::get('me', [MiConjuntoController::class, 'mio']);
+
         Route::post('porteria/verificar', [PorteriaController::class, 'verificar']);
         Route::get('porteria/entradas', [PorteriaController::class, 'entradas']);
+
+        // Los celadores los administra el dueño, no el equipo interno: es
+        // quien sabe quién trabaja en su portería.
+        Route::get('celadores', [MiConjuntoController::class, 'celadores'])
+            ->middleware('conjunto:dueno');
+        Route::post('celadores', [MiConjuntoController::class, 'crearCelador'])
+            ->middleware('conjunto:dueno');
+        Route::put('celadores/{id}', [MiConjuntoController::class, 'cambiarCelador'])
+            ->middleware('conjunto:dueno');
     });
 
     //Domiciliario

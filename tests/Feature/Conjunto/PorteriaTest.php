@@ -224,3 +224,81 @@ test('un domiciliario pide su propio codigo, no el de otro', function () {
     expect(app(AccesoAlConjunto::class)->resolverCodigo($r->json('code'))->domiciliary_id)
         ->toBe($domi->domiciliary_id);
 });
+
+/* ------------------------------ EL PANEL ------------------------------ */
+
+test('al entrar, el panel recibe su conjunto y sus permisos', function () {
+    $c = conjuntoConPersonal(ComplexStaff::DUENO);
+    Sanctum::actingAs($c['user']);
+
+    $r = $this->getJson('/v1/conjunto/me')->assertOk();
+
+    expect($r->json('complex.name'))->toBe('Los Almendros')
+        ->and($r->json('role'))->toBe(ComplexStaff::DUENO)
+        ->and($r->json('permissions.celadores.manage'))->toBeTrue();
+});
+
+test('el celador no administra celadores', function () {
+    // Su trabajo es la puerta, no las cuentas.
+    $c = conjuntoConPersonal(ComplexStaff::CELADOR);
+    Sanctum::actingAs($c['user']);
+
+    expect($this->getJson('/v1/conjunto/me')->json('permissions.celadores'))->toBeNull();
+
+    $this->getJson('/v1/conjunto/celadores')->assertStatus(403);
+});
+
+test('el dueno crea un celador de su conjunto', function () {
+    $c = conjuntoConPersonal(ComplexStaff::DUENO);
+    Sanctum::actingAs($c['user']);
+
+    $this->postJson('/v1/conjunto/celadores', [
+        'name' => 'Pedro Vigilante',
+        'email' => 'pedro@ejemplo.test',
+        'password' => 'ClaveDePrueba1*',
+    ])->assertCreated();
+
+    $ficha = ComplexStaff::whereHas('user', fn ($q) => $q->where('email', 'pedro@ejemplo.test'))->first();
+
+    // Del conjunto de quien lo creó, tomado de la sesión.
+    expect((int) $ficha->complex_id)->toBe($c['complexId'])
+        ->and($ficha->role)->toBe(ComplexStaff::CELADOR);
+});
+
+test('el celador creado puede entrar y usar la porteria', function () {
+    $c = conjuntoConPersonal(ComplexStaff::DUENO);
+    Sanctum::actingAs($c['user']);
+
+    $this->postJson('/v1/conjunto/celadores', [
+        'name' => 'Pedro Vigilante',
+        'email' => 'pedro@ejemplo.test',
+        'password' => 'ClaveDePrueba1*',
+    ])->assertCreated();
+
+    $this->postJson('/v1/login', [
+        'email' => 'pedro@ejemplo.test',
+        'password' => 'ClaveDePrueba1*',
+    ])->assertOk();
+
+    Sanctum::actingAs(User::where('email', 'pedro@ejemplo.test')->first());
+    $this->getJson('/v1/conjunto/porteria/entradas')->assertOk();
+});
+
+test('un dueno no puede tocar celadores de otro conjunto', function () {
+    /*
+     * La prueba que importa del alcance por registro en el lado de escritura.
+     * Responde 404 y no 403 a propósito: confirmar que existe pero es de otro
+     * ya sería decirle algo del edificio del vecino.
+     */
+    $mio  = conjuntoConPersonal(ComplexStaff::DUENO);
+    $otro = conjuntoConPersonal(ComplexStaff::CELADOR);
+
+    $ajeno = ComplexStaff::where('complex_id', $otro['complexId'])->first();
+
+    Sanctum::actingAs($mio['user']);
+
+    $this->putJson("/v1/conjunto/celadores/{$ajeno->id}", ['state' => false])
+        ->assertStatus(404);
+
+    expect($ajeno->fresh()->state)->toBeTrue();
+});
