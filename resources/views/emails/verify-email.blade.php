@@ -3,10 +3,7 @@
 @endphp
 
 @component('mail::message')
-<div style="text-align:center;margin-bottom:20px;">
-    <img src="{{ rtrim(config('services.sitio.url'), '/') }}/logotipo.png"  width="120" alt="VeciPa’Ya">
-</div>
-
+{{-- El logotipo lo pone ahora la cabecera, para todos los correos. --}}
 # ¡Bienvenido a VeciPa’Ya! 🎉
 
 Gracias por registrarte en **VeciPa’Ya**, la plataforma que conecta a los vecinos con los negocios de su conjunto residencial.
