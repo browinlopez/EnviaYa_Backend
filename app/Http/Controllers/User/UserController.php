@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\User;
 
+use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
 use App\Models\Buyer\Buyer;
 use App\Models\User;
@@ -14,6 +15,8 @@ use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
 {
+    use ComprobarPertenencia;
+
     // Listar todos los usuarios con relaciones
     public function index()
     {
@@ -177,6 +180,17 @@ class UserController extends Controller
 
         $user = User::where('email', $request->email)->firstOrFail();
 
+        /*
+         * BAJA DE LA PROPIA CUENTA, no de la de otro.
+         *
+         * Bastaba con saber un correo —y el de cualquier tienda esta
+         * publicado— para dejar a esa persona fuera. Uno por uno se podia
+         * apagar la plataforma entera, administradores incluidos.
+         */
+        if ($no = $this->negarCuentaAjena($request, $user->user_id)) {
+            return $no;
+        }
+
         if ($user->state === true) {
             $user->state = false;
             $user->save();
@@ -193,6 +207,17 @@ class UserController extends Controller
         $request->validate([
             'user_id' => 'required|integer|exists:user,user_id',
         ]);
+
+        /*
+         * La direccion de la casa de otra persona, con coordenadas.
+         *
+         * `user_id` llegaba en el cuerpo y no se comparaba con nadie: con
+         * cualquier cuenta se listaban las direcciones de cualquiera, y los
+         * identificadores son correlativos.
+         */
+        if ($no = $this->negarCuentaAjena($request, $request->user_id)) {
+            return $no;
+        }
 
         $addresses = UserAddress::where('user_id', $request->user_id)
             ->where('state', true)
@@ -314,6 +339,11 @@ class UserController extends Controller
         $request->validate([
             'user_id' => 'required|integer|exists:user,user_id',
         ]);
+
+        // Sin esto se borraba la direccion de cualquiera pasando su user_id.
+        if ($no = $this->negarCuentaAjena($request, $request->user_id)) {
+            return $no;
+        }
 
         $address = UserAddress::where('address_id', $id)
             ->where('user_id', $request->user_id)

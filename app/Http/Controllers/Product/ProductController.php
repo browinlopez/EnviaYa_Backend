@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Product;
 
+use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
 use App\Models\Business;
 use App\Models\Order\OrdersSalesDetail;
@@ -15,12 +16,23 @@ use Illuminate\Validation\ValidationException;
 
 class ProductController extends Controller
 {
+    use ComprobarPertenencia;
+
     // Listar todos los productos de un negocio
     public function index(Request $request)
     {
         $request->validate([
             'business_id' => 'required|integer|exists:business,busines_id'
         ]);
+
+        /*
+         * Un identificador en el cuerpo es una sugerencia, no una
+         * credencial: son correlativos. Sin esto, con la cuenta de un
+         * comprador se leian los pedidos de cualquier tienda.
+         */
+        if ($no = $this->negarNegocioAjeno($request, $request->business_id)) {
+            return $no;
+        }
 
         // Cargar productos con su categoría y los datos extra de todos los tipos
         $business = Business::with(array_merge(

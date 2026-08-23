@@ -102,6 +102,13 @@ class ProductosDelNegocioController extends Controller
                      * poder senalarlos: son la lista de trabajo del tendero.
                      */
                     'sin_precio'  => (float) $pb->price <= 0,
+                    /*
+                     * El vencimiento es del LOTE de esta tienda. Antes colgaba
+                     * del producto compartido, asi que la fecha que escribiera
+                     * una tienda se la escribia a las demas: el atun de la
+                     * esquina vencia el mismo dia que el de tres cuadras alla.
+                     */
+                    'expiration_date' => $pb->expiration_date,
                     'qualification' => $pb->qualification !== null ? (float) $pb->qualification : null,
                     /*
                      * Cuántas tiendas MÁS lo venden. Cero significa que es solo
@@ -123,6 +130,7 @@ class ProductosDelNegocioController extends Controller
         $datos = $request->validate([
             'price'       => 'nullable|numeric|min:0',
             'amount'      => 'nullable|integer|min:0',
+            'expiration_date' => 'nullable|date',
             'name'        => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'category_id' => 'nullable|integer|exists:category,category_id',
@@ -163,7 +171,11 @@ class ProductosDelNegocioController extends Controller
 
         DB::transaction(function () use ($datos, $pb, $id, $otras) {
             $deLaTienda = array_filter(
-                ['price' => $datos['price'] ?? null, 'amount' => $datos['amount'] ?? null],
+                [
+                    'price'  => $datos['price'] ?? null,
+                    'amount' => $datos['amount'] ?? null,
+                    'expiration_date' => $datos['expiration_date'] ?? null,
+                ],
                 fn ($v) => $v !== null,
             );
 

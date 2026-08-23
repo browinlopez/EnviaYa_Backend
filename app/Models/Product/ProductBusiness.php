@@ -18,6 +18,8 @@ class ProductBusiness extends Audit
         'price',
         'amount',
         'qualification',
+        // El vencimiento es del LOTE de esta tienda, no del producto compartido.
+        'expiration_date',
     ];
 
     public function business()

@@ -2112,9 +2112,20 @@ class AdminApiController extends Controller
         return response()->json(
             DB::table('residential_complexes as rc')
                 ->leftJoin('buyer_complex as bc', 'bc.complex_id', '=', 'rc.complex_id')
+                /*
+                 * La ficha del conjunto viaja con la lista: el formulario del
+                 * panel la abre desde aca y sin estos campos habria que pedir
+                 * cada conjunto aparte solo para editarlo.
+                 *
+                 * Van tambien en el GROUP BY porque la consulta agrupa para
+                 * contar residentes, y en MySQL con ONLY_FULL_GROUP_BY una
+                 * columna seleccionada y no agrupada tumba la consulta.
+                 */
                 ->groupBy('rc.complex_id', 'rc.name', 'rc.address', 'rc.state', 'rc.people_count',
                     'rc.latitude', 'rc.longitude', 'rc.municipality_id',
                     'rc.towers_count', 'rc.apartments_per_tower',
+                    'rc.photo', 'rc.phone', 'rc.email', 'rc.admin_name', 'rc.nit',
+                    'rc.gate_notes', 'rc.require_authorization',
                     'm.name', 'dp.id', 'dp.name')
                 ->orderBy('rc.name')
                 ->leftJoin('municipalities as m', 'm.id', '=', 'rc.municipality_id')
@@ -2123,6 +2134,8 @@ class AdminApiController extends Controller
                     'rc.complex_id', 'rc.name', 'rc.address', 'rc.state', 'rc.people_count',
                     'rc.latitude', 'rc.longitude', 'rc.municipality_id',
                     'rc.towers_count', 'rc.apartments_per_tower',
+                    'rc.photo', 'rc.phone', 'rc.email', 'rc.admin_name', 'rc.nit',
+                    'rc.gate_notes', 'rc.require_authorization',
                     'm.name as municipality_name', 'dp.id as department_id', 'dp.name as department_name',
                     DB::raw('COUNT(bc.buyer_id) as residents_count'),
                 ])
@@ -2150,6 +2163,32 @@ class AdminApiController extends Controller
              */
             'towers_count'         => 'nullable|integer|min:1|max:500',
             'apartments_per_tower' => 'nullable|integer|min:1|max:2000',
+
+            /*
+             * LA FICHA DEL CONJUNTO.
+             *
+             * El backend ya guardaba estos campos y el panel de aliados ya los
+             * editaba, pero el formulario del ADMIN —que es donde el conjunto
+             * NACE— no los mandaba: quedaba dado de alta sin foto, sin
+             * telefono y sin a quien llamar, y alguien tenia que entrar por el
+             * otro panel a completarlo.
+             *
+             * La foto va como URL porque MediaService ya sube a Cloudflare y
+             * devuelve una: el formulario sube primero y manda el enlace.
+             */
+            'photo'      => 'nullable|string|max:2048',
+            'phone'      => 'nullable|string|max:40',
+            'email'      => 'nullable|email|max:120',
+            'admin_name' => 'nullable|string|max:120',
+            'nit'        => 'nullable|string|max:40',
+            'gate_notes' => 'nullable|string',
+            /*
+             * Que la porteria tenga que pedirle permiso al residente antes de
+             * dejar entrar. Nace apagado: encenderlo cambia como trabaja el
+             * celador y esa es una decision del conjunto, no un valor por
+             * defecto.
+             */
+            'require_authorization' => 'nullable|boolean',
         ]);
 
         $id = DB::table('residential_complexes')->insertGetId([
@@ -2162,6 +2201,14 @@ class AdminApiController extends Controller
             'municipality_id' => $datos['municipality_id'] ?? null,
             'towers_count'         => $datos['towers_count'] ?? null,
             'apartments_per_tower' => $datos['apartments_per_tower'] ?? null,
+
+            'photo'      => $datos['photo'] ?? null,
+            'phone'      => $datos['phone'] ?? null,
+            'email'      => $datos['email'] ?? null,
+            'admin_name' => $datos['admin_name'] ?? null,
+            'nit'        => $datos['nit'] ?? null,
+            'gate_notes' => $datos['gate_notes'] ?? null,
+            'require_authorization' => $datos['require_authorization'] ?? false,
         ]);
 
         return response()->json(['message' => 'Conjunto creado.', 'complex_id' => $id], 201);
@@ -2179,6 +2226,14 @@ class AdminApiController extends Controller
             'municipality_id' => 'sometimes|nullable|integer|exists:municipalities,id',
             'towers_count'         => 'sometimes|nullable|integer|min:1|max:500',
             'apartments_per_tower' => 'sometimes|nullable|integer|min:1|max:2000',
+
+            'photo'      => 'sometimes|nullable|string|max:2048',
+            'phone'      => 'sometimes|nullable|string|max:40',
+            'email'      => 'sometimes|nullable|email|max:120',
+            'admin_name' => 'sometimes|nullable|string|max:120',
+            'nit'        => 'sometimes|nullable|string|max:40',
+            'gate_notes' => 'sometimes|nullable|string',
+            'require_authorization' => 'sometimes|boolean',
         ]);
 
         $n = DB::table('residential_complexes')->where('complex_id', $id)->update($datos);

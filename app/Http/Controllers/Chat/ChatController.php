@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Chat;
 
+use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Events\MessageSent;
 use App\Helper\ReverbClient;
 use App\Http\Controllers\Controller;
@@ -16,6 +17,8 @@ use Illuminate\Support\Facades\Http;
 
 class ChatController extends Controller
 {
+    use ComprobarPertenencia;
+
     /**
      * Crear un nuevo chat
      */
@@ -53,6 +56,12 @@ class ChatController extends Controller
             'recipient_id' => 'required|exists:user,user_id',
             'content' => 'required|string|max:1000',
         ]);
+
+        // Escribir EN NOMBRE DE OTRO: `user_id` venia del cuerpo, asi que
+        // se podian mandar mensajes haciendose pasar por cualquiera.
+        if ($no = $this->negarCuentaAjena($request, $request->user_id)) {
+            return $no;
+        }
 
         return DB::transaction(function () use ($request) {
             // Obtener usuarios
@@ -135,6 +144,18 @@ class ChatController extends Controller
             $chat = Chat::with(['messages.user', 'participants.user'])
                 ->find($request->chat_id);
 
+            /*
+             * SOLO QUIEN ESTA EN LA CONVERSACION.
+             *
+             * `chat_id` llegaba en el cuerpo y no se comparaba con nadie:
+             * con cualquier cuenta se leia lo que se escribieron un
+             * comprador, un tendero y un domiciliario. Los identificadores
+             * son correlativos, asi que recorrerlos no requiere ingenio.
+             */
+            if ($chat && !$this->participaEnElChat($request, $chat)) {
+                return response()->json(['message' => 'Esa conversacion no es tuya.'], 403);
+            }
+
             if (!$chat) {
                 return response()->json([
                     'chat_id' => $request->chat_id,
@@ -186,6 +207,11 @@ class ChatController extends Controller
         ]);
 
         $message = Message::findOrFail($request->message_id);
+
+        // Editar el mensaje de otro. Solo su autor.
+        if ($no = $this->negarCuentaAjena($request, $message->user_id)) {
+            return $no;
+        }
 
         $message->content = json_encode($request->content);
         $message->save();
@@ -273,5 +299,28 @@ class ChatController extends Controller
         });
 
         return response()->json($formattedChats);
+    }
+
+    /**
+     * Si quien pregunta esta en la conversacion.
+     *
+     * El equipo interno tambien: soporte necesita poder leer un chat cuando
+     * alguien reclama, y su propia puerta ya esta comprobada aparte.
+     */
+    private function participaEnElChat(Request $request, Chat $chat): bool
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return false;
+        }
+
+        if ((int) $user->rol === 4) {
+            return true;
+        }
+
+        return $chat->participants->contains(
+            fn ($p) => (int) $p->user_id === (int) $user->user_id,
+        );
     }
 }

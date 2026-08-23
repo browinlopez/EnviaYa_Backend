@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Review;
 
+use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
 use App\Models\Buyer\Buyer;
 use App\Models\Domiciliary;
@@ -15,6 +16,8 @@ use Illuminate\Support\Facades\DB;
 
 class ReviewController extends Controller
 {
+    use ComprobarPertenencia;
+
     public function store(Request $request)
     {
         $request->validate([
@@ -291,6 +294,19 @@ class ReviewController extends Controller
                 throw new \Exception('Review no encontrada');
             }
 
+            /*
+             * SOLO QUIEN LA ESCRIBIO.
+             *
+             * Bastaba el numero de la resena —correlativo— para cambiarle la
+             * nota a cualquiera o borrarla. Una calificacion que el calificado
+             * puede borrar no es una calificacion.
+             */
+            if (!$this->esSuyaLaResena($request, $review->buyer_id, 'buyer')) {
+                DB::rollBack();
+
+                return response()->json(['message' => 'Esa resena no es tuya.'], 403);
+            }
+
             $review->update($request->only(['qualification', 'comment', 'state']));
 
             /*
@@ -329,6 +345,19 @@ class ReviewController extends Controller
             $review = BusinessReview::find($request->reviews_id);
             if (!$review) {
                 throw new \Exception('Review no encontrada');
+            }
+
+            /*
+             * SOLO QUIEN LA ESCRIBIO.
+             *
+             * Bastaba el numero de la resena —correlativo— para cambiarle la
+             * nota a cualquiera o borrarla. Una calificacion que el calificado
+             * puede borrar no es una calificacion.
+             */
+            if (!$this->esSuyaLaResena($request, $review->buyer_id, 'buyer')) {
+                DB::rollBack();
+
+                return response()->json(['message' => 'Esa resena no es tuya.'], 403);
             }
 
             $busines_id = $review->busines_id;
@@ -784,6 +813,19 @@ class ReviewController extends Controller
                 throw new \Exception('Review no encontrada');
             }
 
+            /*
+             * SOLO QUIEN LA ESCRIBIO.
+             *
+             * Bastaba el numero de la resena —correlativo— para cambiarle la
+             * nota a cualquiera o borrarla. Una calificacion que el calificado
+             * puede borrar no es una calificacion.
+             */
+            if (!$this->esSuyaLaResena($request, $review->user_id, 'user')) {
+                DB::rollBack();
+
+                return response()->json(['message' => 'Esa resena no es tuya.'], 403);
+            }
+
             $user_id = $review->user_id;
 
             $review->delete();
@@ -813,5 +855,35 @@ class ReviewController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Si la resena la escribio quien pregunta.
+     *
+     * `business_reviews` guarda el `buyer_id` y `user_reviews` el `user_id`,
+     * que no son lo mismo: el primero es la fila de comprador y el segundo la
+     * cuenta. De ahi el segundo parametro.
+     *
+     * El equipo interno tambien puede: moderar contenido es parte de su
+     * trabajo, y su puerta esta comprobada aparte.
+     */
+    private function esSuyaLaResena(Request $request, $duenio, string $tipo): bool
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return false;
+        }
+
+        if ((int) $user->rol === 4) {
+            return true;
+        }
+
+        if ($tipo === 'user') {
+            return (int) $duenio === (int) $user->user_id;
+        }
+
+        return $duenio !== null
+            && (int) $duenio === (int) ($user->buyer?->buyer_id ?? 0);
     }
 }

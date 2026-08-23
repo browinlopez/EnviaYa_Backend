@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Business;
 
+use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
 use App\Models\Business;
 use App\Models\User;
@@ -10,6 +11,8 @@ use Illuminate\Support\Facades\DB;
 
 class BusinessController extends Controller
 {
+    use ComprobarPertenencia;
+
     // Listar todos los negocios con dueños y municipio
     public function index(Request $request)
     {
@@ -460,6 +463,14 @@ class BusinessController extends Controller
             'owner_ids' => 'nullable|array',
             'owner_ids.*' => 'integer|exists:owner,owner_id'
         ]);
+
+        /*
+         * Cambiar el nombre, el NIT o la razon social de OTRA tienda.
+         * `busines_id` venia en el cuerpo y no se miraba de quien era.
+         */
+        if ($no = $this->negarNegocioAjeno($request, $request->busines_id)) {
+            return $no;
+        }
 
         DB::beginTransaction();
 

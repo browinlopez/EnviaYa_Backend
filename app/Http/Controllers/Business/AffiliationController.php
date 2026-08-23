@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Business;
 
+use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
 use App\Models\Business\BusinessUserAffiliation;
 use App\Models\User;
@@ -9,6 +10,8 @@ use Illuminate\Http\Request;
 
 class AffiliationController extends Controller
 {
+    use ComprobarPertenencia;
+
     // Afiliar o desafiliar
     public function toggle(Request $request)
     {
@@ -16,6 +19,14 @@ class AffiliationController extends Controller
             'user_id'    => 'required|integer|exists:user,user_id',
             'busines_id' => 'required|integer|exists:business,busines_id',
         ]);
+
+        /*
+         * El negocio del cuerpo tiene que ser suyo. Sin esto se afiliaba y
+         * desafiliaba gente a tiendas ajenas, y se listaban sus clientes.
+         */
+        if ($no = $this->negarNegocioAjeno($request, $request->busines_id)) {
+            return $no;
+        }
 
         $userId     = $request->user_id;
         $businessId = $request->busines_id;
@@ -41,6 +52,14 @@ class AffiliationController extends Controller
         $request->validate([
             'busines_id' => 'required|integer|exists:business,busines_id',
         ]);
+
+        /*
+         * El negocio del cuerpo tiene que ser suyo. Sin esto se afiliaba y
+         * desafiliaba gente a tiendas ajenas, y se listaban sus clientes.
+         */
+        if ($no = $this->negarNegocioAjeno($request, $request->busines_id)) {
+            return $no;
+        }
 
         $businessId = $request->busines_id;
 
@@ -129,6 +148,14 @@ class AffiliationController extends Controller
             'busines_id' => 'required|integer|exists:business,busines_id',
         ]);
 
+        /*
+         * El negocio del cuerpo tiene que ser suyo. Sin esto se afiliaba y
+         * desafiliaba gente a tiendas ajenas, y se listaban sus clientes.
+         */
+        if ($no = $this->negarNegocioAjeno($request, $request->busines_id)) {
+            return $no;
+        }
+
         $userId     = $request->user_id;
         $businessId = $request->busines_id;
 
@@ -171,6 +198,14 @@ class AffiliationController extends Controller
             'busines_id' => 'required|integer|exists:business,busines_id',
         ]);
 
+        /*
+         * El negocio del cuerpo tiene que ser suyo. Sin esto se afiliaba y
+         * desafiliaba gente a tiendas ajenas, y se listaban sus clientes.
+         */
+        if ($no = $this->negarNegocioAjeno($request, $request->busines_id)) {
+            return $no;
+        }
+
         $affiliation = BusinessUserAffiliation::where('user_id', $request->user_id)
             ->where('busines_id', $request->busines_id)
             ->first();
@@ -194,6 +229,14 @@ class AffiliationController extends Controller
         $request->validate([
             'busines_id' => 'required|integer|exists:business,busines_id',
         ]);
+
+        /*
+         * El negocio del cuerpo tiene que ser suyo. Sin esto se afiliaba y
+         * desafiliaba gente a tiendas ajenas, y se listaban sus clientes.
+         */
+        if ($no = $this->negarNegocioAjeno($request, $request->busines_id)) {
+            return $no;
+        }
 
         $businessId = $request->busines_id;
 

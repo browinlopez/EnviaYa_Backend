@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Order;
 
+use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Services\Ajustes;
 use App\Services\PoliticaDeDomicilio;
 use App\Services\CustodiaDeEfectivo;
@@ -37,6 +38,8 @@ use Illuminate\Support\Str;
 
 class OrderController extends Controller
 {
+    use ComprobarPertenencia;
+
     // Función para obtener todas las órdenes de un usuario
     public function ordersUser(Request $request)
     {
@@ -161,6 +164,15 @@ class OrderController extends Controller
         $request->validate([
             'business_id' => 'required|integer'
         ]);
+
+        /*
+         * Un identificador en el cuerpo es una sugerencia, no una
+         * credencial: son correlativos. Sin esto, con la cuenta de un
+         * comprador se leian los pedidos de cualquier tienda.
+         */
+        if ($no = $this->negarNegocioAjeno($request, $request->business_id)) {
+            return $no;
+        }
 
         $business = Business::find($request->business_id);
 
@@ -319,6 +331,15 @@ class OrderController extends Controller
         $request->validate([
             'business_id' => 'required|integer|exists:business,busines_id',
         ]);
+
+        /*
+         * Un identificador en el cuerpo es una sugerencia, no una
+         * credencial: son correlativos. Sin esto, con la cuenta de un
+         * comprador se leian los pedidos de cualquier tienda.
+         */
+        if ($no = $this->negarNegocioAjeno($request, $request->business_id)) {
+            return $no;
+        }
 
         $business_id = $request->business_id;
 

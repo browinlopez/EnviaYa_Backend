@@ -244,19 +244,36 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::post('topProductsBusiness', [ProductController::class, 'mostPopularProducts']);
     });
 
+    /*
+     * LAS CATEGORIAS SON DE LA PLATAFORMA, NO DE UNA TIENDA.
+     *
+     * Escribirlas estaba abierto a cualquier sesion: con la cuenta de un
+     * comprador se creaban, renombraban y BORRABAN las categorias con las que
+     * se organiza el catalogo de todos los negocios. Borrar una deja sin
+     * seccion a los productos que colgaban de ella.
+     *
+     * Leerlas se deja como estaba: la app las necesita para pintar el
+     * formulario de un producto, y no dicen nada de nadie.
+     */
     Route::prefix('categories')->group(function () {
-        Route::post('/create', [CategoryController::class, 'store']);         // Crear categoría
-        Route::get('/show', [CategoryController::class, 'show']); // Mostrar categoría específica
-        Route::put('/update', [CategoryController::class, 'update']); // Actualizar categoría
-        Route::delete('/delete', [CategoryController::class, 'destroy']); // Eliminar categoría
+        Route::get('/show', [CategoryController::class, 'show']);
+
+        Route::middleware('admin')->group(function () {
+            Route::post('/create', [CategoryController::class, 'store']);
+            Route::put('/update', [CategoryController::class, 'update']);
+            Route::delete('/delete', [CategoryController::class, 'destroy']);
+        });
     });
 
     Route::prefix('categories-business')->group(function () {
         Route::get('index', [CategoryBusinessController::class, 'index']);
-        Route::post('store', [CategoryBusinessController::class, 'store']);
         Route::post('show', [CategoryBusinessController::class, 'show']);
-        Route::post('update', [CategoryBusinessController::class, 'update']);
-        Route::post('destroy', [CategoryBusinessController::class, 'destroy']);
+
+        Route::middleware('admin')->group(function () {
+            Route::post('store', [CategoryBusinessController::class, 'store']);
+            Route::post('update', [CategoryBusinessController::class, 'update']);
+            Route::post('destroy', [CategoryBusinessController::class, 'destroy']);
+        });
     });
 
     //Ordenes
@@ -290,7 +307,9 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
     Route::prefix('businesses')->group(function () {
         Route::get('index', [BusinessController::class, 'index']);
         Route::get('top-businesses', [BusinessController::class, 'indexByQualification']);
-        Route::post('store', [BusinessController::class, 'store']);
+        // Dar de alta un aliado es una operacion del equipo: implica
+        // contrato y verificacion, no un formulario abierto a cualquiera.
+        Route::post('store', [BusinessController::class, 'store'])->middleware('admin');
         Route::post('show', [BusinessController::class, 'show']);
         Route::put('update', [BusinessController::class, 'update']);
         Route::prefix('affiliations')->group(function () {
@@ -446,7 +465,10 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
     Route::prefix('domiciliaries')->group(function () {
         Route::get('/listDomiciliary', [DomiciliaryController::class, 'listDomiciliary']);      // Listar todos
         Route::get('/listDomiciliariesByBusiness', [DomiciliaryController::class, 'listDomiciliariesByBusiness']);      // Listar todos
-        Route::post('/createDomiciliary', [DomiciliaryController::class, 'createDomiciliary']);  // Crear
+        // Dar de alta a un domiciliario ata una persona a la plataforma
+        // —contrato, documentos, cuenta para cobrar—: lo hace el equipo.
+        Route::post('/createDomiciliary', [DomiciliaryController::class, 'createDomiciliary'])
+            ->middleware('admin');
         Route::post('/showDomiciliary', [DomiciliaryController::class, 'showDomiciliary']);      // Obtener uno
         Route::post('/updateDomiciliary', [DomiciliaryController::class, 'updateDomiciliary']);  // Actualizar
         Route::post('/deleteDomiciliary', [DomiciliaryController::class, 'deleteDomiciliary']);  // Eliminar
