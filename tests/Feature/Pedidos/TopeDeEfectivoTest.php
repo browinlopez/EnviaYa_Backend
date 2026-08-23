@@ -22,64 +22,6 @@ use Laravel\Sanctum\Sanctum;
  * lista—. En el cliente, cualquiera de los dos se la saltaría.
  */
 
-function escenarioDeTope(?float $tope, int $metodo = 1, int $total = 60000): array
-{
-    foreach ([1 => 'comprador', 2 => 'tendero', 3 => 'domiciliario'] as $id => $nombre) {
-        Rol::firstOrCreate(['rol_id' => $id], ['name' => $nombre, 'guard_name' => 'web']);
-    }
-
-    // `orderssales.methods_id` es clave foránea: sin la fila, el insert falla.
-    foreach ([1 => 'Efectivo', 2 => 'Tarjeta'] as $id => $nombre) {
-        DB::table('payment_methods')->insertOrIgnore([
-            'methods_id' => $id, 'name' => $nombre, 'state' => 1,
-        ]);
-    }
-
-    $repartidor = User::factory()->create(['rol' => 3]);
-    $domiId = DB::table('domiciliary')->insertGetId([
-        'user_id' => $repartidor->user_id, 'available' => 1,
-        'qualification' => 0, 'state' => 1,
-    ], 'domiciliary_id');
-
-    $tendero = User::factory()->create(['rol' => 2]);
-
-    // `business.type` es clave foránea a `category_business`.
-    $tipo = DB::table('category_business')->insertGetId(['name' => 'Tienda'], 'id');
-
-    $businessId = DB::table('business')->insertGetId([
-        'name' => 'Tienda', 'qualification' => 0, 'state' => 1, 'type' => $tipo,
-        'max_courier_cash' => $tope,
-    ], 'busines_id');
-
-    $ownerId = DB::table('owner')->insertGetId([
-        'user_id' => $tendero->user_id, 'state' => 1,
-    ], 'owner_id');
-
-    DB::table('owner_busines')->insert([
-        'owner_id' => $ownerId, 'busines_id' => $businessId, 'state' => 1,
-    ]);
-
-    DB::table('business_domiciliary')->insert([
-        'busines_id' => $businessId, 'domiciliary_id' => $domiId, 'state' => 1,
-    ]);
-
-    $comprador = User::factory()->create(['rol' => 1]);
-    $buyerId = DB::table('buyer')->insertGetId([
-        'user_id' => $comprador->user_id, 'qualification' => 0, 'state' => 1,
-    ]);
-
-    // Aceptado y esperando a que alguien lo lleve.
-    $orderId = DB::table('orderssales')->insertGetId([
-        'buyer_id' => $buyerId, 'busines_id' => $businessId,
-        'methods_id' => $metodo,
-        'subtotal' => $total - 2000, 'domicilio' => 2000, 'total' => $total,
-        'domiciliary_fee' => 500, 'sale_date' => now(),
-        'state' => 2, 'payment_state' => $metodo === 1 ? 'pending_cash' : 'paid',
-    ], 'orderSales_id');
-
-    return compact('repartidor', 'domiId', 'tendero', 'businessId', 'orderId');
-}
-
 /** Le pone efectivo encima sin tener que simular una entrega entera. */
 function conEfectivoEncima(int $domiId, float $cuanto): void
 {

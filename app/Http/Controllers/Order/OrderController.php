@@ -1101,7 +1101,45 @@ class OrderController extends Controller
             'user_id' => 'nullable|integer|exists:user,user_id'
         ]);
 
-        $order = OrdersSales::with('details', 'domiciliary')->find($request->order_id);
+        /*
+         * DOS PERSONAS TOCANDO EL MISMO PEDIDO A LA VEZ.
+         *
+         * Con veinte domiciliarios mirando la misma lista, dos tocan «aceptar»
+         * en el mismo segundo el primer dia. Y por esta misma transicion pasa
+         * tambien el tendero despachando, asi que la pareja puede ser un
+         * domiciliario y la tienda.
+         *
+         * Leyendo con `find()` los dos veian estado 2, los dos pasaban la
+         * comprobacion y los dos escribian: el ultimo ganaba y al otro se le
+         * respondia «actualizado». Ese otro sale a repartir un pedido que no
+         * lleva, y el cliente recibe dos motos.
+         *
+         * NO SE NOTA EN DESARROLLO: el servidor de PHP en Windows atiende una
+         * peticion a la vez, asi que las dos van en fila y siempre sale bien.
+         * En produccion, con php-fpm, van de verdad en paralelo.
+         *
+         * `lockForUpdate` hace que la segunda espere a que la primera termine
+         * su transaccion y lea ya el estado nuevo, con lo que su comprobacion
+         * de transicion falla como debe. Fuera de una transaccion el bloqueo se
+         * suelta enseguida y no sirve de nada, de ahi el `DB::transaction`.
+         */
+        return DB::transaction(function () use ($request) {
+            $order = OrdersSales::with('details', 'domiciliary')
+                ->lockForUpdate()
+                ->find($request->order_id);
+
+            return $this->moverPedido($request, $order);
+        });
+    }
+
+    /**
+     * El cambio de estado en si, ya con el pedido bloqueado.
+     *
+     * Va aparte para que el bloqueo de arriba envuelva TODO el camino —leer,
+     * comprobar y escribir— sin tener que indentar trescientas lineas.
+     */
+    private function moverPedido(Request $request, ?OrdersSales $order)
+    {
 
         if (!$order) {
             return response()->json(['message' => 'Orden no encontrada'], 404);

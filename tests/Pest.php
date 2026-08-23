@@ -89,3 +89,68 @@ function enLaTienda(int $businessId, int $productId, float $precio = 5000, int $
         'price' => $precio, 'amount' => $cantidad, 'qualification' => 0,
     ]);
 }
+
+/*
+ * Un pedido aceptado, su tienda, su dueno y un domiciliario con cupo.
+ *
+ * Compartido entre el tope de efectivo y el candado del pedido. Vive aca
+ * porque Pest solo carga los archivos que va a correr: con el helper dentro de
+ * uno de ellos, correr el otro solo se cae con Call to undefined function.
+ */
+function escenarioDeTope(?float $tope, int $metodo = 1, int $total = 60000): array
+{
+    foreach ([1 => 'comprador', 2 => 'tendero', 3 => 'domiciliario'] as $id => $nombre) {
+        \App\Models\Rol::firstOrCreate(['rol_id' => $id], ['name' => $nombre, 'guard_name' => 'web']);
+    }
+
+    // `orderssales.methods_id` es clave foránea: sin la fila, el insert falla.
+    foreach ([1 => 'Efectivo', 2 => 'Tarjeta'] as $id => $nombre) {
+        \Illuminate\Support\Facades\DB::table('payment_methods')->insertOrIgnore([
+            'methods_id' => $id, 'name' => $nombre, 'state' => 1,
+        ]);
+    }
+
+    $repartidor = \App\Models\User::factory()->create(['rol' => 3]);
+    $domiId = \Illuminate\Support\Facades\DB::table('domiciliary')->insertGetId([
+        'user_id' => $repartidor->user_id, 'available' => 1,
+        'qualification' => 0, 'state' => 1,
+    ], 'domiciliary_id');
+
+    $tendero = \App\Models\User::factory()->create(['rol' => 2]);
+
+    // `business.type` es clave foránea a `category_business`.
+    $tipo = \Illuminate\Support\Facades\DB::table('category_business')->insertGetId(['name' => 'Tienda'], 'id');
+
+    $businessId = \Illuminate\Support\Facades\DB::table('business')->insertGetId([
+        'name' => 'Tienda', 'qualification' => 0, 'state' => 1, 'type' => $tipo,
+        'max_courier_cash' => $tope,
+    ], 'busines_id');
+
+    $ownerId = \Illuminate\Support\Facades\DB::table('owner')->insertGetId([
+        'user_id' => $tendero->user_id, 'state' => 1,
+    ], 'owner_id');
+
+    \Illuminate\Support\Facades\DB::table('owner_busines')->insert([
+        'owner_id' => $ownerId, 'busines_id' => $businessId, 'state' => 1,
+    ]);
+
+    \Illuminate\Support\Facades\DB::table('business_domiciliary')->insert([
+        'busines_id' => $businessId, 'domiciliary_id' => $domiId, 'state' => 1,
+    ]);
+
+    $comprador = \App\Models\User::factory()->create(['rol' => 1]);
+    $buyerId = \Illuminate\Support\Facades\DB::table('buyer')->insertGetId([
+        'user_id' => $comprador->user_id, 'qualification' => 0, 'state' => 1,
+    ]);
+
+    // Aceptado y esperando a que alguien lo lleve.
+    $orderId = \Illuminate\Support\Facades\DB::table('orderssales')->insertGetId([
+        'buyer_id' => $buyerId, 'busines_id' => $businessId,
+        'methods_id' => $metodo,
+        'subtotal' => $total - 2000, 'domicilio' => 2000, 'total' => $total,
+        'domiciliary_fee' => 500, 'sale_date' => now(),
+        'state' => 2, 'payment_state' => $metodo === 1 ? 'pending_cash' : 'paid',
+    ], 'orderSales_id');
+
+    return compact('repartidor', 'domiId', 'tendero', 'businessId', 'orderId');
+}
