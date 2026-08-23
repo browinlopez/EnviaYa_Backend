@@ -149,3 +149,43 @@ test('un correo que no existe no delata si esta registrado', function () {
 
     expect($r->status())->toBe(200);
 });
+
+test('pulsar el enlace dos veces no dice que sea invalido', function () {
+    Mail::fake();
+
+    $this->postJson('/v1/register', [
+        'name' => 'Doble Clic', 'email' => 'doble.clic@ejemplo.com',
+        'password' => '12345678', 'belongs_to_complex' => false,
+    ])->assertStatus(201);
+
+    $token = User::where('email', 'doble.clic@ejemplo.com')->value('email_verification_token');
+
+    /*
+     * PASA TODO EL TIEMPO: el antivirus del correo abre los enlaces antes que
+     * la persona, Gmail los escanea, alguien pulsa dos veces o refresca. Como
+     * el token se ponia en `null` al verificar, la segunda visita no
+     * encontraba a nadie y respondia «Token invalido» sobre una cuenta que
+     * acababa de quedar lista. Es lo que se vio en produccion.
+     */
+    $this->get("/verify-email?token={$token}")->assertOk();
+
+    $segunda = $this->get("/verify-email?token={$token}");
+
+    $segunda->assertOk();
+    expect($segunda->getContent())->not->toContain('no es válido');
+
+    expect(User::where('email', 'doble.clic@ejemplo.com')->value('email_verified_at'))
+        ->not->toBeNull();
+});
+
+test('un enlace de un correo anterior lo dice sin asustar', function () {
+    Mail::fake();
+
+    $r = $this->get('/verify-email?token=' . str_repeat('x', 60));
+
+    $r->assertOk();
+
+    // Ni «fallida» ni «error»: casi siempre es un correo viejo, y decirlo así
+    // evita que la persona crea que su cuenta está rota.
+    expect($r->getContent())->toContain('correo anterior');
+});

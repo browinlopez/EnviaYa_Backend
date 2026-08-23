@@ -70,3 +70,32 @@ test('el enlace de verificacion va en el correo', function () {
     expect($html)->toContain('https://ejemplo.test/verify?token=abc')
         ->and($html)->toContain('Verificar mi cuenta');
 });
+
+test('el correo no lleva emojis', function () {
+    /*
+     * No es cosmética. Los lectores de pantalla los leen en voz alta uno por
+     * uno —«cara sonriente», «candado»— y convierten una frase en un párrafo
+     * de ruido; algunos filtros antispam los puntúan en contra, y este correo
+     * es justamente el que NO puede caer en no deseados.
+     */
+    $html = correoDeVerificacion();
+
+    $emojis = preg_match_all(
+        '/[\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}\x{2B00}-\x{2BFF}\x{FE0F}]/u',
+        $html,
+    );
+
+    expect($emojis)->toBe(0);
+});
+
+test('el correo trae el enlace tambien como texto', function () {
+    /*
+     * Hay clientes que no pintan el botón —modo texto plano, algunos
+     * corporativos— y sin la dirección escrita la persona se queda sin poder
+     * hacer nada con el correo.
+     */
+    $html = correoDeVerificacion();
+
+    expect(substr_count($html, 'https://ejemplo.test/verify?token=abc'))
+        ->toBeGreaterThanOrEqual(2);
+});

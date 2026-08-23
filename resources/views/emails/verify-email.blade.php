@@ -1,37 +1,45 @@
-@php
-    $primaryColor = '#2563eb'; // Azul VeciPa’Ya
-@endphp
+{{--
+    EL CORREO DE VERIFICACIÓN.
 
+    Es el primer contacto de la plataforma con una persona, y sin él no puede
+    entrar: el login rechaza a quien no verificó.
+
+    SIN EMOJIS, y no por gusto. Tres razones concretas:
+
+    · Los lectores de pantalla los leen en voz alta, uno por uno («cara
+      sonriente con corazones»), y convierten una frase de diez palabras en
+      media hora de ruido.
+    · Algunos filtros antispam los puntúan en contra, y este correo es
+      justamente el que NO puede caer en no deseados.
+    · En clientes viejos y en la vista de texto plano salen como cuadros o
+      signos de interrogación.
+
+    El logotipo lo pone la cabecera; acá va solo el mensaje.
+--}}
 @component('mail::message')
-{{-- El logotipo lo pone ahora la cabecera, para todos los correos. --}}
-# ¡Bienvenido a VeciPa’Ya! 🎉
+# Bienvenido a VeciPa’Ya
 
-Gracias por registrarte en **VeciPa’Ya**, la plataforma que conecta a los vecinos con los negocios de su conjunto residencial.
+Gracias por registrarte. VeciPa’Ya conecta a los vecinos de un conjunto con los
+negocios de su barrio.
 
----
+## Confirma tu correo
 
-### 🔐 Verifica tu cuenta
-Para activar tu cuenta y empezar a usar VeciPa’Ya, confirma tu correo electrónico haciendo clic en el siguiente botón:
+Solo falta un paso. Pulsa el botón para activar tu cuenta:
 
-@component('mail::button', ['url' => $actionUrl, 'color' => 'primary'])
+@component('mail::button', ['url' => $actionUrl])
 Verificar mi cuenta
 @endcomponent
 
----
+Si el botón no funciona, copia esta dirección en tu navegador:
 
-### ❓ ¿Por qué es importante?
-✔ Protegemos tu cuenta  
-✔ Evitamos registros falsos  
-✔ Garantizamos una mejor experiencia  
+<small style="word-break: break-all; color: #6b7280;">{{ $actionUrl }}</small>
 
-Si **no creaste esta cuenta**, puedes ignorar este correo.
+El enlace caduca en una hora. Si se te pasa, puedes pedir otro desde la
+aplicación.
 
 ---
 
-Gracias por confiar en nosotros,  
-**Equipo VeciPa’Ya** 💙  
+Si no creaste esta cuenta, ignora este correo: sin confirmar, no se activa.
 
-<small style="color:#6b7280;">
-Este enlace expirará en 60 minutos.
-</small>
+Equipo VeciPa’Ya
 @endcomponent

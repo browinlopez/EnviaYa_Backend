@@ -178,8 +178,14 @@ class AuthController extends Controller
         $user = User::where('email_verification_token', $request->token)->first();
 
         if (!$user) {
+            /*
+             * Se llega aca sobre todo por enlaces VIEJOS: quien pidio el
+             * reenvio dos veces tiene dos correos, y el primero ya no sirve.
+             * Decirlo asi evita que la persona crea que su cuenta esta rota.
+             */
             return view('auth.verify-error', [
-                'message' => 'Token inválido'
+                'message' => 'Este enlace no es válido. Puede que sea de un correo anterior: '
+                    . 'busca el más reciente en tu bandeja.',
             ]);
         }
 
@@ -191,14 +197,35 @@ class AuthController extends Controller
             !$user->email_verification_expires_at ||
             $user->email_verification_expires_at->isPast()
         ) {
+            /*
+             * Caducado no es lo mismo que invalido, y la salida es distinta:
+             * la cuenta existe y solo hace falta otro enlace. Se pasa el correo
+             * a la vista para que pueda ofrecer el reenvio sin volver a
+             * preguntarlo.
+             */
             return view('auth.verify-error', [
-                'message' => 'El enlace de verificación ha expirado'
+                'message' => 'Este enlace ya caducó. Los enlaces duran una hora.',
+                'email'   => $user->email,
+                'caducado' => true,
             ]);
         }
 
+        /*
+         * EL TOKEN NO SE BORRA.
+         *
+         * Se ponia en `null` al verificar, y eso hacia que la SEGUNDA visita
+         * al mismo enlace no encontrara a nadie: «Token invalido», sobre una
+         * cuenta que acababa de quedar verificada. Y una segunda visita pasa
+         * todo el tiempo —el antivirus del correo abre los enlaces antes que
+         * la persona, Gmail los escanea, alguien pulsa dos veces o refresca—
+         * asi que lo normal era ver el error justo despues del exito.
+         *
+         * Conservarlo no reabre nada: la comprobacion de `email_verified_at`
+         * de mas arriba corta antes y responde que ya esta lista. El token
+         * queda inerte, y ademas caduca solo.
+         */
         $user->update([
             'email_verified_at' => Carbon::now(),
-            'email_verification_token' => null,
             'email_verification_expires_at' => null,
         ]);
 
