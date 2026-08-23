@@ -47,7 +47,7 @@ class AuthController extends Controller
         ]);
 
         try {
-            DB::transaction(function () use ($validated) {
+            $usuario = DB::transaction(function () use ($validated) {
 
                 $user = User::create([
                     'name'     => $validated['name'],
@@ -74,10 +74,18 @@ class AuthController extends Controller
                      * contradicen desde siempre, y `AffiliationController` le
                      * mostraba al tendero la equivocada.
                      */
-                    'belongs_to_complex' => $validated['belongs_to_complex'] ? 1 : 0,
+                    /*
+                     * Con `??` y no directo: la regla es `boolean`, no
+                     * `required`, asi que si el cliente no manda el campo la
+                     * clave NO EXISTE en `$validated` y esto reventaba con
+                     * «Undefined array key» — un 500 en el registro, que es la
+                     * primera pantalla que toca cualquiera. Se comprobo contra
+                     * el servidor de verdad.
+                     */
+                    'belongs_to_complex' => !empty($validated['belongs_to_complex']) ? 1 : 0,
                 ]);
 
-                if ($validated['belongs_to_complex'] && !empty($validated['complex_id'])) {
+                if (!empty($validated['belongs_to_complex']) && !empty($validated['complex_id'])) {
                     BuyerComplex::create([
                         'buyer_id' => $buyer->buyer_id,
                         'complex_id' => $validated['complex_id'],
@@ -113,11 +121,39 @@ class AuthController extends Controller
                     }
                 }
 
-                $this->sendVerificationEmail($user);
+                return $user;
             });
 
+            /*
+             * EL CORREO SE MANDA FUERA DE LA TRANSACCION.
+             *
+             * Estaba dentro, y eso ataba la cuenta al SMTP: un tropiezo de
+             * Gmail —o los cuatro segundos que tarda en una conexion mala—
+             * hacia rodar atras el registro entero y devolvia un 500. La
+             * persona se quedaba sin cuenta por algo que no tiene nada que ver
+             * con crearla.
+             *
+             * Y si el envio falla, la cuenta YA EXISTE: se avisa de que el
+             * correo no salio, en vez de negar el registro. Reenviarlo es un
+             * boton; volver a registrarse con el mismo correo es un 409.
+             */
+            try {
+                $this->sendVerificationEmail($usuario);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('No se pudo enviar la verificacion', [
+                    'email' => $usuario->email,
+                    'error' => $e->getMessage(),
+                ]);
+
+                return response()->json([
+                    'message' => 'Tu cuenta quedo creada, pero no pudimos enviarte el correo de verificacion. Pide que te lo reenviemos.',
+                    'email_enviado' => false,
+                ], 201);
+            }
+
             return response()->json([
-                'message' => 'Registro exitoso. Revisa tu correo para verificar tu cuenta.'
+                'message' => 'Registro exitoso. Revisa tu correo para verificar tu cuenta.',
+                'email_enviado' => true,
             ], 201);
         } catch (\Illuminate\Database\QueryException $e) {
             if ($e->errorInfo[1] == 1062) {
