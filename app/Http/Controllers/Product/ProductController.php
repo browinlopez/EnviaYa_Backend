@@ -103,6 +103,25 @@ class ProductController extends Controller
             'business_id' => 'required|integer|exists:business,busines_id',
         ]);
 
+        /*
+         * QUE EL NEGOCIO SEA SUYO.
+         *
+         * Esta ruta la usa la app publicada, que manda `business_id` en el
+         * cuerpo, y no habia nada que comprobara que ese numero fuera de
+         * quien pregunta: con el identificador de otra tienda —que es
+         * correlativo— se le podian meter productos a su catalogo.
+         *
+         * La puerta nueva (`POST /v1/negocio/productos`) ya no crea nada:
+         * elige del catalogo maestro. Esta se queda porque las versiones de
+         * la app que ya estan en los telefonos la siguen usando y apagarla
+         * las deja sin poder cargar; pero con la pertenencia comprobada. Se
+         * retira cuando la mayoria haya actualizado.
+         */
+        if (!app(\App\Services\NegocioDelUsuario::class)
+            ->administra($request->user()?->user_id, (int) $request->business_id)) {
+            return response()->json(['message' => 'Ese negocio no es tuyo.'], 403);
+        }
+
         $business = Business::findOrFail($request->business_id);
         $type = (int) $business->type;
 

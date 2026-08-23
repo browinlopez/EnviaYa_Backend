@@ -25,6 +25,8 @@ use App\Http\Controllers\Conjunto\PorteriaController;
 use App\Http\Controllers\Conjunto\MiConjuntoController;
 use App\Http\Controllers\Conjunto\ResumenDelConjuntoController;
 use App\Http\Controllers\Conjunto\VisitantesController;
+use App\Http\Controllers\Negocio\CargaDeCatalogoController;
+use App\Http\Controllers\Negocio\CatalogoController;
 use App\Http\Controllers\Negocio\MiNegocioController;
 use App\Http\Controllers\Negocio\ProductosDelNegocioController;
 use App\Http\Controllers\LandingRequestController;
@@ -397,17 +399,43 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::get('ingresos', [OrderController::class, 'incomeBusiness']);
 
         /*
-         * El catalogo tiene controlador propio: un producto puede estar en
-         * varias tiendas y `ProductController@update` escribe la fila
-         * compartida sin mirar con quien. Ver el porque en
-         * ProductosDelNegocioController.
+         * EL CATÁLOGO, DESDE UNA TIENDA.
+         *
+         * El tendero ENCUENTRA productos, no los inventa. Antes `POST
+         * productos` iba a `ProductController@store`, que recibía nombre y
+         * categoría en texto libre y creaba una fila en `products` —el catálogo
+         * maestro de toda la plataforma— mientras el `update` de al lado le
+         * impedía, con razón, cambiarle una tilde a un producto compartido. Se
+         * defendía una puerta y la otra estaba abierta.
+         *
+         * Ahora `POST productos` recibe `products_id`, `price` y `amount`. Para
+         * lo que de verdad no existe está `catalogo/proponer`, que es un camino
+         * aparte y deja marcado de dónde salió.
          */
+        Route::get('catalogo', [CatalogoController::class, 'buscar']);
+        Route::get('catalogo/codigo/{barcode}', [CatalogoController::class, 'porCodigo']);
+        Route::post('catalogo/proponer', [CatalogoController::class, 'proponer']);
+
         Route::get('productos', [ProductosDelNegocioController::class, 'index']);
-        Route::put('productos/{id}', [ProductosDelNegocioController::class, 'update']);
-        // Crear si es seguro reutilizarlo: nace una fila nueva en `products`,
-        // que no comparte con nadie todavia.
-        Route::post('productos', [ProductController::class, 'store']);
+        Route::post('productos', [ProductosDelNegocioController::class, 'agregar']);
+
+        /*
+         * Las rutas fijas van ANTES que `productos/{id}`: si no, «precios» y
+         * «copiar» entran por el comodín y llegan al controlador como un id que
+         * no es un número.
+         */
+        Route::put('productos/precios', [ProductosDelNegocioController::class, 'precios']);
+        Route::get('productos/tiendas-para-copiar', [ProductosDelNegocioController::class, 'tiendasParaCopiar']);
+        Route::post('productos/copiar', [ProductosDelNegocioController::class, 'copiar']);
         Route::get('productos/esquema', [ProductController::class, 'schema']);
+
+        Route::get('productos/cargas', [CargaDeCatalogoController::class, 'historial']);
+        Route::post('productos/cargas', [CargaDeCatalogoController::class, 'subir']);
+        Route::get('productos/cargas/plantilla', [CargaDeCatalogoController::class, 'plantilla']);
+        Route::get('productos/cargas/{id}', [CargaDeCatalogoController::class, 'ver']);
+
+        Route::put('productos/{id}', [ProductosDelNegocioController::class, 'update']);
+        Route::delete('productos/{id}', [ProductosDelNegocioController::class, 'quitar']);
 
         Route::get('domiciliarios', [DomiciliaryController::class, 'listDomiciliariesByBusiness']);
 

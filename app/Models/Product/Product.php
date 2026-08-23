@@ -15,7 +15,7 @@ class Product extends Audit
     protected $primaryKey = 'products_id';
     public $timestamps = false;
 
-    protected $fillable = ['name', 'description', 'category_id', 'image', 'state'];
+    protected $fillable = ['name', 'barcode', 'description', 'brand', 'category_id', 'image', 'state', 'origen'];
 
     public function category()
     {

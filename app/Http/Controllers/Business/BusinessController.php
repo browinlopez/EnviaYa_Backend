@@ -401,7 +401,23 @@ class BusinessController extends Controller
                 ];
             }),
             'is_affiliated' => $estaAfiliado,
-            'products' => $business->products->map(function ($product) use ($estaAfiliado) {
+            /*
+             * SIN PRECIO NO SE OFRECE.
+             *
+             * Copiar el surtido de otra tienda deja los productos en cero a
+             * proposito: se copia QUE vende, no A CUANTO. Si esos cero
+             * llegaran al comprador, la tienda estaria anunciando decenas de
+             * productos que no puede despachar, y el que queda mal es el
+             * domiciliario en la puerta.
+             *
+             * Se filtra por el precio GUARDADO y no por el que se muestra:
+             * quien no esta afiliado sigue viendo el catalogo con candado,
+             * como hasta ahora.
+             */
+            'products' => $business->products
+                ->filter(fn ($p) => (float) ($p->pivot->price ?? 0) > 0)
+                ->values()
+                ->map(function ($product) use ($estaAfiliado) {
                 return [
                     'product_id' => $product->products_id,
                     'name'       => $product->name,

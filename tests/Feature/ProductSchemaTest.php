@@ -49,7 +49,25 @@ function productTestSetup(int $businessType): array
 
     asignarCategoriaANegocio($category->category_id, $businessType);
 
-    Sanctum::actingAs(User::factory()->create());
+    $user = User::factory()->create();
+
+    /*
+     * EL NEGOCIO TIENE QUE SER SUYO.
+     *
+     * `/v1/product/create` recibe `business_id` en el cuerpo y hasta ahora no
+     * comprobaba que fuera de quien pregunta: con el identificador de otra
+     * tienda —que es correlativo— se le metian productos a su catalogo. Estas
+     * pruebas pasaban porque tampoco lo comprobaban ellas.
+     */
+    $ownerId = DB::table('owner')->insertGetId([
+        'user_id' => $user->user_id, 'state' => 1,
+    ], 'owner_id');
+
+    DB::table('owner_busines')->insert([
+        'owner_id' => $ownerId, 'busines_id' => $business->busines_id, 'state' => 1,
+    ]);
+
+    Sanctum::actingAs($user);
 
     return [$business, $category];
 }
