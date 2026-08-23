@@ -110,3 +110,42 @@ test('el correo repetido sigue respondiendo que ya existe', function () {
     expect($r->status())->toBeIn([409, 422]);
     expect(User::where('email', 'repetido@ejemplo.com')->count())->toBe(1);
 });
+
+test('reenviar la verificacion no revienta si el correo falla', function () {
+    Mail::fake();
+
+    $this->postJson('/v1/register', [
+        'name' => 'Sin Verificar', 'email' => 'sin.verificar@ejemplo.com',
+        'password' => '12345678', 'belongs_to_complex' => false,
+    ])->assertStatus(201);
+
+    /*
+     * Es JUSTO el endpoint al que se llega cuando el correo no llego: la
+     * persona que no puede entrar pulsa «reenviar». Devolvia 500 —comprobado
+     * contra produccion— con lo que recibia otro error sin saber si el
+     * problema era suyo o del servidor.
+     */
+    Mail::shouldReceive('to')->andThrow(new \RuntimeException('SMTP caído'));
+
+    $r = $this->postJson('/v1/email/resend-verification', [
+        'email' => 'sin.verificar@ejemplo.com',
+    ]);
+
+    // 503: el problema es del servicio de correo, no de lo que pidio.
+    expect($r->status())->toBe(503)
+        ->and($r->json('email_enviado'))->toBeFalse();
+});
+
+test('un correo que no existe no delata si esta registrado', function () {
+    Mail::fake();
+
+    /*
+     * Respuesta identica para el que existe y el que no: si se distinguieran,
+     * este endpoint seria una forma de averiguar quien tiene cuenta.
+     */
+    $r = $this->postJson('/v1/email/resend-verification', [
+        'email' => 'nadie@ejemplo.com',
+    ]);
+
+    expect($r->status())->toBe(200);
+});

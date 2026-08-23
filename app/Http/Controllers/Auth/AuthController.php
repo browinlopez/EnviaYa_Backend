@@ -250,11 +250,38 @@ class AuthController extends Controller
             ]);
         }
 
-        // 📩 Enviar correo
-        $this->sendVerificationEmail($user);
+        /*
+         * EL MISMO CUIDADO QUE EN EL REGISTRO.
+         *
+         * Esto enviaba sin proteger, asi que un SMTP caido daba un 500. Y este
+         * es JUSTO el endpoint al que se llega cuando el correo no llego: la
+         * persona que no puede entrar pulsa «reenviar» y recibe otro error, sin
+         * saber si el problema es suyo o del servidor.
+         *
+         * Comprobado contra produccion: respondia 500 en cinco segundos.
+         */
+        try {
+            $this->sendVerificationEmail($user);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('No se pudo reenviar la verificacion', [
+                'email' => $user->email,
+                'error' => $e->getMessage(),
+            ]);
+
+            /*
+             * 503 y no 500: el problema es del servicio de correo, no de lo que
+             * pidio la persona, y el cliente puede distinguirlo para ofrecer
+             * «intentalo mas tarde» en vez de «algo salio mal».
+             */
+            return response()->json([
+                'message' => 'No pudimos enviar el correo en este momento. Intentalo en unos minutos.',
+                'email_enviado' => false,
+            ], 503);
+        }
 
         return response()->json([
-            'message' => 'Si el correo existe, se ha enviado el enlace de verificación.'
+            'message' => 'Si el correo existe, se ha enviado el enlace de verificación.',
+            'email_enviado' => true,
         ], 200);
     }
 
