@@ -73,20 +73,45 @@ $propios = [
         ? str_replace('://', '://www.', $sitio)
         : null,
     $aOrigen(env('PANEL_URL')),
+    /*
+     * EL PANEL DE ALIADOS ES OTRO ORIGEN.
+     *
+     * Vive en su propio subdominio —`aliados.` frente al `panel.` del equipo
+     * interno— y hasta ahora entraba solo por el patron comodin de mas abajo,
+     * que autoriza cualquier subdominio propio. Funciona, pero es fragil: ese
+     * patron desaparece en cuanto alguien defina
+     * `CORS_ALLOWED_ORIGIN_PATTERNS`, y entonces el panel de los tenderos y de
+     * los conjuntos deja de poder llamar a la API. No falla al desplegar:
+     * falla al intentar entrar.
+     *
+     * Nombrarlo aparte lo vuelve independiente del comodin.
+     */
+    $aOrigen(env('ALIADOS_URL')),
     $aOrigen(env('APP_URL')),
 ];
 
 if ($origenes === []) {
-    // Los puertos de desarrollo del monorepo: 5173 y 5174 son el panel
-    // (Vite salta al siguiente si el primero está ocupado) y 5175 la
-    // landing. Sin variable configurada, al menos el equipo puede trabajar.
+    /*
+     * Los puertos de desarrollo del monorepo. 5173 y 5174 son el panel de
+     * administracion —Vite salta al siguiente si el primero esta ocupado—,
+     * 5175 la landing y 5176/5177 el de aliados. Sin variable configurada, al
+     * menos el equipo puede trabajar.
+     *
+     * Los de aliados faltaban: en local su panel se sirve en 5177 y quedaba
+     * bloqueado si alguien lo apuntaba a la API de verdad en vez de al proxy
+     * de Vite.
+     */
     $origenes = [
         'http://localhost:5173',
         'http://localhost:5174',
         'http://localhost:5175',
+        'http://localhost:5176',
+        'http://localhost:5177',
         'http://127.0.0.1:5173',
         'http://127.0.0.1:5174',
         'http://127.0.0.1:5175',
+        'http://127.0.0.1:5176',
+        'http://127.0.0.1:5177',
     ];
 }
 

@@ -2,6 +2,10 @@
 .DS_Store
 .env
 .env.backup
+# Cualquier .env con otro sufijo: se usan para apuntar comandos a otra base
+# —por ejemplo `--env=produccion`— y llevan credenciales de verdad.
+.env.*
+!.env.example
 .env.production
 .phpactor.json
 .phpunit.result.cache
