@@ -553,6 +553,16 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::get('users/{id}', [AdminApiController::class, 'showUser'])->middleware('modulo:usuarios');
         Route::put('users/{id}', [AdminApiController::class, 'updateUser'])->middleware('modulo:usuarios,gestionar');
 
+        /*
+         * Dar por bueno un correo sin que su dueño abra el enlace.
+         *
+         * Ruta aparte y no un campo más de `updateUser`: no es editar un dato,
+         * es afirmar algo que nadie comprobó. Tener su propio verbo la deja
+         * visible en el registro de auditoría y permite negarla sin negar el
+         * resto de la edición.
+         */
+        Route::post('users/{id}/verify-email', [AdminApiController::class, 'verifyUserEmail'])->middleware('modulo:usuarios,gestionar');
+
         // Transversal: lo consumen los formularios de negocios, conjuntos y
         // segmentación de banners.
         Route::get('locations', [AdminApiController::class, 'locations']);
@@ -645,6 +655,16 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::post('complexes', [AdminApiController::class, 'storeComplex'])->middleware('modulo:conjuntos,gestionar');
         Route::put('complexes/{id}', [AdminApiController::class, 'updateComplex'])->middleware('modulo:conjuntos,gestionar');
         Route::delete('complexes/{id}', [AdminApiController::class, 'deleteComplex'])->middleware('modulo:conjuntos,gestionar');
+
+        /*
+         * El personal del conjunto: quién lo administra y quién está en la
+         * portería. Va bajo el módulo `conjuntos` y no bajo `usuarios` a
+         * propósito: quien administra los conjuntos es quien tiene que poder
+         * darles un responsable, y hasta ahora eso solo se podía por consola
+         * (`php artisan conjunto:dueno`).
+         */
+        Route::get('complexes/{id}/staff', [AdminApiController::class, 'complexStaff'])->middleware('modulo:conjuntos');
+        Route::post('complexes/{id}/owner', [AdminApiController::class, 'assignComplexOwner'])->middleware('modulo:conjuntos,gestionar');
 
         /*
         |------------------------------------------------------------------

@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Admin\Api;
 use App\Services\Ajustes;
 use App\Http\Controllers\Controller;
 use App\Models\Area;
+use App\Models\Conjunto\ComplexStaff;
 use App\Models\Operacion\DomiciliaryDocument;
 use App\Models\Reviews\BusinessReview;
 use App\Models\Reviews\DomiciliaryReview;
+use App\Models\User;
 use App\Services\BusinessMediaService;
 use App\Services\ContratoService;
 use App\Services\MediaService;
@@ -16,6 +18,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 /**
@@ -207,10 +210,23 @@ class AdminApiController extends Controller
 
     public function users(Request $request)
     {
-        $q = DB::table('user as u')->select([
-            'u.user_id', 'u.name', 'u.email', 'u.phone', 'u.address', 'u.rol',
-            'u.qualification', 'u.state', 'u.email_verified_at',
-        ]);
+        $q = DB::table('user as u')
+            /*
+             * QUIEN VERIFICO EL CORREO, no solo si esta verificado.
+             *
+             * Con el boton de verificar a mano, la insignia verde pasa a cubrir
+             * dos hechos distintos: uno comprobado —la persona abrio el enlace
+             * que le llego— y otro afirmado por un administrador. Sin esta
+             * columna serian indistinguibles, y la diferencia importa el dia
+             * que haya que recuperar una contrasena: si el correo estaba mal
+             * escrito, la cuenta queda verificada y a la vez inalcanzable.
+             */
+            ->leftJoin('user as vb', 'vb.user_id', '=', 'u.email_verified_by')
+            ->select([
+                'u.user_id', 'u.name', 'u.email', 'u.phone', 'u.address', 'u.rol',
+                'u.qualification', 'u.state', 'u.email_verified_at',
+                'u.email_verified_by', 'vb.name as email_verified_by_name',
+            ]);
 
         if ($rol = (int) $request->query('rol')) {
             $q->where('u.rol', $rol);
@@ -242,7 +258,8 @@ class AdminApiController extends Controller
             SUM(CASE WHEN u.rol = 2 THEN 1 ELSE 0 END) as tenderos,
             SUM(CASE WHEN u.rol = 3 THEN 1 ELSE 0 END) as domiciliarios,
             SUM(CASE WHEN u.rol = 4 THEN 1 ELSE 0 END) as personal,
-            SUM(CASE WHEN u.email_verified_at IS NULL THEN 1 ELSE 0 END) as sin_verificar
+            SUM(CASE WHEN u.email_verified_at IS NULL THEN 1 ELSE 0 END) as sin_verificar,
+            SUM(CASE WHEN u.email_verified_by IS NOT NULL THEN 1 ELSE 0 END) as verificados_a_mano
         ');
 
         return [
@@ -252,6 +269,7 @@ class AdminApiController extends Controller
             'domiciliarios' => (int) ($r->domiciliarios ?? 0),
             'personal'      => (int) ($r->personal ?? 0),
             'sinVerificar'  => (int) ($r->sin_verificar ?? 0),
+            'aMano'         => (int) ($r->verificados_a_mano ?? 0),
         ];
     }
 
@@ -276,6 +294,26 @@ class AdminApiController extends Controller
             'address'  => 'nullable|string|max:255',
             'rol'      => 'required|integer|exists:rol,rol_id',
             'document' => 'nullable|string|max:50',
+
+            /*
+             * A QUE CONJUNTO PERTENECE, cuando el rol es de conjunto.
+             *
+             * El `match` de mas abajo tenia `default => null`, asi que un rol 5
+             * se creaba SIN su ficha en `complex_staff` y en silencio: la
+             * cuenta existia, iniciaba sesion y no veia nada, porque todo el
+             * panel de aliados se acota por el conjunto de esa ficha. Un fallo
+             * que solo aparecia del otro lado y sin ningun mensaje.
+             */
+            'complex_id' => [
+                Rule::requiredIf(fn () => in_array(
+                    (int) request('rol'),
+                    [ComplexStaff::ROL_DUENO, ComplexStaff::ROL_CELADOR],
+                    true,
+                )),
+                'nullable',
+                'integer',
+                'exists:residential_complexes,complex_id',
+            ],
         ]);
 
         $id = DB::transaction(function () use ($datos) {
@@ -310,6 +348,19 @@ class AdminApiController extends Controller
                     'qualification' => 0,
                     'state' => 1,
                 ]),
+                /*
+                 * Los dos roles de conjunto comparten tabla y solo cambia el
+                 * papel dentro de ella.
+                 */
+                ComplexStaff::ROL_DUENO, ComplexStaff::ROL_CELADOR => ComplexStaff::create([
+                    'user_id'    => $userId,
+                    'complex_id' => $datos['complex_id'],
+                    'role'       => (int) $datos['rol'] === ComplexStaff::ROL_DUENO
+                        ? ComplexStaff::DUENO
+                        : ComplexStaff::CELADOR,
+                    'state'      => true,
+                    'created_by' => request()->user()?->user_id,
+                ]),
                 default => null,
             };
 
@@ -321,10 +372,14 @@ class AdminApiController extends Controller
 
     public function showUser($id)
     {
-        $user = DB::table('user')->where('user_id', $id)->first([
-            'user_id', 'name', 'email', 'phone', 'address', 'rol',
-            'qualification', 'state', 'email_verified_at',
-        ]);
+        $user = DB::table('user as u')
+            ->leftJoin('user as vb', 'vb.user_id', '=', 'u.email_verified_by')
+            ->where('u.user_id', $id)
+            ->first([
+                'u.user_id', 'u.name', 'u.email', 'u.phone', 'u.address', 'u.rol',
+                'u.qualification', 'u.state', 'u.email_verified_at',
+                'u.email_verified_by', 'vb.name as email_verified_by_name',
+            ]);
 
         abort_if(!$user, 404, 'El usuario no existe.');
 
@@ -364,6 +419,53 @@ class AdminApiController extends Controller
         }
 
         return $this->showUser($id);
+    }
+
+    /**
+     * Da por bueno un correo sin que su duenio abra el enlace.
+     *
+     * PARA QUE EXISTE: durante las pruebas se dan de alta cuentas desde la app
+     * —un domiciliario de prueba, un comprador de prueba— con correos de usar y
+     * tirar a los que nunca va a llegar nada. Sin esto quedan bloqueadas al
+     * iniciar sesion y hay que entrar a la base a mano.
+     *
+     * QUE CUESTA: `email_verified_at` deja de significar "esta direccion existe
+     * y es suya" para significar "alguien lo dio por bueno". Por eso se guarda
+     * QUIEN lo hizo: es lo unico que permite seguir distinguiendo una cosa de
+     * la otra, y lo que explica, el dia que esa cuenta no pueda recuperar su
+     * contrasena, por que no le llega el correo.
+     *
+     * Va por Eloquent y no por el constructor de consultas a proposito: `User`
+     * es auditable y asi el cambio queda ademas en el registro de auditoria,
+     * con fecha y con autor.
+     */
+    public function verifyUserEmail(Request $request, $id)
+    {
+        $user = User::find($id);
+        abort_if(!$user, 404, 'El usuario no existe.');
+
+        if ($user->email_verified_at) {
+            /*
+             * No se vuelve a escribir. Si ya lo habia verificado la persona por
+             * su correo, sobrescribirlo con un autor manual convertiria una
+             * verificacion buena en una dudosa, y eso no se puede deshacer.
+             */
+            return response()->json([
+                'message' => 'Este correo ya estaba verificado.',
+            ], 422);
+        }
+
+        $user->update([
+            'email_verified_at' => now(),
+            'email_verified_by' => $request->user()?->user_id,
+            // El enlace pendiente se apaga: ya no hay nada que confirmar.
+            'email_verification_expires_at' => null,
+        ]);
+
+        return response()->json([
+            'message' => 'Correo verificado. Ya puede iniciar sesion.',
+            'user'    => $this->showUser($id)->getData(),
+        ]);
     }
 
     /* ==================================================================
@@ -2109,6 +2211,28 @@ class AdminApiController extends Controller
 
     public function complexes()
     {
+        /*
+         * El administrador de cada conjunto y cuantos celadores tiene, en dos
+         * consultas planas que se cruzan en memoria. `complex_staff` es la
+         * tabla que dice CUAL conjunto es de quien: sin fila ahi, una cuenta
+         * con rol 5 entra al panel de aliados y no ve absolutamente nada.
+         */
+        $duenos = DB::table('complex_staff as cs')
+            ->join('user as u', 'u.user_id', '=', 'cs.user_id')
+            ->where('cs.role', ComplexStaff::DUENO)
+            ->get(['cs.complex_id', 'u.user_id', 'u.name', 'u.email', 'u.state'])
+            ->keyBy('complex_id');
+
+        $celadores = DB::table('complex_staff')
+            ->where('role', ComplexStaff::CELADOR)
+            ->where('state', true)
+            ->groupBy('complex_id')
+            // El COUNT necesita un alias propio: `pluck` pide la columna por
+            // nombre y una expresión cruda no lo tiene, así que devolvía cero
+            // para todos los conjuntos.
+            ->selectRaw('complex_id, COUNT(*) as total')
+            ->pluck('total', 'complex_id');
+
         return response()->json(
             DB::table('residential_complexes as rc')
                 ->leftJoin('buyer_complex as bc', 'bc.complex_id', '=', 'rc.complex_id')
@@ -2139,6 +2263,30 @@ class AdminApiController extends Controller
                     'm.name as municipality_name', 'dp.id as department_id', 'dp.name as department_name',
                     DB::raw('COUNT(bc.buyer_id) as residents_count'),
                 ])
+                /*
+                 * QUIEN ADMINISTRA CADA CONJUNTO VIAJA CON LA LISTA.
+                 *
+                 * Sin esto el panel no puede decir "este conjunto no tiene a
+                 * nadie", que es exactamente el estado en el que nace y el que
+                 * hay que ver de un vistazo. Un conjunto sin administrador se
+                 * ve idéntico a uno con administrador, y nadie lo nota hasta
+                 * que el dueño llama diciendo que no puede entrar.
+                 *
+                 * Va como transformación en memoria y no como otro join: la
+                 * consulta ya agrupa para contar residentes y meterle una
+                 * segunda tabla obligaría a añadir sus columnas al GROUP BY.
+                 */
+                ->map(function ($c) use ($duenos, $celadores) {
+                    $d = $duenos[$c->complex_id] ?? null;
+
+                    $c->admin_user_id = $d->user_id ?? null;
+                    $c->admin_email   = $d->email   ?? null;
+                    $c->admin_account = $d->name    ?? null;
+                    $c->admin_active  = $d ? (bool) $d->state : null;
+                    $c->guards_count  = $celadores[$c->complex_id] ?? 0;
+
+                    return $c;
+                })
         );
     }
 
@@ -2255,6 +2403,153 @@ class AdminApiController extends Controller
         abort_if(!$n, 404, 'El conjunto no existe.');
 
         return response()->json(['message' => 'Conjunto eliminado.']);
+    }
+
+    /* ------------------------------------------------------------------
+       EL PERSONAL DEL CONJUNTO
+
+       Un conjunto recien creado no le sirve a nadie: hace falta una persona
+       que entre por el panel de aliados a administrarlo, y a esa persona
+       habia que crearla por consola (`php artisan conjunto:dueno`). Quien
+       da de alta el conjunto desde el panel no tiene acceso al servidor, asi
+       que el conjunto se quedaba a medias sin que nada lo dijera.
+
+       Son DOS COSAS que van juntas y por eso no basta con la pantalla de
+       usuarios: la cuenta con rol 5, y la ficha en `complex_staff` que dice
+       cual conjunto es el suyo. Con la primera sola, la cuenta entra y no ve
+       nada.
+       ------------------------------------------------------------------ */
+
+    /** El administrador y los celadores de un conjunto. */
+    public function complexStaff($id)
+    {
+        abort_if(
+            !DB::table('residential_complexes')->where('complex_id', $id)->exists(),
+            404,
+            'El conjunto no existe.',
+        );
+
+        $personal = DB::table('complex_staff as cs')
+            ->join('user as u', 'u.user_id', '=', 'cs.user_id')
+            ->leftJoin('user as c', 'c.user_id', '=', 'cs.created_by')
+            ->where('cs.complex_id', $id)
+            // El dueno primero: es el que se busca al abrir la ficha.
+            ->orderByRaw("CASE WHEN cs.role = '" . ComplexStaff::DUENO . "' THEN 0 ELSE 1 END")
+            ->orderBy('u.name')
+            ->get([
+                'cs.id', 'cs.role', 'cs.state', 'cs.created_at',
+                'u.user_id', 'u.name', 'u.email', 'u.phone',
+                'u.state as account_state', 'u.email_verified_at',
+                'c.name as created_by_name',
+            ]);
+
+        return response()->json([
+            'dueno'     => $personal->firstWhere('role', ComplexStaff::DUENO),
+            'celadores' => $personal->where('role', ComplexStaff::CELADOR)->values(),
+        ]);
+    }
+
+    /**
+     * Crea o repone al administrador de un conjunto.
+     *
+     * Acepta un correo que ya exista: mudarse de conjunto o reponer un acceso
+     * perdido es mas frecuente que equivocarse, y fallar con "ese correo ya
+     * esta usado" obligaria a borrar la cuenta a mano en la base.
+     */
+    public function assignComplexOwner(Request $request, $id)
+    {
+        $conjunto = DB::table('residential_complexes')->where('complex_id', $id)->first();
+        abort_if(!$conjunto, 404, 'El conjunto no existe.');
+
+        $datos = $request->validate([
+            'name'     => 'required|string|max:255',
+            'email'    => 'required|email|max:255',
+            'phone'    => 'nullable|string|max:20',
+            // Opcional a proposito: sin ella se genera una y se devuelve UNA
+            // vez, que es como se entrega un acceso sin escribirlo en ningun
+            // sitio.
+            'password' => 'nullable|string|min:8|max:72',
+        ]);
+
+        $generada = empty($datos['password']);
+        $clave    = $generada ? Str::password(14) : $datos['password'];
+
+        $existente = DB::table('user')->where('email', $datos['email'])->first();
+
+        /*
+         * Si el correo pertenece a una cuenta que NO es de conjunto —un
+         * comprador, un tendero— no se la convierte: se le arrancaria su
+         * perfil y sus pedidos quedarian colgando de un rol que ya no puede
+         * verlos.
+         */
+        if ($existente && !in_array((int) $existente->rol, [ComplexStaff::ROL_DUENO, ComplexStaff::ROL_CELADOR], true)) {
+            return response()->json([
+                'message' => "Ese correo ya pertenece a otra cuenta de la plataforma "
+                    . "({$existente->name}). Usa un correo distinto para el administrador del conjunto.",
+            ], 422);
+        }
+
+        $usuario = DB::transaction(function () use ($datos, $clave, $existente, $id, $request) {
+            if ($existente) {
+                DB::table('user')->where('user_id', $existente->user_id)->update([
+                    'name'              => $datos['name'],
+                    'phone'             => $datos['phone'] ?? $existente->phone,
+                    'password'          => Hash::make($clave),
+                    'rol'               => ComplexStaff::ROL_DUENO,
+                    'state'             => 1,
+                    // Lo da de alta un administrador: dejarlo sin verificar lo
+                    // bloquearia al iniciar sesion.
+                    'email_verified_at' => now(),
+                ]);
+                $userId = $existente->user_id;
+            } else {
+                $userId = DB::table('user')->insertGetId([
+                    'name'              => $datos['name'],
+                    'email'             => $datos['email'],
+                    'phone'             => $datos['phone'] ?? null,
+                    'password'          => Hash::make($clave),
+                    'rol'               => ComplexStaff::ROL_DUENO,
+                    'state'             => 1,
+                    'qualification'     => 0,
+                    'email_verified_at' => now(),
+                ]);
+            }
+
+            /*
+             * Un conjunto tiene UN administrador. Al nombrar a otro, el
+             * anterior baja a celador en vez de perder el acceso de golpe:
+             * suele seguir trabajando ahi, y quitarle la entrada sin avisar
+             * deja al conjunto sin porteria el mismo dia del cambio.
+             */
+            DB::table('complex_staff')
+                ->where('complex_id', $id)
+                ->where('role', ComplexStaff::DUENO)
+                ->where('user_id', '!=', $userId)
+                ->update(['role' => ComplexStaff::CELADOR, 'updated_at' => now()]);
+
+            // `user_id` es unico en la tabla: quien venia de otro conjunto se
+            // reasigna a este en vez de duplicarse.
+            ComplexStaff::updateOrCreate(
+                ['user_id' => $userId],
+                [
+                    'complex_id' => $id,
+                    'role'       => ComplexStaff::DUENO,
+                    'state'      => true,
+                    'created_by' => $request->user()?->user_id,
+                ],
+            );
+
+            return $userId;
+        });
+
+        return response()->json([
+            'message'  => $existente ? 'Acceso repuesto.' : 'Administrador creado.',
+            'user_id'  => $usuario,
+            'email'    => $datos['email'],
+            // Solo cuando la genero el servidor: si la escribio quien llama,
+            // devolverla no aporta nada y la deja en un log mas.
+            'password' => $generada ? $clave : null,
+        ], $existente ? 200 : 201);
     }
 
     /* ==================================================================
