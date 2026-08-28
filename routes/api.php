@@ -191,11 +191,31 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::delete('sessions/{id}', [SeguridadApiController::class, 'cerrarSesion']);
     });
 
-    //Pagos (Bold): el usuario siempre está logueado cuando paga.
-    //Antes eran públicos: cualquiera podía crear intents de pago.
+    /*
+     * Pagos (Bold): el usuario siempre está logueado cuando paga.
+     * Antes eran públicos: cualquiera podía crear intents de pago.
+     *
+     * AQUÍ HABÍA DOS RUTAS QUE NO PODÍAN FUNCIONAR, y se retiraron:
+     *
+     *   POST /bold/payment → PaymentController::makePayment()
+     *        Ese método NO EXISTE en el controlador —`makePayment` es de
+     *        `BoldService`—, así que la ruta reventaba con un error fatal en
+     *        cualquier llamada. No se rompió a nadie al quitarla: pasa de dar
+     *        500 a dar 404, que es lo que siempre debió dar.
+     *
+     *   POST /bold/intent → PaymentController::createIntent()
+     *        El método sí existe, pero NO es un manejador de ruta: recibe
+     *        `OrdersSales $order` y la URL no lleva parámetro, así que Laravel
+     *        le inyectaba un modelo VACÍO. Habría creado una intención de pago
+     *        con orden nula y montos en cero, o reventado en `$order->buyer`.
+     *
+     * Las dos son internas: `OrderController::store` las llama con sus
+     * argumentos, que es como están escritas. Exponerlas como endpoint fue un
+     * descuido, y nadie las llamaba —ni la app, ni los paneles, ni las pruebas.
+     *
+     * `status/{ref}` sí es un manejador de verdad y se queda.
+     */
     Route::prefix('bold')->group(function () {
-        Route::post('/intent', [PaymentController::class, 'createIntent']);
-        Route::post('/payment', [PaymentController::class, 'makePayment']);
         Route::get('/status/{ref}', [PaymentController::class, 'checkStatus']);
     });
     // Alias estilo dev97 que usa la app (GET /payment/status?referenceId=)
@@ -493,7 +513,21 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::post('/deposits', [EfectivoController::class, 'declararDeposito']);
     });
 
-    //reviews
+    /*
+     * RESEÑAS.
+     *
+     * De las quince de este bloque, los clientes de hoy usan TRES: `store`,
+     * `business/by` (público, más arriba) y `domiciliary/by`. Las otras doce
+     * son el CRUD completo de antes de que se reescribiera la capa de datos de
+     * la app.
+     *
+     * No se retiran porque la 1.0.8 está publicada en las tiendas y no se puede
+     * leer qué llama: borrar una que todavía use le rompe la pantalla a alguien
+     * que no puede actualizar hasta que la tienda apruebe la versión nueva.
+     *
+     * La lista completa, y cómo decidir con el registro de auditoría en la
+     * mano, está en `Documentacion/03-Operacion/SUPERFICIE-DE-API-SIN-USO.md`.
+     */
     Route::prefix('reviews')->group(function () {
         Route::post('store', [ReviewController::class, 'store']);
 
@@ -646,10 +680,19 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         // por reseña. Con tope de 100 por petición.
         Route::delete('reviews/lote', [AdminApiController::class, 'deleteReviews'])->middleware('modulo:resenas,gestionar');
 
-        Route::get('categories', [AdminApiController::class, 'categories'])->middleware('modulo:categorias');
-        Route::post('categories', [AdminApiController::class, 'storeCategory'])->middleware('modulo:categorias,gestionar');
-        Route::put('categories', [AdminApiController::class, 'updateCategory'])->middleware('modulo:categorias,gestionar');
-        Route::delete('categories', [AdminApiController::class, 'deleteCategory'])->middleware('modulo:categorias,gestionar');
+        /*
+         * Las cuatro van detrás de `categorias`, que NO es `modulo:categorias`:
+         * es el middleware que mira el `scope` de la peticion y exige
+         * `categorias` o `categorias-negocio` segun cual de los dos catalogos
+         * se este tocando. Con la clave fija, `categorias-negocio` era un
+         * modulo de la matriz que no protegia ninguna ruta.
+         */
+        Route::middleware('categorias')->group(function () {
+            Route::get('categories', [AdminApiController::class, 'categories']);
+            Route::post('categories', [AdminApiController::class, 'storeCategory']);
+            Route::put('categories', [AdminApiController::class, 'updateCategory']);
+            Route::delete('categories', [AdminApiController::class, 'deleteCategory']);
+        });
 
         Route::get('complexes', [AdminApiController::class, 'complexes'])->middleware('modulo:conjuntos');
         Route::post('complexes', [AdminApiController::class, 'storeComplex'])->middleware('modulo:conjuntos,gestionar');

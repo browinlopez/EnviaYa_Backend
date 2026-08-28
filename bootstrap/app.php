@@ -64,6 +64,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // la entidad de la URL: los de un negocio los rige `negocios` y los de
         // un banner, `marketing.banners`.
         'medios'    => \App\Http\Middleware\EnsureMediaAccess::class,
+        // Puerta de las categorías. Aparte por lo mismo: una sola ruta sirve
+        // las de producto y las de negocio, y son dos módulos distintos.
+        'categorias' => \App\Http\Middleware\EnsureCategoryAccess::class,
     ]);
 })
     ->withExceptions(function (Exceptions $exceptions): void {

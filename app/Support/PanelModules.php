@@ -5,10 +5,15 @@ namespace App\Support;
 /**
  * CATÁLOGO DE MÓDULOS DEL PANEL
  *
- * Fuente única de qué secciones existen. El panel de React tiene su propia
- * copia en `src/lib/modules.js`, y las dos tienen que decir lo mismo: si acá se
- * agrega un módulo y allá no, la sección queda accesible por API pero invisible
- * en el menú; al revés, el menú ofrece una pantalla que el servidor rechaza.
+ * Fuente única de qué secciones existen, y la única: el panel de React NO tiene
+ * copia de esta lista. La pide con `paraPanel()` para dibujar la matriz de
+ * Áreas, y su menú declara la clave de cada entrada contra ella. Así agregar un
+ * módulo acá basta para que exista en los dos lados.
+ *
+ * (Este comentario decía que la copia vivía en `src/lib/modules.js` y avisaba
+ * de mantenerlas iguales. Ese archivo no existe — el panel nunca llegó a
+ * tenerlo. Se corrige porque un aviso sobre un riesgo que ya no existe hace
+ * perder el tiempo a quien venga a comprobarlo.)
  *
  * La clave es la que se guarda en `area_module` y la que consultan tanto el
  * middleware como el menú, así que renombrarla invalida los permisos ya

@@ -1,8 +1,6 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthController;
-use App\Http\Controllers\Auth\EmailVerificationPromptController;
-use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -88,17 +86,21 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // --- Verificación nativa de Laravel (solo web) ---
-    Route::get('laravel-verify-email', EmailVerificationPromptController::class)
-        ->name('verification.notice');
-
-    Route::get('laravel-verify-email/{id}/{hash}', VerifyEmailController::class)
-        ->middleware(['signed', 'throttle:6,1'])
-        ->name('verification.verify');
-
-    Route::post('email/verification-notification', [AuthController::class, 'resendVerificationEmail'])
-        ->middleware('throttle:6,1')
-        ->name('verification.send');
+    /*
+     * LA VERIFICACIÓN NATIVA DE LARAVEL VIVE EN `auth.php`, NO AQUÍ.
+     *
+     * Estas tres rutas estaban declaradas en los dos archivos, y `web.php`
+     * carga `auth.php` al final: el nombre `verification.send` resolvía a la
+     * versión de allá —`EmailVerificationNotificationController`— mientras que
+     * el POST lo atendía la de aquí, `AuthController::resendVerificationEmail`.
+     * Generar la URL por el nombre y llamarla llevaban a controladores
+     * distintos.
+     *
+     * Se quedan las de `auth.php`, que es el archivo de Breeze y donde alguien
+     * las va a buscar. Nada del proyecto depende de esta copia: la
+     * verificación que se usa de verdad es la de abajo, por token propio, y el
+     * reenvío desde la app va por `/v1/resend-verification-email`.
+     */
 });
 
 require __DIR__ . '/auth.php';
