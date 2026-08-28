@@ -70,3 +70,23 @@ Schedule::command('liquidaciones:diarias')
     ->dailyAt('03:00')
     ->timezone('America/Bogota')
     ->withoutOverlapping();
+
+/*
+| Poda de la auditoria.
+|
+| `audits` guarda una fila por cada cambio de cada modelo auditable, con el
+| antes y el despues en JSON: 1,7 kB por fila medidos en esta base. Sin poda
+| crece indefinidamente, y a mil cambios al dia son unos 600 MB al anio.
+|
+| Mensual y no diaria: se conserva un horizonte de dos anios, asi que lo que
+| sobra en un dia cualquiera son las filas de un solo dia de hace dos anios. No
+| hay prisa, y una tarea que corre poco molesta poco.
+|
+| El domingo 1 a las 4 de la maniana: despues de la copia de seguridad, para
+| que lo podado quede respaldado al menos una vez mas, y en el dia de menos
+| pedidos.
+*/
+Schedule::command('auditoria:podar')
+    ->monthlyOn(1, '04:00')
+    ->timezone('America/Bogota')
+    ->withoutOverlapping();

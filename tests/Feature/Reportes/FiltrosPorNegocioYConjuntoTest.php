@@ -3,6 +3,7 @@
 use App\Models\Area;
 use App\Models\Rol;
 use App\Models\User;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 
@@ -15,9 +16,11 @@ use Laravel\Sanctum\Sanctum;
  *
  * El de conjunto es distinto y merece cuidado: `orderssales` NO tiene columna
  * de conjunto, así que hay que llegar por el comprador. Se hace con EXISTS y
- * no con un join porque `buyer_complex` no tiene índice único: un comprador
- * con la pareja duplicada contaría su pedido dos veces y el total saldría
- * inflado.
+ * no con un join: cuando esto se escribió, `buyer_complex` no tenía índice
+ * único y un comprador con la pareja duplicada habría contado su pedido dos
+ * veces. Hoy la tabla ya tiene `uq_buyer_complex`, así que la defensa está en
+ * el esquema — el EXISTS se queda porque sigue siendo la consulta correcta y
+ * no cuesta nada.
  */
 
 function staffReportes(): User
@@ -106,20 +109,34 @@ test('el reporte dice que esta filtrado por conjunto', function () {
         ->assertJsonPath('filters.0.value', 'Los Almendros');
 });
 
-test('un comprador con el conjunto duplicado no cuenta dos veces', function () {
-    // `buyer_complex` no tiene índice único. Con un join, este pedido se
-    // contaría dos veces y el total saldría al doble.
+test('el conjunto de un comprador ya no se puede duplicar', function () {
+    /*
+     * ESTA PRUEBA CAMBIÓ DE SENTIDO, Y ES UNA BUENA NOTICIA.
+     *
+     * Antes creaba a propósito la pareja repetida y comprobaba que el reporte
+     * no contara el pedido dos veces, porque `buyer_complex` no tenía índice
+     * único y la única defensa era el `EXISTS` de la consulta.
+     *
+     * Ahora la tabla tiene `uq_buyer_complex (buyer_id, complex_id)`, así que
+     * el escenario ya no se puede montar: la base lo rechaza. Lo que se
+     * comprueba es eso — que la puerta está cerrada donde tiene que estarlo.
+     *
+     * El `EXISTS` de la consulta se queda igualmente: la defensa buena está en
+     * el esquema, pero una consulta que no depende de ella sigue siendo la
+     * consulta correcta.
+     */
     $complexId = DB::table('residential_complexes')->insertGetId([
         'name' => 'Los Almendros', 'state' => 1, 'people_count' => 0,
     ], 'complex_id');
 
     $buyerId = compradorDeConjunto($complexId);
 
-    DB::table('buyer_complex')->insert([
+    expect(fn () => DB::table('buyer_complex')->insert([
         'buyer_id' => $buyerId, 'complex_id' => $complexId,
         'created_at' => now(), 'updated_at' => now(),
-    ]);
+    ]))->toThrow(UniqueConstraintViolationException::class);
 
+    // Y el total sigue siendo el que es, con un solo vínculo.
     pedidoParaFiltro($buyerId, negocioParaFiltro('Tienda'), 20000);
 
     Sanctum::actingAs(staffReportes());

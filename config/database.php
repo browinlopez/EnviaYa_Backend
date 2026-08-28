@@ -75,6 +75,51 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
+
+            /*
+            |------------------------------------------------------------------
+            | LA HORA DE LA CONEXIÓN
+            |------------------------------------------------------------------
+            |
+            | Sin esto la sesión usa la zona del SERVIDOR (`SYSTEM`), mientras
+            | PHP trabaja en `America/Bogota`. Mientras las dos coincidan no se
+            | nota; en cuanto no coinciden —un VPS Linux está en UTC salvo que
+            | alguien lo cambie— aparecen dos relojes en la misma columna:
+            |
+            |   · lo que escribe Eloquent va en hora de Bogotá;
+            |   · lo que rellena la base con `DEFAULT CURRENT_TIMESTAMP` va en
+            |     hora del servidor.
+            |
+            | Dos filas creadas en el mismo instante quedarían con cinco horas
+            | de diferencia, y `NOW()` en una consulta tampoco diría lo mismo
+            | que `now()` en PHP.
+            |
+            | NO HACE FALTA PARA QUE LAS FECHAS SEAN CORRECTAS. Las columnas
+            | `created_at` / `updated_at` las escribe SIEMPRE la aplicación, con
+            | el reloj de PHP; no hay `DEFAULT CURRENT_TIMESTAMP` en ninguna
+            | precisamente para no depender del servidor. Esto es para lo demás:
+            | un `NOW()` en una consulta cruda, un `CURDATE()`, una comparación
+            | de fechas hecha por la base.
+            |
+            | VIENE VACÍO A PROPÓSITO, y esto importa antes de ponerlo:
+            |
+            | MySQL guarda los `timestamp` en UTC y los convierte a la zona de
+            | la sesión al leerlos. Si hasta ahora la sesión era UTC y se pasa a
+            | `-05:00`, TODO lo ya guardado se lee cinco horas corrido. En una
+            | base donde el servidor ya está en hora de Colombia no cambia nada;
+            | en una donde está en UTC, mueve el pasado.
+            |
+            | Así que primero se mira, y después se pone:
+            |
+            |     php artisan db:zona-horaria
+            |
+            | Ese comando dice si las dos horas coinciden y si es seguro. El
+            | valor es `-05:00` y no `America/Bogota`: el offset fijo no exige
+            | que el servidor tenga cargadas las tablas de zonas horarias, y
+            | Colombia no cambia de hora en verano.
+            */
+            'timezone' => env('DB_TIMEZONE'),
+
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],

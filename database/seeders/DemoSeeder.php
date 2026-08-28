@@ -1347,7 +1347,14 @@ class DemoSeeder extends Seeder
         }
 
         return (int) DB::table('user')->insertGetId(
-            $comunes + ['email' => $datos['email'], 'password' => Hash::make(self::CLAVE)],
+            $comunes + [
+                'email'      => $datos['email'],
+                'password'   => Hash::make(self::CLAVE),
+                // La fecha la pone la aplicacion: `CURRENT_TIMESTAMP` es el
+                // reloj del servidor, que en el VPS no es el de Bogota.
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
             'user_id',
         );
     }

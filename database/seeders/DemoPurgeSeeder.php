@@ -56,6 +56,20 @@ class DemoPurgeSeeder extends Seeder
             )->delete();
             DB::table('pqrs')->where('code', 'like', 'DEMO-%')->delete();
 
+            /*
+             * Los comprobantes ANTES que los pedidos, y no despues.
+             *
+             * Esto no estaba, y sin foranea nadie lo impedia: la purga borraba
+             * el pedido y dejaba su comprobante apuntando a un numero que ya no
+             * existia. Asi aparecio `FV-2026-000087`, por $18.500, sobre una
+             * venta que no esta en ninguna parte.
+             *
+             * Ahora `invoices.orderSales_id` es una foranea con RESTRICT, asi
+             * que sin esta linea la purga fallaria — que es exactamente lo que
+             * tenia que haber pasado la primera vez.
+             */
+            DB::table('invoices')->whereIn('orderSales_id', $pedidos)->delete();
+
             DB::table('payments')->whereIn('orderSales_id', $pedidos)->delete();
             DB::table('orderssales_detail')->whereIn('orderSales_id', $pedidos)->delete();
             DB::table('orderssales')->whereIn('orderSales_id', $pedidos)->delete();
