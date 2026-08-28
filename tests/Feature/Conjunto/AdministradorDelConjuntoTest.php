@@ -342,3 +342,79 @@ test('el personal del conjunto separa al administrador de los celadores', functi
     expect($fila['admin_email'])->toBe('admin-conj@ejemplo.com')
         ->and($fila['guards_count'])->toBe(1);
 });
+
+/* ===================================================================== */
+/*  NO SE LE QUITA EL ADMINISTRADOR A OTRO CONJUNTO                      */
+/* ===================================================================== */
+
+test('nombrar aca a quien ya administra otro conjunto se rechaza', function () {
+    comoAdministrador();
+
+    $suyo  = unConjunto('Villa Carolina');
+    $otro  = unConjunto('Los Mangos');
+
+    $this->postJson("/v1/admin/complexes/{$suyo->complex_id}/owner", [
+        'name' => 'Administración', 'email' => 'admin@ejemplo.com',
+    ])->assertCreated();
+
+    /*
+     * `user_id` es único en `complex_staff`, así que nombrarlo acá lo MOVERÍA:
+     * Villa Carolina se quedaría sin nadie que la gestione ni registre entradas
+     * en la portería, y sin que nada lo dijera. El aviso llega antes.
+     */
+    $r = $this->postJson("/v1/admin/complexes/{$otro->complex_id}/owner", [
+        'name' => 'Administración', 'email' => 'admin@ejemplo.com',
+    ])->assertStatus(422);
+
+    expect($r->json('message'))->toContain('Villa Carolina');
+
+    // Y sigue donde estaba.
+    $ficha = ComplexStaff::where('user_id', User::where('email', 'admin@ejemplo.com')->value('user_id'))->first();
+    expect((int) $ficha->complex_id)->toBe((int) $suyo->complex_id);
+});
+
+test('a un celador de otro conjunto si se le puede: el suyo no se queda sin cabeza', function () {
+    comoAdministrador();
+
+    $suyo = unConjunto('Villa Carolina');
+    $otro = unConjunto('Los Mangos');
+
+    $this->postJson('/v1/admin/users', [
+        'name' => 'Celador', 'email' => 'cel@ejemplo.com',
+        'password' => 'unaClaveLarga123',
+        'rol' => ComplexStaff::ROL_CELADOR, 'complex_id' => $suyo->complex_id,
+    ])->assertCreated();
+
+    // 200 y no 201: la cuenta ya existía, lo que se creó es su vínculo nuevo.
+    $this->postJson("/v1/admin/complexes/{$otro->complex_id}/owner", [
+        'name' => 'Celador Ascendido', 'email' => 'cel@ejemplo.com',
+    ])->assertOk();
+
+    $ficha = ComplexStaff::where('user_id', User::where('email', 'cel@ejemplo.com')->value('user_id'))->first();
+    expect((int) $ficha->complex_id)->toBe((int) $otro->complex_id)
+        ->and($ficha->role)->toBe(ComplexStaff::DUENO);
+});
+
+test('al administrador anterior le baja tambien el rol, no solo la ficha', function () {
+    comoAdministrador();
+    $conjunto = unConjunto();
+
+    $this->postJson("/v1/admin/complexes/{$conjunto->complex_id}/owner", [
+        'name' => 'Primera', 'email' => 'primera@ejemplo.com',
+    ])->assertCreated();
+
+    $this->postJson("/v1/admin/complexes/{$conjunto->complex_id}/owner", [
+        'name' => 'Segunda', 'email' => 'segunda@ejemplo.com',
+    ])->assertCreated();
+
+    $anterior = User::where('email', 'primera@ejemplo.com')->first();
+
+    /*
+     * Su ficha baja a celador —sigue trabajando ahí y quitarle la entrada de
+     * golpe deja al conjunto sin portería el mismo día del cambio— y su rol de
+     * usuario baja con ella. Si no, quedaba con `rol = 5` haciendo de celador y
+     * el panel lo seguía enseñando como «Admin. de conjunto».
+     */
+    expect((int) $anterior->rol)->toBe(ComplexStaff::ROL_CELADOR);
+    expect(ComplexStaff::de($anterior->user_id)->role)->toBe(ComplexStaff::CELADOR);
+});

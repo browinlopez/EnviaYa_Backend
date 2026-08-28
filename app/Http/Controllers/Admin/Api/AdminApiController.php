@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Services\BusinessMediaService;
 use App\Services\ContratoService;
 use App\Services\MediaService;
+use App\Services\VinculosDelRol;
 use App\Support\ListadoPaginado;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -280,9 +281,10 @@ class AdminApiController extends Controller
      * administrador, y dejarlo sin verificar lo bloquearía al iniciar sesión
      * (el login rechaza cuentas sin verificar).
      *
-     * Según el rol se crea además su fila satélite: `buyer` para compradores,
-     * `owner` para tenderos y `domiciliary` para repartidores. Sin ella la app
-     * falla al cargar el perfil.
+     * El rol no es un campo suelto: arrastra la fila que lo hace servir. Quién
+     * necesita qué vive en `VinculosDelRol`, compartido con `updateUser` — la
+     * puerta de crear y la de editar hacían cosas distintas, y la de editar no
+     * hacía ninguna.
      */
     public function storeUser(Request $request)
     {
@@ -294,80 +296,92 @@ class AdminApiController extends Controller
             'address'  => 'nullable|string|max:255',
             'rol'      => 'required|integer|exists:rol,rol_id',
             'document' => 'nullable|string|max:50',
-
-            /*
-             * A QUE CONJUNTO PERTENECE, cuando el rol es de conjunto.
-             *
-             * El `match` de mas abajo tenia `default => null`, asi que un rol 5
-             * se creaba SIN su ficha en `complex_staff` y en silencio: la
-             * cuenta existia, iniciaba sesion y no veia nada, porque todo el
-             * panel de aliados se acota por el conjunto de esa ficha. Un fallo
-             * que solo aparecia del otro lado y sin ningun mensaje.
-             */
-            'complex_id' => [
-                Rule::requiredIf(fn () => in_array(
-                    (int) request('rol'),
-                    [ComplexStaff::ROL_DUENO, ComplexStaff::ROL_CELADOR],
-                    true,
-                )),
-                'nullable',
-                'integer',
-                'exists:residential_complexes,complex_id',
-            ],
+            'complex_id'   => $this->reglaConjunto('rol'),
+            'area_id'      => $this->reglaArea('rol'),
+            'access_level' => ['nullable', Rule::in(Area::NIVELES)],
         ]);
 
-        $id = DB::transaction(function () use ($datos) {
+        $rol = (int) $datos['rol'];
+
+        $id = DB::transaction(function () use ($datos, $rol, $request) {
             $userId = DB::table('user')->insertGetId([
                 'name'              => $datos['name'],
                 'email'             => $datos['email'],
                 'password'          => Hash::make($datos['password']),
                 'phone'             => $datos['phone'] ?? null,
                 'address'           => $datos['address'] ?? null,
-                'rol'               => $datos['rol'],
+                'rol'               => $rol,
                 'state'             => 1,
                 'qualification'     => 0,
                 'email_verified_at' => now(),
+                // Solo el personal interno tiene área; para los demás la
+                // columna se queda nula y el panel les está cerrado igual.
+                'area_id'      => $rol === VinculosDelRol::ROL_PERSONAL ? ($datos['area_id'] ?? null) : null,
+                'access_level' => $rol === VinculosDelRol::ROL_PERSONAL
+                    ? ($datos['access_level'] ?? Area::NIVEL_GESTOR)
+                    : Area::NIVEL_GESTOR,
+                // La fecha la pone la aplicación y no la base: `CURRENT_TIMESTAMP`
+                // es el reloj del servidor, que en el VPS no es el de Bogotá.
+                'created_at'        => now(),
+                'updated_at'        => now(),
             ]);
 
-            match ((int) $datos['rol']) {
-                1 => DB::table('buyer')->insert([
-                    'user_id' => $userId,
-                    'qualification' => 0,
-                    'belongs_to_complex' => 0,
-                    'state' => 1,
-                ]),
-                2 => DB::table('owner')->insert([
-                    'user_id' => $userId,
-                    'document_number' => $datos['document'] ?? null,
-                    'state' => 1,
-                ]),
-                3 => DB::table('domiciliary')->insert([
-                    'user_id' => $userId,
-                    'document' => $datos['document'] ?? null,
-                    'available' => 0, // entra fuera de turno: lo activa él o el admin
-                    'qualification' => 0,
-                    'state' => 1,
-                ]),
-                /*
-                 * Los dos roles de conjunto comparten tabla y solo cambia el
-                 * papel dentro de ella.
-                 */
-                ComplexStaff::ROL_DUENO, ComplexStaff::ROL_CELADOR => ComplexStaff::create([
-                    'user_id'    => $userId,
-                    'complex_id' => $datos['complex_id'],
-                    'role'       => (int) $datos['rol'] === ComplexStaff::ROL_DUENO
-                        ? ComplexStaff::DUENO
-                        : ComplexStaff::CELADOR,
-                    'state'      => true,
-                    'created_by' => request()->user()?->user_id,
-                ]),
-                default => null,
-            };
+            $vinculos = app(VinculosDelRol::class);
+            $vinculos->crearPerfilSiFalta($userId, $rol, $datos['document'] ?? null);
+
+            if (in_array($rol, VinculosDelRol::ROLES_DE_CONJUNTO, true)) {
+                $vinculos->ponerEnConjunto(
+                    $userId,
+                    (int) $datos['complex_id'],
+                    $rol,
+                    $request->user()?->user_id,
+                );
+            }
 
             return $userId;
         });
 
         return response()->json(['message' => 'Usuario creado.', 'user_id' => $id], 201);
+    }
+
+    /**
+     * A QUÉ CONJUNTO PERTENECE, cuando el rol es de conjunto.
+     *
+     * Sin esta fila la cuenta existe, inicia sesión y no ve nada, porque todo
+     * el panel de aliados se acota por ella. Un fallo que solo aparece del otro
+     * lado y sin ningún mensaje, así que el conjunto se exige acá y no se
+     * confía en que la pantalla se acuerde de mandarlo.
+     */
+    private function reglaConjunto(string $campoRol): array
+    {
+        return [
+            Rule::requiredIf(fn () => in_array(
+                (int) request($campoRol),
+                VinculosDelRol::ROLES_DE_CONJUNTO,
+                true,
+            )),
+            'nullable',
+            'integer',
+            'exists:residential_complexes,complex_id',
+        ];
+    }
+
+    /**
+     * EL ÁREA, cuando el rol es el del personal interno.
+     *
+     * Mismo caso que el conjunto, una puerta más allá: un rol 4 sin área entra
+     * al login y se le rechaza con «tu cuenta no tiene un área asignada». La
+     * cuenta queda creada y sirviendo para nada hasta que alguien pase por otra
+     * pantalla. Se pide donde se crea.
+     */
+    private function reglaArea(string $campoRol): array
+    {
+        return [
+            Rule::requiredIf(fn () => (int) request($campoRol) === VinculosDelRol::ROL_PERSONAL),
+            'nullable',
+            'integer',
+            'exists:areas,id',
+        ];
     }
 
     public function showUser($id)
@@ -386,10 +400,29 @@ class AdminApiController extends Controller
         return response()->json($user);
     }
 
+    /**
+     * Edita un usuario, y con él los vínculos que su rol arrastra.
+     *
+     * CAMBIAR EL ROL NO ERA UN CAMBIO DE CAMPO. Antes esto hacía un
+     * `update` del número y nada más, con dos consecuencias comprobadas:
+     *
+     *  · subir a alguien a rol 5 lo dejaba SIN fila en `complex_staff` — la
+     *    cuenta entraba al panel de aliados y no veía nada, en silencio. Era el
+     *    mismo fallo que se había corregido al crear, entrando por la otra
+     *    puerta;
+     *  · bajarle el rol a un tendero o a un dueño de conjunto NO le quitaba el
+     *    acceso: `GET /v1/negocio/me` y `GET /v1/conjunto/residentes` seguían
+     *    respondiendo 200, porque las dos puertas resuelven por la fila de
+     *    vínculo y no miraban el rol.
+     *
+     * Lo segundo se cerró además en los middlewares, que es donde tiene que
+     * estar la defensa. Acá se cierra el origen: el rol y sus filas se mueven
+     * juntos o no se mueve ninguno.
+     */
     public function updateUser(Request $request, $id)
     {
-        $existe = DB::table('user')->where('user_id', $id)->exists();
-        abort_if(!$existe, 404, 'El usuario no existe.');
+        $actual = DB::table('user')->where('user_id', $id)->first();
+        abort_if(!$actual, 404, 'El usuario no existe.');
 
         $datos = $request->validate([
             'name'     => 'sometimes|string|max:255',
@@ -399,24 +432,135 @@ class AdminApiController extends Controller
             'rol'      => 'sometimes|integer|exists:rol,rol_id',
             'state'    => 'sometimes|boolean',
             'password' => 'sometimes|string|min:6',
+            'document' => 'sometimes|nullable|string|max:50',
+            /*
+             * Acá NO se usa `reglaConjunto()`: esa exige el conjunto cada vez
+             * que llega un `rol`, y el panel manda el rol siempre —también
+             * cuando solo se corrigió el teléfono—. Editar a un dueño que ya
+             * tiene su conjunto habría empezado a pedirlo sin motivo. Se exige
+             * más abajo, y solo cuando el rol CAMBIA y no hay ficha de la que
+             * heredarlo.
+             */
+            'complex_id'   => 'nullable|integer|exists:residential_complexes,complex_id',
+            'area_id'      => 'nullable|integer|exists:areas,id',
+            'access_level' => ['nullable', Rule::in(Area::NIVELES)],
         ]);
+
+        $rolNuevo   = array_key_exists('rol', $datos) ? (int) $datos['rol'] : null;
+        $cambiaRol  = $rolNuevo !== null && $rolNuevo !== (int) $actual->rol;
+        $sePropioId = (int) $id === (int) $request->user()->user_id;
+
+        /*
+         * Los dos vínculos que el rol nuevo necesita para que la cuenta sirva.
+         * Si ya los tiene se heredan; si no, se piden. Lo que no puede pasar es
+         * que el cambio salga adelante sin ellos, que es lo que hacía antes.
+         */
+        $fichaPrevia = ComplexStaff::where('user_id', $id)->first();
+        $conjuntoNuevo = $datos['complex_id'] ?? $fichaPrevia?->complex_id;
+
+        if ($cambiaRol && in_array($rolNuevo, VinculosDelRol::ROLES_DE_CONJUNTO, true) && !$conjuntoNuevo) {
+            return response()->json([
+                'message' => 'Elige a qué conjunto pertenece. Sin él la cuenta entra al panel '
+                    . 'de aliados y no ve nada, porque todo se acota por ese vínculo.',
+            ], 422);
+        }
+
+        if ($cambiaRol && $rolNuevo === VinculosDelRol::ROL_PERSONAL
+            && !($datos['area_id'] ?? $actual->area_id)) {
+            return response()->json([
+                'message' => 'Elige un área. Una cuenta de personal interno sin área no puede '
+                    . 'entrar al panel: el login la rechaza.',
+            ], 422);
+        }
 
         // Un administrador no puede quitarse a sí mismo el rol: si se
         // equivoca queda sin acceso al panel y hay que arreglarlo a mano en
         // la base.
-        if (isset($datos['rol']) && (int) $id === (int) $request->user()->user_id && (int) $datos['rol'] !== 4) {
+        if ($cambiaRol && $sePropioId && $rolNuevo !== 4) {
             return response()->json([
                 'message' => 'No puedes cambiar tu propio rol de administrador.',
             ], 422);
+        }
+
+        $vinculos = app(VinculosDelRol::class);
+
+        if ($cambiaRol && ($motivo = $vinculos->impedimento((int) $id, $rolNuevo))) {
+            return response()->json(['message' => $motivo], 422);
         }
 
         if (isset($datos['password'])) {
             $datos['password'] = Hash::make($datos['password']);
         }
 
-        if ($datos) {
-            DB::table('user')->where('user_id', $id)->update($datos);
+        // El documento y el conjunto no son columnas de `user`: viajan en la
+        // misma petición y se aplican en otra tabla.
+        $documento = $datos['document'] ?? null;
+        $conjunto  = $conjuntoNuevo;
+        $areaPedida = $datos['area_id'] ?? null;
+        $nivelPedido = $datos['access_level'] ?? null;
+        unset($datos['document'], $datos['complex_id'], $datos['area_id'], $datos['access_level']);
+
+        /*
+         * EL ÁREA SOLO SE TOCA ACÁ CUANDO EL ROL CAMBIA.
+         *
+         * Para todo lo demás está Control → Áreas, que tiene las salvaguardas
+         * que esta pantalla no: no dejarse a uno mismo sin área, no bajarse el
+         * propio nivel a consulta. Aceptar `area_id` de forma general por acá
+         * habría sido una segunda puerta a lo mismo, sin esas comprobaciones.
+         *
+         * Y dejar de ser personal interno es dejar de tener área: si se quedara
+         * puesta, devolverle el rol 4 le devolvería en silencio los permisos que
+         * tenía antes.
+         */
+        if ($cambiaRol) {
+            $esPersonal = $rolNuevo === VinculosDelRol::ROL_PERSONAL;
+
+            $datos['area_id'] = $esPersonal ? ($areaPedida ?? $actual->area_id) : null;
+
+            if ($esPersonal) {
+                $datos['access_level'] = $nivelPedido
+                    ?? $actual->access_level
+                    ?? Area::NIVEL_GESTOR;
+            }
         }
+
+        $apagando = array_key_exists('state', $datos) && !$datos['state'] && (int) $actual->state === 1;
+
+        DB::transaction(function () use ($datos, $id, $rolNuevo, $cambiaRol, $conjunto, $documento, $apagando, $vinculos, $request) {
+            if ($datos) {
+                DB::table('user')->where('user_id', $id)->update($datos);
+            }
+
+            if ($cambiaRol) {
+                $vinculos->cerrarVinculos((int) $id, $rolNuevo);
+                $vinculos->crearPerfilSiFalta((int) $id, $rolNuevo, $documento);
+
+                if (in_array($rolNuevo, VinculosDelRol::ROLES_DE_CONJUNTO, true)) {
+                    $vinculos->ponerEnConjunto(
+                        (int) $id,
+                        (int) $conjunto,
+                        $rolNuevo,
+                        $request->user()?->user_id,
+                    );
+                }
+            }
+
+            /*
+             * SE LE CIERRAN LAS SESIONES ABIERTAS.
+             *
+             * Apagar la cuenta bloquea el login, no la sesión que ya tenía: sin
+             * esto, a quien se acaba de desactivar le seguía sirviendo su token
+             * hasta que caducara. Comprobado: `GET /v1/profile` devolvía 200
+             * después de apagarlo. Lo mismo al cambiar de rol — el token se
+             * emitió para una puerta que ya no es la suya.
+             */
+            if ($apagando || $cambiaRol) {
+                DB::table('personal_access_tokens')
+                    ->where('tokenable_type', User::class)
+                    ->where('tokenable_id', $id)
+                    ->delete();
+            }
+        });
 
         return $this->showUser($id);
     }
@@ -620,6 +764,10 @@ class AdminApiController extends Controller
 
         $datos['state'] = $datos['state'] ?? 1;
         $datos['qualification'] = 0;
+        // La fecha la pone la aplicación y no la base: `CURRENT_TIMESTAMP` es
+        // el reloj del servidor, que en el VPS no es el de Bogotá.
+        $datos['created_at'] = now();
+        $datos['updated_at'] = now();
 
         $id = DB::table('business')->insertGetId($datos);
 
@@ -1056,6 +1204,10 @@ class AdminApiController extends Controller
                 'image'       => $datos['image'] ?? null,
                 'category_id' => $datos['category_id'] ?? null,
                 'state'       => 1,
+                // La fecha la pone la aplicación y no la base: `CURRENT_TIMESTAMP`
+                // es el reloj del servidor, que en el VPS no es el de Bogotá.
+                'created_at'        => now(),
+                'updated_at'        => now(),
             ]);
 
             if (!empty($datos['busines_id'])) {
@@ -1387,6 +1539,10 @@ class AdminApiController extends Controller
                     'state'             => 1,
                     'qualification'     => 0,
                     'email_verified_at' => now(),
+                    // La fecha la pone la aplicación y no la base: `CURRENT_TIMESTAMP`
+                    // es el reloj del servidor, que en el VPS no es el de Bogotá.
+                    'created_at'        => now(),
+                    'updated_at'        => now(),
                 ]);
             }
 
@@ -2357,6 +2513,10 @@ class AdminApiController extends Controller
             'nit'        => $datos['nit'] ?? null,
             'gate_notes' => $datos['gate_notes'] ?? null,
             'require_authorization' => $datos['require_authorization'] ?? false,
+            // La fecha la pone la aplicación y no la base: `CURRENT_TIMESTAMP`
+            // es el reloj del servidor, que en el VPS no es el de Bogotá.
+            'created_at'        => now(),
+            'updated_at'        => now(),
         ]);
 
         return response()->json(['message' => 'Conjunto creado.', 'complex_id' => $id], 201);
@@ -2390,8 +2550,31 @@ class AdminApiController extends Controller
         return response()->json(['message' => 'Conjunto actualizado.']);
     }
 
+    /**
+     * Borra un conjunto, y solo si no se lleva nada por delante.
+     *
+     * Las foráneas de `complex_staff` y `complex_entries` van EN CASCADA, así
+     * que borrar la fila del conjunto borraba también, sin decirlo:
+     *
+     *  · a su administrador y a sus celadores, que quedaban con la cuenta viva
+     *    y sin conjunto — entraban al panel de aliados y se les rechazaba;
+     *  · **la bitácora entera de la portería**: quién entró, cuándo y con qué
+     *    método. Eso es el control, no un dato accesorio, y una pantalla más
+     *    allá se argumenta justo lo contrario para no borrar a un celador
+     *    («tienen entradas registradas a su nombre»).
+     *
+     * Se comprueban las tres cosas antes, con el mismo criterio con el que ya
+     * se rechaza borrar un área con gente dentro: lo que tiene historial no se
+     * desengancha de paso.
+     */
     public function deleteComplex($id)
     {
+        abort_if(
+            !DB::table('residential_complexes')->where('complex_id', $id)->exists(),
+            404,
+            'El conjunto no existe.',
+        );
+
         $vinculados = DB::table('buyer_complex')->where('complex_id', $id)->count();
         if ($vinculados) {
             return response()->json([
@@ -2399,8 +2582,23 @@ class AdminApiController extends Controller
             ], 422);
         }
 
-        $n = DB::table('residential_complexes')->where('complex_id', $id)->delete();
-        abort_if(!$n, 404, 'El conjunto no existe.');
+        $personal = DB::table('complex_staff')->where('complex_id', $id)->count();
+        if ($personal) {
+            return response()->json([
+                'message' => "No se puede eliminar: tiene {$personal} persona(s) a cargo de su portería. "
+                    . 'Cámbiales el rol desde Comunidad → Usuarios antes de borrarlo.',
+            ], 422);
+        }
+
+        $entradas = DB::table('complex_entries')->where('complex_id', $id)->count();
+        if ($entradas) {
+            return response()->json([
+                'message' => "No se puede eliminar: su portería tiene {$entradas} entrada(s) registradas, "
+                    . 'y son la constancia de quién entró al conjunto. Desactívalo en su lugar.',
+            ], 422);
+        }
+
+        DB::table('residential_complexes')->where('complex_id', $id)->delete();
 
         return response()->json(['message' => 'Conjunto eliminado.']);
     }
@@ -2471,6 +2669,30 @@ class AdminApiController extends Controller
             'password' => 'nullable|string|min:8|max:72',
         ]);
 
+        /*
+         * NO SE LE QUITA EL ADMINISTRADOR A OTRO CONJUNTO.
+         *
+         * `user_id` es unico en `complex_staff`: nombrar aca a quien ya
+         * administra otro edificio lo MUEVE, y aquel se queda sin nadie que lo
+         * gestione ni registre entradas, en silencio. Un celador si se puede
+         * mover —su conjunto no se queda sin cabeza—.
+         */
+        $yaEs = DB::table('complex_staff as cs')
+            ->join('residential_complexes as rc', 'rc.complex_id', '=', 'cs.complex_id')
+            ->join('user as u', 'u.user_id', '=', 'cs.user_id')
+            ->where('u.email', $request->input('email'))
+            ->where('cs.role', ComplexStaff::DUENO)
+            ->where('cs.state', true)
+            ->where('cs.complex_id', '!=', $id)
+            ->first(['rc.name']);
+
+        if ($yaEs) {
+            return response()->json([
+                'message' => "Esa persona ya administra {$yaEs->name}. Nombrarla aca dejaria ese "
+                    . 'conjunto sin administrador. Usa otro correo, o nombrale primero un reemplazo alli.',
+            ], 422);
+        }
+
         $generada = empty($datos['password']);
         $clave    = $generada ? Str::password(14) : $datos['password'];
 
@@ -2512,6 +2734,10 @@ class AdminApiController extends Controller
                     'state'             => 1,
                     'qualification'     => 0,
                     'email_verified_at' => now(),
+                    // La fecha la pone la aplicación y no la base: `CURRENT_TIMESTAMP`
+                    // es el reloj del servidor, que en el VPS no es el de Bogotá.
+                    'created_at'        => now(),
+                    'updated_at'        => now(),
                 ]);
             }
 
@@ -2521,11 +2747,27 @@ class AdminApiController extends Controller
              * suele seguir trabajando ahi, y quitarle la entrada sin avisar
              * deja al conjunto sin porteria el mismo dia del cambio.
              */
-            DB::table('complex_staff')
+            $anteriores = DB::table('complex_staff')
                 ->where('complex_id', $id)
                 ->where('role', ComplexStaff::DUENO)
                 ->where('user_id', '!=', $userId)
-                ->update(['role' => ComplexStaff::CELADOR, 'updated_at' => now()]);
+                ->pluck('user_id');
+
+            if ($anteriores->isNotEmpty()) {
+                DB::table('complex_staff')
+                    ->whereIn('user_id', $anteriores)
+                    ->update(['role' => ComplexStaff::CELADOR, 'updated_at' => now()]);
+
+                /*
+                 * Y su rol de usuario baja con la ficha. Si no, quedaba con
+                 * `rol = 5` haciendo de celador: el panel de administracion lo
+                 * seguia enseniando como «Admin. de conjunto» y nadie sabia que
+                 * ya no lo era.
+                 */
+                DB::table('user')
+                    ->whereIn('user_id', $anteriores)
+                    ->update(['rol' => ComplexStaff::ROL_CELADOR]);
+            }
 
             // `user_id` es unico en la tabla: quien venia de otro conjunto se
             // reasigna a este en vez de duplicarse.
@@ -2658,6 +2900,10 @@ class AdminApiController extends Controller
                 // Lo da de alta un administrador: sin verificar, el login lo
                 // rechazaría y la cuenta nacería inservible.
                 'email_verified_at' => now(),
+                // La fecha la pone la aplicación y no la base: `CURRENT_TIMESTAMP`
+                // es el reloj del servidor, que en el VPS no es el de Bogotá.
+                'created_at'        => now(),
+                'updated_at'        => now(),
             ]);
 
             $ownerId = DB::table('owner')->insertGetId([
@@ -3168,6 +3414,21 @@ class AdminApiController extends Controller
                 'owners_without_business' => DB::table('owner as o')
                     ->whereNotExists(fn ($q) => $q->from('owner_busines as ob')
                         ->whereColumn('ob.owner_id', 'o.owner_id'))
+                    ->count(),
+                /*
+                 * Y la dirección contraria, que es la que rompe algo.
+                 *
+                 * Se contaba el propietario sin negocio —molesto— y no el
+                 * negocio sin propietario, que es el que NADIE puede
+                 * administrar: ni desde el panel de aliados ni desde la app,
+                 * porque las dos resuelven la tienda por `owner_busines`.
+                 * Crearlo desde Catálogo → Negocios no crea ese vínculo; se
+                 * ata desde Propietarios, y hasta que alguien lo haga la
+                 * tienda está dada de alta y muda.
+                 */
+                'businesses_without_owner' => DB::table('business as b')
+                    ->whereNotExists(fn ($q) => $q->from('owner_busines as ob')
+                        ->whereColumn('ob.busines_id', 'b.busines_id'))
                     ->count(),
             ];
         }

@@ -27,6 +27,9 @@ class ComplexStaff extends Audit
     public const ROL_DUENO   = 5;
     public const ROL_CELADOR = 6;
 
+    /** Los dos roles que pueden entrar por la puerta del conjunto. */
+    public const ROLES_DE_USUARIO = [self::ROL_DUENO, self::ROL_CELADOR];
+
     protected $fillable = [
         'user_id',
         'complex_id',

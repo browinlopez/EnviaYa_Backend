@@ -35,6 +35,25 @@ class EnsureComplexStaff
             return response()->json(['message' => 'No autenticado.'], 401);
         }
 
+        /*
+         * EL ROL Y LA FICHA, LOS DOS.
+         *
+         * Antes se miraba solo la ficha, y eso dejaba una puerta abierta que se
+         * comprobó: al bajarle el rol a un dueño de conjunto desde el panel, su
+         * fila en `complex_staff` seguía ahí y `GET /v1/conjunto/residentes` le
+         * seguía respondiendo 200. Se le quitaba el rol y no se le quitaba el
+         * acceso.
+         *
+         * El origen se corrigió —cambiar el rol ahora cierra la ficha— pero la
+         * defensa va acá: una fila que se quedó atrás por cualquier motivo, hoy
+         * o dentro de dos años, no puede volver a valer como llave.
+         */
+        if (!in_array((int) $usuario->rol, ComplexStaff::ROLES_DE_USUARIO, true)) {
+            return response()->json([
+                'message' => 'Esta sección es para el personal de un conjunto.',
+            ], 403);
+        }
+
         $ficha = ComplexStaff::de((int) $usuario->user_id);
 
         if (!$ficha) {

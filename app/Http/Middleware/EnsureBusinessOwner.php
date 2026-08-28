@@ -55,12 +55,35 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class EnsureBusinessOwner
 {
+    /** Tabla `rol`: el 2 es el tendero. */
+    private const ROL_TENDERO = 2;
+
     public function handle(Request $request, Closure $next): Response
     {
         $usuario = $request->user();
 
         if (!$usuario) {
             return response()->json(['message' => 'No autenticado.'], 401);
+        }
+
+        /*
+         * EL ROL, ANTES QUE LA CADENA DE PROPIEDAD.
+         *
+         * La cadena `user → owner → owner_busines → business` no sabe nada del
+         * rol, y eso dejaba una puerta abierta que se comprobó: al bajar a un
+         * tendero a comprador desde el panel, su cadena seguía intacta y
+         * `GET /v1/negocio/me` le seguía respondiendo 200. Se le quitaba el rol
+         * y no se le quitaba el acceso.
+         *
+         * Cambiar el rol ahora exige desvincularlo primero, así que esto no
+         * debería poder pasar. Va igual: una cadena que se quede atrás por
+         * cualquier otro camino —una carga de datos, un arreglo a mano en la
+         * base— no puede volver a valer como llave.
+         */
+        if ((int) $usuario->rol !== self::ROL_TENDERO) {
+            return response()->json([
+                'message' => 'Esta sección es para quien administra un negocio.',
+            ], 403);
         }
 
         $negocios = app(NegocioDelUsuario::class)->negociosDe((int) $usuario->user_id);
