@@ -601,6 +601,20 @@ class OrderController extends Controller
         if ($order->state == 1 && $request->state == 2) {
             $order->state = 2;
 
+            /*
+             * Y se le dice al comprador, que hasta ahora no se enteraba.
+             *
+             * Este es el aviso que mas se espera de los cuatro: entre pedir y
+             * que la tienda acepte es donde la gente duda de si el pedido
+             * llego siquiera, y era justo el tramo en el que la app callaba.
+             */
+            Avisos::para(
+                $order->buyer->user_id,
+                'pedido_aceptado',
+                "{$order->business->name} aceptó tu pedido y lo está preparando.",
+                ['order_id' => $order->orderSales_id],
+            );
+
             // Acepta domiciliario
         } elseif ($order->state == 2 && $request->state == 3) {
             if (!$request->user_id) {
@@ -657,6 +671,19 @@ class OrderController extends Controller
                 ['order_id' => $order->orderSales_id],
             );
 
+            /*
+             * Y al comprador, que es a quien le cambia el dia: a partir de aca
+             * tiene sentido que mire por donde va. El aviso lleva el minutero
+             * que se acaba de congelar, para no prometer un plazo distinto del
+             * que se va a medir despues.
+             */
+            Avisos::para(
+                $order->buyer->user_id,
+                'pedido_en_camino',
+                "Tu pedido salió de {$order->business->name}. Llega en unos {$order->promised_minutes} minutos.",
+                ['order_id' => $order->orderSales_id],
+            );
+
             // Pedido entregado
         } elseif ($order->state == 3 && $request->state == 4) {
             $order->state = 4;
@@ -679,6 +706,21 @@ class OrderController extends Controller
              * se declara desde otro sitio.
              */
             $cobros->registrar($order, $request->user()?->user_id);
+
+            /*
+             * El aviso de entrega va DESPUES del cobro y antes del save, en la
+             * misma rama: si el cobro reventara no habria entrega que anunciar.
+             *
+             * Sirve ademas de recordatorio para calificar, que es la unica
+             * forma que tiene una tienda nueva de conseguir sus primeras
+             * reseñas.
+             */
+            Avisos::para(
+                $order->buyer->user_id,
+                'pedido_entregado',
+                "Tu pedido de {$order->business->name} fue entregado. ¿Nos cuentas qué tal?",
+                ['order_id' => $order->orderSales_id],
+            );
         } else {
             return response()->json(['message' => 'Transición de estado no permitida.'], 400);
         }

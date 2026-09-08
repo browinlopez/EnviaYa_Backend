@@ -303,7 +303,18 @@ class PromocionesDeLaTienda
         ];
 
         foreach ($destinatarios as $userId) {
-            Avisos::para($userId, 'promocion', $texto, $datos);
+            /*
+             * `push: false` porque el envio a los telefonos va mas abajo, en un
+             * solo bloque con todos los tokens de una vez. `Avisos::para` manda
+             * push por su cuenta desde que los avisos de pedido lo necesitan;
+             * dejarlo encendido aqui significaria que cada cliente afiliado
+             * recibe la MISMA promocion dos veces, una por cada camino.
+             *
+             * Ademas el titulo es distinto: el de abajo es el NOMBRE DE LA
+             * TIENDA, que es lo que hace que se reconozca en la barra, y no el
+             * rotulo generico que pondria `Avisos`.
+             */
+            Avisos::para($userId, 'promocion', $texto, $datos, push: false);
         }
 
         $tokens = DeviceToken::vivos()
