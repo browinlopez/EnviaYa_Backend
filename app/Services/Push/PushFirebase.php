@@ -190,7 +190,15 @@ class PushFirebase implements TransportePush
      */
     private function accessToken(): ?string
     {
-        return Cache::remember('fcm.access_token', self::VIDA_TOKEN, function () {
+        /*
+         * La huella de la cuenta de servicio va en la clave de caché por el
+         * mismo motivo que en `PushApns`: sin ella, cambiar de credencial no
+         * surte efecto hasta que caduque la anterior, y mientras tanto se
+         * manda un token firmado por la cuenta vieja sin que nada lo diga.
+         */
+        $huella = substr(hash('sha256', json_encode($this->cuenta())), 0, 12);
+
+        return Cache::remember("fcm.access_token.{$huella}", self::VIDA_TOKEN, function () {
             $cuenta = $this->cuenta();
 
             if (!$cuenta) {

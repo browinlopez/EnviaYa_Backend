@@ -184,10 +184,29 @@ class PushApns implements TransportePush
         }
     }
 
-    /** El JWT de autorización, en caché mientras dure. */
+    /**
+     * El JWT de autorización, en caché mientras dure.
+     *
+     * LA CLAVE DE CACHÉ LLEVA LA HUELLA DE LA CREDENCIAL, y no es un adorno.
+     *
+     * Con una clave fija —`apns.jwt` a secas, que es como estaba—, cambiar la
+     * `.p8` no surte efecto hasta 55 minutos después: se sigue devolviendo el
+     * JWT viejo, que lleva el `kid` viejo firmado dentro. Paso de verdad al
+     * rotar la clave: las variables nuevas estaban puestas, el contenedor
+     * reiniciado, y Apple seguía respondiendo `BadEnvironmentKeyInToken`
+     * porque recibía el token de la clave anterior. Nada en el servidor lo
+     * decía; parecía que las variables no habían llegado.
+     *
+     * Con la huella dentro, una credencial nueva es una entrada nueva y el
+     * cambio surte efecto en el acto. La vieja caduca sola.
+     */
     private function jwt(): ?string
     {
-        return Cache::remember('apns.jwt', self::VIDA_TOKEN, function () {
+        $huella = substr(hash('sha256', (string) $this->clave()
+            . (string) config('services.apns.key_id')
+            . (string) config('services.apns.team_id')), 0, 12);
+
+        return Cache::remember("apns.jwt.{$huella}", self::VIDA_TOKEN, function () {
             $clave = $this->clave();
 
             if ($clave === null) {
