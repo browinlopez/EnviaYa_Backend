@@ -53,11 +53,18 @@ function telefono(string $token, string $plataforma): string
 {
     $user = User::factory()->create();
 
+    /*
+     * `failed_at` vacio es lo que marca un token vivo —lo dice
+     * `DeviceToken::scopeVivos()`—. Antes aqui habia un `'state' => 1` que no
+     * corresponde a ninguna columna: Eloquent descarta en silencio lo que no
+     * esta en `$fillable`, asi que la prueba pasaba igual y dejaba escrito que
+     * existia una columna inexistente. De ahi salio una consulta a mano contra
+     * produccion que reviento con «Unknown column 'state'».
+     */
     DeviceToken::create([
         'user_id'  => $user->user_id,
         'token'    => $token,
         'platform' => $plataforma,
-        'state'    => 1,
     ]);
 
     return $token;
