@@ -47,16 +47,14 @@ class ConfirmacionDePago
             return false;
         }
 
-        try {
-            broadcast(new OrderCreated($order->load('buyer.user')));
-        } catch (\Throwable $e) {
-            // El pedido ya está pagado y guardado: la tienda lo verá al
-            // refrescar. Perder el aviso es molesto; perder el pedido, no.
-            Log::warning('No se pudo anunciar el pedido ya pagado', [
-                'order_id' => $order->orderSales_id,
-                'error' => $e->getMessage(),
-            ]);
-        }
+        /*
+         * El mismo anuncio que un pedido contra entrega, por el mismo camino:
+         * websocket para quien tenga la pantalla abierta y push para quien no.
+         * Este es justo el caso donde el push importa mas —la confirmacion del
+         * banco puede llegar minutos despues, con todo el mundo fuera de la
+         * app— y donde repetir el codigo lo habria dejado sin poner.
+         */
+        AvisoDePedidoNuevo::anunciar($order);
 
         return true;
     }

@@ -42,6 +42,8 @@ class Avisos
         'pedido_entregado' => 'Pedido entregado',
         'pedido_cancelado' => 'Pedido cancelado',
         'entrega_asignada' => 'Tienes una entrega',
+        'pedido_nuevo'     => '¡Pedido nuevo!',
+        'mensaje_nuevo'    => 'Mensaje nuevo',
     ];
 
     /**
@@ -52,6 +54,10 @@ class Avisos
      *                      bloque a todos los afiliados de una vez en lugar de
      *                      uno por persona; sin esto, cada cliente recibiría la
      *                      misma promoción DOS veces.
+     * @param  string|null  $titulo  Para cuando el título no depende del tipo
+     *                      sino del contenido: en un chat es el NOMBRE de quien
+     *                      escribe, que es lo que hace que se reconozca en la
+     *                      barra sin abrir nada.
      */
     public static function para(
         int|string $userId,
@@ -59,6 +65,7 @@ class Avisos
         string $mensaje,
         array $datos = [],
         bool $push = true,
+        ?string $titulo = null,
     ): ?Notification {
         try {
             $aviso = Notification::create([
@@ -107,7 +114,7 @@ class Avisos
             try {
                 EnviarAvisoPush::dispatch(
                     $userId,
-                    self::TITULOS[$tipo] ?? "VeciPa'Ya",
+                    $titulo ?? self::TITULOS[$tipo] ?? "VeciPa'Ya",
                     $mensaje,
                     // El tipo viaja para que la app sepa a qué pantalla llevar
                     // al tocarla; sin él, el destino se perdería.

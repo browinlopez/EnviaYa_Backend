@@ -165,3 +165,62 @@ it('una promocion no se envia dos veces', function () {
 
     expect($codigo)->toContain("push: false");
 });
+
+/* =========================================================================
+   QUE LA TIENDA SE ENTERE DE QUE LE ENTRO UN PEDIDO
+
+   Es el aviso mas grave de todos los que faltaban. Un comprador sin aviso se
+   impacienta, pero su pedido se prepara igual; un TENDERO sin aviso no prepara
+   nada y el pedido se queda quieto. Solo salia por websocket, o sea que con el
+   telefono en el bolsillo no llegaba.
+   ======================================================================== */
+
+it('un pedido nuevo le suena al dueño de la tienda', function () {
+    $e = pedidoConGente();
+
+    \App\Services\AvisoDePedidoNuevo::anunciar($e['pedido']);
+
+    $duenio = \Illuminate\Support\Facades\DB::table('owner')
+        ->join('owner_busines', 'owner.owner_id', '=', 'owner_busines.owner_id')
+        ->where('owner_busines.busines_id', $e['businessId'])
+        ->value('owner.user_id');
+
+    Queue::assertPushed(
+        EnviarAvisoPush::class,
+        fn ($job) => (int) $job->userId === (int) $duenio
+            && $job->datos['tipo'] === 'pedido_nuevo',
+    );
+});
+
+it('el aviso del pedido nuevo dice cuanto es, sin abrir nada', function () {
+    $e = pedidoConGente();
+
+    \App\Services\AvisoDePedidoNuevo::anunciar($e['pedido']);
+
+    /*
+     * El importe va en el propio aviso a proposito: es lo que deja decidir si
+     * vale la pena dejar lo que se esta haciendo sin entrar a mirar.
+     */
+    Queue::assertPushed(
+        EnviarAvisoPush::class,
+        fn ($job) => str_contains($job->cuerpo, '#' . $e['orderId'])
+            && str_contains($job->cuerpo, '$'),
+    );
+});
+
+it('los dos caminos por los que nace un pedido avisan igual', function () {
+    /*
+     * Un pedido pasa a existir para la tienda de dos formas: contra entrega al
+     * crearlo, y con tarjeta cuando la pasarela confirma —que puede ser
+     * minutos despues, con la app de todos cerrada—. Si cada sitio lo hiciera
+     * por su cuenta, uno acabaria sin el push y el fallo solo aparecerian en
+     * la mitad de los pedidos.
+     */
+    foreach ([
+        'app/Http/Controllers/Order/OrderController.php',
+        'app/Services/ConfirmacionDePago.php',
+    ] as $archivo) {
+        expect(file_get_contents(base_path($archivo)))
+            ->toContain('AvisoDePedidoNuevo::anunciar');
+    }
+});

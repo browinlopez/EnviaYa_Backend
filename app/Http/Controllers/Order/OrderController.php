@@ -14,6 +14,7 @@ use App\Services\PoliticaDeDomicilio;
 use App\Services\CustodiaDeEfectivo;
 use App\Services\ConfirmacionDePago;
 use App\Services\Avisos;
+use App\Services\AvisoDePedidoNuevo;
 use App\Events\DomiciliaryLocationUpdated;
 use App\Events\OrderCreated;
 use App\Events\OrderStatusUpdated;
@@ -335,7 +336,7 @@ class OrderController extends Controller
                  * el aviso: llega unos segundos más tarde y ya es de verdad.
                  */
                 if (!$order->esperandoPago()) {
-                    broadcast(new OrderCreated($order->load('buyer.user')));
+                    AvisoDePedidoNuevo::anunciar($order);
                 }
             } catch (\Throwable $e) {
                 Log::warning('No se pudo anunciar el pedido nuevo', [

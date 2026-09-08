@@ -12,6 +12,7 @@ use App\Models\Chat\Message;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use App\Services\Avisos;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 
@@ -124,6 +125,35 @@ class ChatController extends Controller
                     'error'      => $e->getMessage(),
                 ]);
             }
+
+            /*
+             * Y al telefono del otro, que es lo que faltaba.
+             *
+             * Igual que el resto del chat, esto solo salia por websocket: alguien
+             * preguntaba «tiene leche deslactosada?» y si el otro lado tenia la
+             * app cerrada, el mensaje esperaba a que la abriera. En un pedido en
+             * curso eso es un cliente esperando una respuesta que nadie va a ver.
+             *
+             * EL TITULO ES EL NOMBRE DE QUIEN ESCRIBE, no «Mensaje nuevo»: en la
+             * barra de notificaciones es lo unico que se lee entero, y saber
+             * quien escribe es la mitad de la decision de abrir.
+             *
+             * Se recorta el cuerpo porque un mensaje largo se corta igual en la
+             * pantalla bloqueada, y mandarlo entero solo gasta carga util.
+             */
+            Avisos::para(
+                $recipient->user_id,
+                'mensaje_nuevo',
+                \Illuminate\Support\Str::limit((string) $message->content, 120),
+                [
+                    'chat_id'          => $chat->chat_id,
+                    // Para que tocar el aviso abra ESE chat: la pantalla necesita
+                    // saber con quien se habla, no solo el numero del chat.
+                    'remitente_id'     => $sender->user_id,
+                    'remitente_nombre' => (string) ($sender->name ?? ''),
+                ],
+                titulo: (string) ($sender->name ?: 'Mensaje nuevo'),
+            );
 
             return response()->json([
                 'message' => 'Mensaje enviado',
