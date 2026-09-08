@@ -7,16 +7,30 @@ use App\Http\Controllers\Auth\EmailVerificationPromptController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
-use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
 
+/*
+ * AQUI NO HAY REGISTRO, Y ES A PROPOSITO.
+ *
+ * Breeze trae de fabrica `GET/POST /register`, y en este proyecto el
+ * controlador creaba el usuario con `'rol' => 4` —administrador— y ademas le
+ * iniciaba la sesion. `EnsureAdmin`, que es la puerta del panel interno,
+ * comprueba exactamente una cosa: que el rol sea 4.
+ *
+ * O sea que habia un formulario publico, sin invitacion ni aprobacion, que
+ * repartia el rol de administrador. No hacia falta explotar nada: se rellenaba.
+ * Estuvo servido en produccion.
+ *
+ * Las cuentas de verdad se crean por dos caminos, los dos con su rol correcto:
+ *
+ *   · la app, por `POST /v1/register` (`RegistroController`);
+ *   · el panel, dando de alta a alguien desde dentro y ya autenticado.
+ *
+ * Si algun dia hace falta un alta web, que NO sea esta: que no asigne rol por
+ * defecto y que exija invitacion.
+ */
 Route::middleware('guest')->group(function () {
-    Route::get('register', [RegisteredUserController::class, 'create'])
-        ->name('register');
-
-    Route::post('register', [RegisteredUserController::class, 'store']);
-
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');
 
