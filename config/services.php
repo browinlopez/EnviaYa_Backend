@@ -104,6 +104,28 @@ return [
         'project_id'       => env('FCM_PROJECT_ID', ''),
     ],
 
+    /*
+     * Apple, para las notificaciones a iPhone.
+     *
+     * Van directo a APNs y no por Firebase porque el token que registra la app
+     * en iOS es el NATIVO de Apple, y Firebase solo acepta los suyos. Ver
+     * `PushApns`.
+     *
+     * `APNS_PRODUCTION` tiene que coincidir con el `aps-environment` con el que
+     * se compilo la app: los tokens de sandbox no valen en produccion ni al
+     * reves, y Apple responde `BadDeviceToken` sin decir cual es el problema.
+     */
+    'apns' => [
+        // La clave .p8, en base64 y en una linea (o su ruta en el servidor).
+        'key'        => env('APNS_KEY', ''),
+        'key_path'   => env('APNS_KEY_PATH', ''),
+        'key_id'     => env('APNS_KEY_ID', ''),
+        'team_id'    => env('APNS_TEAM_ID', ''),
+        // El bundle de la app: es el `apns-topic` de cada envio.
+        'bundle_id'  => env('APNS_BUNDLE_ID', ''),
+        'production' => env('APNS_PRODUCTION', false),
+    ],
+
     'contrato' => [
         'empresa'        => env('CONTRATO_EMPRESA', 'MARCAVA GROUP S.A.S.'),
         'nit'            => env('CONTRATO_NIT', ''),

@@ -4,6 +4,12 @@ namespace App\Http\Controllers\Order;
 
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Services\Ajustes;
+use App\Services\ArmadoDelPedido;
+use App\Services\CobroContraEntrega;
+use App\Services\EconomiaDelPedido;
+use App\Services\PagoEnLinea;
+use App\Services\ReglasDeDespacho;
+use App\Services\TarifaPorDistancia;
 use App\Services\PoliticaDeDomicilio;
 use App\Services\CustodiaDeEfectivo;
 use App\Services\ConfirmacionDePago;
@@ -40,401 +46,15 @@ class OrderController extends Controller
 {
     use ComprobarPertenencia;
 
-    // Función para obtener todas las órdenes de un usuario
-    public function ordersUser(Request $request)
-    {
-        $request->validate([
-            'user_id' => 'required|integer'
-        ]);
-
-        $buyer = Buyer::where('user_id', $request->user_id)->first();
-
-        if (!$buyer) {
-            return response()->json([
-                'message' => 'Usuario comprador no encontrado'
-            ], 404);
-        }
-
-        $orders = OrdersSales::where('buyer_id', $buyer->buyer_id)
-            ->confirmados()
-            ->with('details.product.category', 'business', 'promotions', 'payments', 'address.municipality.department.country', 'address.alias', 'domiciliary.user')
-            ->get();
-
-        $formattedOrders = $orders->map(function ($order) {
-            return [
-                'order_id' => $order->orderSales_id,
-                'buyer_id' => $order->buyer_id,
-                'busines_id' => $order->busines_id,
-                'total' => $order->total,
-                // Desglose, para que cada rol sepa qué parte le corresponde:
-                // el negocio cobra el subtotal y el domiciliario el domicilio.
-                'subtotal' => $order->subtotal,
-                'domicilio' => $order->domicilio,
-                'domiciliary_fee' => $order->domiciliary_fee,
-                // El domiciliario necesita saber si cobra en la puerta o
-                // si el pedido ya viene pagado en línea.
-                'methods_id' => $order->methods_id,
-                'payment_state' => $order->payment_state,
-                'sale_date' => $order->sale_date,
-                'is_scheduled' => $order->is_scheduled,
-                'delivery_date' => $order->delivery_date,
-                'delivery_type' => $order->pickup ? 'pickup' : 'delivery',
-                'pickup' => (bool) $order->pickup,
-                'pickup_time' => $order->pickup_time,
-                'has_review' => $order->has_review,
-                'dispatched_at' => $order->dispatched_at,
-                // Compromiso y cumplimiento del plazo. Se mandan resueltos
-                // desde acá para que la app no tenga que reimplementar la
-                // regla y contarla distinto que el informe del panel.
-                'promised_minutes' => $order->promised_minutes,
-                'delivery_minutes' => $order->delivery_minutes,
-                'on_time' => $order->on_time,
-                'delay_minutes' => $order->delay_minutes,
-                'state' => $order->state,
-                'business' => [
-                    'business_id' => $order->business->busines_id,
-                    'name' => $order->business->name,
-                    'address' => $order->business->address,
-                    'address' => $order->business->address,
-                    'latitude' => $order->business->latitude !== null ? (float)$order->business->latitude : null,
-                    'longitude' => $order->business->longitude !== null ? (float)$order->business->longitude : null,
-                    'phone' => $order->business->phone,
-                    'city' => $order->business->city,
-                    'state' => $order->business->state,
-                    'logo' => $order->business->logo,
-                ],
-                'delivery_address' => !$order->pickup && $order->address ? [
-                    'address_id' => $order->address->address_id,
-                    /*
-                     * La calle va JUNTO a la dirección del mapa, no en vez de
-                     * ella.
-                     *
-                     * La del mapa sitúa la cuadra; la que escribió la persona
-                     * lleva el número de casa o apartamento. El domiciliario
-                     * necesita las dos para llegar a la puerta, y hasta ahora
-                     * solo le llegaba la primera.
-                     */
-                    'address' => trim(implode(', ', array_filter([
-                        $order->address->street,
-                        $order->address->address,
-                    ]))),
-                    'street' => $order->address->street,
-                    'alias' => $order->address->alias?->name,
-                    'municipality' => $order->address->municipality?->name,
-                    'department' => $order->address->department?->name,
-                    'country' => $order->address->country?->name,
-                    'latitude' => $order->address->latitude !== null ? (float)$order->address->latitude : null,
-                    'longitude' => $order->address->longitude !== null ? (float)$order->address->longitude : null,
-                ] : null,
-                'domiciliary' => $order->domiciliary ? [
-                    'name' => $order->domiciliary->user->name,
-                    'email' => $order->domiciliary->user->email,
-                    'phone' => $order->domiciliary->user->phone,
-                    'domiciliary_id' => $order->domiciliary->domiciliary_id,
-                    'available' => $order->domiciliary->available,
-                    'qualification' => $order->domiciliary->qualification,
-                    'state' => $order->domiciliary->state,
-                    'user_id' => $order->domiciliary->user->user_id,
-                ] : null,
-                'details' => $order->details->map(function ($detail) {
-                    return [
-                        'product_id' => $detail->product->products_id,
-                        'name' => $detail->product->name,
-                        'description' => $detail->product->description,
-                        'category' => $detail->product->category?->name,
-                        'image' => $detail->product->image,
-                        'amount' => $detail->amount,
-                        'unit_price' => $detail->unit_price,
-                    ];
-                }),
-                'promotions' => $order->promotions,
-                'payments' => $order->payments,
-            ];
-        });
-
-        return response()->json([
-            'message' => 'Órdenes encontradas',
-            'orders' => $formattedOrders
-        ]);
-    }
-
-    // Función para obtener todas las órdenes de un negocio (tendero)
-    public function ordersBusiness(Request $request)
-    {
-        $request->validate([
-            'business_id' => 'required|integer'
-        ]);
-
-        /*
-         * Un identificador en el cuerpo es una sugerencia, no una
-         * credencial: son correlativos. Sin esto, con la cuenta de un
-         * comprador se leian los pedidos de cualquier tienda.
-         */
-        if ($no = $this->negarNegocioAjeno($request, $request->business_id)) {
-            return $no;
-        }
-
-        $business = Business::find($request->business_id);
-
-        if (!$business) {
-            return response()->json([
-                'message' => 'Negocio no encontrado'
-            ], 404);
-        }
-
-        // Precargamos relaciones necesarias
-        /*
-         * Sin los que esperan un pago en línea.
-         *
-         * No filtraba nada: un pago rechazado dejaba el pedido en la lista de
-         * la tienda —y con aviso en vivo—, así que el tendero podía ponerse a
-         * preparar comida que nadie pagó. Y cada reintento dejaba otro.
-         */
-        $orders = OrdersSales::where('busines_id', $business->busines_id)
-            ->confirmados()
-            ->with([
-                'business',
-                'details.product',
-                'buyer.user', // Buyer + User
-                'promotions',
-                'payments',
-                'address.municipality.department.country',
-                'address.alias'
-            ])
-            ->get();
-
-        // Datos del business, solo una vez
-        $businessData = [
-            'business_id' => $business->busines_id,
-            'name' => $business->name,
-            'address' => $business->address,
-            'latitude' => $business->latitude !== null ? (float)$business->latitude : null,
-            'longitude' => $business->longitude !== null ? (float)$business->longitude : null,
-            'phone' => $business->phone,
-            'city' => $business->city,
-            'qualification' => $business->qualification,
-            'state' => $business->state,
-            'logo' => $business->logo,
-        ];
-
-        $formattedOrders = $orders->map(function ($order) use ($businessData) {
-            return [
-                'order_id' => $order->orderSales_id,
-                'buyer_id' => $order->buyer_id,
-                'busines_id' => $order->busines_id,
-                'total' => $order->total,
-                // Desglose, para que cada rol sepa qué parte le corresponde:
-                // el negocio cobra el subtotal y el domiciliario el domicilio.
-                'subtotal' => $order->subtotal,
-                'domicilio' => $order->domicilio,
-                'domiciliary_fee' => $order->domiciliary_fee,
-                // El domiciliario necesita saber si cobra en la puerta o
-                // si el pedido ya viene pagado en línea.
-                'methods_id' => $order->methods_id,
-                'payment_state' => $order->payment_state,
-                'sale_date' => $order->sale_date,
-                'is_scheduled' => $order->is_scheduled,
-                'delivery_date' => $order->delivery_date,
-                'delivery_type' => $order->pickup ? 'pickup' : 'delivery',
-                'pickup' => (bool) $order->pickup,
-                'pickup_time' => $order->pickup_time,
-                'dispatched_at' => $order->dispatched_at,
-                'promised_minutes' => $order->promised_minutes,
-                'delivery_minutes' => $order->delivery_minutes,
-                'on_time' => $order->on_time,
-                'delay_minutes' => $order->delay_minutes,
-                'state' => $order->state,
-                'buyer' => $order->buyer ? [
-                    'buyer_id' => $order->buyer->buyer_id,
-                    'qualification' => $order->buyer->qualification,
-                    'state' => (bool) $order->buyer->state,
-                    'user' => [
-                        'user_id' => $order->buyer->user->user_id,
-                        'name' => $order->buyer->user->name,
-                        'email' => $order->buyer->user->email,
-                        'phone' => $order->buyer->user->phone,
-                        'address' => $order->buyer->user->address,
-                        'rol' => $order->buyer->user->rol,
-                        'qualification' => $order->buyer->user->qualification,
-                        'state' => (bool) $order->buyer->user->state,
-                    ]
-                ] : null,
-                'business' => [
-                    'business_id' => $order->business->busines_id,
-                    'name' => $order->business->name,
-                    'address' => $order->business->address,
-                    'latitude' => $order->business->latitude !== null ? (float)$order->business->latitude : null,
-                    'longitude' => $order->business->longitude !== null ? (float)$order->business->longitude : null,
-                    'phone' => $order->business->phone,
-                    'city' => $order->business->city,
-                    'state' => $order->business->state,
-                    'logo' => $order->business->logo,
-                ],
-                'delivery_address' => !$order->pickup && $order->address ? [
-                    'address_id' => $order->address->address_id,
-                    /*
-                     * La calle va JUNTO a la dirección del mapa, no en vez de
-                     * ella.
-                     *
-                     * La del mapa sitúa la cuadra; la que escribió la persona
-                     * lleva el número de casa o apartamento. El domiciliario
-                     * necesita las dos para llegar a la puerta, y hasta ahora
-                     * solo le llegaba la primera.
-                     */
-                    'address' => trim(implode(', ', array_filter([
-                        $order->address->street,
-                        $order->address->address,
-                    ]))),
-                    'street' => $order->address->street,
-                    'alias' => $order->address->alias?->name,
-                    'municipality' => $order->address->municipality?->name,
-                    'department' => $order->address->department?->name,
-                    'country' => $order->address->country?->name,
-                    'latitude' => $order->address->latitude !== null ? (float)$order->address->latitude : null,
-                    'longitude' => $order->address->longitude !== null ? (float)$order->address->longitude : null,
-                ] : null,
-                'domiciliary' => $order->domiciliary ? [
-                    'name' => $order->domiciliary->user->name,
-                    'email' => $order->domiciliary->user->email,
-                    'phone' => $order->domiciliary->user->phone,
-                    'domiciliary_id' => $order->domiciliary->domiciliary_id,
-                    'available' => $order->domiciliary->available,
-                    'qualification' => $order->domiciliary->qualification,
-                    'state' => $order->domiciliary->state,
-                    'user_id' => $order->domiciliary->user->user_id,
-                ] : null,
-                'details' => $order->details->map(function ($detail) {
-                    return [
-                        'product_id' => $detail->product->products_id,
-                        'name' => $detail->product->name,
-                        'description' => $detail->product->description,
-                        'category' => $detail->product->category?->name,
-                        'image' => $detail->product->image,
-                        'amount' => $detail->amount,
-                        'unit_price' => $detail->unit_price,
-                    ];
-                }),
-                'promotions' => $order->promotions,
-                'payments' => $order->payments,
-            ];
-        });
-
-        return response()->json([
-            'message' => 'Órdenes del negocio encontradas',
-            'business' => $businessData,  // incluimos business una sola vez
-            'orders' => $formattedOrders
-        ]);
-    }
-
-    public function incomeBusiness(Request $request)
-    {
-        $request->validate([
-            'business_id' => 'required|integer|exists:business,busines_id',
-        ]);
-
-        /*
-         * Un identificador en el cuerpo es una sugerencia, no una
-         * credencial: son correlativos. Sin esto, con la cuenta de un
-         * comprador se leian los pedidos de cualquier tienda.
-         */
-        if ($no = $this->negarNegocioAjeno($request, $request->business_id)) {
-            return $no;
-        }
-
-        $business_id = $request->business_id;
-
-        /**
-         * Una orden cuenta como ingreso cuando su pago online está
-         * confirmado (payment_state 'paid') o cuando ya fue entregada
-         * (efectivo, state 4). Antes se sumaba desde `payments`, que solo
-         * existe para pagos online: las ventas en efectivo no contaban.
-         */
-        $incomeOrders = fn() => OrdersSales::where('busines_id', $business_id)
-            ->where(function ($q) {
-                $q->where('payment_state', 'paid')->orWhere('state', 4);
-            });
-
-        $daysOfWeek = [
-            2 => 'Lunes',
-            3 => 'Martes',
-            4 => 'Miércoles',
-            5 => 'Jueves',
-            6 => 'Viernes',
-            7 => 'Sábado',
-            1 => 'Domingo',
-        ];
-
-        // Ingresos por día de la semana para un rango dado
-        $incomeByDay = function ($start, $end) use ($incomeOrders, $daysOfWeek) {
-            $rows = $incomeOrders()
-                ->select(
-                    DB::raw('DAYOFWEEK(sale_date) as weekday'),
-                    DB::raw('SUM(total) as total_income')
-                )
-                ->whereBetween('sale_date', [$start, $end])
-                ->groupBy('weekday')
-                ->get()
-                ->keyBy('weekday');
-
-            $out = [];
-            foreach ($daysOfWeek as $key => $day) {
-                $out[$day] = (float) ($rows[$key]->total_income ?? 0);
-            }
-
-            return $out;
-        };
-
-        $currentWeekStart = now()->startOfWeek();
-        $currentWeekEnd   = (clone $currentWeekStart)->endOfWeek();
-        $previousWeekStart = (clone $currentWeekStart)->subWeek();
-        $previousWeekEnd   = (clone $previousWeekStart)->endOfWeek();
-
-        $weeklyIncome = $incomeByDay($currentWeekStart, $currentWeekEnd);
-        $previousWeeklyIncome = $incomeByDay($previousWeekStart, $previousWeekEnd);
-
-        $currentWeekTotal  = array_sum($weeklyIncome);
-        $previousWeekTotal = array_sum($previousWeeklyIncome);
-
-        $difference = $currentWeekTotal - $previousWeekTotal;
-        $percentageChange = $previousWeekTotal > 0
-            ? ($difference / $previousWeekTotal) * 100
-            : 100;
-
-        $month_start = now()->startOfMonth();
-        $month_end   = (clone $month_start)->endOfMonth();
-
-        $monthlyIncome = $incomeOrders()
-            ->whereBetween('sale_date', [$month_start, $month_end])
-            ->sum('total');
-
-        $totalIncome = $incomeOrders()->sum('total');
-
-        return response()->json([
-            'business_id' => $business_id,
-
-            'week_start' => $currentWeekStart->toDateString(),
-            'week_end'   => $currentWeekEnd->toDateString(),
-
-            'weekly_income' => $weeklyIncome,
-            // Semana anterior desglosada por día (antes solo venía el total
-            // y la línea comparativa del chart no tenía datos)
-            'previous_weekly_income' => $previousWeeklyIncome,
-
-            'current_week_income'  => (float)$currentWeekTotal,
-            'previous_week_income' => (float)$previousWeekTotal,
-            'difference'            => (float)$difference,
-            'percentage_change'     => round($percentageChange, 2),
-
-            'month_start'    => $month_start->toDateString(),
-            'month_end'      => $month_end->toDateString(),
-            'monthly_income' => (float)$monthlyIncome,
-
-            'total_income' => (float)$totalIncome,
-        ]);
-    }
-
     // Crear orden de venta
-    public function store(Request $request, BoldService $bold)
+    public function store(
+        Request $request,
+        BoldService $bold,
+        EconomiaDelPedido $economia,
+        ArmadoDelPedido $armado,
+        PagoEnLinea $pasarela,
+        TarifaPorDistancia $distancias,
+    )
     {
         /* ========= COMPATIBILIDAD DE NOMBRES =========
            La app migrada a la API nueva manda business_id / payment_method_id
@@ -516,22 +136,51 @@ class OrderController extends Controller
             if (!$address || (int) $address->user_id !== (int) $request->user_id) {
                 return response()->json(['message' => 'Dirección no encontrada'], 404);
             }
+
+            /*
+             * Y QUE LA TIENDA REPARTA HASTA AHÍ.
+             *
+             * `operacion.radio_maximo_km` existía, los listados devolvían
+             * `in_range` por negocio… y no lo miraba NADIE: ni la app ni esta
+             * creación. Se podía pedir a 12,5 km a una tienda que reparte
+             * hasta 6, con la tarifa del escalón correspondiente cobrada
+             * tan campante.
+             *
+             * Va acá por lo mismo que el `state` de arriba: filtrar los
+             * listados no basta, porque basta con conservar el identificador
+             * —un favorito, un pedido anterior, una pantalla abierta— para
+             * saltárselo. Esta es la puerta de verdad; lo que haga la app es
+             * cortesía para no hacer perder el tiempo.
+             *
+             * Sin coordenadas se deja pasar: es la misma decisión que en la
+             * tarifa, y bloquear una venta por un dato que la tienda todavía
+             * no ha cargado sería castigarla por algo que no decidió.
+             */
+            $km = $distancias->kilometros(
+                $business->latitude !== null ? (float) $business->latitude : null,
+                $business->longitude !== null ? (float) $business->longitude : null,
+                $address->latitude !== null ? (float) $address->latitude : null,
+                $address->longitude !== null ? (float) $address->longitude : null,
+            );
+
+            if (!$distancias->reparteHasta($km)) {
+                return response()->json([
+                    'message' => 'Esta tienda no reparte hasta tu dirección. Elige otra dirección o recoge en tienda.',
+                    'reason' => 'out_of_range',
+                    'distance_km' => round($km, 2),
+                    'max_km' => (float) Ajustes::valor('operacion.radio_maximo_km'),
+                ], 422);
+            }
         }
 
         /* ========= PRECIOS REALES DEL SERVIDOR =========
-           El unit_price NUNCA se toma del cliente: se busca el precio del
-           producto en este negocio. De paso valida que cada producto
-           realmente pertenezca al negocio. */
-        $productIds = collect($request->products)->pluck('product_id')->all();
+           La regla —el precio lo pone el servidor, no el carrito— vive entera
+           en EconomiaDelPedido, junto al resto de lo que decide dinero. */
+        [$prices, $missing] = $economia->preciosDelServidor(
+            $request->products,
+            (int) $business->busines_id,
+        );
 
-        $prices = ProductBusiness::where('busines_id', $business->busines_id)
-            ->whereIn('products_id', $productIds)
-            // Y que el producto siga activo: uno retirado desde el panel no se
-            // vende, aunque el carrito del cliente todavía lo lleve dentro.
-            ->whereHas('product', fn ($q) => $q->where('state', 1))
-            ->pluck('price', 'products_id');
-
-        $missing = collect($productIds)->reject(fn($id) => $prices->has($id));
         if ($missing->isNotEmpty()) {
             return response()->json([
                 // El mensaje no distingue "no es de este negocio" de "ya no se
@@ -561,61 +210,38 @@ class OrderController extends Controller
         try {
             /* ========= ORDEN ========= */
 
-            $subtotal = collect($request->products)
-                ->sum(fn($p) => $p['amount'] * (float) $prices[$p['product_id']]);
-
             /*
-             * Tarifa de domicilio, del panel.
+             * Las cifras que deciden dinero, todas de una vez.
              *
-             * Vivía en `config/services.php`, o sea en el `.env` del servidor,
-             * mientras la app llevaba su propia copia escrita en el código con
-             * un comentario que pedía "mantener ambas iguales". No lo estaban:
-             * subir la tarifa exigía desplegar el servidor Y publicar una
-             * versión nueva en las tiendas, y entre una cosa y otra todos los
-             * pedidos mostraban un total y cobraban otro.
-             *
-             * Se congela en el pedido al crearlo, como el reparto: cambiarla no
-             * reescribe lo ya entregado.
+             * Vivian aca dentro, partidas en dos por la comprobacion del 409.
+             * `EconomiaDelPedido` las calcula juntas porque juntas se
+             * congelan: el subtotal a precio del servidor, el cupon, el
+             * reparto del domicilio en tres, lo que gana el repartidor y la
+             * comision de la plataforma.
              */
-            $tarifaBase = $isPickup ? 0.0 : (float) Ajustes::valor('operacion.tarifa_domicilio');
-
-            /*
-             * Cupón. El descuento se recalcula en el servidor a partir del
-             * código: aceptar el monto que mande el cliente sería dejar que
-             * cualquiera se ponga el descuento que quiera.
-             *
-             * Se resuelve ANTES del domicilio porque ahora también puede
-             * afectarlo: un cupón de envío gratis no toca el subtotal, rebaja
-             * la tarifa.
-             */
-            $cupon = app(CouponService::class)->resolver(
+            $cifras = $economia->calcular(
+                $request->products,
+                $prices,
                 $request->input('coupon_code'),
-                $subtotal,
                 (int) $request->user_id,
                 (int) $business->busines_id,
+                $isPickup,
+                // Dónde está la tienda y dónde la puerta: de ahí sale la
+                // tarifa por distancia. Sin coordenadas se cobra la base.
+                $business->latitude !== null ? (float) $business->latitude : null,
+                $business->longitude !== null ? (float) $business->longitude : null,
+                $address?->latitude !== null ? (float) $address?->latitude : null,
+                $address?->longitude !== null ? (float) $address?->longitude : null,
             );
 
-            $descuento = $cupon ? $cupon->descuentoPara($subtotal) : 0.0;
-
-            /*
-             * EL DOMICILIO SE PARTE EN TRES.
-             *
-             * Antes era una sola cifra y por eso no había forma de regalarlo:
-             * `domiciliary_fee` salía de lo que pagaba el cliente, así que un
-             * domicilio gratis era un viaje gratis para quien lo hace.
-             *
-             *   tarifa base   lo que cuesta el servicio
-             *   domicilio     lo que PAGA el cliente (puede ser 0)
-             *   subsidio      lo que pone la plataforma para cubrir la rebaja
-             *
-             * La rebaja sale del bolsillo de la plataforma, nunca del
-             * repartidor. El costo de la promoción queda anotado en su propia
-             * columna para poder medir cuánto cuesta la campaña.
-             */
-            $rebajaDomicilio = app(PoliticaDeDomicilio::class)->rebajaPara($tarifaBase, $cupon);
-            $domicilio       = $tarifaBase - $rebajaDomicilio;
-
-            $total = $subtotal + $domicilio - $descuento;
+            $subtotal        = $cifras['subtotal'];
+            $descuento       = $cifras['descuento'];
+            $domicilio       = $cifras['domicilio'];
+            $total           = $cifras['total'];
+            $cupon           = $cifras['cupon'];
+            $rebajaDomicilio = $cifras['rebajaDomicilio'];
+            $domiciliaryFee  = $cifras['domiciliaryFee'];
+            $platformFee     = $cifras['platformFee'];
 
             /*
              * ¿Sigue valiendo lo que la app prometió?
@@ -651,211 +277,35 @@ class OrderController extends Controller
             }
 
             /*
-             * Lo que gana el domiciliario sale de la TARIFA BASE, no de lo que
-             * pagó el cliente. Es la línea que hace posible el domicilio
-             * gratis: con `$domicilio` acá, una promoción le habría bajado el
-             * pago a quien hace el viaje.
-             *
-             * Se congela: si el reparto cambia después, esta orden conserva lo
-             * que se pactó al crearla.
+             * El alta del pedido y su detalle. Dentro va la regla del
+             * reintento: un segundo intento de pago reutiliza el pedido que
+             * quedo a medias en vez de crear otro.
              */
-            $domiciliaryFee = round(
-                $tarifaBase * (float) Ajustes::valor('operacion.reparto_domiciliario')
+            $order = $armado->guardar(
+                $buyer,
+                (int) $business->busines_id,
+                $address?->address_id,
+                (int) $request->methods_id,
+                $request->products,
+                $prices,
+                $cifras,
+                $isScheduled,
+                $deliveryDate,
+                $isPickup,
+                $request->pickup_time,
+                (int) $request->user_id,
             );
-
-            /*
-             * Comisión de la plataforma sobre la venta del negocio.
-             *
-             * Sobre el subtotal MENOS el descuento, que es lo que el negocio
-             * va a cobrar de verdad: cobrarle comisión sobre un dinero que no
-             * recibió sería cobrarle dos veces la promoción. El domicilio no
-             * entra: no es venta suya.
-             */
-            $platformFee = round(
-                max(0.0, $subtotal - $descuento)
-                * (float) Ajustes::valor('operacion.comision_plataforma'),
-                2
-            );
-
-            /*
-             * REINTENTAR NO CREA OTRO PEDIDO.
-             *
-             * Cuando el cobro se rechazaba, la app avisaba y la persona volvía
-             * a darle a pagar: eso repetía esta petición entera y dejaba OTRO
-             * pedido. Tres intentos, tres pedidos —y con la lista de la tienda
-             * sin filtrar, tres veces el mismo encargo esperando a que alguien
-             * lo preparara—.
-             *
-             * Se reutiliza el que quedó a medias si es del mismo comprador, la
-             * misma tienda y el mismo importe, y es reciente. Fuera de esa
-             * ventana se asume que es una compra nueva que casualmente cuesta
-             * lo mismo, y se crea aparte.
-             */
-            $aMedias = OrdersSales::where('buyer_id', $buyer->buyer_id)
-                ->where('busines_id', $business->busines_id)
-                ->whereIn('payment_state', OrdersSales::SIN_PAGO)
-                ->where('total', $total)
-                ->where('created_at', '>=', now()->subMinutes(30))
-                ->latest('orderSales_id')
-                ->first();
-
-            $datosDelPedido = [
-                'buyer_id' => $buyer->buyer_id,
-                'busines_id' => $business->busines_id,
-                'address_id' => $address?->address_id,
-                'methods_id' => $request->methods_id,
-                'total' => $total,
-                'subtotal' => $subtotal,
-                'domicilio' => $domicilio,
-                'discount' => $descuento,
-                'coupon_id' => $cupon?->id,
-                'domiciliary_fee' => $domiciliaryFee,
-                // Congeladas al crear, como todo lo que decide dinero.
-                'platform_fee'     => $platformFee,
-                'delivery_subsidy' => $rebajaDomicilio,
-                'sale_date' => now(),
-                /*
-                 * Solo los programados nacen con fecha: ahí `delivery_date` es
-                 * la hora PEDIDA por el cliente. En el resto es la hora REAL de
-                 * entrega y se sella al pasar a estado 4, así que ponerla en
-                 * `now()` al crear daba por entregado todo pedido nuevo. Los
-                 * informes que filtran por `delivery_date IS NOT NULL` contaban
-                 * esos pedidos con un tiempo de entrega de cero minutos y se
-                 * llevaban el promedio al suelo.
-                 */
-                'delivery_date' => $isScheduled ? $deliveryDate : null,
-                'is_scheduled' => $isScheduled,
-                'pickup' => $isPickup,
-                'pickup_time' => $isPickup && $request->pickup_time
-                    ? \Carbon\Carbon::parse($request->pickup_time)->format('Y-m-d H:i:s')
-                    : null,
-                'state' => 1,
-                'payment_state' => in_array($request->methods_id, [2, 5])
-                    ? OrdersSales::ESPERANDO_PAGO
-                    : 'pending_cash'
-            ];
-
-            /*
-             * Se REUTILIZA la fila, no se borra.
-             *
-             * Ese pedido a medias puede tener un cobro todavía en curso apuntando
-             * a él. Si se borrara y ese cobro acabara aprobándose, el webhook no
-             * encontraría dónde apuntarlo: la persona habría pagado y no habría
-             * pedido. Reutilizando la fila, ese aviso tardío sigue cayendo en el
-             * sitio correcto.
-             */
-            if ($aMedias) {
-                $aMedias->update($datosDelPedido);
-                $order = $aMedias;
-
-                // El detalle se reescribe abajo con lo que hay ahora en el
-                // carrito, que puede no ser lo mismo que en el primer intento.
-                OrdersSalesDetail::where('orderSales_id', $order->orderSales_id)->delete();
-            } else {
-                $order = OrdersSales::create($datosDelPedido);
-            }
-
-            foreach ($request->products as $p) {
-                OrdersSalesDetail::create([
-                    'orderSales_id' => $order->orderSales_id,
-                    'product_id' => $p['product_id'],
-                    'amount' => $p['amount'],
-                    'unit_price' => (float) $prices[$p['product_id']],
-                ]);
-            }
-
-            // El uso se consume ya con la orden creada, dentro de la misma
-            // transacción: si algo falla más abajo, el cupón se libera solo.
-            if ($cupon) {
-                app(CouponService::class)->canjear(
-                    $cupon,
-                    (int) $request->user_id,
-                    (int) $order->orderSales_id,
-                    $descuento,
-                );
-            }
 
             /* ========= PAGO ONLINE ========= */
 
-            if (in_array($request->methods_id, [2, 5])) {
+            $intent = null;
 
-                $paymentController = app(PaymentController::class);
-
-                // 1️⃣ Crear intent
-                $intent = $paymentController->createIntent($order, $bold);
-
-                // 2️⃣ Payer: si la app no lo manda, se construye desde el
-                //    perfil del comprador con el formato EXACTO que exige
-                //    Bold (person_type, document y billing_address son
-                //    obligatorios). Mismos fallbacks que usa dev97.
-                $payer = $request->payer;
-
-                if (!$payer) {
-                    $payerUser = $buyer->user;
-                    $phone = $payerUser->phone ?? '3000000000';
-                    $addressStr = $address->address ?? 'Calle 1';
-                    $city = $address?->municipality?->name ?? 'Barranquilla';
-                    $province = $address?->municipality?->department?->name ?? 'Atlántico';
-
-                    $payer = [
-                        'person_type' => 'NATURAL_PERSON',
-                        'name' => $payerUser->name ?? 'Cliente',
-                        'phone' => $phone,
-                        'email' => $payerUser->email ?? 'correo@ejemplo.com',
-                        'document_type' => 'CEDULA',
-                        'document_number' => '1234567890',
-                        'billing_address' => [
-                            'street1' => $addressStr,
-                            'street2' => '',
-                            'city' => $city,
-                            'zip_code' => '110111',
-                            'province' => $province,
-                            'country' => 'CO',
-                            'phone' => $phone,
-                        ],
-                    ];
-                }
-
-                // 3️⃣ Método de pago
-                $paymentMethod = $request->methods_id == 2
-                    ? array_merge(['name' => 'CREDIT_CARD'], $request->payment_method)
-                    : [
-                        'name' => 'QR',
-                        'qr_format' => 'BOLD_BASE64' //CLAVE puede ser ese o TEXT o BASE64
-                    ];
-
-                // 4️⃣ Productos (con los precios reales del servidor)
-                $products = collect($request->products)->map(fn($p) => [
-                    'product_id' => $p['product_id'],
-                    'amount' => (int) $p['amount'],
-                    'unit_price' => (float) $prices[$p['product_id']],
-                ])->toArray();
-
-                // 5️⃣ Ejecutar pago
-                $payment = $paymentController->createPayment(
-                    $order,
-                    $intent,
-                    $payer,
-                    $paymentMethod,
-                    $products,
-                    $request,
-                    $bold
+            if (in_array($request->methods_id, PagoEnLinea::CON_PASARELA)) {
+                // Devuelve el intent porque su referencia viaja en la respuesta:
+                // la app la necesita para consultar el estado del cobro.
+                $intent = $pasarela->cobrar(
+                    $order, $request->products, $prices, $request, $bold,
                 );
-
-                /*
-                 * 6️⃣ Estado del pago.
-                 *
-                 * Si la pasarela aprobó en el momento, el pedido pasa a existir
-                 * ya —y ahí se anuncia a la tienda—. Si no, se queda esperando:
-                 * puede que el cobro siga procesándose y lo confirme el webhook
-                 * más tarde, o puede que lo rechace.
-                 */
-                if ($payment->payment_status) {
-                    ConfirmacionDePago::confirmar($order);
-                } else {
-                    $order->payment_state = OrdersSales::ESPERANDO_PAGO;
-                    $order->save();
-                }
             }
 
             DB::commit();
@@ -928,26 +378,6 @@ class OrderController extends Controller
                 'error' => $e->getMessage()
             ], 422);
         }
-    }
-
-    // Obtener métodos de pago
-    public function paymentMethods()
-    {
-        $methods = PaymentMethods::with('forms')
-            ->where('state', 1)
-            ->get();
-
-        return response()->json($methods);
-    }
-
-    // Obtener formas de pago
-    public function paymentForms()
-    {
-        $forms = PaymentForms::with('methods')
-            ->where('state', 1)
-            ->get();
-
-        return response()->json($forms);
     }
 
     /**
@@ -1093,7 +523,11 @@ class OrderController extends Controller
     }
 
     // Actualizar estado de la orden (números)
-    public function updateStatus(Request $request)
+    public function updateStatus(
+        Request $request,
+        CobroContraEntrega $cobros,
+        ReglasDeDespacho $reglas,
+    )
     {
         $request->validate([
             'order_id' => 'required|integer',
@@ -1123,12 +557,12 @@ class OrderController extends Controller
          * de transicion falla como debe. Fuera de una transaccion el bloqueo se
          * suelta enseguida y no sirve de nada, de ahi el `DB::transaction`.
          */
-        return DB::transaction(function () use ($request) {
+        return DB::transaction(function () use ($request, $cobros, $reglas) {
             $order = OrdersSales::with('details', 'domiciliary')
                 ->lockForUpdate()
                 ->find($request->order_id);
 
-            return $this->moverPedido($request, $order);
+            return $this->moverPedido($request, $order, $cobros, $reglas);
         });
     }
 
@@ -1138,7 +572,12 @@ class OrderController extends Controller
      * Va aparte para que el bloqueo de arriba envuelva TODO el camino —leer,
      * comprobar y escribir— sin tener que indentar trescientas lineas.
      */
-    private function moverPedido(Request $request, ?OrdersSales $order)
+    private function moverPedido(
+        Request $request,
+        ?OrdersSales $order,
+        CobroContraEntrega $cobros,
+        ReglasDeDespacho $reglas,
+    )
     {
 
         if (!$order) {
@@ -1174,70 +613,14 @@ class OrderController extends Controller
             }
 
             /*
-             * Reglas de asignación. Se validan acá y no en la app porque por
-             * esta misma transición pasan los dos caminos: el domiciliario
-             * aceptando un pedido y el tendero despachándoselo. Si viviera
-             * solo en el cliente, cualquiera de los dos podría saltársela.
+             * Las reglas de asignacion viven en `ReglasDeDespacho`: por esta
+             * transicion pasan el domiciliario aceptando y el tendero
+             * despachando, y para los dos valen las mismas.
              */
-            if (!$domiciliary->available) {
-                return response()->json([
-                    'message' => 'El domiciliario no está disponible en este momento.',
-                    'reason'  => 'unavailable',
-                ], 422);
+            if ($impedimento = $reglas->impedimento($order, $domiciliary)) {
+                return response()->json($impedimento, 422);
             }
 
-            $maxSimultaneos = (int) Ajustes::valor('operacion.entregas_simultaneas');
-
-            $enCurso = OrdersSales::where('domiciliary_id', $domiciliary->domiciliary_id)
-                ->confirmados()
-                ->where('state', 3)
-                ->where('orderSales_id', '!=', $order->orderSales_id)
-                ->count();
-
-            if ($enCurso >= $maxSimultaneos) {
-                return response()->json([
-                    'message' => "Ya hay {$enCurso} pedidos en curso. Se debe entregar alguno antes de aceptar otro.",
-                    'reason'  => 'limit_reached',
-                    'active_orders' => $enCurso,
-                    'max_active_orders' => $maxSimultaneos,
-                ], 422);
-            }
-
-            /*
-             * CUÁNTO EFECTIVO PUEDE LLEVAR ENCIMA.
-             *
-             * Sólo cuenta para los pedidos contra entrega: uno ya pagado por la
-             * app no le pone un peso más en el bolsillo, y bloquearlo por el
-             * saldo sería castigarlo por deber dinero que no tiene que ver.
-             *
-             * El tope es del NEGOCIO que despacha, aunque el saldo del
-             * domiciliario sea global —cobra para varias tiendas—. Es lo
-             * correcto: quien decide si le confía otro pedido en efectivo es
-             * quien se lo está entregando.
-             *
-             * Se valida acá y no en la app porque por esta transición pasan los
-             * dos caminos: el tendero despachando y el domiciliario tomando el
-             * pedido de su lista. En el cliente, cualquiera de los dos se la
-             * saltaría.
-             */
-            $tope = $order->business?->max_courier_cash;
-
-            if ($tope !== null && (int) $order->methods_id === 1) {
-                $encima = app(CustodiaDeEfectivo::class)
-                    ->saldo($domiciliary->domiciliary_id);
-
-                $quedaria = $encima + (float) $order->total;
-
-                if ($quedaria > (float) $tope) {
-                    return response()->json([
-                        'message' => 'Con este pedido pasaría el máximo de efectivo que puede llevar encima. Tiene que consignar antes.',
-                        'reason'  => 'cash_limit_reached',
-                        'cash_now'   => round($encima, 2),
-                        'cash_after' => round($quedaria, 2),
-                        'cash_limit' => (float) $tope,
-                    ], 422);
-                }
-            }
 
             $order->state = 3;
             $order->domiciliary_id = $domiciliary->domiciliary_id;
@@ -1288,67 +671,14 @@ class OrderController extends Controller
              * pedidos pickup), el total restaba el domicilio en vez de sumarlo
              * y `amount` estaba fijo en 1.
              */
-            if ($order->methods_id == 1) {
-                $valorPromocion = 0; // pendiente: descuentos y promociones
-
-                /*
-                 * El pago, el apunte del efectivo y el estado del pedido, o
-                 * ninguno de los tres.
-                 *
-                 * Sin la transacción, un fallo al apuntar el recaudo dejaría un
-                 * pago registrado y aprobado sin nadie responsable del dinero
-                 * —que es exactamente el agujero que este cambio viene a
-                 * cerrar—.
-                 */
-                DB::transaction(function () use ($order, $request, $valorPromocion) {
-                Payment::create([
-                    'orderSales_id' => $order->orderSales_id,
-                    'methods_id' => $order->methods_id,
-                    'forms_id' => $order->forms_id,
-                    'amount' => $order->total,
-                    'subtotal' => $order->subtotal,
-                    'total' => $order->total - $valorPromocion,
-                    'domicilio' => $order->domicilio,
-                    'domiciliary_fee' => $order->domiciliary_fee,
-                    'valor_promocion' => $valorPromocion,
-                    // `status` es NOT NULL y sin default: no enviarlo hacía
-                    // fallar el insert, así que los pedidos en efectivo nunca
-                    // llegaron a registrar pago (y el domiciliario no cobraba).
-                    'provider' => 'cash',
-                    'status' => 'approved',
-                    'payment_status' => 1, // pagado
-                    'payment_date' => now(),
-                    'state' => 1 // activo
-                ]);
-
-                // El pago quedaba registrado y aprobado, pero la orden seguía
-                // diciendo 'pending' para siempre: nadie sincronizaba este
-                // campo al cobrar en efectivo. Resultado: pedidos entregados y
-                // cobrados que en los tableros aparecían como pendientes de
-                // pago, contradiciendo a la tabla de pagos.
-                $order->payment_state = 'paid';
-
-                /*
-                 * Y SE APUNTA QUIÉN TIENE ESE DINERO.
-                 *
-                 * Hasta ahora acá terminaba todo: se creaba un pago
-                 * `approved` y el pedido quedaba `paid`, como si la plata
-                 * hubiera llegado a la plataforma. No había llegado a ninguna
-                 * parte — estaba en el bolsillo del domiciliario, sin un solo
-                 * registro—, y la liquidación encima le PAGABA su comisión sin
-                 * COBRARLE lo recaudado.
-                 *
-                 * Recauda el total del pedido, no su comisión: cobra 32.000 y
-                 * gana 500. El resto lo debe.
-                 */
-                app(CustodiaDeEfectivo::class)->registrarRecaudo(
-                    $order,
-                    $request->user()?->user_id,
-                );
-
-                    $order->save();
-                });
-            }
+            /*
+             * El cobro en efectivo, el apunte de quien tiene esa plata y el
+             * estado de pago del pedido: los tres o ninguno. Vive en
+             * `CobroContraEntrega` porque es lo unico de esta transicion que
+             * mueve dinero, y tiene que ser identico si algun dia la entrega
+             * se declara desde otro sitio.
+             */
+            $cobros->registrar($order, $request->user()?->user_id);
         } else {
             return response()->json(['message' => 'Transición de estado no permitida.'], 400);
         }
@@ -1402,114 +732,6 @@ class OrderController extends Controller
         return response()->json([
             'message' => 'Estado de la orden actualizado',
             'order' => $order->load('details.product', 'buyer', 'business', 'address', 'payments')
-        ]);
-    }
-
-    public function storeGeolocation(Request $request)
-    {
-        // Validar los datos recibidos
-        $data = $request->validate([
-            'domiciliary_id' => 'required|exists:domiciliary,domiciliary_id',
-            'orderSales_id'  => 'required|exists:orderssales,orderSales_id',
-            'latitude'       => 'required|numeric',
-            'longitude'      => 'required|numeric',
-            'state'          => 'nullable|integer',
-        ]);
-
-        // Crear registro en la base de datos
-        $geo = OrderGeolocation::create($data);
-
-        /*
-         * Y se anuncia por el canal del pedido.
-         *
-         * El evento existía y estaba importado en este archivo desde hacía
-         * tiempo, pero no se emitía en ningún sitio: el mapa en vivo no tenía
-         * de dónde alimentarse y la app del comprador terminaba preguntando
-         * por HTTP cada pocos segundos.
-         *
-         * No interrumpe la respuesta: la ubicación ya quedó guardada, y si el
-         * servidor de websockets está caído el domiciliario no tiene por qué
-         * enterarse ni reintentar.
-         */
-        try {
-            broadcast(new DomiciliaryLocationUpdated($geo));
-        } catch (\Throwable $e) {
-            Log::warning('No se pudo anunciar la ubicación del domiciliario', [
-                'order_id' => $geo->orderSales_id,
-                'error'    => $e->getMessage(),
-            ]);
-        }
-
-        // Retornar respuesta JSON
-        return response()->json([
-            'success' => true,
-            'message' => 'Geolocalización guardada correctamente',
-            'data' => $geo
-        ], 201);
-    }
-
-    public function latest(Request $request)
-    {
-        $data = $request->validate([
-            'domiciliary_id' => 'required|exists:domiciliary,domiciliary_id'
-        ]);
-
-        $last = OrderGeolocation::where('domiciliary_id', $data['domiciliary_id'])
-            ->orderByDesc('created_at')
-            ->first();
-
-        if ($last) {
-            return response()->json([
-                'latitude' => $last->latitude,
-                'longitude' => $last->longitude,
-                'orderSales_id' => $last->orderSales_id,
-                'state' => $last->state,
-                'created_at' => $last->created_at,
-            ]);
-        }
-
-        return response()->json([]); // sin ubicación
-    }
-
-    public function ordersPendingReview(Request $request)
-    {
-        /*
-         * Solo los pedidos de quien pregunta. La consulta no filtraba por
-         * comprador, así que devolvía TODOS los pedidos entregados del
-         * sistema: a cualquiera se le pedía calificar compras ajenas (y de
-         * paso se le exponía la dirección de entrega de otras personas).
-         */
-        $buyer = Buyer::where('user_id', $request->user()->user_id)->first();
-
-        if (!$buyer) {
-            return response()->json([
-                'message' => 'Órdenes pendientes de review',
-                'orders' => [],
-            ]);
-        }
-
-        $orders = OrdersSales::where('buyer_id', $buyer->buyer_id)
-            ->where('state', 4)
-            ->where('has_review', false) // o 0
-            ->where('pickup', false)     // o 0
-            ->with([
-                'details.product.category',
-                'business',
-                'promotions',
-                'payments',
-                'address.municipality.department.country',
-                'address.alias',
-                'domiciliary.user'
-            ])
-            ->get();
-
-        $formattedOrders = $orders->map(function ($order) {
-            return $order->toApi(); // usando tu método toApi para mantener consistencia
-        });
-
-        return response()->json([
-            'message' => 'Órdenes pendientes de review',
-            'orders' => $formattedOrders,
         ]);
     }
 }

@@ -16,7 +16,18 @@ RUN npm run build
 # =========================
 # Etapa 2: PHP con sus extensiones
 # =========================
-FROM php:8.2-fpm-bullseye AS php-base
+# Debian 12 (bookworm), NO bullseye.
+#
+# El 31 de agosto de 2026 Debian publicó el ÚLTIMO `Release` de
+# `bullseye-security`, con validez de una semana. Al vencer, `apt-get update`
+# empezó a responder «Release file … is expired» y el build dejó de compilar
+# de un día para otro, sin que nadie tocara nada. No hay vuelta atrás: ese
+# archivo no se va a volver a firmar nunca.
+#
+# Se puede silenciar con `Acquire::Check-Valid-Until=false`, y compila. Lo que
+# no arregla es el motivo: sería seguir levantando la API sobre un sistema que
+# ya no recibe parches de seguridad. Bookworm tiene soporte hasta 2028.
+FROM php:8.2-fpm-bookworm AS php-base
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \

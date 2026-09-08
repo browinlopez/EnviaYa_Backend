@@ -62,6 +62,60 @@ class CatalogoDeAjustes
                 'reglas'   => 'required|integer|min:0|max:100000',
             ],
 
+            /*
+             * LA TARIFA POR DISTANCIA.
+             *
+             * Hasta ahora el domicilio costaba lo mismo a una cuadra que al
+             * otro lado del barrio, y quien hacia el viaje largo cobraba igual
+             * que quien cruzaba la calle.
+             *
+             * La escala es regular a proposito: un radio base con la tarifa de
+             * arriba, y de ahi en adelante un escalon fijo. Con
+             * 1,5 km / 1 km / $1.000 sale lo pactado —hasta 1,5 km $2.000,
+             * hasta 2,5 km $3.000, hasta 3,5 km $4.000— y se puede mover sin
+             * tocar codigo. Una tabla de tramos sueltos daria mas libertad y
+             * exigiria pantalla propia; esto se configura con tres numeros.
+             */
+            'operacion.radio_base_km' => [
+                'grupo'    => 'operacion',
+                'etiqueta' => 'Radio de la tarifa base',
+                'tipo'     => 'decimal',
+                'sufijo'   => 'km',
+                'ayuda'    => 'Hasta esta distancia en linea recta entre la tienda y la direccion, el domicilio cuesta la tarifa base. Mas alla empieza a subir por escalones.',
+                'defecto'  => 1.5,
+                'reglas'   => 'required|numeric|min:0.1|max:50',
+            ],
+
+            'operacion.paso_km' => [
+                'grupo'    => 'operacion',
+                'etiqueta' => 'Cada cuanto sube',
+                'tipo'     => 'decimal',
+                'sufijo'   => 'km',
+                'ayuda'    => 'Pasado el radio base, cada cuantos kilometros sube un escalon la tarifa.',
+                'defecto'  => 1.0,
+                'reglas'   => 'required|numeric|min:0.1|max:50',
+            ],
+
+            'operacion.paso_precio' => [
+                'grupo'    => 'operacion',
+                'etiqueta' => 'Cuanto sube cada escalon',
+                'tipo'     => 'entero',
+                'sufijo'   => 'COP',
+                'ayuda'    => 'Lo que se suma a la tarifa por cada escalon de distancia. Se congela en el pedido al crearlo, como el resto de lo que decide dinero.',
+                'defecto'  => 1000,
+                'reglas'   => 'required|integer|min:0|max:100000',
+            ],
+
+            'operacion.radio_maximo_km' => [
+                'grupo'    => 'operacion',
+                'etiqueta' => 'Hasta donde se entrega',
+                'tipo'     => 'decimal',
+                'sufijo'   => 'km',
+                'ayuda'    => 'Distancia maxima a la que una tienda reparte. Mas alla no aparece en la lista de quien busca, y su catalogo se puede mirar pero no pedir. En 0 no hay limite.',
+                'defecto'  => 6.0,
+                'reglas'   => 'required|numeric|min:0|max:100',
+            ],
+
             'operacion.comision_plataforma' => [
                 'grupo'    => 'operacion',
                 'etiqueta' => 'Comisión de la plataforma sobre la venta',
@@ -88,6 +142,27 @@ class CatalogoDeAjustes
                 'ayuda'    => 'Tope de pedidos activos que puede llevar una misma persona. Subirlo aumenta la capacidad y empeora los tiempos; bajarlo hace lo contrario.',
                 'defecto'  => (int) config('services.max_active_deliveries', 3),
                 'reglas'   => 'required|integer|min:1|max:20',
+            ],
+
+            /*
+             * El tope existe para proteger al CLIENTE, no al servidor.
+             *
+             * Una promoción llega como notificación al teléfono de gente que se
+             * afilió a la tienda por su voluntad. Tres avisos al día de la misma
+             * tienda y esa gente apaga las notificaciones de la app entera —no
+             * las de esa tienda, las de todas—, y entonces tampoco se enteran de
+             * que su pedido va en camino. El daño no se queda en quien abusa.
+             *
+             * Se pone acá y no como constante para poder subirlo un diciembre
+             * sin tocar código.
+             */
+            'operacion.promociones_por_dia' => [
+                'grupo'    => 'operacion',
+                'etiqueta' => 'Promociones que puede enviar una tienda al día',
+                'tipo'     => 'entero',
+                'ayuda'    => 'Cuántas veces al día puede una tienda avisar a sus clientes afiliados. Subirlo mucho hace que la gente silencie los avisos de la app, y entonces se pierden también los de sus pedidos.',
+                'defecto'  => 2,
+                'reglas'   => 'required|integer|min:1|max:10',
             ],
 
             'operacion.horas_estancado' => [
@@ -191,6 +266,7 @@ class CatalogoDeAjustes
 
         return match ($def['tipo']) {
             'porcentaje' => (float) $crudo,
+            'decimal'    => (float) $crudo,
             'entero'     => (int) $crudo,
             'booleano'   => filter_var($crudo, FILTER_VALIDATE_BOOLEAN),
             default      => $crudo,

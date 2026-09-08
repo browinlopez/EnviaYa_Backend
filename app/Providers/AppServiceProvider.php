@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use App\Services\Push\PushEnRegistro;
 use App\Services\Push\PushFirebase;
+use App\Services\Push\PushApns;
+use App\Services\Push\PushSegunPlataforma;
 use App\Services\Push\TransportePush;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -32,7 +34,18 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(TransportePush::class, function () {
             $firebase = new PushFirebase();
 
-            return $firebase->configurado() ? $firebase : new PushEnRegistro();
+            if (!$firebase->configurado()) {
+                return new PushEnRegistro();
+            }
+
+            /*
+             * Con Firebase configurado siempre se enruta por plataforma:
+             * Android por Firebase, iPhone directo a Apple. El enrutador
+             * funciona igual aunque APNs no este configurado —los iPhone se
+             * quedan sin aviso y los Android siguen recibiendo—, asi que no
+             * hace falta decidir aca si Apple esta listo.
+             */
+            return new PushSegunPlataforma($firebase, new PushApns());
         });
     }
 

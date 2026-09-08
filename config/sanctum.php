@@ -47,7 +47,28 @@ return [
     |
     */
 
-    'expiration' => null,
+    /*
+     * CADUCIDAD DE LA SESION.
+     *
+     * Estaba en `null`, o sea que un token no caducaba NUNCA. Sumado a que la
+     * app lo restaura al arrancar, un telefono desbloqueado daba acceso
+     * completo y permanente: el saldo de efectivo de un domiciliario, la
+     * direccion de cada cliente, la caja de un tendero.
+     *
+     * Ahora sale del entorno para poder encenderla sin tocar codigo, y sigue
+     * apagada por defecto: ponerle caducidad obliga a volver a entrar a quien
+     * no abra la app en ese plazo, y eso es una decision de negocio, no
+     * tecnica.
+     *
+     * Para activarla, en el `.env` del servidor:
+     *
+     *     SANCTUM_EXPIRATION=43200      # 30 dias, en minutos
+     *
+     * Conviene hacerlo DESPUES de que el bloqueo con huella este en manos de
+     * la gente: son las dos mitades del mismo problema, y con el bloqueo
+     * puesto la caducidad molesta menos.
+     */
+    'expiration' => env('SANCTUM_EXPIRATION'),
 
     /*
     |--------------------------------------------------------------------------

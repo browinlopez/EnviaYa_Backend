@@ -91,7 +91,6 @@ class DomiciliaryController extends Controller
         ]);
     }
 
-
     // Crear un domiciliario
     public function createDomiciliary(Request $request)
     {
@@ -159,7 +158,6 @@ class DomiciliaryController extends Controller
             ], 500);
         }
     }
-
 
     // Actualizar un domiciliario
     public function updateDomiciliary(Request $request)
@@ -265,7 +263,6 @@ class DomiciliaryController extends Controller
             ->exists();
     }
 
-
     // Eliminar un domiciliario
     public function deleteDomiciliary(Request $request)
     {
@@ -289,202 +286,5 @@ class DomiciliaryController extends Controller
         $domiciliary = Domiciliary::with('user', 'reviews')->find($request->domiciliary_id);
 
         return response()->json($domiciliary);
-    }
-
-    // Asignar un domiciliario a un negocio
-    public function assignToBusiness(Request $request)
-    {
-        $request->validate([
-            'domiciliary_id' => 'required|integer|exists:domiciliary,domiciliary_id',
-            'busines_id' => 'required|integer|exists:business,busines_id',
-            'state' => 'boolean'
-        ]);
-
-        $domiciliary = Domiciliary::findOrFail($request->domiciliary_id);
-
-        $domiciliary->businesses()->syncWithoutDetaching([
-            $request->busines_id => ['state' => $request->state ?? true]
-        ]);
-
-        return response()->json([
-            'message' => 'Domiciliario asignado al negocio correctamente',
-            'domiciliary_id' => $request->domiciliary_id,
-            'busines_id' => $request->busines_id
-        ]);
-    }
-
-    // Listar negocios asignados a un domiciliario
-    public function listBusinessesByDomiciliary(Request $request)
-    {
-        $request->validate([
-            'domiciliary_id' => 'required|integer|exists:domiciliary,domiciliary_id',
-        ]);
-
-        $domiciliary = Domiciliary::with(['user', 'businesses'])->findOrFail($request->domiciliary_id);
-
-        $formatted = [
-            'domiciliary' => [
-                'domiciliary_id' => $domiciliary->domiciliary_id,
-                'name'           => $domiciliary->user ? $domiciliary->user->name : null,
-                'email'          => $domiciliary->user ? $domiciliary->user->email : null,
-                'phone'          => $domiciliary->user ? $domiciliary->user->phone : null,
-                'state'          => $domiciliary->state,
-            ],
-            'businesses' => $domiciliary->businesses->map(function ($business) {
-                return [
-                    'busines_id'      => $business->busines_id,
-                    'name'            => $business->name,
-                    'phone'           => $business->phone,
-                    'address'         => $business->address,
-                    'qualification'   => $business->qualification,
-                    'razonSocial_DCD' => $business->razonSocial_DCD,
-                    'NIT'             => $business->NIT,
-                    'logo'            => $business->logo,
-                    'municipality_id' => $business->municipality_id,
-                    'state'           => $business->state,
-                ];
-            }),
-        ];
-
-        return response()->json($formatted);
-    }
-
-    public function incomeDomiciliary(Request $request)
-    {
-        $request->validate([
-            'domiciliary_id' => 'required|integer|exists:domiciliary,domiciliary_id',
-        ]);
-
-        $domiciliary_id = $request->domiciliary_id;
-
-        $daysOfWeek = [
-            2 => 'Lunes',
-            3 => 'Martes',
-            4 => 'Miércoles',
-            5 => 'Jueves',
-            6 => 'Viernes',
-            7 => 'Sábado',
-            1 => 'Domingo',
-        ];
-
-        /* =========================
-       SEMANA ACTUAL
-    ========================== */
-        $weekStart = now()->startOfWeek();
-        $weekEnd = now()->endOfWeek();
-
-        $currentWeek = Payment::select(
-            DB::raw('DAYOFWEEK(payment_date) as weekday'),
-            DB::raw('SUM(domiciliary_fee) as total')
-        )
-            ->whereHas(
-                'order',
-                fn($q) =>
-                $q->where('domiciliary_id', $domiciliary_id)
-            )
-            // Solo pagos aprobados: Bold registra una fila por cada intento
-            // de cobro, y contarlos todos multiplicaría el domicilio de una
-            // misma entrega por cada reintento del cliente.
-            ->where('payment_status', 1)
-            ->whereBetween('payment_date', [$weekStart, $weekEnd])
-            ->groupBy('weekday')
-            ->get()
-            ->keyBy('weekday');
-
-        /* =========================
-       SEMANA ANTERIOR
-    ========================== */
-        $prevWeekStart = now()->subWeek()->startOfWeek();
-        $prevWeekEnd = now()->subWeek()->endOfWeek();
-
-        $previousWeek = Payment::select(
-            DB::raw('DAYOFWEEK(payment_date) as weekday'),
-            DB::raw('SUM(domiciliary_fee) as total')
-        )
-            ->whereHas(
-                'order',
-                fn($q) =>
-                $q->where('domiciliary_id', $domiciliary_id)
-            )
-            // Solo pagos aprobados: Bold registra una fila por cada intento
-            // de cobro, y contarlos todos multiplicaría el domicilio de una
-            // misma entrega por cada reintento del cliente.
-            ->where('payment_status', 1)
-            ->whereBetween('payment_date', [$prevWeekStart, $prevWeekEnd])
-            ->groupBy('weekday')
-            ->get()
-            ->keyBy('weekday');
-
-        /* =========================
-       MAPEO DE DÍAS
-    ========================== */
-        $current = [];
-        $previous = [];
-        $currentWeekTotal = 0;
-        $previousWeekTotal = 0;
-
-        foreach ($daysOfWeek as $key => $day) {
-            $currentValue = (float) ($currentWeek[$key]->total ?? 0);
-            $previousValue = (float) ($previousWeek[$key]->total ?? 0);
-
-            $current[$day] = $currentValue;
-            $previous[$day] = $previousValue;
-
-            $currentWeekTotal += $currentValue;
-            $previousWeekTotal += $previousValue;
-        }
-
-        /* =========================
-       CRECIMIENTO %
-    ========================== */
-        if ($previousWeekTotal > 0) {
-            $weeklyGrowthPercent =
-                (($currentWeekTotal - $previousWeekTotal) / $previousWeekTotal) * 100;
-        } else {
-            $weeklyGrowthPercent = $currentWeekTotal > 0 ? 100 : 0;
-        }
-
-        /* =========================
-       TOTAL HISTÓRICO
-    ========================== */
-        $totalIncome = Payment::whereHas(
-            'order',
-            fn($q) =>
-            $q->where('domiciliary_id', $domiciliary_id)
-        )
-            ->where('payment_status', 1)
-            ->sum('domiciliary_fee');
-
-        return response()->json([
-            'weekly_current' => $current,
-            'weekly_previous' => $previous,
-            'weekly_current_total' => $currentWeekTotal,
-            'weekly_previous_total' => $previousWeekTotal,
-            'weekly_growth_percent' => round($weeklyGrowthPercent, 2),
-            'total_income' => (float) $totalIncome,
-        ]);
-    }
-
-    /**
-     * SU CÓDIGO DE ENTRADA A LOS CONJUNTOS.
-     *
-     * La app lo pinta como QR y el celador lo escanea en la portería. Caduca
-     * en cinco minutos: es lo que se tarda en llegar de la moto a la puerta, y
-     * un código que no caduca deja de probar que quien está ahí es él.
-     *
-     * El domiciliario sale de la SESIÓN. Con un identificador por parámetro,
-     * cualquiera podría pedir el código de otro y entrar en su nombre.
-     */
-    public function codigoDeAcceso(Request $request)
-    {
-        $domiciliario = Domiciliary::where('user_id', $request->user()->user_id)->first();
-
-        if (!$domiciliario) {
-            return response()->json(['message' => 'Esta cuenta no es de un domiciliario.'], 403);
-        }
-
-        return response()->json(
-            app(\App\Services\AccesoAlConjunto::class)->generar($domiciliario)
-        );
     }
 }

@@ -1,18 +1,47 @@
 <?php
 
+use App\Http\Controllers\Auth\AccesoBiometricoController;
+use App\Http\Controllers\Domiciliary\PedidosDelDomiciliarioController;
 use App\Http\Controllers\Admin\Api\AdminApiController;
+use App\Http\Controllers\Admin\Api\AuditoriaApiController;
+use App\Http\Controllers\Admin\Api\CategoriasApiController;
+use App\Http\Controllers\Admin\Api\ChatsApiController;
+use App\Http\Controllers\Admin\Api\ConjuntosApiController;
+use App\Http\Controllers\Admin\Api\DomiciliariosApiController;
+use App\Http\Controllers\Admin\Api\MediosApiController;
+use App\Http\Controllers\Admin\Api\NegociosApiController;
+use App\Http\Controllers\Admin\Api\PagosApiController;
+use App\Http\Controllers\Admin\Api\PedidosApiController;
+use App\Http\Controllers\Admin\Api\ProductosApiController;
+use App\Http\Controllers\Admin\Api\PropietariosApiController;
+use App\Http\Controllers\Admin\Api\ReportesApiController;
+use App\Http\Controllers\Admin\Api\ResenasApiController;
+use App\Http\Controllers\Admin\Api\UsuariosApiController;
 use App\Http\Controllers\Admin\Api\FacturasApiController;
 use App\Http\Controllers\Admin\Api\AjustesApiController;
 use App\Http\Controllers\Admin\Api\AreasApiController;
 use App\Http\Controllers\Admin\Api\MarketingApiController;
+use App\Http\Controllers\Admin\Api\AnunciantesApiController;
+use App\Http\Controllers\Admin\Api\BannersApiController;
+use App\Http\Controllers\Admin\Api\CampanasApiController;
+use App\Http\Controllers\Admin\Api\CuponesApiController;
+use App\Http\Controllers\Admin\Api\DestacadosApiController;
 use App\Http\Controllers\Admin\Api\OperacionApiController;
+use App\Http\Controllers\Admin\Api\DocumentosApiController;
+use App\Http\Controllers\Admin\Api\IncidentesApiController;
+use App\Http\Controllers\Admin\Api\PqrsApiController;
+use App\Http\Controllers\Admin\Api\SolicitudesApiController;
 use App\Http\Controllers\Admin\Api\ReportesExcelController;
 use App\Http\Controllers\Admin\Api\SeguridadApiController;
 use App\Http\Controllers\AppConfigController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Auth\ClaveController;
+use App\Http\Controllers\Auth\RegistroController;
+use App\Http\Controllers\Auth\VerificacionDeCorreoController;
 use App\Http\Controllers\Buyer\ResidentialComplexController;
 use App\Http\Controllers\Business\AffiliationController;
 use App\Http\Controllers\Business\BusinessController;
+use App\Http\Controllers\Business\ConsultaDeNegociosController;
 use App\Http\Controllers\Business\CategoryBusinessController;
 use App\Http\Controllers\Business\FavoriteController;
 use App\Http\Controllers\Category\CategoryController;
@@ -20,23 +49,39 @@ use App\Http\Controllers\Chat\ChatController;
 use App\Http\Controllers\CoberturaController;
 use App\Http\Controllers\DeviceTokenController;
 use App\Http\Controllers\Domiciliary\DomiciliaryController;
+use App\Http\Controllers\Domiciliary\IngresosDelDomiciliarioController;
+use App\Http\Controllers\Domiciliary\VinculosDelDomiciliarioController;
 use App\Http\Controllers\Operacion\EfectivoController;
 use App\Http\Controllers\Conjunto\PorteriaController;
 use App\Http\Controllers\Conjunto\MiConjuntoController;
+use App\Http\Controllers\Conjunto\CeladoresController;
+use App\Http\Controllers\Conjunto\ResidentesController;
 use App\Http\Controllers\Conjunto\ResumenDelConjuntoController;
 use App\Http\Controllers\Conjunto\VisitantesController;
 use App\Http\Controllers\Negocio\CargaDeCatalogoController;
 use App\Http\Controllers\Negocio\CatalogoController;
 use App\Http\Controllers\Negocio\MiNegocioController;
 use App\Http\Controllers\Negocio\ProductosDelNegocioController;
+use App\Http\Controllers\Negocio\PromocionesController;
+use App\Http\Controllers\Order\CotizacionController;
 use App\Http\Controllers\LandingRequestController;
 use App\Http\Controllers\Marketing\AdsController;
 use App\Http\Controllers\Order\OrderController;
+use App\Http\Controllers\Order\ConsultaDePedidosController;
+use App\Http\Controllers\Order\GeolocalizacionDePedidoController;
+use App\Http\Controllers\Order\MediosDePagoController;
 use App\Http\Controllers\Payment\PaymentController;
 use App\Http\Controllers\Payment\BoldWebhookController;
 use App\Http\Controllers\Product\ProductController;
+use App\Http\Controllers\Product\DestacadosDeProductoController;
+use App\Http\Controllers\Product\EsquemaDeProductoController;
 use App\Http\Controllers\Review\ReviewController;
+use App\Http\Controllers\Review\ResenasDeDomiciliarioController;
+use App\Http\Controllers\Review\ResenasDeNegocioController;
+use App\Http\Controllers\Review\ResenasDeUsuarioController;
 use App\Http\Controllers\User\UserController;
+use App\Http\Controllers\User\DireccionesController;
+use App\Http\Controllers\User\NotificacionesController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -50,16 +95,16 @@ use Illuminate\Support\Facades\Route;
 
 // --- Autenticación: throttle agresivo contra fuerza bruta ---
 Route::middleware('throttle:10,1')->group(function () {
-    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/register', [RegistroController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
 });
 
 // --- Recuperación de cuenta: pocos intentos, ventana larga (envían correo) ---
 Route::middleware('throttle:5,10')->group(function () {
-    Route::post('/forgot-password', [AuthController::class, 'resetPassword']);
-    Route::post('/reset-password', [AuthController::class, 'resetPasswordConfirm']);
-    Route::post('/resend-verification-email', [AuthController::class, 'resendVerificationEmail']);
-    Route::post('/email/resend-verification', [AuthController::class, 'resendVerificationEmail']);
+    Route::post('/forgot-password', [ClaveController::class, 'resetPassword']);
+    Route::post('/reset-password', [ClaveController::class, 'resetPasswordConfirm']);
+    Route::post('/resend-verification-email', [VerificacionDeCorreoController::class, 'resendVerificationEmail']);
+    Route::post('/email/resend-verification', [VerificacionDeCorreoController::class, 'resendVerificationEmail']);
 });
 
 // --- Catálogo público: lo que la app muestra antes de loguearse ---
@@ -74,7 +119,7 @@ Route::middleware('throttle:300,1')->group(function () {
      * justo para elegir uno.
      */
     Route::get('complexes-free', [ResidentialComplexController::class, 'index']);
-    Route::get('top-businesses-free', [BusinessController::class, 'indexByQualification']);
+    Route::get('top-businesses-free', [ConsultaDeNegociosController::class, 'indexByQualification']);
     /*
      * Los puntos del mapa de cobertura de la web pública. Va acá y no bajo
      * `/admin` porque lo consume un sitio sin cuenta; devuelve lo justo
@@ -83,7 +128,7 @@ Route::middleware('throttle:300,1')->group(function () {
     Route::get('cobertura-free', CoberturaController::class);
     // Las reseñas de un negocio se ven sin sesión (la respuesta no expone
     // datos de contacto del reseñador).
-    Route::post('reviews/business/by', [ReviewController::class, 'listReviewsByBusiness']);
+    Route::post('reviews/business/by', [ResenasDeNegocioController::class, 'listReviewsByBusiness']);
 });
 
 /*
@@ -158,6 +203,22 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 
     /*
+     * ENTRAR CON LA HUELLA.
+     *
+     * `habilitar` se llama con una sesion normal ya abierta —o sea despues de
+     * escribir la contrasena— y devuelve el token que el telefono guarda en su
+     * llavero, detras de la huella. `entrar` lo cambia por una sesion de
+     * verdad. `olvidar` lo mata: es "saca mi cuenta de este telefono".
+     *
+     * Ese token NO sirve para nada mas, y quien lo impide es
+     * `SoloParaCambiarPorSesion`, en el grupo `api` entero: Sanctum guarda las
+     * habilidades pero no las aplica por su cuenta.
+     */
+    Route::post('/biometrico', [AccesoBiometricoController::class, 'habilitar']);
+    Route::post('/biometrico/entrar', [AccesoBiometricoController::class, 'entrar']);
+    Route::delete('/biometrico', [AccesoBiometricoController::class, 'olvidar']);
+
+    /*
      * El teléfono se registra para poder recibir notificaciones.
      *
      * La app llama al POST al iniciar sesión y cada vez que el proveedor le rota
@@ -227,9 +288,9 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
          * tabla `notifications` llevaba desde el principio sin usar. Siempre
          * del usuario en sesión: no reciben `user_id`.
          */
-        Route::get('/notifications', [UserController::class, 'getNotifications']);
-        Route::put('/notifications/read', [UserController::class, 'markNotificationAsRead']);
-        Route::put('/notifications/read-all', [UserController::class, 'markAllNotificationsAsRead']);
+        Route::get('/notifications', [NotificacionesController::class, 'getNotifications']);
+        Route::put('/notifications/read', [NotificacionesController::class, 'markNotificationAsRead']);
+        Route::put('/notifications/read-all', [NotificacionesController::class, 'markAllNotificationsAsRead']);
 
         // Listar usuarios
         Route::get('/', [UserController::class, 'index']);
@@ -243,11 +304,11 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         // Eliminar usuario
         Route::delete('/delete', [UserController::class, 'desactivate']);
         // Direcciones
-        Route::post('/addresses', [UserController::class, 'getAddresses']);
-        Route::post('/addresses/add', [UserController::class, 'addAddress']);
+        Route::post('/addresses', [DireccionesController::class, 'getAddresses']);
+        Route::post('/addresses/add', [DireccionesController::class, 'addAddress']);
         // La comprobación de que la dirección es de quien pide va dentro del
         // controlador: el identificador solo no basta para autorizar.
-        Route::delete('/addresses/{id}', [UserController::class, 'deleteAddress']);
+        Route::delete('/addresses/{id}', [DireccionesController::class, 'deleteAddress']);
         // Perfil buyer
         Route::post('/buyer', [UserController::class, 'getBuyerProfile']);
     });
@@ -255,13 +316,13 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
     //Productos tendero
     Route::prefix('product')->group(function () {
         // Formulario dinámico: campos y categorías según el tipo del negocio
-        Route::get('schema', [ProductController::class, 'schema']);
+        Route::get('schema', [EsquemaDeProductoController::class, 'schema']);
         Route::post('index', [ProductController::class, 'index']);
         Route::post('create', [ProductController::class, 'store']);
         Route::post('show', [ProductController::class, 'show']);
         Route::put('update', [ProductController::class, 'update']);
-        Route::post('top-products', [ProductController::class, 'topRated']);
-        Route::post('topProductsBusiness', [ProductController::class, 'mostPopularProducts']);
+        Route::post('top-products', [DestacadosDeProductoController::class, 'topRated']);
+        Route::post('topProductsBusiness', [DestacadosDeProductoController::class, 'mostPopularProducts']);
     });
 
     /*
@@ -298,21 +359,31 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
 
     //Ordenes
     Route::prefix('orders')->group(function () {
-        Route::post('user', [OrderController::class, 'ordersUser']); // Usuario comprador
-        Route::post('business', [OrderController::class, 'ordersBusiness']); // Tendero / negocio
-        Route::post('IncomeBusiness', [OrderController::class, 'incomeBusiness']); // Tendero / negocio
+        Route::post('user', [ConsultaDePedidosController::class, 'ordersUser']); // Usuario comprador
+        Route::post('business', [ConsultaDePedidosController::class, 'ordersBusiness']); // Tendero / negocio
+        Route::post('IncomeBusiness', [ConsultaDePedidosController::class, 'incomeBusiness']); // Tendero / negocio
         Route::post('orders', [OrderController::class, 'store']); // Crear orden
+
+        /*
+         * Cuanto costaria este carrito, sin crear nada.
+         *
+         * El carrito sumaba precios y anadia la tarifa por su cuenta. Con el
+         * descuento por promociones eso ya no se puede: depende de que
+         * promociones estan vigentes y cual rebaja mas, que solo sabe el
+         * servidor. Devuelve el mismo desglose que se congela al pedir.
+         */
+        Route::post('cotizar', [CotizacionController::class, 'cotizar']);
         Route::put('update', [OrderController::class, 'updateStatus']); // Crear orden
         // Cancelar es del comprador dueño del pedido y solo antes de que la
         // tienda lo acepte; la comprobación va dentro del controlador.
         Route::put('{id}/cancel', [OrderController::class, 'cancel']);
-        Route::post('geolocation', [OrderController::class, 'storeGeolocation']);
-        Route::get('geolocation/latest', [OrderController::class, 'latest']);
-        Route::get('/pending-review', [OrderController::class, 'ordersPendingReview']);
+        Route::post('geolocation', [GeolocalizacionDePedidoController::class, 'storeGeolocation']);
+        Route::get('geolocation/latest', [ConsultaDePedidosController::class, 'latest']);
+        Route::get('/pending-review', [ConsultaDePedidosController::class, 'ordersPendingReview']);
     });
 
-    Route::get('paymentMethods', [OrderController::class, 'paymentMethods']); // Listar metodos de pago
-    Route::get('paymentForms', [OrderController::class, 'paymentForms']); // Listar formas de pago
+    Route::get('paymentMethods', [MediosDePagoController::class, 'paymentMethods']); // Listar metodos de pago
+    Route::get('paymentForms', [MediosDePagoController::class, 'paymentForms']); // Listar formas de pago
 
     //Chat
     Route::prefix('chats')->group(function () {
@@ -325,12 +396,12 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
 
     //Negocios
     Route::prefix('businesses')->group(function () {
-        Route::get('index', [BusinessController::class, 'index']);
-        Route::get('top-businesses', [BusinessController::class, 'indexByQualification']);
+        Route::get('index', [ConsultaDeNegociosController::class, 'index']);
+        Route::get('top-businesses', [ConsultaDeNegociosController::class, 'indexByQualification']);
         // Dar de alta un aliado es una operacion del equipo: implica
         // contrato y verificacion, no un formulario abierto a cualquiera.
         Route::post('store', [BusinessController::class, 'store'])->middleware('admin');
-        Route::post('show', [BusinessController::class, 'show']);
+        Route::post('show', [ConsultaDeNegociosController::class, 'show']);
         Route::put('update', [BusinessController::class, 'update']);
         Route::prefix('affiliations')->group(function () {
             Route::post('/AfiliationUser', [AffiliationController::class, 'AfiliationUser']);
@@ -392,10 +463,10 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
 
         // Los celadores los administra el dueño, no el equipo interno: es
         // quien sabe quién trabaja en su portería.
-        Route::get('residentes', [MiConjuntoController::class, 'residentes'])
+        Route::get('residentes', [ResidentesController::class, 'residentes'])
             ->middleware('conjunto:dueno');
         // El detalle: quienes son, no cuantos. Sin correo ni telefono.
-        Route::get('residentes/detalle', [MiConjuntoController::class, 'residentesDetalle'])
+        Route::get('residentes/detalle', [ResidentesController::class, 'residentesDetalle'])
             ->middleware('conjunto:dueno');
 
         // La ficha del conjunto y su foto: del administrador.
@@ -404,11 +475,11 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::post('perfil/foto', [MiConjuntoController::class, 'subirFoto'])
             ->middleware('conjunto:dueno');
 
-        Route::get('celadores', [MiConjuntoController::class, 'celadores'])
+        Route::get('celadores', [CeladoresController::class, 'celadores'])
             ->middleware('conjunto:dueno');
-        Route::post('celadores', [MiConjuntoController::class, 'crearCelador'])
+        Route::post('celadores', [CeladoresController::class, 'crearCelador'])
             ->middleware('conjunto:dueno');
-        Route::put('celadores/{id}', [MiConjuntoController::class, 'cambiarCelador'])
+        Route::put('celadores/{id}', [CeladoresController::class, 'cambiarCelador'])
             ->middleware('conjunto:dueno');
     });
 
@@ -433,9 +504,9 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
 
         // Pedidos. `updateStatus` ya comprobaba pertenencia por su cuenta
         // —es la unica del grupo que lo hacia— y se reutiliza tal cual.
-        Route::get('pedidos', [OrderController::class, 'ordersBusiness']);
+        Route::get('pedidos', [ConsultaDePedidosController::class, 'ordersBusiness']);
         Route::put('pedidos/estado', [OrderController::class, 'updateStatus']);
-        Route::get('ingresos', [OrderController::class, 'incomeBusiness']);
+        Route::get('ingresos', [ConsultaDePedidosController::class, 'incomeBusiness']);
 
         /*
          * EL CATÁLOGO, DESDE UNA TIENDA.
@@ -466,7 +537,7 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::put('productos/precios', [ProductosDelNegocioController::class, 'precios']);
         Route::get('productos/tiendas-para-copiar', [ProductosDelNegocioController::class, 'tiendasParaCopiar']);
         Route::post('productos/copiar', [ProductosDelNegocioController::class, 'copiar']);
-        Route::get('productos/esquema', [ProductController::class, 'schema']);
+        Route::get('productos/esquema', [EsquemaDeProductoController::class, 'schema']);
 
         Route::get('productos/cargas', [CargaDeCatalogoController::class, 'historial']);
         Route::post('productos/cargas', [CargaDeCatalogoController::class, 'subir']);
@@ -478,7 +549,20 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
 
         Route::get('domiciliarios', [DomiciliaryController::class, 'listDomiciliariesByBusiness']);
 
-        Route::get('resenas', [ReviewController::class, 'listReviewsByBusiness']);
+        Route::get('resenas', [ResenasDeNegocioController::class, 'listReviewsByBusiness']);
+
+        /*
+         * Promociones escritas.
+         *
+         * Corregir y retirar alcanzan al AVISO EN LA CAMPANA del cliente —esas
+         * filas son nuestras y se reescriben o se borran—, pero no al zumbido
+         * que ya sonó en su teléfono. Los mensajes de la app lo dicen así en
+         * vez de prometer que la promoción desaparece del todo.
+         */
+        Route::get('promociones', [PromocionesController::class, 'index']);
+        Route::post('promociones', [PromocionesController::class, 'store']);
+        Route::put('promociones/{id}', [PromocionesController::class, 'update']);
+        Route::delete('promociones/{id}', [PromocionesController::class, 'destroy']);
     });
 
     //Domiciliario
@@ -492,9 +576,9 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::post('/showDomiciliary', [DomiciliaryController::class, 'showDomiciliary']);      // Obtener uno
         Route::post('/updateDomiciliary', [DomiciliaryController::class, 'updateDomiciliary']);  // Actualizar
         Route::post('/deleteDomiciliary', [DomiciliaryController::class, 'deleteDomiciliary']);  // Eliminar
-        Route::post('/assignToBusiness', [DomiciliaryController::class, 'assignToBusiness']);
-        Route::post('/listbussiness', [DomiciliaryController::class, 'listBusinessesByDomiciliary']);
-        Route::post('/incomeDomiciliary', [DomiciliaryController::class, 'incomeDomiciliary']);
+        Route::post('/assignToBusiness', [VinculosDelDomiciliarioController::class, 'assignToBusiness']);
+        Route::post('/listbussiness', [VinculosDelDomiciliarioController::class, 'listBusinessesByDomiciliary']);
+        Route::post('/incomeDomiciliary', [IngresosDelDomiciliarioController::class, 'incomeDomiciliary']);
 
         /*
          * El efectivo que ESTE domiciliario tiene encima.
@@ -509,8 +593,22 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
          * Su código de entrada a los conjuntos. Caduca en cinco minutos: lo
          * que se tarda en llegar de la moto a la portería.
          */
-        Route::post('/access-code', [DomiciliaryController::class, 'codigoDeAcceso']);
+        Route::post('/access-code', [IngresosDelDomiciliarioController::class, 'codigoDeAcceso']);
         Route::post('/deposits', [EfectivoController::class, 'declararDeposito']);
+
+        /*
+         * SUS pedidos: los que le asignaron y los que puede tomar.
+         *
+         * Existe porque la app los pedia a `/orders/business`, o sea que se
+         * bajaba la lista ENTERA de la tienda —con nombre, telefono y
+         * direccion de cada comprador— y filtraba en el telefono. Al cerrar
+         * aquel endpoint a quien no es dueno del negocio, el domiciliario se
+         * quedo viendo "0 de 3" con cuatro entregas encima.
+         *
+         * Aca el ambito sale de la sesion, y los datos de la persona solo
+         * viajan en los pedidos que YA son suyos.
+         */
+        Route::get('/pedidos', [PedidosDelDomiciliarioController::class, 'mios']);
     });
 
     /*
@@ -533,24 +631,24 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
 
         // Negocios
         // (business/by es público, está arriba en la zona de catálogo)
-        Route::get('business/all', [ReviewController::class, 'listBusinessReviews']);
-        Route::post('business/create', [ReviewController::class, 'createBusinessReview']);
-        Route::put('business/update', [ReviewController::class, 'updateBusinessReview']);
-        Route::delete('business/delete', [ReviewController::class, 'deleteBusinessReview']);
+        Route::get('business/all', [ResenasDeNegocioController::class, 'listBusinessReviews']);
+        Route::post('business/create', [ResenasDeNegocioController::class, 'createBusinessReview']);
+        Route::put('business/update', [ResenasDeNegocioController::class, 'updateBusinessReview']);
+        Route::delete('business/delete', [ResenasDeNegocioController::class, 'deleteBusinessReview']);
 
         // Domiciliarios
-        Route::get('domiciliaries/all', [ReviewController::class, 'listDomiciliaryReviews']);
-        Route::post('domiciliary/by', [ReviewController::class, 'listReviewsByDomiciliary']);
-        Route::post('domiciliary/create', [ReviewController::class, 'createDomiciliaryReview']);
-        Route::put('domiciliary/update', [ReviewController::class, 'updateDomiciliaryReview']);
-        Route::delete('domiciliary/delete', [ReviewController::class, 'deleteDomiciliaryReview']);
+        Route::get('domiciliaries/all', [ResenasDeDomiciliarioController::class, 'listDomiciliaryReviews']);
+        Route::post('domiciliary/by', [ResenasDeDomiciliarioController::class, 'listReviewsByDomiciliary']);
+        Route::post('domiciliary/create', [ResenasDeDomiciliarioController::class, 'createDomiciliaryReview']);
+        Route::put('domiciliary/update', [ResenasDeDomiciliarioController::class, 'updateDomiciliaryReview']);
+        Route::delete('domiciliary/delete', [ResenasDeDomiciliarioController::class, 'deleteDomiciliaryReview']);
 
         // Usuarios
-        Route::get('users/all', [ReviewController::class, 'listAllUserReviews']);
-        Route::get('user/by', [ReviewController::class, 'listUserReviewsByUser']);
-        Route::post('user/create', [ReviewController::class, 'createUserReview']);
-        Route::put('user/update', [ReviewController::class, 'updateUserReview']);
-        Route::delete('user/delete', [ReviewController::class, 'deleteUserReview']);
+        Route::get('users/all', [ResenasDeUsuarioController::class, 'listAllUserReviews']);
+        Route::get('user/by', [ResenasDeUsuarioController::class, 'listUserReviewsByUser']);
+        Route::post('user/create', [ResenasDeUsuarioController::class, 'createUserReview']);
+        Route::put('user/update', [ResenasDeUsuarioController::class, 'updateUserReview']);
+        Route::delete('user/delete', [ResenasDeUsuarioController::class, 'deleteUserReview']);
     });
 
     /*
@@ -582,10 +680,10 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::get('overview', [AdminApiController::class, 'overview'])
             ->middleware('modulo:panel');
 
-        Route::get('users', [AdminApiController::class, 'users'])->middleware('modulo:usuarios');
-        Route::post('users', [AdminApiController::class, 'storeUser'])->middleware('modulo:usuarios,gestionar');
-        Route::get('users/{id}', [AdminApiController::class, 'showUser'])->middleware('modulo:usuarios');
-        Route::put('users/{id}', [AdminApiController::class, 'updateUser'])->middleware('modulo:usuarios,gestionar');
+        Route::get('users', [UsuariosApiController::class, 'users'])->middleware('modulo:usuarios');
+        Route::post('users', [UsuariosApiController::class, 'storeUser'])->middleware('modulo:usuarios,gestionar');
+        Route::get('users/{id}', [UsuariosApiController::class, 'showUser'])->middleware('modulo:usuarios');
+        Route::put('users/{id}', [UsuariosApiController::class, 'updateUser'])->middleware('modulo:usuarios,gestionar');
 
         /*
          * Dar por bueno un correo sin que su dueño abra el enlace.
@@ -595,14 +693,14 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
          * visible en el registro de auditoría y permite negarla sin negar el
          * resto de la edición.
          */
-        Route::post('users/{id}/verify-email', [AdminApiController::class, 'verifyUserEmail'])->middleware('modulo:usuarios,gestionar');
+        Route::post('users/{id}/verify-email', [UsuariosApiController::class, 'verifyUserEmail'])->middleware('modulo:usuarios,gestionar');
 
         // Transversal: lo consumen los formularios de negocios, conjuntos y
         // segmentación de banners.
-        Route::get('locations', [AdminApiController::class, 'locations']);
+        Route::get('locations', [NegociosApiController::class, 'locations']);
 
         // Archivos de cualquier entidad: negocios, productos, usuarios, conjuntos.
-        Route::get('storage', [AdminApiController::class, 'storageStatus'])->middleware('modulo:ajustes');
+        Route::get('storage', [MediosApiController::class, 'storageStatus'])->middleware('modulo:ajustes');
 
         /*
         | Ajustes de la plataforma: reglas de la operación y control de la app.
@@ -619,10 +717,10 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         // /admin sin puerta: cualquiera del equipo podía borrar el logo de un
         // negocio, y el reparto por áreas se saltaba por acá.
         Route::middleware('medios')->group(function () {
-            Route::get('media/{entidad}/{id}', [AdminApiController::class, 'media']);
-            Route::post('media/{entidad}/{id}', [AdminApiController::class, 'uploadMedia']);
-            Route::delete('media/{entidad}/{id}', [AdminApiController::class, 'deleteMedia']);
-            Route::put('media/{entidad}/{id}/principal', [AdminApiController::class, 'setPrimaryMedia']);
+            Route::get('media/{entidad}/{id}', [MediosApiController::class, 'media']);
+            Route::post('media/{entidad}/{id}', [MediosApiController::class, 'uploadMedia']);
+            Route::delete('media/{entidad}/{id}', [MediosApiController::class, 'deleteMedia']);
+            Route::put('media/{entidad}/{id}/principal', [MediosApiController::class, 'setPrimaryMedia']);
         });
 
         /*
@@ -644,41 +742,41 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         // nunca es de un solo comprobante. Tope de 50 por petición.
         Route::put('invoices/anular-lote', [FacturasApiController::class, 'anularLote'])->middleware('modulo:facturas,gestionar');
 
-        Route::get('businesses', [AdminApiController::class, 'businesses'])->middleware('modulo:negocios');
-        Route::post('businesses', [AdminApiController::class, 'storeBusiness'])->middleware('modulo:negocios,gestionar');
-        Route::get('businesses/{id}', [AdminApiController::class, 'showBusiness'])->middleware('modulo:negocios');
-        Route::put('businesses/{id}', [AdminApiController::class, 'updateBusiness'])->middleware('modulo:negocios,gestionar');
+        Route::get('businesses', [NegociosApiController::class, 'businesses'])->middleware('modulo:negocios');
+        Route::post('businesses', [NegociosApiController::class, 'storeBusiness'])->middleware('modulo:negocios,gestionar');
+        Route::get('businesses/{id}', [NegociosApiController::class, 'showBusiness'])->middleware('modulo:negocios');
+        Route::put('businesses/{id}', [NegociosApiController::class, 'updateBusiness'])->middleware('modulo:negocios,gestionar');
 
         // Medios en Cloudflare R2. La subida pasa por el backend porque las
         // llaves del bucket no pueden salir del servidor.
-        Route::get('businesses/{id}/media', [AdminApiController::class, 'businessMedia'])->middleware('modulo:negocios');
-        Route::post('businesses/{id}/media', [AdminApiController::class, 'uploadBusinessMedia'])->middleware('modulo:negocios,gestionar');
-        Route::delete('businesses/{id}/media', [AdminApiController::class, 'deleteBusinessMedia'])->middleware('modulo:negocios,gestionar');
+        Route::get('businesses/{id}/media', [NegociosApiController::class, 'businessMedia'])->middleware('modulo:negocios');
+        Route::post('businesses/{id}/media', [NegociosApiController::class, 'uploadBusinessMedia'])->middleware('modulo:negocios,gestionar');
+        Route::delete('businesses/{id}/media', [NegociosApiController::class, 'deleteBusinessMedia'])->middleware('modulo:negocios,gestionar');
 
-        Route::get('products', [AdminApiController::class, 'products'])->middleware('modulo:productos');
+        Route::get('products', [ProductosApiController::class, 'products'])->middleware('modulo:productos');
         // Va ANTES de 'products/{id}': con el orden invertido, Laravel toma
         // "categorias" como identificador y responde 404.
-        Route::get('products/categorias', [AdminApiController::class, 'productCategories'])->middleware('modulo:productos');
-        Route::post('products', [AdminApiController::class, 'storeProduct'])->middleware('modulo:productos,gestionar');
-        Route::get('products/{id}', [AdminApiController::class, 'showProduct'])->middleware('modulo:productos');
-        Route::put('products/{id}', [AdminApiController::class, 'updateProduct'])->middleware('modulo:productos,gestionar');
+        Route::get('products/categorias', [ProductosApiController::class, 'productCategories'])->middleware('modulo:productos');
+        Route::post('products', [ProductosApiController::class, 'storeProduct'])->middleware('modulo:productos,gestionar');
+        Route::get('products/{id}', [ProductosApiController::class, 'showProduct'])->middleware('modulo:productos');
+        Route::put('products/{id}', [ProductosApiController::class, 'updateProduct'])->middleware('modulo:productos,gestionar');
 
-        Route::get('orders', [AdminApiController::class, 'orders'])->middleware('modulo:ordenes');
-        Route::get('orders/{id}', [AdminApiController::class, 'showOrder'])->middleware('modulo:ordenes');
+        Route::get('orders', [PedidosApiController::class, 'orders'])->middleware('modulo:ordenes');
+        Route::get('orders/{id}', [PedidosApiController::class, 'showOrder'])->middleware('modulo:ordenes');
 
-        Route::get('domiciliaries', [AdminApiController::class, 'domiciliaries'])->middleware('modulo:domiciliarios');
-        Route::post('domiciliaries', [AdminApiController::class, 'storeDomiciliary'])->middleware('modulo:domiciliarios,gestionar');
-        Route::get('domiciliaries/{id}', [AdminApiController::class, 'showDomiciliary'])->middleware('modulo:domiciliarios');
-        Route::put('domiciliaries/{id}', [AdminApiController::class, 'updateDomiciliary'])->middleware('modulo:domiciliarios,gestionar');
-        Route::post('domiciliaries/{id}/contrato', [AdminApiController::class, 'signContract'])->middleware('modulo:domiciliarios,gestionar');
+        Route::get('domiciliaries', [DomiciliariosApiController::class, 'domiciliaries'])->middleware('modulo:domiciliarios');
+        Route::post('domiciliaries', [DomiciliariosApiController::class, 'storeDomiciliary'])->middleware('modulo:domiciliarios,gestionar');
+        Route::get('domiciliaries/{id}', [DomiciliariosApiController::class, 'showDomiciliary'])->middleware('modulo:domiciliarios');
+        Route::put('domiciliaries/{id}', [DomiciliariosApiController::class, 'updateDomiciliary'])->middleware('modulo:domiciliarios,gestionar');
+        Route::post('domiciliaries/{id}/contrato', [DomiciliariosApiController::class, 'signContract'])->middleware('modulo:domiciliarios,gestionar');
 
-        Route::get('payments', [AdminApiController::class, 'payments'])->middleware('modulo:pagos');
+        Route::get('payments', [PagosApiController::class, 'payments'])->middleware('modulo:pagos');
 
-        Route::get('reviews', [AdminApiController::class, 'reviews'])->middleware('modulo:resenas');
-        Route::delete('reviews', [AdminApiController::class, 'deleteReview'])->middleware('modulo:resenas,gestionar');
+        Route::get('reviews', [ResenasApiController::class, 'reviews'])->middleware('modulo:resenas');
+        Route::delete('reviews', [ResenasApiController::class, 'deleteReview'])->middleware('modulo:resenas,gestionar');
         // En lote: moderar es un trabajo por tandas, y de a una son cuatro clics
         // por reseña. Con tope de 100 por petición.
-        Route::delete('reviews/lote', [AdminApiController::class, 'deleteReviews'])->middleware('modulo:resenas,gestionar');
+        Route::delete('reviews/lote', [ResenasApiController::class, 'deleteReviews'])->middleware('modulo:resenas,gestionar');
 
         /*
          * Las cuatro van detrás de `categorias`, que NO es `modulo:categorias`:
@@ -688,16 +786,16 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
          * modulo de la matriz que no protegia ninguna ruta.
          */
         Route::middleware('categorias')->group(function () {
-            Route::get('categories', [AdminApiController::class, 'categories']);
-            Route::post('categories', [AdminApiController::class, 'storeCategory']);
-            Route::put('categories', [AdminApiController::class, 'updateCategory']);
-            Route::delete('categories', [AdminApiController::class, 'deleteCategory']);
+            Route::get('categories', [CategoriasApiController::class, 'categories']);
+            Route::post('categories', [CategoriasApiController::class, 'storeCategory']);
+            Route::put('categories', [CategoriasApiController::class, 'updateCategory']);
+            Route::delete('categories', [CategoriasApiController::class, 'deleteCategory']);
         });
 
-        Route::get('complexes', [AdminApiController::class, 'complexes'])->middleware('modulo:conjuntos');
-        Route::post('complexes', [AdminApiController::class, 'storeComplex'])->middleware('modulo:conjuntos,gestionar');
-        Route::put('complexes/{id}', [AdminApiController::class, 'updateComplex'])->middleware('modulo:conjuntos,gestionar');
-        Route::delete('complexes/{id}', [AdminApiController::class, 'deleteComplex'])->middleware('modulo:conjuntos,gestionar');
+        Route::get('complexes', [ConjuntosApiController::class, 'complexes'])->middleware('modulo:conjuntos');
+        Route::post('complexes', [ConjuntosApiController::class, 'storeComplex'])->middleware('modulo:conjuntos,gestionar');
+        Route::put('complexes/{id}', [ConjuntosApiController::class, 'updateComplex'])->middleware('modulo:conjuntos,gestionar');
+        Route::delete('complexes/{id}', [ConjuntosApiController::class, 'deleteComplex'])->middleware('modulo:conjuntos,gestionar');
 
         /*
          * El personal del conjunto: quién lo administra y quién está en la
@@ -706,8 +804,8 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
          * darles un responsable, y hasta ahora eso solo se podía por consola
          * (`php artisan conjunto:dueno`).
          */
-        Route::get('complexes/{id}/staff', [AdminApiController::class, 'complexStaff'])->middleware('modulo:conjuntos');
-        Route::post('complexes/{id}/owner', [AdminApiController::class, 'assignComplexOwner'])->middleware('modulo:conjuntos,gestionar');
+        Route::get('complexes/{id}/staff', [ConjuntosApiController::class, 'complexStaff'])->middleware('modulo:conjuntos');
+        Route::post('complexes/{id}/owner', [ConjuntosApiController::class, 'assignComplexOwner'])->middleware('modulo:conjuntos,gestionar');
 
         /*
         |------------------------------------------------------------------
@@ -727,24 +825,24 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
             Route::put('areas-members/{userId}', [AreasApiController::class, 'asignarArea']);
         });
 
-        Route::get('owners', [AdminApiController::class, 'owners'])->middleware('modulo:propietarios');
-        Route::get('owners/options', [AdminApiController::class, 'ownerOptions'])->middleware('modulo:propietarios');
-        Route::post('owners', [AdminApiController::class, 'storeOwner'])->middleware('modulo:propietarios,gestionar');
-        Route::put('owners/{id}', [AdminApiController::class, 'updateOwner'])->middleware('modulo:propietarios,gestionar');
+        Route::get('owners', [PropietariosApiController::class, 'owners'])->middleware('modulo:propietarios');
+        Route::get('owners/options', [PropietariosApiController::class, 'ownerOptions'])->middleware('modulo:propietarios');
+        Route::post('owners', [PropietariosApiController::class, 'storeOwner'])->middleware('modulo:propietarios,gestionar');
+        Route::put('owners/{id}', [PropietariosApiController::class, 'updateOwner'])->middleware('modulo:propietarios,gestionar');
 
-        Route::get('chats', [AdminApiController::class, 'chats'])->middleware('modulo:chats');
-        Route::get('chats/{chatId}/messages', [AdminApiController::class, 'chatMessages'])->middleware('modulo:chats');
+        Route::get('chats', [ChatsApiController::class, 'chats'])->middleware('modulo:chats');
+        Route::get('chats/{chatId}/messages', [ChatsApiController::class, 'chatMessages'])->middleware('modulo:chats');
 
-        Route::get('audits', [AdminApiController::class, 'audits'])->middleware('modulo:auditoria');
+        Route::get('audits', [AuditoriaApiController::class, 'audits'])->middleware('modulo:auditoria');
 
         /*
          * Va ANTES que `reports/{kind}`: si fuera después, `{kind}` se comería
          * "desglose" y respondería "tipo de reporte no válido".
          */
-        Route::get('reports-desglose', [AdminApiController::class, 'desglose'])
+        Route::get('reports-desglose', [ReportesApiController::class, 'desglose'])
             ->middleware('modulo:reportes');
 
-        Route::get('reports/{kind}', [AdminApiController::class, 'report'])->middleware('modulo:reportes');
+        Route::get('reports/{kind}', [ReportesApiController::class, 'report'])->middleware('modulo:reportes');
         // El libro de Excel multi-hoja. Vivía en el panel anterior en Blade, con
         // sesión web y sin autorización por área; acá queda detrás del módulo.
         Route::get('reports/{kind}/excel', ReportesExcelController::class)->middleware('modulo:reportes');
@@ -758,22 +856,22 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         | liquidaciones aunque el código viva al lado.
         */
         Route::prefix('sst')->group(function () {
-            Route::get('documentos', [OperacionApiController::class, 'documentos'])->middleware('modulo:sst.documentos');
-            Route::post('documentos', [OperacionApiController::class, 'storeDocumento'])->middleware('modulo:sst.documentos,gestionar');
-            Route::put('documentos/{id}', [OperacionApiController::class, 'updateDocumento'])->middleware('modulo:sst.documentos,gestionar');
-            Route::delete('documentos/{id}', [OperacionApiController::class, 'deleteDocumento'])->middleware('modulo:sst.documentos,gestionar');
+            Route::get('documentos', [DocumentosApiController::class, 'documentos'])->middleware('modulo:sst.documentos');
+            Route::post('documentos', [DocumentosApiController::class, 'storeDocumento'])->middleware('modulo:sst.documentos,gestionar');
+            Route::put('documentos/{id}', [DocumentosApiController::class, 'updateDocumento'])->middleware('modulo:sst.documentos,gestionar');
+            Route::delete('documentos/{id}', [DocumentosApiController::class, 'deleteDocumento'])->middleware('modulo:sst.documentos,gestionar');
 
-            Route::get('incidentes', [OperacionApiController::class, 'incidentes'])->middleware('modulo:sst.incidentes');
-            Route::post('incidentes', [OperacionApiController::class, 'storeIncidente'])->middleware('modulo:sst.incidentes,gestionar');
-            Route::put('incidentes/{id}', [OperacionApiController::class, 'updateIncidente'])->middleware('modulo:sst.incidentes,gestionar');
+            Route::get('incidentes', [IncidentesApiController::class, 'incidentes'])->middleware('modulo:sst.incidentes');
+            Route::post('incidentes', [IncidentesApiController::class, 'storeIncidente'])->middleware('modulo:sst.incidentes,gestionar');
+            Route::put('incidentes/{id}', [IncidentesApiController::class, 'updateIncidente'])->middleware('modulo:sst.incidentes,gestionar');
         });
 
         Route::prefix('pqrs')->group(function () {
-            Route::get('/', [OperacionApiController::class, 'pqrs'])->middleware('modulo:pqrs');
-            Route::post('/', [OperacionApiController::class, 'storePqrs'])->middleware('modulo:pqrs,gestionar');
-            Route::get('{id}', [OperacionApiController::class, 'showPqrs'])->middleware('modulo:pqrs');
-            Route::put('{id}', [OperacionApiController::class, 'updatePqrs'])->middleware('modulo:pqrs,gestionar');
-            Route::post('{id}/notes', [OperacionApiController::class, 'addPqrsNote'])->middleware('modulo:pqrs,gestionar');
+            Route::get('/', [PqrsApiController::class, 'pqrs'])->middleware('modulo:pqrs');
+            Route::post('/', [PqrsApiController::class, 'storePqrs'])->middleware('modulo:pqrs,gestionar');
+            Route::get('{id}', [PqrsApiController::class, 'showPqrs'])->middleware('modulo:pqrs');
+            Route::put('{id}', [PqrsApiController::class, 'updatePqrs'])->middleware('modulo:pqrs,gestionar');
+            Route::post('{id}/notes', [PqrsApiController::class, 'addPqrsNote'])->middleware('modulo:pqrs,gestionar');
         });
 
         /*
@@ -782,9 +880,9 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
          * se hace acá es atenderlas.
          */
         Route::prefix('solicitudes')->group(function () {
-            Route::get('/', [OperacionApiController::class, 'solicitudes'])->middleware('modulo:solicitudes');
-            Route::get('{id}', [OperacionApiController::class, 'showSolicitud'])->middleware('modulo:solicitudes');
-            Route::put('{id}', [OperacionApiController::class, 'updateSolicitud'])->middleware('modulo:solicitudes,gestionar');
+            Route::get('/', [SolicitudesApiController::class, 'solicitudes'])->middleware('modulo:solicitudes');
+            Route::get('{id}', [SolicitudesApiController::class, 'showSolicitud'])->middleware('modulo:solicitudes');
+            Route::put('{id}', [SolicitudesApiController::class, 'updateSolicitud'])->middleware('modulo:solicitudes,gestionar');
         });
 
         /*
@@ -822,33 +920,33 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
             Route::get('overview', [MarketingApiController::class, 'overview'])
                 ->middleware('modulo:marketing');
 
-            Route::get('advertisers', [MarketingApiController::class, 'advertisers'])->middleware('modulo:marketing.anunciantes');
-            Route::post('advertisers', [MarketingApiController::class, 'storeAdvertiser'])->middleware('modulo:marketing.anunciantes,gestionar');
-            Route::put('advertisers/{id}', [MarketingApiController::class, 'updateAdvertiser'])->middleware('modulo:marketing.anunciantes,gestionar');
-            Route::delete('advertisers/{id}', [MarketingApiController::class, 'deleteAdvertiser'])->middleware('modulo:marketing.anunciantes,gestionar');
+            Route::get('advertisers', [AnunciantesApiController::class, 'advertisers'])->middleware('modulo:marketing.anunciantes');
+            Route::post('advertisers', [AnunciantesApiController::class, 'storeAdvertiser'])->middleware('modulo:marketing.anunciantes,gestionar');
+            Route::put('advertisers/{id}', [AnunciantesApiController::class, 'updateAdvertiser'])->middleware('modulo:marketing.anunciantes,gestionar');
+            Route::delete('advertisers/{id}', [AnunciantesApiController::class, 'deleteAdvertiser'])->middleware('modulo:marketing.anunciantes,gestionar');
 
-            Route::get('campaigns', [MarketingApiController::class, 'campaigns'])->middleware('modulo:marketing.campanas');
-            Route::post('campaigns', [MarketingApiController::class, 'storeCampaign'])->middleware('modulo:marketing.campanas,gestionar');
-            Route::put('campaigns/{id}', [MarketingApiController::class, 'updateCampaign'])->middleware('modulo:marketing.campanas,gestionar');
-            Route::delete('campaigns/{id}', [MarketingApiController::class, 'deleteCampaign'])->middleware('modulo:marketing.campanas,gestionar');
+            Route::get('campaigns', [CampanasApiController::class, 'campaigns'])->middleware('modulo:marketing.campanas');
+            Route::post('campaigns', [CampanasApiController::class, 'storeCampaign'])->middleware('modulo:marketing.campanas,gestionar');
+            Route::put('campaigns/{id}', [CampanasApiController::class, 'updateCampaign'])->middleware('modulo:marketing.campanas,gestionar');
+            Route::delete('campaigns/{id}', [CampanasApiController::class, 'deleteCampaign'])->middleware('modulo:marketing.campanas,gestionar');
 
-            Route::get('banners', [MarketingApiController::class, 'banners'])->middleware('modulo:marketing.banners');
-            Route::post('banners', [MarketingApiController::class, 'storeBanner'])->middleware('modulo:marketing.banners,gestionar');
-            Route::get('banners/{id}', [MarketingApiController::class, 'showBanner'])->middleware('modulo:marketing.banners');
-            Route::put('banners/{id}', [MarketingApiController::class, 'updateBanner'])->middleware('modulo:marketing.banners,gestionar');
-            Route::delete('banners/{id}', [MarketingApiController::class, 'deleteBanner'])->middleware('modulo:marketing.banners,gestionar');
-            Route::get('banners/{id}/metrics', [MarketingApiController::class, 'bannerMetrics'])->middleware('modulo:marketing.banners');
+            Route::get('banners', [BannersApiController::class, 'banners'])->middleware('modulo:marketing.banners');
+            Route::post('banners', [BannersApiController::class, 'storeBanner'])->middleware('modulo:marketing.banners,gestionar');
+            Route::get('banners/{id}', [BannersApiController::class, 'showBanner'])->middleware('modulo:marketing.banners');
+            Route::put('banners/{id}', [BannersApiController::class, 'updateBanner'])->middleware('modulo:marketing.banners,gestionar');
+            Route::delete('banners/{id}', [BannersApiController::class, 'deleteBanner'])->middleware('modulo:marketing.banners,gestionar');
+            Route::get('banners/{id}/metrics', [BannersApiController::class, 'bannerMetrics'])->middleware('modulo:marketing.banners');
 
-            Route::get('coupons', [MarketingApiController::class, 'coupons'])->middleware('modulo:marketing.cupones');
-            Route::post('coupons', [MarketingApiController::class, 'storeCoupon'])->middleware('modulo:marketing.cupones,gestionar');
-            Route::put('coupons/{id}', [MarketingApiController::class, 'updateCoupon'])->middleware('modulo:marketing.cupones,gestionar');
-            Route::delete('coupons/{id}', [MarketingApiController::class, 'deleteCoupon'])->middleware('modulo:marketing.cupones,gestionar');
-            Route::get('coupons/{id}/redemptions', [MarketingApiController::class, 'couponRedemptions'])->middleware('modulo:marketing.cupones');
+            Route::get('coupons', [CuponesApiController::class, 'coupons'])->middleware('modulo:marketing.cupones');
+            Route::post('coupons', [CuponesApiController::class, 'storeCoupon'])->middleware('modulo:marketing.cupones,gestionar');
+            Route::put('coupons/{id}', [CuponesApiController::class, 'updateCoupon'])->middleware('modulo:marketing.cupones,gestionar');
+            Route::delete('coupons/{id}', [CuponesApiController::class, 'deleteCoupon'])->middleware('modulo:marketing.cupones,gestionar');
+            Route::get('coupons/{id}/redemptions', [CuponesApiController::class, 'couponRedemptions'])->middleware('modulo:marketing.cupones');
 
-            Route::get('featured', [MarketingApiController::class, 'featured'])->middleware('modulo:marketing.destacados');
-            Route::post('featured', [MarketingApiController::class, 'storeFeatured'])->middleware('modulo:marketing.destacados,gestionar');
-            Route::put('featured/{id}', [MarketingApiController::class, 'updateFeatured'])->middleware('modulo:marketing.destacados,gestionar');
-            Route::delete('featured/{id}', [MarketingApiController::class, 'deleteFeatured'])->middleware('modulo:marketing.destacados,gestionar');
+            Route::get('featured', [DestacadosApiController::class, 'featured'])->middleware('modulo:marketing.destacados');
+            Route::post('featured', [DestacadosApiController::class, 'storeFeatured'])->middleware('modulo:marketing.destacados,gestionar');
+            Route::put('featured/{id}', [DestacadosApiController::class, 'updateFeatured'])->middleware('modulo:marketing.destacados,gestionar');
+            Route::delete('featured/{id}', [DestacadosApiController::class, 'deleteFeatured'])->middleware('modulo:marketing.destacados,gestionar');
 
             Route::get('push', [MarketingApiController::class, 'pushCampaigns'])->middleware('modulo:marketing.notificaciones');
             Route::post('push', [MarketingApiController::class, 'storePushCampaign'])->middleware('modulo:marketing.notificaciones,gestionar');

@@ -38,3 +38,11 @@ Thumbs.db
 *-service-account*.json
 service-account*.json
 /storage/app/firebase/
+
+# Credenciales de firma y notificaciones. Ninguna de estas va al repositorio:
+# con la .p8 de APNs se pueden mandar notificaciones en nombre de la app, y
+# Apple la entrega UNA sola vez.
+*.p8
+*.p12
+*.mobileprovision
+AuthKey_*

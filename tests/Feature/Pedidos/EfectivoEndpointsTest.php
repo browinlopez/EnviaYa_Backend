@@ -168,3 +168,24 @@ test('un domiciliario no puede confirmar sus propios depositos', function () {
 
     expect(app(CustodiaDeEfectivo::class)->saldo($e['domiId']))->toBe(32000.0);
 });
+
+test('la nota de quien confirma se guarda', function () {
+    /*
+     * El endpoint validaba `notes` y solo la pasaba al rechazar: al confirmar
+     * se descartaba en silencio. Quien revisa el extracto escribe por qué da
+     * por buena la consignación —«extracto del 5, movimiento 4482910»— y esa
+     * frase es todo el sustento que queda si mañana la cifra se discute.
+     */
+    $e = repartidorConSaldo(24000);
+    $deposito = app(CustodiaDeEfectivo::class)
+        ->declararDeposito($e['domiId'], ['amount' => 24000, 'reference' => '4482910']);
+
+    Sanctum::actingAs(contable());
+
+    $this->putJson("/v1/admin/cash-deposits/{$deposito->id}", [
+        'state' => 'confirmada',
+        'notes' => 'Verificado contra el extracto del 5.',
+    ])->assertOk();
+
+    expect($deposito->fresh()->notes)->toBe('Verificado contra el extracto del 5.');
+});

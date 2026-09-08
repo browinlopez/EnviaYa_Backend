@@ -170,7 +170,7 @@ class EfectivoController extends Controller
 
         try {
             $deposito = $datos['state'] === CashDeposit::CONFIRMADA
-                ? $this->custodia->confirmarDeposito($deposito, $usuarioId)
+                ? $this->custodia->confirmarDeposito($deposito, $usuarioId, $datos['notes'] ?? null)
                 : $this->custodia->rechazarDeposito($deposito, $usuarioId, $datos['notes'] ?? null);
         } catch (RuntimeException $e) {
             return response()->json(['message' => $e->getMessage()], 422);

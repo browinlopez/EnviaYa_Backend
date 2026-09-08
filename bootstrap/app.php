@@ -40,6 +40,14 @@ return Application::configure(basePath: dirname(__DIR__))
      */
     $middleware->api(append: [
         \App\Http\Middleware\AppEnMantenimiento::class,
+
+        /*
+         * El token que el telefono guarda tras la huella solo puede cambiarse
+         * por una sesion. Va en el grupo entero porque Sanctum NO aplica las
+         * habilidades por su cuenta: sin esto, esa credencial serviria para
+         * leer pedidos y pagar.
+         */
+        \App\Http\Middleware\SoloParaCambiarPorSesion::class,
     ]);
 
     $middleware->alias([

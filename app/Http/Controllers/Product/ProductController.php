@@ -66,43 +66,6 @@ class ProductController extends Controller
         return response()->json($products);
     }
 
-    /**
-     * Describe el formulario de producto para el tipo del negocio dado:
-     * campos extra (etiqueta, tipo de input, obligatoriedad) y categorías
-     * válidas. La app arma el formulario con esto en vez de hardcodearlo.
-     */
-    public function schema(Request $request)
-    {
-        $request->validate([
-            'business_id' => 'required|integer|exists:business,busines_id',
-        ]);
-
-        $business = Business::findOrFail($request->business_id);
-        $type = (int) $business->type;
-
-        if (!ProductTypeSchema::has($type)) {
-            return response()->json([
-                'message' => 'El negocio no tiene un tipo de producto configurado',
-            ], 422);
-        }
-
-        return response()->json(array_merge(
-            ProductTypeSchema::forApi($type),
-            [
-                // Una categoría puede servir a varios tipos de negocio, así que
-                // el filtro va contra la tabla de vínculos, no contra la columna.
-                'categories' => Category::active()
-                    ->whereIn(
-                        'category_id',
-                        DB::table('category_category_business')
-                            ->where('business_category_id', $type)
-                            ->pluck('category_id')
-                    )
-                    ->get(['category_id', 'name']),
-            ],
-        ));
-    }
-
     // Crear producto
     public function store(Request $request)
     {
@@ -374,74 +337,5 @@ class ProductController extends Controller
                 'error'   => $e->getMessage()
             ], 500);
         }
-    }
-
-    // Top 10 productos mejor calificados
-    public function topRated()
-    {
-        $products = ProductBusiness::with('product')
-            ->orderBy('qualification', 'desc')
-            ->take(10)
-            ->get();
-
-        $formatted = $products->map(function ($item) {
-            return [
-                'product_id' => $item->product->products_id,
-                'name' => $item->product->name,
-                'description' => $item->product->description,
-                'category_id' => $item->product->category_id,
-                'image' => $item->product->image,
-                'state' => $item->product->state,
-                'price' => $item->price,
-                'amount' => $item->amount,
-                'qualification' => $item->qualification,
-                'business_id' => $item->busines_id,
-            ];
-        });
-
-        return response()->json($formatted);
-    }
-
-    public function mostPopularProducts(Request $request)
-    {
-        $request->validate([
-            'business_id' => 'required|integer|exists:business,busines_id',
-            'limit' => 'nullable|integer|min:1|max:50', // opcional para top N
-        ]);
-
-        $limit = $request->get('limit', 10); // por defecto top 10
-
-        $products = OrdersSalesDetail::selectRaw('product_id, SUM(amount) as total_ordered')
-            ->whereHas('order', function ($query) use ($request) {
-                $query->where('busines_id', $request->business_id);
-            })
-            ->with('product') // para traer datos del producto
-            ->groupBy('product_id')
-            ->orderByDesc('total_ordered')
-            ->take($limit)
-            ->get();
-
-        // Precio actual de cada producto en este negocio
-        $prices = ProductBusiness::where('busines_id', $request->business_id)
-            ->whereIn('products_id', $products->pluck('product_id'))
-            ->pluck('price', 'products_id');
-
-        $formatted = $products->map(function ($item) use ($prices) {
-            return [
-                'product_id' => $item->product->products_id,
-                'name' => $item->product->name,
-                'description' => $item->product->description,
-                'category_id' => $item->product->category_id,
-                'image' => $item->product->image,
-                'state' => $item->product->state,
-                'price' => (float) ($prices[$item->product_id] ?? 0),
-                'total_ordered' => (int) $item->total_ordered, // cantidad total pedida
-            ];
-        });
-
-        return response()->json([
-            'message' => 'Productos más populares del negocio',
-            'products' => $formatted
-        ]);
     }
 }

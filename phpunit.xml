@@ -35,5 +35,25 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!--
+            LAS PRUEBAS NO USAN LAS CREDENCIALES DE LA MAQUINA.
+
+            Sin esto, las que comprueban "sin transporte configurado lo DICE en
+            vez de fingir" pasaban en un portatil sin credenciales y fallaban en
+            cuanto alguien ponia las de verdad en su .env — que fue exactamente
+            lo que paso al configurar Firebase. Una prueba que depende de la
+            maquina no prueba nada.
+
+            La que necesita el transporte encendido lo enciende ella misma con
+            `config([...])`, que es explicito y no se lleva por delante al resto.
+        -->
+        <env name="FCM_PROJECT_ID" value=""/>
+        <env name="FCM_CREDENTIALS_JSON" value=""/>
+        <env name="FCM_CREDENTIALS" value=""/>
+        <env name="APNS_KEY" value=""/>
+        <env name="APNS_KEY_PATH" value=""/>
+        <env name="APNS_KEY_ID" value=""/>
+        <env name="APNS_TEAM_ID" value=""/>
+        <env name="APNS_BUNDLE_ID" value=""/>
     </php>
 </phpunit>

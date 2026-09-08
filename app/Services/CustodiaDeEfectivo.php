@@ -89,7 +89,14 @@ class CustodiaDeEfectivo
      * quedar un depósito confirmado sin su apunte —o al revés, un apunte sin
      * respaldo—.
      */
-    public function confirmarDeposito(CashDeposit $deposito, int $usuarioId): CashDeposit
+    /**
+     * @param string|null $nota Lo que anotó quien confirmó, tal cual.
+     *                          Se guardaba solo al rechazar: al confirmar el
+     *                          controlador la validaba y la tiraba, así que
+     *                          «verificado contra el extracto del 5» se perdía
+     *                          y quedaba una confirmación sin sustento.
+     */
+    public function confirmarDeposito(CashDeposit $deposito, int $usuarioId, ?string $nota = null): CashDeposit
     {
         if ($deposito->state === CashDeposit::CONFIRMADA) {
             throw new RuntimeException('Este depósito ya estaba confirmado.');
@@ -99,7 +106,7 @@ class CustodiaDeEfectivo
             throw new RuntimeException('Este depósito fue rechazado; no se puede confirmar.');
         }
 
-        return DB::transaction(function () use ($deposito, $usuarioId) {
+        return DB::transaction(function () use ($deposito, $usuarioId, $nota) {
             CashMovement::create([
                 'domiciliary_id' => $deposito->domiciliary_id,
                 'type'           => CashMovement::CONSIGNACION,
@@ -112,6 +119,7 @@ class CustodiaDeEfectivo
             $deposito->state        = CashDeposit::CONFIRMADA;
             $deposito->confirmed_by = $usuarioId;
             $deposito->confirmed_at = now();
+            $deposito->notes        = $nota ?: $deposito->notes;
             $deposito->save();
 
             return $deposito;

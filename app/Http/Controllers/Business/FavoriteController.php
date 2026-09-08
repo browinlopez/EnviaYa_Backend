@@ -4,11 +4,19 @@ namespace App\Http\Controllers\Business;
 
 use App\Http\Controllers\Controller;
 use App\Models\Business\BusinessUserFavorite;
+use App\Services\NegocioParaLaApp;
+use App\Services\TarifaPorDistancia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class FavoriteController extends Controller
 {
+    public function __construct(
+        private readonly NegocioParaLaApp $presentador,
+        private readonly TarifaPorDistancia $distancias,
+    ) {
+    }
+
     public function toggleFavorite(Request $request)
     {
         $request->validate([
@@ -48,6 +56,16 @@ class FavoriteController extends Controller
         $userId = $request->user_id;
 
         /*
+         * Desde dónde mira quien pregunta, igual que los otros dos listados.
+         *
+         * Sin esto los favoritos eran el único sitio donde la tarifa salía
+         * plana y donde no se sabía si la tienda reparte hasta la dirección
+         * elegida. Opcional: sin coordenadas responde como antes.
+         */
+        $lat = $request->filled('lat') ? (float) $request->input('lat') : null;
+        $lon = $request->filled('lng') ? (float) $request->input('lng') : null;
+
+        /*
          * Favoritos de negocios ACTIVOS, y con sus productos activos.
          *
          * Esta era la puerta de atrás: el listado del catálogo sí filtraba por
@@ -67,12 +85,24 @@ class FavoriteController extends Controller
             ->get();
 
         // Transformamos a un array similar al index
-        $formatted = $favorites->map(function ($favorite) {
+        $formatted = $favorites->map(function ($favorite) use ($lat, $lon) {
             $business = $favorite->business;
+
+            $km = $this->distancias->kilometros(
+                $business->latitude !== null ? (float) $business->latitude : null,
+                $business->longitude !== null ? (float) $business->longitude : null,
+                $lat,
+                $lon,
+            );
 
             return [
                 'favorite_id'   => $favorite->id,
                 'business_id'   => $business->busines_id,
+                'latitude'      => $business->latitude !== null ? (float) $business->latitude : null,
+                'longitude'     => $business->longitude !== null ? (float) $business->longitude : null,
+                'distance_km'   => $km === null ? null : round($km, 2),
+                'delivery_fee'  => $this->distancias->paraDistancia($km),
+                'in_range'      => $this->distancias->reparteHasta($km),
                 'name'          => $business->name,
                 'phone'         => $business->phone,
                 'address'       => $business->address,
@@ -87,19 +117,18 @@ class FavoriteController extends Controller
                     'name' => $business->municipality->name,
                 ] : null,
                 'owner_count'   => $business->owners->count(),
-                'owners'        => $business->owners->map(function ($owner) {
-                    return [
-                        'owner_id'          => $owner->owner_id,
-                        'user_id'           => $owner->user_id,
-                        'profile_photo'     => $owner->profile_photo ?? 'https://example.com/default-user.png',
-                        'document_type'     => $owner->document_type,
-                        'document_number'   => $owner->document_number,
-                        'birthdate'         => $owner->birthdate,
-                        'contact_secondary' => $owner->contact_secondary,
-                        'notes'             => $owner->notes,
-                        'state'             => (bool) $owner->state,
-                    ];
-                }),
+                /*
+                 * DEL PROPIETARIO SOLO SALE LO QUE HACE FALTA PARA COMPRAR.
+                 *
+                 * Acá salían su número de documento, su fecha de nacimiento,
+                 * su teléfono secundario y las notas internas que le haya
+                 * puesto el equipo. La misma fuga se cerró en los dos listados
+                 * del catálogo y ESTE se quedó sin tocar: bastaba con marcar
+                 * la tienda como favorita para volver a leerlo todo. Ahora usa
+                 * el mismo presentador que los otros, para que no pueda volver
+                 * a divergir.
+                 */
+                'owners'        => $this->presentador->propietarios($business),
                 'products' => $business->products->map(function ($product) {
                     return [
                         'product_id'  => $product->products_id,

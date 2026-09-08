@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Auth\VerificacionDeCorreoController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -57,7 +58,7 @@ Route::get('/', function () {
 
 // --- Verificación de correo de la app móvil (token propio, no el firmado de
 //     Laravel: la app abre este enlace desde el correo). ---
-Route::get('/verify-email', [AuthController::class, 'verify'])
+Route::get('/verify-email', [VerificacionDeCorreoController::class, 'verify'])
     ->name('verify.email');
 
 /*
