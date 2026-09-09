@@ -34,6 +34,7 @@ use App\Http\Controllers\Admin\Api\SolicitudesApiController;
 use App\Http\Controllers\Admin\Api\ReportesExcelController;
 use App\Http\Controllers\Admin\Api\SeguridadApiController;
 use App\Http\Controllers\AppConfigController;
+use App\Http\Controllers\ErroresDeLaAppController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\ClaveController;
 use App\Http\Controllers\Auth\RegistroController;
@@ -185,6 +186,18 @@ Route::post('webhooks/bold', [BoldWebhookController::class, 'handle'])
  */
 Route::get('app/config', AppConfigController::class)
     ->middleware('throttle:600,1');
+
+/*
+ * Donde la app avisa de que se rompio.
+ *
+ * Publico porque puede reventar ANTES de iniciar sesion —resolviendo la sesion
+ * guardada, que es justo uno de los sitios donde puede pasar—. El limite es
+ * bajo a proposito: escribir sin autenticacion es superficie de ataque, y una
+ * app que manda mas de veinte fallos por minuto no esta informando, esta en un
+ * bucle.
+ */
+Route::post('app/errores', ErroresDeLaAppController::class)
+    ->middleware('throttle:20,1');
 
 /*
 |--------------------------------------------------------------------------
