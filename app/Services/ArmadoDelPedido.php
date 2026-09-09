@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Services\PagoEnLinea;
+
 use App\Models\Order\OrdersSales;
 use App\Models\Order\OrdersSalesDetail;
 
@@ -91,7 +93,13 @@ class ArmadoDelPedido
                 ? \Carbon\Carbon::parse($horaDeRecogida)->format('Y-m-d H:i:s')
                 : null,
             'state' => 1,
-            'payment_state' => in_array($metodoId, [2, 5])
+            /*
+             * La misma lista que decide si se abre el cobro, no una copia.
+             * Estaba escrito `[2, 5]` a mano en dos archivos distintos: añadir
+             * un medio en uno y olvidarlo en el otro deja pedidos esperando un
+             * pago que nadie abrio, o cobrando dos veces.
+             */
+            'payment_state' => in_array($metodoId, PagoEnLinea::CON_PASARELA)
                 ? OrdersSales::ESPERANDO_PAGO
                 : 'pending_cash'
         ];

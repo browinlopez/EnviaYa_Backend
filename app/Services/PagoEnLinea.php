@@ -23,6 +23,21 @@ class PagoEnLinea
     /** `orderssales.methods_id` que se cobran con pasarela. */
     public const CON_PASARELA = [2, 5];
 
+    /**
+     * El unico metodo que se cobra en la puerta.
+     *
+     * Todo lo que no sea esto ni pasarela NO TIENE COBRO: el pedido se crearia
+     * y nadie pediria el dinero. Por eso `MediosDePagoController` solo ofrece
+     * los de estas dos listas, y no lo que haya en la tabla.
+     */
+    public const CONTRA_ENTREGA = [1];
+
+    /** Los que el sistema sabe cobrar de verdad. */
+    public static function metodosQueSeCobran(): array
+    {
+        return array_merge(self::CONTRA_ENTREGA, self::CON_PASARELA);
+    }
+
     public function __construct(private readonly PaymentController $pagos)
     {
     }
