@@ -72,6 +72,12 @@ class PanelModules
 
         'reportes'  => ['Reportes', 'Control'],
         'auditoria' => ['Auditoría', 'Control'],
+        /*
+         * Lo que se rompe en el telefono de la gente. Va en Control y junto a
+         * Auditoria porque responde la misma clase de pregunta —que paso— y no
+         * "como va la operacion".
+         */
+        'fallos'    => ['Fallos de la app', 'Control'],
         'areas'     => ['Roles y accesos', 'Control'],
         'ajustes'   => ['Ajustes', 'Control'],
     ];

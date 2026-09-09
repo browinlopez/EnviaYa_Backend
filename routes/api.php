@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\AccesoBiometricoController;
 use App\Http\Controllers\Domiciliary\PedidosDelDomiciliarioController;
 use App\Http\Controllers\Admin\Api\AdminApiController;
 use App\Http\Controllers\Admin\Api\AuditoriaApiController;
+use App\Http\Controllers\Admin\Api\FallosDeLaAppApiController;
 use App\Http\Controllers\Admin\Api\CategoriasApiController;
 use App\Http\Controllers\Admin\Api\ChatsApiController;
 use App\Http\Controllers\Admin\Api\ConjuntosApiController;
@@ -847,6 +848,11 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::get('chats/{chatId}/messages', [ChatsApiController::class, 'chatMessages'])->middleware('modulo:chats');
 
         Route::get('audits', [AuditoriaApiController::class, 'audits'])->middleware('modulo:auditoria');
+
+        // Lo que se rompio en el telefono de alguien. Lo manda el
+        // `ErrorBoundary` de la app a `POST /v1/app/errores`.
+        Route::get('fallos', [FallosDeLaAppApiController::class, 'fallos'])->middleware('modulo:fallos');
+        Route::get('fallos/resumen', [FallosDeLaAppApiController::class, 'resumen'])->middleware('modulo:fallos');
 
         /*
          * Va ANTES que `reports/{kind}`: si fuera después, `{kind}` se comería
