@@ -162,6 +162,27 @@ class BoldWebhookController extends Controller
             }
         }
 
-        PaymentStatusUpdated::dispatch($payment->fresh());
+        /*
+         * EL ANUNCIO VA APARTE Y TOLERA EL FALLO.
+         *
+         * Sin esto, con Reverb caido la llamada reventaba y Bold recibia un
+         * 500 por un cobro que ya se habia aplicado: el pedido quedaba pagado
+         * en la base y la pasarela lo daba por fallido, reintentando algo que
+         * ya estaba hecho.
+         *
+         * Lo que no puede perderse es el PAGO, y eso ya esta guardado unas
+         * lineas arriba. Perder el aviso en vivo solo cuesta que la pantalla
+         * de la tienda tarde en enterarse, y la app recarga por su cuenta.
+         *
+         * Mismo criterio que `Avisos::para`, que ya lo hacia asi.
+         */
+        try {
+            PaymentStatusUpdated::dispatch($payment->fresh());
+        } catch (\Throwable $e) {
+            Log::warning('Bold webhook: no se pudo anunciar el cambio de pago', [
+                'payment_id' => $payment->getKey(),
+                'error'      => $e->getMessage(),
+            ]);
+        }
     }
 }
