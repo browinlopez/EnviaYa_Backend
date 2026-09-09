@@ -135,3 +135,60 @@ test('el listado completo también responde sin user_id', function () {
 
     test()->getJson('/v1/businesses/index')->assertOk();
 });
+
+/* =========================================================================
+   EL LISTADO DEL COMPRADOR CON SESION
+
+   `businesses/index` es el que abre un comprador identificado, y era el mas
+   pesado de los dos: viajaba SIEMPRE con el catalogo entero de cada negocio.
+   Medido contra la base de demostracion, 105 KB con seis tiendas para pintar
+   seis tarjetas. La bandera existia en el otro listado y aca se habia quitado
+   al arreglar un 500; nadie la volvio a poner.
+   ======================================================================== */
+
+test('el listado del comprador con light=1 va sin catalogo ni reseñas', function () {
+    $e = negocioConCatalogo();
+    Sanctum::actingAs($e['user']);
+
+    $this->getJson("/v1/businesses/index?user_id={$e['user']->user_id}&light=1")
+        ->assertOk()
+        ->assertJsonPath('businesses.0.products', [])
+        ->assertJsonPath('businesses.0.reviews', [])
+        // Lo que la tarjeta SI necesita sigue estando, y lo que lee el carrito.
+        ->assertJsonPath('businesses.0.name', 'Tienda de Prueba')
+        ->assertJsonStructure(['businesses' => [['delivery_fee', 'in_range', 'distance_km']]]);
+});
+
+test('sin la bandera sigue trayendo el catalogo, por las versiones ya instaladas', function () {
+    /*
+     * La bandera es OPCIONAL a proposito: los telefonos que ya tienen la app
+     * instalada no la mandan, y si el servidor dejara de enviar `products` de
+     * golpe se quedarian con la ficha de negocio vacia hasta que actualicen.
+     */
+    $e = negocioConCatalogo();
+    Sanctum::actingAs($e['user']);
+
+    $this->getJson("/v1/businesses/index?user_id={$e['user']->user_id}")
+        ->assertOk()
+        ->assertJsonPath('businesses.0.products.0.name', 'Arroz');
+});
+
+test('el listado ligero pesa una fraccion del completo', function () {
+    /*
+     * Lo que se fija es la RAZON, no un numero de bytes: con otra base los dos
+     * cambian, pero el ligero tiene que seguir siendo mucho mas pequeño. Si
+     * alguien vuelve a meter el catalogo en la tarjeta, esto lo dice.
+     */
+    $e = negocioConCatalogo();
+    Sanctum::actingAs($e['user']);
+
+    $completo = strlen($this->getJson(
+        "/v1/businesses/index?user_id={$e['user']->user_id}",
+    )->getContent());
+
+    $ligero = strlen($this->getJson(
+        "/v1/businesses/index?user_id={$e['user']->user_id}&light=1",
+    )->getContent());
+
+    expect($ligero)->toBeLessThan($completo);
+});

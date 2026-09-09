@@ -78,15 +78,28 @@ class ConsultaDeNegociosController extends Controller
             ->get();
 
         /*
-         * Sin `$ligero`: acá no existe.
+         * EL MODO LIGERO, TAMBIEN ACA.
          *
-         * La bandera `light` es de `indexByQualification`, y este `use` se
-         * quedó con la variable de una copia. PHP no avisa de eso hasta que
-         * ejecuta la closure, así que el método reventaba con 500 en cada
-         * llamada: todo comprador con sesión iniciada abría el inicio y no veía
-         * un solo negocio.
+         * Este es el listado que abre un comprador CON SESION, y viajaba
+         * siempre con el catalogo entero de cada negocio: 105 KB medidos con la
+         * base de demostracion —29 productos y sus reseñas por tienda— para
+         * pintar seis tarjetas que solo enseñan nombre, categoria, nota y
+         * domicilio. En un telefono con datos eso se paga cada vez que se abre
+         * el inicio, y se vuelve a pagar al cambiar de direccion.
+         *
+         * Ademas es la unica peticion que fallaba de forma intermitente en el
+         * emulador: la mas pesada, cortandose a medias. Es exactamente el
+         * sintoma que ya describia `ListadoLigeroTest` para el otro listado.
+         *
+         * `indexByQualification` ya tenia la bandera; aca se habia quitado al
+         * arreglar un 500 —la closure capturaba una variable que no existia— y
+         * nadie la volvio a poner bien. Va OPCIONAL, como alli: las versiones
+         * de la app ya instaladas siguen recibiendo el catalogo y no se quedan
+         * con la ficha vacia.
          */
-        $formatted = $businesses->map(function ($business) use ($affiliatedIds, $userId, $lat, $lon) {
+        $ligero = $request->boolean('light');
+
+        $formatted = $businesses->map(function ($business) use ($affiliatedIds, $userId, $lat, $lon, $ligero) {
             $isAffiliated = in_array($business->busines_id, $affiliatedIds);
 
             /*
@@ -142,8 +155,15 @@ class ConsultaDeNegociosController extends Controller
                  * administración, que ya exige rol 4 y módulo.
                  */
                 'owners'        => $this->presentador->propietarios($business),
-                'products' => $this->presentador->productos($business, $isAffiliated, $userId),
-                'reviews' => $this->presentador->resenas($business),
+                /*
+                 * Las claves siguen viajando, vacias: la app las lee sin
+                 * comprobar si existen, y quitarlas del todo la obligaria a
+                 * defenderse de un `undefined` en cada pantalla.
+                 */
+                'products' => $ligero
+                    ? []
+                    : $this->presentador->productos($business, $isAffiliated, $userId),
+                'reviews' => $ligero ? [] : $this->presentador->resenas($business),
                 'is_affiliated' => $isAffiliated,
             ];
         });
