@@ -46,7 +46,17 @@ class User extends Authenticatable implements Auditable, MustVerifyEmail
         'email_verification_token',
         'email_verified_at',
         'email_verified_by',
-        'email_verification_expires_at'
+        'email_verification_expires_at',
+        /*
+         * La autorizacion de tratamiento de datos: cuando, que version de la
+         * politica y desde que IP. Sin estas tres en `fillable`, Eloquent las
+         * descarta EN SILENCIO al crear el usuario y el registro quedaria sin
+         * la prueba del consentimiento — que es justo lo unico que hay que
+         * poder demostrar.
+         */
+        'policy_accepted_at',
+        'policy_version',
+        'policy_ip',
     ];
 
     /*
@@ -66,6 +76,12 @@ class User extends Authenticatable implements Auditable, MustVerifyEmail
         'state' => 'boolean',
         'email_verified_at' => 'datetime',
         'email_verification_expires_at' => 'datetime',
+        /*
+         * Fecha y no cadena: es el dato que responde «cuando autorizo esta
+         * persona», y compararlo o formatearlo como texto invita justo a los
+         * errores que importan en algo que hay que poder demostrar.
+         */
+        'policy_accepted_at' => 'datetime',
         /*
          * CIFRADOS en la base, no solo ocultos en la respuesta. Ocultarlos
          * protege de una fuga por la API; cifrarlos protege de una fuga de la

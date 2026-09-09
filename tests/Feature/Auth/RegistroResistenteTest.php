@@ -33,6 +33,8 @@ test('registrarse sin decir si vive en un conjunto no revienta', function () {
         'name'     => 'Sin Bandera',
         'email'    => 'sin.bandera@ejemplo.com',
         'password' => '12345678',
+        // El registro exige la autorizacion de datos (Ley 1581).
+        'consentimiento' => true,
     ]);
 
     $r->assertStatus(201);
@@ -63,6 +65,8 @@ test('si el correo de verificacion falla, la cuenta igual queda creada', functio
         'email'    => 'correo.caido@ejemplo.com',
         'password' => '12345678',
         'belongs_to_complex' => false,
+        // El registro exige la autorizacion de datos (Ley 1581).
+        'consentimiento' => true,
     ]);
 
     // 201: la cuenta se creó. Lo que falló fue el aviso, y se dice.
@@ -80,6 +84,8 @@ test('el registro normal manda el correo y lo dice', function () {
         'email'    => 'con.correo@ejemplo.com',
         'password' => '12345678',
         'belongs_to_complex' => false,
+        // El registro exige la autorizacion de datos (Ley 1581).
+        'consentimiento' => true,
     ]);
 
     $r->assertStatus(201);
@@ -95,6 +101,8 @@ test('el correo repetido sigue respondiendo que ya existe', function () {
     $this->postJson('/v1/register', [
         'name' => 'Primero', 'email' => 'repetido@ejemplo.com',
         'password' => '12345678', 'belongs_to_complex' => false,
+        // El registro exige la autorizacion de datos (Ley 1581).
+        'consentimiento' => true,
     ])->assertStatus(201);
 
     /*
@@ -105,6 +113,8 @@ test('el correo repetido sigue respondiendo que ya existe', function () {
     $r = $this->postJson('/v1/register', [
         'name' => 'Segundo', 'email' => 'repetido@ejemplo.com',
         'password' => '12345678', 'belongs_to_complex' => false,
+        // El registro exige la autorizacion de datos (Ley 1581).
+        'consentimiento' => true,
     ]);
 
     expect($r->status())->toBeIn([409, 422]);
@@ -117,6 +127,8 @@ test('reenviar la verificacion no revienta si el correo falla', function () {
     $this->postJson('/v1/register', [
         'name' => 'Sin Verificar', 'email' => 'sin.verificar@ejemplo.com',
         'password' => '12345678', 'belongs_to_complex' => false,
+        // El registro exige la autorizacion de datos (Ley 1581).
+        'consentimiento' => true,
     ])->assertStatus(201);
 
     /*
@@ -156,6 +168,8 @@ test('pulsar el enlace dos veces no dice que sea invalido', function () {
     $this->postJson('/v1/register', [
         'name' => 'Doble Clic', 'email' => 'doble.clic@ejemplo.com',
         'password' => '12345678', 'belongs_to_complex' => false,
+        // El registro exige la autorizacion de datos (Ley 1581).
+        'consentimiento' => true,
     ])->assertStatus(201);
 
     $token = User::where('email', 'doble.clic@ejemplo.com')->value('email_verification_token');

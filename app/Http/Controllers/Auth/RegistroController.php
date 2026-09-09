@@ -46,10 +46,39 @@ class RegistroController extends Controller
              */
             'tower'              => 'nullable|string|max:40',
             'apartment'          => 'nullable|string|max:40',
+            /*
+             * LA AUTORIZACION DE TRATAMIENTO DE DATOS.
+             *
+             * La Ley 1581 la pide PREVIA, EXPRESA E INFORMADA, y pide poder
+             * demostrarla. Aca no se pedia nada: se recogia nombre, telefono,
+             * correo, direccion y ubicacion, y se ataba al historial de
+             * compras, sin una casilla ni un enlace a la politica.
+             *
+             * `accepted` y no `boolean`: rechaza el false explicito igual que
+             * el campo ausente, que es lo que corresponde a un consentimiento.
+             * Mismo criterio que el formulario de la web, que ya lo exigia.
+             */
+            'consentimiento'     => 'accepted',
+            'politica_version'   => 'nullable|string|max:20',
+        ], [
+            'consentimiento.accepted' =>
+                'Falta la autorizacion de tratamiento de datos.',
         ]);
 
+        /*
+         * Quien autorizo, cuando y desde donde. Se toma del servidor y no del
+         * cliente: una hora que manda el telefono no demuestra nada, porque el
+         * telefono la elige. La IP y la version de la politica completan lo que
+         * hace falta para responder «que acepto exactamente esta persona».
+         */
+        $huellaDelConsentimiento = [
+            'policy_accepted_at' => now(),
+            'policy_version'     => $validated['politica_version'] ?? null,
+            'policy_ip'          => $request->ip(),
+        ];
+
         try {
-            $usuario = DB::transaction(function () use ($validated) {
+            $usuario = DB::transaction(function () use ($validated, $huellaDelConsentimiento) {
 
                 $user = User::create([
                     'name'     => $validated['name'],
@@ -60,6 +89,7 @@ class RegistroController extends Controller
                     'state'    => true,
                     'email_verification_token' => Str::random(60),
                     'email_verification_expires_at' => Carbon::now()->addMinutes(60),
+                    ...$huellaDelConsentimiento,
                 ]);
 
                 $buyer = Buyer::create([

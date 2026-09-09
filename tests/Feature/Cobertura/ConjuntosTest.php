@@ -150,6 +150,8 @@ test('registrarse en un conjunto marca la bandera del comprador', function () {
         'phone' => '3001234567',
         'belongs_to_complex' => 1,
         'complex_id' => $complexId,
+        // El registro exige la autorizacion de datos (Ley 1581).
+        'consentimiento' => true,
     ])->assertCreated();
 
     $buyer = Buyer::whereHas('user', fn ($q) => $q->where('email', 'camila@ejemplo.test'))->first();
@@ -169,6 +171,8 @@ test('quien no vive en conjunto queda con la bandera en cero', function () {
         'email' => 'solo@ejemplo.test',
         'password' => 'ClaveDePrueba1*',
         'belongs_to_complex' => 0,
+        // El registro exige la autorizacion de datos (Ley 1581).
+        'consentimiento' => true,
     ])->assertCreated();
 
     $buyer = Buyer::whereHas('user', fn ($q) => $q->where('email', 'solo@ejemplo.test'))->first();
@@ -194,6 +198,8 @@ test('registrarse con torre y apartamento crea la primera direccion', function (
         'complex_id' => $complexId,
         'tower' => '3',
         'apartment' => '502',
+        // El registro exige la autorizacion de datos (Ley 1581).
+        'consentimiento' => true,
     ])->assertCreated();
 
     $user = User::where('email', 'camila2@ejemplo.test')->first();
@@ -217,6 +223,8 @@ test('sin torre no se inventa una direccion', function () {
         'password' => 'ClaveDePrueba1*',
         'belongs_to_complex' => 1,
         'complex_id' => conjunto(),
+        // El registro exige la autorizacion de datos (Ley 1581).
+        'consentimiento' => true,
     ])->assertCreated();
 
     $user = User::where('email', 'sintorre@ejemplo.test')->first();
