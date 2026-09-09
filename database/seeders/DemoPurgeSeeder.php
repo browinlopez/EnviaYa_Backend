@@ -12,9 +12,9 @@ use Illuminate\Support\Facades\DB;
  * forma de quitarlos no son datos de prueba: son datos, y a la semana ya nadie
  * sabe cuáles eran de verdad.
  *
- * Borra únicamente lo que lleva la marca —correos @demo.example.com y NIT
- * DEMO-…— y lo que cuelga de ello. Nada más: si un pedido apunta a un negocio
- * real, se queda.
+ * Borra únicamente lo que lleva la marca —correos de cualquiera de los
+ * dominios de `DemoSeeder::DOMINIOS_HISTORICOS` y NIT DEMO-…— y lo que cuelga
+ * de ello. Nada más: si un pedido apunta a un negocio real, se queda.
  *
  *   php artisan db:seed --class=DemoPurgeSeeder
  */
@@ -23,8 +23,17 @@ class DemoPurgeSeeder extends Seeder
     public function run(): void
     {
         DB::transaction(function () {
+            /*
+             * Cualquiera de los dominios que se hayan usado, no solo el de hoy:
+             * si no, lo sembrado antes de un cambio de dominio se queda para
+             * siempre. Ver `DemoSeeder::DOMINIOS_HISTORICOS`.
+             */
             $usuarios = DB::table('user')
-                ->where('email', 'like', '%@' . DemoSeeder::DOMINIO)
+                ->where(function ($q) {
+                    foreach (DemoSeeder::DOMINIOS_HISTORICOS as $dominio) {
+                        $q->orWhere('email', 'like', '%@' . $dominio);
+                    }
+                })
                 ->pluck('user_id');
 
             $negocios = DB::table('business')
@@ -81,8 +90,13 @@ class DemoPurgeSeeder extends Seeder
             /* --- Marketing --- */
             $anunciantes = DB::table('advertisers')
                 ->whereIn('business_id', $negocios)
-                ->orWhere('contact_email', 'like', '%@' . DemoSeeder::DOMINIO)
-                ->orWhere('contact_email', 'like', '%.demo')
+                ->orWhere(function ($q) {
+                    foreach (DemoSeeder::DOMINIOS_HISTORICOS as $dominio) {
+                        $q->orWhere('contact_email', 'like', '%@' . $dominio);
+                    }
+
+                    $q->orWhere('contact_email', 'like', '%.demo');
+                })
                 ->pluck('id');
 
             $campanas = DB::table('ad_campaigns')->whereIn('advertiser_id', $anunciantes)->pluck('id');

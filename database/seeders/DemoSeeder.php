@@ -50,6 +50,29 @@ class DemoSeeder extends Seeder
     public const CLAVE   = 'Demo2026*';
     public const NIT     = 'DEMO-';
 
+    /*
+     * TODOS los dominios con los que se sembró alguna vez, no solo el de hoy.
+     *
+     * Al cambiar de `.test` a `example.com` —por lo de Bold, acá arriba— la
+     * purga se quedó mirando solo el nuevo, y en cualquier base sembrada antes
+     * del cambio la tanda vieja se volvió indeleble: `DemoPurgeSeeder` no la
+     * reconoce y `DemoSeeder` no la pisa, porque inserta por correo y esos
+     * correos ya no los usa nadie.
+     *
+     * Se ve enseguida en el panel del tendero: sus tres domiciliarios salen
+     * seis veces, cada uno con su gemelo, y la tarjeta dice 6. No es un fallo
+     * de la consulta —los seis existen— pero para quien mira la pantalla es
+     * indistinguible de uno.
+     *
+     * Por eso la lista, y por eso crece hacia atrás: el día que el dominio
+     * vuelva a cambiar, el de hoy se queda acá y lo sembrado sigue siendo
+     * borrable.
+     */
+    public const DOMINIOS_HISTORICOS = [
+        self::DOMINIO,
+        'demo.enviaya.test',
+    ];
+
     /** Barranquilla y su área metropolitana, que es donde opera la plataforma. */
     private const MUNICIPIOS = [16 => 'Barranquilla', 17 => 'Soledad', 18 => 'Malambo'];
 
