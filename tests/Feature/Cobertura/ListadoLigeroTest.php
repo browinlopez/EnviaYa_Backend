@@ -192,3 +192,50 @@ test('el listado ligero pesa una fraccion del completo', function () {
 
     expect($ligero)->toBeLessThan($completo);
 });
+
+/* =========================================================================
+   LOS FAVORITOS
+
+   Misma historia y mismo arreglo. La pestaña pinta TARJETAS de tienda y no
+   enseña ni un producto, pero la respuesta traia el catalogo entero de cada
+   favorito: 38 KB por UNO solo, de los cuales 36 eran 185 productos que nadie
+   mira. Con cinco favoritos son casi 200 KB por cada visita.
+   ======================================================================== */
+
+test('los favoritos con light=1 van sin catalogo ni reseñas', function () {
+    $e = negocioConCatalogo();
+
+    \Illuminate\Support\Facades\DB::table('business_user_favorites')->insert([
+        'user_id'    => $e['user']->user_id,
+        'busines_id' => $e['businessId'],
+    ]);
+
+    Sanctum::actingAs($e['user']);
+
+    $this->postJson('/v1/favorites/index', [
+        'user_id' => $e['user']->user_id,
+        'light'   => 1,
+    ])
+        ->assertOk()
+        ->assertJsonPath('favorites.0.products', [])
+        ->assertJsonPath('favorites.0.reviews', [])
+        // Lo que la tarjeta si necesita.
+        ->assertJsonPath('favorites.0.name', 'Tienda de Prueba')
+        ->assertJsonStructure(['favorites' => [['delivery_fee', 'in_range', 'qualification']]]);
+});
+
+test('los favoritos sin la bandera siguen trayendo el catalogo', function () {
+    // Por las versiones de la app ya instaladas, que no la mandan.
+    $e = negocioConCatalogo();
+
+    \Illuminate\Support\Facades\DB::table('business_user_favorites')->insert([
+        'user_id'    => $e['user']->user_id,
+        'busines_id' => $e['businessId'],
+    ]);
+
+    Sanctum::actingAs($e['user']);
+
+    $this->postJson('/v1/favorites/index', ['user_id' => $e['user']->user_id])
+        ->assertOk()
+        ->assertJsonPath('favorites.0.products.0.name', 'Arroz');
+});

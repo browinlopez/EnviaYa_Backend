@@ -74,18 +74,39 @@ class FavoriteController extends Controller
          * quien ya la tenía guardada — con su catálogo, sus precios y el botón
          * de pedir.
          */
+        /*
+         * MODO LIGERO, igual que en el listado del inicio.
+         *
+         * Esta pantalla pinta TARJETAS de tienda —logo, nombre, nota, tarifa—
+         * y no enseña ni un producto. Aun asi la respuesta traia el catalogo
+         * entero de cada favorito: medido con la base de demostracion, 38 KB
+         * para UN solo favorito, de los cuales 36 eran 185 productos que nadie
+         * mira. Con cinco favoritos son casi 200 KB cada vez que se abre la
+         * pestaña.
+         *
+         * Y no es solo gasto de datos: la peticion mas pesada es la que se
+         * corta a medias en una red lenta, que es como el listado del inicio
+         * acababa fallando en el emulador.
+         *
+         * Va OPCIONAL, como en el otro: las versiones de la app ya instaladas
+         * no mandan la bandera y siguen recibiendo lo de siempre.
+         */
+        $ligero = $request->boolean('light');
+
         $favorites = BusinessUserFavorite::where('user_id', $userId)
             ->whereHas('business', fn ($q) => $q->where('state', 1))
-            ->with([
+            ->with(array_filter([
                 'business.owners',
                 'business.municipality',
-                'business.reviews',
+                // Ni siquiera se traen de la base si no van a viajar.
+                $ligero ? null : 'business.reviews',
+            ]) + ($ligero ? [] : [
                 'business.products' => fn ($q) => $q->where('products.state', 1),
-            ])
+            ]))
             ->get();
 
         // Transformamos a un array similar al index
-        $formatted = $favorites->map(function ($favorite) use ($lat, $lon) {
+        $formatted = $favorites->map(function ($favorite) use ($lat, $lon, $ligero) {
             $business = $favorite->business;
 
             $km = $this->distancias->kilometros(
@@ -129,7 +150,7 @@ class FavoriteController extends Controller
                  * a divergir.
                  */
                 'owners'        => $this->presentador->propietarios($business),
-                'products' => $business->products->map(function ($product) {
+                'products' => $ligero ? [] : $business->products->map(function ($product) {
                     return [
                         'product_id'  => $product->products_id,
                         'name'        => $product->name,
@@ -140,7 +161,7 @@ class FavoriteController extends Controller
                         'price'       => $product->pivot->price ?? null,
                     ];
                 }),
-                'reviews' => $business->reviews->map(function ($review) {
+                'reviews' => $ligero ? [] : $business->reviews->map(function ($review) {
                     return [
                         'review_id'  => $review->reviews_id ?? null,
                         'buyer_id'   => $review->buyer_id,
