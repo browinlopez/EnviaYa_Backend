@@ -94,7 +94,28 @@ it('la hora la pone el SERVIDOR, no el telefono', function () {
 it('el mensaje explica que falta, en español', function () {
     // Lo lee una persona en su telefono: «The consentimiento must be accepted»
     // no le dice nada.
-    $this->postJson('/v1/register', datosDeRegistro())
+    $this->postJson('/v1/register', datosDeRegistro(['consentimiento' => false]))
         ->assertStatus(422)
         ->assertJsonPath('errors.consentimiento.0', 'Falta la autorizacion de tratamiento de datos.');
+});
+
+it('a una compilacion sin la casilla se le dice que actualice, no que le falta marcarla', function () {
+    /*
+     * La version publicada en las tiendas es anterior a la casilla: no manda
+     * el campo y no hay forma de que lo mande. Tampoco se puede arreglar por
+     * aire, porque `expo-updates` entro despues de esa compilacion.
+     *
+     * Decirle «falta la autorizacion» le describe una casilla que su pantalla
+     * no tiene: lee que hizo algo mal y no hay nada que pueda hacer. Se
+     * distingue por la AUSENCIA del campo, que es lo unico que separa una
+     * compilacion vieja de una nueva.
+     */
+    $datos = datosDeRegistro();
+
+    $respuesta = $this->postJson('/v1/register', $datos)->assertStatus(422);
+
+    expect($respuesta->json('errors.consentimiento.0'))->toContain('Actualizala desde la tienda');
+
+    // Y lo que no cambia: sigue sin crearse la cuenta.
+    expect(User::where('email', $datos['email'])->exists())->toBeFalse();
 });

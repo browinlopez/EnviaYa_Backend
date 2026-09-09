@@ -27,6 +27,39 @@ class RegistroController extends Controller
     // Registro
     public function register(Request $request)
     {
+        /*
+         * UNA COMPILACION ANTERIOR A LA CASILLA NO PUEDE ACEPTAR NADA.
+         *
+         * La autorizacion se empezo a exigir el 09/09/2026, y la version
+         * publicada en las tiendas es la 1.0.8 del 23/08: no tiene la casilla,
+         * asi que no manda el campo y no hay forma de que lo mande. Tampoco se
+         * puede arreglar por aire: `expo-updates` entro despues de esa
+         * compilacion, o sea que el binario que tiene la gente instalado ni
+         * siquiera sabe buscar actualizaciones.
+         *
+         * A esa persona el mensaje normal —«falta la autorizacion»— le describe
+         * una casilla que su pantalla no tiene. Lee que hizo algo mal, y no hay
+         * nada que pueda hacer.
+         *
+         * Se distingue por la AUSENCIA del campo, que es lo unico que separa
+         * una compilacion vieja de una nueva: la app de hoy lo manda siempre,
+         * true o false. Las dos siguen recibiendo 422 y ninguna cuenta se crea
+         * sin autorizacion; lo unico que cambia es que a la vieja se le dice
+         * algo que puede hacer.
+         *
+         * Se retira cuando la version con la casilla lleve tiempo publicada.
+         */
+        if (!$request->has('consentimiento')) {
+            return response()->json([
+                'message' => 'Tu version de la app no permite completar el registro. Actualizala desde la tienda y vuelve a intentarlo.',
+                'errors'  => [
+                    'consentimiento' => [
+                        'Tu version de la app no permite completar el registro. Actualizala desde la tienda y vuelve a intentarlo.',
+                    ],
+                ],
+            ], 422);
+        }
+
         $validated = $request->validate([
             'name'               => 'required|string|max:255',
             'email'              => 'required|string|email|unique:user,email',
