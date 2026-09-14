@@ -52,6 +52,21 @@ class EconomiaDelPedido
         $precios = ProductBusiness::where('busines_id', $negocioId)
             ->whereIn('products_id', $ids)
             ->whereHas('product', fn ($q) => $q->where('state', 1))
+            /*
+             * SIN PRECIO NO SE VENDE, TAMPOCO AL PAGAR.
+             *
+             * La vitrina ya escondía los productos en $0 —copiar el surtido de
+             * otra tienda los deja así a propósito—, pero esta comprobación no:
+             * un carrito guardado de antes de que el precio pasara a cero, o una
+             * petición armada a mano, creaba el pedido con esas líneas GRATIS.
+             * En producción había diez: cremas Colgate, toallas Nosotras…
+             *
+             * Filtrándolo acá, un producto en cero cae en «faltantes» y recibe
+             * el mismo 422 que uno retirado. La app ya sabe qué hacer con eso:
+             * quitarlo del carrito. Y la cotización usa este mismo método, así
+             * que el total que se enseña y el que se cobra no pueden separarse.
+             */
+            ->where('price', '>', 0)
             ->pluck('price', 'products_id');
 
         $faltantes = collect($ids)->reject(fn ($id) => $precios->has($id));

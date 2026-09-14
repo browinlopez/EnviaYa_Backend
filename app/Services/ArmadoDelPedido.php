@@ -21,8 +21,10 @@ use App\Models\Order\OrdersSalesDetail;
  */
 class ArmadoDelPedido
 {
-    public function __construct(private readonly CouponService $cupones)
-    {
+    public function __construct(
+        private readonly CouponService $cupones,
+        private readonly ExistenciasDelPedido $existencias,
+    ) {
     }
 
     public function guardar(
@@ -117,6 +119,16 @@ class ArmadoDelPedido
             $aMedias->update($datosDelPedido);
             $order = $aMedias;
 
+            /*
+             * LO QUE RESTÓ EL INTENTO ANTERIOR SE DEVUELVE ANTES DE BORRARLO.
+             *
+             * Las líneas de abajo se reescriben con el carrito de ahora, y se
+             * vuelven a restar. Si no se devolviera primero lo del intento
+             * anterior, cada clic en «pagar» restaría el carrito otra vez: tres
+             * reintentos, tres veces el inventario.
+             */
+            $this->existencias->devolver($order);
+
             // El detalle se reescribe abajo con lo que hay ahora en el
             // carrito, que puede no ser lo mismo que en el primer intento.
             OrdersSalesDetail::where('orderSales_id', $order->orderSales_id)->delete();
@@ -132,6 +144,13 @@ class ArmadoDelPedido
                 'unit_price' => (float) $precios[$p['product_id']],
             ]);
         }
+
+        /*
+         * Las unidades salen del inventario con el pedido, en la misma
+         * transacción: si algo falla más abajo, vuelven solas. Pueden quedar en
+         * negativo — ver ExistenciasDelPedido.
+         */
+        $this->existencias->descontar($order);
 
         // El uso se consume ya con la orden creada, dentro de la misma
         // transacción: si algo falla más abajo, el cupón se libera solo.

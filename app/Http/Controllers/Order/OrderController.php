@@ -422,8 +422,17 @@ class OrderController extends Controller
             ], 422);
         }
 
-        $order->state = 5;
-        $order->save();
+        /*
+         * Cancelado y devuelto a la vez. El estado y las unidades van en la
+         * misma transacción: un pedido cancelado que siguiera restándole al
+         * inventario dejaría la tienda creyendo que vendió lo que no vendió.
+         */
+        DB::transaction(function () use ($order) {
+            $order->state = 5;
+            $order->save();
+
+            app(\App\Services\ExistenciasDelPedido::class)->devolver($order);
+        });
 
         // Si lo canceló el propio comprador ya lo sabe, pero el aviso deja
         // constancia en su campana: es un pedido que existió y desapareció, y
