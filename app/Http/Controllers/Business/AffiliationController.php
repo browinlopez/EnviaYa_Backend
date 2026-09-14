@@ -6,11 +6,31 @@ use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
 use App\Models\Business\BusinessUserAffiliation;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class AffiliationController extends Controller
 {
     use ComprobarPertenencia;
+
+    /**
+     * Afiliarse a una tienda es cosa de dos: el comprador puede hacerlo por su
+     * cuenta desde la ficha de la tienda —con el tope de tres—, y el tendero
+     * puede hacerlo por él desde su lista de afiliados.
+     *
+     * Lo que no puede nadie es afiliar o desafiliar a OTRA persona en una
+     * tienda que no es suya: vaciarle los clientes a la competencia o meterle
+     * gente. Cerrar también la auto-afiliación dejó a la app publicada con un
+     * botón «Afiliar negocio» que respondía 403 siempre.
+     */
+    private function negarAfiliacionAjena(Request $request): ?JsonResponse
+    {
+        if ((int) $request->user()?->user_id === (int) $request->user_id) {
+            return null;
+        }
+
+        return $this->negarNegocioAjeno($request, $request->busines_id);
+    }
 
     // Afiliar o desafiliar
     public function toggle(Request $request)
@@ -148,11 +168,7 @@ class AffiliationController extends Controller
             'busines_id' => 'required|integer|exists:business,busines_id',
         ]);
 
-        /*
-         * El negocio del cuerpo tiene que ser suyo. Sin esto se afiliaba y
-         * desafiliaba gente a tiendas ajenas, y se listaban sus clientes.
-         */
-        if ($no = $this->negarNegocioAjeno($request, $request->busines_id)) {
+        if ($no = $this->negarAfiliacionAjena($request)) {
             return $no;
         }
 
@@ -198,11 +214,7 @@ class AffiliationController extends Controller
             'busines_id' => 'required|integer|exists:business,busines_id',
         ]);
 
-        /*
-         * El negocio del cuerpo tiene que ser suyo. Sin esto se afiliaba y
-         * desafiliaba gente a tiendas ajenas, y se listaban sus clientes.
-         */
-        if ($no = $this->negarNegocioAjeno($request, $request->busines_id)) {
+        if ($no = $this->negarAfiliacionAjena($request)) {
             return $no;
         }
 

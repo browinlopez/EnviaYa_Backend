@@ -103,22 +103,52 @@ test('un comprador no puede cambiarle el nombre ni el NIT a una tienda ajena', f
 /*  AFILIACIONES: LOS CLIENTES DE OTRA TIENDA                            */
 /* ===================================================================== */
 
-test('un comprador no puede afiliarse solo a una tienda ajena', function () {
+test('un comprador se puede afiliar y desafiliar a sí mismo desde la ficha', function () {
     $yo = unComprador();
-    $ajeno = unNegocioAjeno();
+    $tienda = unNegocioAjeno();
 
     Sanctum::actingAs($yo);
 
     /*
-     * La afiliación decide QUÉ PRECIOS VE: sin ella el catálogo sale con
-     * candado. Auto-afiliarse era saltarse la decisión del tendero.
+     * Es el botón «Afiliar negocio» de la app publicada. Hubo un tiempo en que
+     * esto respondía 403 a todo el mundo y nadie se podía afiliar.
      */
     $this->postJson('/v1/businesses/affiliations/AfiliationUser', [
-        'user_id' => $yo->user_id, 'busines_id' => $ajeno,
+        'user_id' => $yo->user_id, 'busines_id' => $tienda,
+    ])->assertStatus(201);
+
+    expect(DB::table('business_user_affiliations')
+        ->where('user_id', $yo->user_id)->where('busines_id', $tienda)->count())->toBe(1);
+
+    $this->postJson('/v1/businesses/affiliations/DesafiliationUser', [
+        'user_id' => $yo->user_id, 'busines_id' => $tienda,
+    ])->assertOk();
+
+    expect(DB::table('business_user_affiliations')
+        ->where('busines_id', $tienda)->count())->toBe(0);
+});
+
+test('un comprador no puede afiliar ni desafiliar a otra persona en una tienda ajena', function () {
+    $yo = unComprador();
+    $otro = unComprador();
+    $ajeno = unNegocioAjeno();
+
+    DB::table('business_user_affiliations')->insert(['user_id' => $otro->user_id, 'busines_id' => $ajeno]);
+
+    Sanctum::actingAs($yo);
+
+    // Sacarle los clientes a la competencia, o meterle gente, sigue cerrado.
+    $this->postJson('/v1/businesses/affiliations/DesafiliationUser', [
+        'user_id' => $otro->user_id, 'busines_id' => $ajeno,
+    ])->assertStatus(403);
+
+    $tercero = unComprador();
+    $this->postJson('/v1/businesses/affiliations/AfiliationUser', [
+        'user_id' => $tercero->user_id, 'busines_id' => $ajeno,
     ])->assertStatus(403);
 
     expect(DB::table('business_user_affiliations')
-        ->where('busines_id', $ajeno)->count())->toBe(0);
+        ->where('busines_id', $ajeno)->pluck('user_id')->all())->toBe([$otro->user_id]);
 });
 
 test('un comprador no puede listar los clientes de una tienda ajena', function () {
