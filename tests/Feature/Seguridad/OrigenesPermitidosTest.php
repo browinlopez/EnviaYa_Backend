@@ -107,3 +107,54 @@ test('el resto de internet sigue fuera', function () {
         // Sin HTTPS tampoco: la sesión viajaría en claro.
         ->and((bool) preg_match($patron, 'http://aliados.enviaya.com.co'))->toBeFalse();
 });
+
+/**
+ * Si algún patrón del conjunto deja pasar el origen.
+ */
+function algunPatronAcepta(array $cors, string $origen): bool
+{
+    foreach ($cors['allowed_origins_patterns'] as $patron) {
+        if (preg_match($patron, $origen)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+test('vecipaya.com entra aunque el entorno siga diciendo enviaya.com.co', function () {
+    /*
+     * LA MUDANZA DE DOMINIO NO PUEDE DEPENDER DEL ORDEN.
+     *
+     * El 2026-09-14 la plataforma volvió a vecipaya.com —api., admin., aliados.
+     * y ws.—, con producción todavía en SITIO_URL=https://enviaya.com.co. Con
+     * el comodín atado solo a esa variable, el panel desplegado en
+     * admin.vecipaya.com habría recibido un CORS negado en cada petición.
+     */
+    $cors = corsCon(['SITIO_URL' => 'https://enviaya.com.co']);
+
+    foreach (['https://admin.vecipaya.com', 'https://aliados.vecipaya.com', 'https://vecipaya.com', 'https://www.vecipaya.com'] as $origen) {
+        expect(algunPatronAcepta($cors, $origen))->toBeTrue("{$origen} debería entrar");
+    }
+
+    // Y el dominio viejo sigue valiendo mientras dure la transición.
+    expect(algunPatronAcepta($cors, 'https://admin.enviaya.com.co'))->toBeTrue();
+});
+
+test('el dominio fijo no abre nada que se le parezca', function () {
+    /*
+     * Un patrón mal anclado deja pasar `vecipaya.com.otro.com` o
+     * `malvecipaya.com`, y con credenciales eso es la sesión del usuario en
+     * manos de un tercero.
+     */
+    $cors = corsCon(['SITIO_URL' => 'https://enviaya.com.co']);
+
+    foreach ([
+        'https://vecipaya.com.malicioso.example',
+        'https://malvecipaya.com',
+        'http://admin.vecipaya.com',
+        'https://vecipaya.co',
+    ] as $origen) {
+        expect(algunPatronAcepta($cors, $origen))->toBeFalse("{$origen} NO debería entrar");
+    }
+});

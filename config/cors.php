@@ -142,14 +142,34 @@ $patrones = array_values(array_filter(array_map(
     explode(',', (string) env('CORS_ALLOWED_ORIGIN_PATTERNS', '')),
 )));
 
-if ($patrones === []) {
-    $anfitrion = parse_url((string) env('SITIO_URL', 'https://enviaya.com.co'), PHP_URL_HOST)
-        ?: 'enviaya.com.co';
-
+$subdominiosDe = static fn (string $anfitrion): string =>
     // Sin comas: la lista de patrones se parte por comas, así que un
     // cuantificador como {2,3} rompería el patrón en dos mitades inválidas.
-    $patrones = ['#^https://([a-z0-9-]+\.)*' . preg_quote($anfitrion, '#') . '$#i'];
+    '#^https://([a-z0-9-]+\.)*' . preg_quote($anfitrion, '#') . '$#i';
+
+if ($patrones === []) {
+    $anfitrion = parse_url((string) env('SITIO_URL', 'https://vecipaya.com'), PHP_URL_HOST)
+        ?: 'vecipaya.com';
+
+    $patrones = [$subdominiosDe($anfitrion)];
 }
+
+/*
+ * vecipaya.com ES DOMINIO PROPIO SIEMPRE, diga lo que diga el entorno.
+ *
+ * La plataforma volvió a vecipaya.com el 2026-09-14 —api., admin., aliados. y
+ * ws.—, pero producción seguía con SITIO_URL en enviaya.com.co. Con el comodín
+ * atado solo a esa variable, en cuanto el panel y aliados se desplegaran en su
+ * dominio nuevo la API les negaría el CORS a todo: no falla al desplegar, falla
+ * al intentar entrar.
+ *
+ * Fijarlo acá hace que la mudanza funcione con el despliegue, sin depender de
+ * que alguien cambie variables antes y en el orden correcto. Y como se AÑADE,
+ * lo que diga SITIO_URL —enviaya.com.co mientras dure la transición— sigue
+ * valiendo también.
+ */
+$patrones[] = $subdominiosDe('vecipaya.com');
+$patrones = array_values(array_unique($patrones));
 
 return [
     'paths' => ['api/*', 'v1/*', 'broadcasting/auth', 'sanctum/csrf-cookie'],

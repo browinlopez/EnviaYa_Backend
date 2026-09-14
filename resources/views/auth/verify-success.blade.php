@@ -103,7 +103,7 @@
  <p>Tu correo electrónico fue verificado correctamente.<br>
  Ya puedes disfrutar de todas las funcionalidades de <strong>VeciPa’Ya</strong>.</p>
 
- <a href="https://api.enviaya.com.co/" class="button">
+ <a href="{{ config('services.sitio.url') }}" class="button">
  Ir a VeciPa’Ya
  </a>
 

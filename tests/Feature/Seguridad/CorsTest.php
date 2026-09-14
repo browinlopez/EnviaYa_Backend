@@ -26,16 +26,21 @@ function preflight(string $origen): \Illuminate\Testing\TestResponse
 }
 
 test('el patrón de fábrica cubre el dominio y todos sus subdominios', function () {
+    /*
+     * El dominio de fábrica es vecipaya.com desde el 2026-09-14: la
+     * plataforma volvió ahí —api., admin., aliados. y ws.— cuando
+     * enviaya.com.co dejó de apuntar al servidor.
+     */
     foreach ([
-        'https://enviaya.com.co',
-        'https://www.enviaya.com.co',
-        'https://admin.enviaya.com.co',
-        'https://panel.enviaya.com.co',
-        'https://api.enviaya.com.co',
-        'https://ws.enviaya.com.co',
+        'https://vecipaya.com',
+        'https://www.vecipaya.com',
+        'https://admin.vecipaya.com',
+        'https://aliados.vecipaya.com',
+        'https://api.vecipaya.com',
+        'https://ws.vecipaya.com',
         // Uno que todavía no existe: el patrón tiene que cubrirlo igual, que
         // es justo el punto de no mantener una lista a mano.
-        'https://tablero.enviaya.com.co',
+        'https://tablero.vecipaya.com',
     ] as $origen) {
         expect(preflight($origen)->headers->get('Access-Control-Allow-Origin'))
             ->toBe($origen, "debería autorizar {$origen}");
@@ -46,9 +51,9 @@ test('deja fuera cualquier otro dominio', function () {
     foreach ([
         'https://sitio-malicioso.example',
         // El truco clásico: el dominio propio como prefijo de otro.
-        'https://enviaya.com.co.malicioso.example',
+        'https://vecipaya.com.malicioso.example',
         // Y como sufijo.
-        'https://malicioso-enviaya.com.co',
+        'https://malicioso-vecipaya.com',
     ] as $origen) {
         expect(preflight($origen)->headers->get('Access-Control-Allow-Origin'))
             ->not->toBe($origen, "NO debería autorizar {$origen}");
@@ -58,12 +63,12 @@ test('deja fuera cualquier otro dominio', function () {
 test('no autoriza el mismo dominio sin cifrar', function () {
     // Con `supports_credentials`, aceptar http significaría que una sesión
     // viaje por un canal que cualquiera en la red puede leer.
-    expect(preflight('http://enviaya.com.co')->headers->get('Access-Control-Allow-Origin'))
-        ->not->toBe('http://enviaya.com.co');
+    expect(preflight('http://vecipaya.com')->headers->get('Access-Control-Allow-Origin'))
+        ->not->toBe('http://vecipaya.com');
 });
 
 test('el patrón sigue al dominio configurado en SITIO_URL', function () {
-    // No está clavado a enviaya.com.co: si la plataforma cambia de dominio,
+    // No está clavado a un dominio: si la plataforma cambia de dominio,
     // CORS lo sigue sin tocar código.
     Config::set('cors.allowed_origins_patterns', ['#^https://([a-z0-9-]+\.)*otrodominio\.com$#i']);
 
@@ -78,8 +83,8 @@ test('una lista explícita sigue mandando cuando se configura', function () {
     expect(preflight('https://solo-este.example')->headers->get('Access-Control-Allow-Origin'))
         ->toBe('https://solo-este.example');
 
-    expect(preflight('https://admin.enviaya.com.co')->headers->get('Access-Control-Allow-Origin'))
-        ->not->toBe('https://admin.enviaya.com.co');
+    expect(preflight('https://admin.vecipaya.com')->headers->get('Access-Control-Allow-Origin'))
+        ->not->toBe('https://admin.vecipaya.com');
 });
 
 test('cubre las rutas que los navegadores necesitan', function () {

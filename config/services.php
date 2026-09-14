@@ -143,22 +143,22 @@ return [
      * correos de aviso. Estaba escrito a mano en tres archivos apuntando a
      * vecipaya.com, que dejó de responder; el enlace de confirmación llevaba
      * a un dominio caído y a una ruta que la landing ni siquiera tenía.
+     *
+     * VUELVE A vecipaya.com el 2026-09-14. La plataforma se había mudado a
+     * enviaya.com.co cuando aquel sitio cayó, y ahora es enviaya.com.co el que
+     * dejó de apuntar al servidor (resuelve a 54.237.127.126, otra máquina).
+     * Los subdominios nuevos: api., admin., aliados. y ws. de vecipaya.com.
      */
     'sitio' => [
-        'url' => rtrim(env('SITIO_URL', 'https://enviaya.com.co'), '/'),
+        'url' => rtrim(env('SITIO_URL', 'https://vecipaya.com'), '/'),
 
         /*
-         * EL BUZÓN SIGUE EN vecipaya.com A PROPÓSITO. No es un descuido del
-         * barrido de dominios.
+         * EL BUZÓN, EN EL DOMINIO QUE TIENE CORREO.
          *
-         * El sitio web de vecipaya.com está caído y por eso se retiró de todo
-         * lo demás, pero el correo es independiente: ese dominio tiene MX
-         * activos (mx1 y mx2.hostinger.com) y enviaya.com.co NO tiene ninguno
-         * —comprobado el 2026-08-22 contra 8.8.8.8—. Publicar una dirección
-         * en el dominio nuevo la deja rebotando, y un correo que rebota es
-         * peor que uno viejo: quien escribe cree que llegó.
-         *
-         * Se cambia el día que enviaya.com.co tenga correo configurado.
+         * vecipaya.com tiene MX activos (mx1 y mx2.hostinger.com); ni
+         * enviaya.com.co ni vecipaya.com.co los tienen —el segundo ni siquiera
+         * existe—. Una dirección en un dominio sin MX rebota, y un correo que
+         * rebota es peor que uno viejo: quien escribe cree que llegó.
          */
         'correo'         => env('SITIO_CORREO', 'gerencia@vecipaya.com'),
         'correo_soporte' => env('SITIO_CORREO_SOPORTE', 'gerencia@vecipaya.com'),

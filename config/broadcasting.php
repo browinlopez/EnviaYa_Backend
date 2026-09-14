@@ -35,7 +35,7 @@ return [
             'secret' => env('REVERB_APP_SECRET'),
             'app_id' => env('REVERB_APP_ID'),
             'options' => [
-                'host' => env('REVERB_HOST', 'ws.api.enviaya.com.co'),
+                'host' => env('REVERB_HOST', 'ws.vecipaya.com'),
                 'port' => env('REVERB_PORT', 443),
                 'scheme' => env('REVERB_SCHEME', 'https'),
                 'useTLS' => env('REVERB_SCHEME', 'https') === 'https', // esto fuerza TLS si el esquema es https
