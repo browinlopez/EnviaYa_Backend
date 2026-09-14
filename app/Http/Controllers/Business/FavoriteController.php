@@ -125,6 +125,9 @@ class FavoriteController extends Controller
                 'delivery_fee'  => $this->distancias->paraDistancia($km),
                 'in_range'      => $this->distancias->reparteHasta($km),
                 'name'          => $business->name,
+                // La tarjeta la pinta debajo del nombre; sin ella decía «Sin
+                // descripción» de una tienda que sí la tiene.
+                'description'   => $business->description,
                 'phone'         => $business->phone,
                 'address'       => $business->address,
                 'qualification' => (float) $business->qualification,
