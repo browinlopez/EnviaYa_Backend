@@ -48,7 +48,9 @@ it('solo se ofrecen los medios que el sistema sabe cobrar', function () {
         ->values()
         ->all();
 
-    expect($ofrecidos)->toBe([1, 2, 5]);
+    // 7 es el crédito de la tienda: no pasa por pasarela ni por la puerta,
+    // pero el sistema sí sabe cobrarlo (lo descuenta en la liquidación).
+    expect($ofrecidos)->toBe([1, 2, 5, 7]);
 });
 
 it('los que no se cobran NO aparecen, aunque esten activos en la tabla', function () {
@@ -81,8 +83,8 @@ it('la lista de lo que se cobra vive en UN solo sitio', function () {
         ->and($armado)->not->toContain('in_array($metodoId, [2, 5])');
 });
 
-it('efectivo y pasarela juntos son lo que se ofrece', function () {
-    // Que la lista compuesta no se desincronice de sus dos partes.
+it('efectivo, pasarela y crédito de la tienda juntos son lo que se ofrece', function () {
+    // Que la lista compuesta no se desincronice de sus partes.
     expect(PagoEnLinea::metodosQueSeCobran())
-        ->toBe(array_merge(PagoEnLinea::CONTRA_ENTREGA, PagoEnLinea::CON_PASARELA));
+        ->toBe(array_merge(PagoEnLinea::CONTRA_ENTREGA, PagoEnLinea::CON_PASARELA, PagoEnLinea::CREDITO_DE_TIENDA));
 });

@@ -167,6 +167,13 @@ class NegociosApiController extends Controller
             // no deje un punto en mitad del océano.
             'latitude'        => 'sometimes|nullable|numeric|between:-90,90',
             'longitude'       => 'sometimes|nullable|numeric|between:-180,180',
+            /*
+             * Tope de crédito: lo que la tienda puede fiar entre todos sus
+             * clientes y la deuda que puede arrastrar con la plataforma. Solo
+             * lo pone el equipo; el panel del tendero no lo recibe. Vacío: la
+             * tienda no vende a crédito.
+             */
+            'credit_debt_cap' => 'sometimes|nullable|numeric|min:0|max:999999999',
         ];
     }
 

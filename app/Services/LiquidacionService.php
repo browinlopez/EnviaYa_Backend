@@ -75,6 +75,8 @@ class LiquidacionService
                     // `add_dinero_congelado_to_orderssales`.
                     'o.platform_fee',
                     'o.cash_due',
+                    'o.total',
+                    'o.methods_id',
                 ]);
 
             if ($pedidos->isEmpty()) {
@@ -95,11 +97,11 @@ class LiquidacionService
 
             $totales = [
                 'gross' => 0.0, 'delivery' => 0.0, 'discounts' => 0.0,
-                'net' => 0.0, 'retenido' => 0.0,
+                'net' => 0.0, 'retenido' => 0.0, 'credito' => 0.0,
             ];
 
             foreach ($pedidos as $p) {
-                [$bruto, $domicilio, $descuento, $neto, $retenido] = $this->repartir($tipo, $p);
+                [$bruto, $domicilio, $descuento, $neto, $retenido, $credito] = $this->repartir($tipo, $p);
 
                 SettlementItem::create([
                     'settlement_id' => $liq->id,
@@ -107,8 +109,10 @@ class LiquidacionService
                     'gross'         => $bruto,
                     'delivery_fee'  => $domicilio,
                     'discount'      => $descuento,
+                    'credit'        => $credito,
                     'net'           => $neto,
                 ]);
+                $totales['credito']   += $credito;
 
                 $totales['gross']     += $bruto;
                 $totales['delivery']  += $domicilio;
@@ -117,7 +121,27 @@ class LiquidacionService
                 $totales['retenido']  += $retenido;
             }
 
+            /*
+             * EL ROJO DEL CORTE ANTERIOR ENTRA A ESTE.
+             *
+             * Un día con más ventas a crédito que venta cobrada deja a la tienda
+             * debiéndole a la plataforma. No se le cobra aparte: se descuenta
+             * del siguiente corte, y se anota de cuál vino para que no se
+             * descuente dos veces. Anular este corte libera ese rojo para el
+             * próximo, porque la búsqueda ignora los cortes anulados.
+             */
+            $arrastre = null;
+            if ($tipo === 'business') {
+                $arrastre = app(CreditoDeTienda::class)->corteEnRojoPendiente($destinatarioId);
+                if ($arrastre && $arrastre->id === $liq->id) {
+                    $arrastre = null;
+                }
+            }
+            $arrastrado = $arrastre ? (float) $arrastre->net_payable : 0.0;
             $liq->update([
+                'credit_sales'    => round($totales['credito'], 2),
+                'carried_in'      => round($arrastrado, 2),
+                'carried_from_id' => $arrastre?->id,
                 'orders_count'  => $pedidos->count(),
                 'gross'         => round($totales['gross'], 2),
                 'delivery_fees' => round($totales['delivery'], 2),
@@ -131,7 +155,7 @@ class LiquidacionService
                  * significaría nada.
                  */
                 'platform_fee'  => round($totales['retenido'], 2),
-                'net_payable'   => round($totales['net'], 2),
+                'net_payable'   => round($totales['net'] + $arrastrado, 2),
             ]);
 
             return $liq->fresh();
@@ -151,11 +175,20 @@ class LiquidacionService
      * un pago: es una deuda. Recauda el total del pedido y gana una fracción
      * del domicilio, así que lo normal es que deba.
      *
-     * @return array{0: float, 1: float, 2: float, 3: float, 4: float}
-     *         bruto, domicilio, descuento, neto, retenido
+     * CRÉDITO DE LA TIENDA: el pedido lo cobra la tienda directamente al
+     * comprador —productos Y domicilio—, así que ese total se le DESCUENTA.
+     * Ejemplo: productos 10.000, domicilio 2.000, comisión 300 → la tienda
+     * gana 9.700 pero recibe 12.000 del cliente: el pedido le resta 2.300 al
+     * corte. Por eso el neto del negocio YA NO se topa en cero.
+     *
+     * @return array{0: float, 1: float, 2: float, 3: float, 4: float, 5: float}
+     *         bruto, domicilio, descuento, neto, retenido, crédito
      */
     private function repartir(string $tipo, object $p): array
     {
+        $credito   = (int) ($p->methods_id ?? 0) === CreditoDeTienda::METODO
+            ? (float) ($p->total ?? 0)
+            : 0.0;
         $subtotal  = (float) ($p->subtotal ?? 0);
         $domicilio = (float) ($p->domicilio ?? 0);
         $descuento = (float) ($p->discount ?? 0);
@@ -164,14 +197,14 @@ class LiquidacionService
         $efectivo  = (float) ($p->cash_due ?? 0);
 
         if ($tipo === 'business') {
-            $neto = max(0, $subtotal - $descuento - $retencion);
+            $neto = $subtotal - $descuento - $retencion - $credito;
 
-            return [$subtotal, 0.0, $descuento, $neto, $retencion];
+            return [$subtotal, 0.0, $descuento, $neto, $retencion, $credito];
         }
 
         // Sin `max(0, ...)` a propósito: si debe más de lo que ganó, el saldo
         // tiene que poder salir en rojo. Taparlo con un cero sería perder la
         // deuda.
-        return [0.0, $domicilio, 0.0, $comision - $efectivo, 0.0];
+        return [0.0, $domicilio, 0.0, $comision - $efectivo, 0.0, 0.0];
     }
 }

@@ -116,6 +116,13 @@ class OrdersSales extends Audit
      */
     public const ESPERANDO_PAGO = 'pending_online';
 
+    /*
+     * Pagado con el crédito de la tienda: nadie cobra en la puerta, la tienda
+     * le cobra al comprador por fuera. NO está en SIN_PAGO: es un pedido de
+     * verdad y entra a la liquidación, donde se le descuenta a la tienda.
+     */
+    public const A_CREDITO = 'store_credit';
+
     /** El pago en línea se intentó y la pasarela lo rechazó. */
     public const PAGO_RECHAZADO = 'rejected';
 

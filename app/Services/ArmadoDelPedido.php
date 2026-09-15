@@ -103,7 +103,7 @@ class ArmadoDelPedido
              */
             'payment_state' => in_array($metodoId, PagoEnLinea::CON_PASARELA)
                 ? OrdersSales::ESPERANDO_PAGO
-                : 'pending_cash'
+                : ($metodoId === CreditoDeTienda::METODO ? OrdersSales::A_CREDITO : 'pending_cash')
         ];
 
         /*

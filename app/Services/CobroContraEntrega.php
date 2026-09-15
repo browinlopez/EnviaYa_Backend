@@ -33,6 +33,24 @@ class CobroContraEntrega
      */
     public function registrar(OrdersSales $order, ?int $porQuien = null): void
     {
+        /*
+         * A CRÉDITO DE LA TIENDA: se entrega sin cobrar nada.
+         *
+         * El domiciliario no recibe plata y no debe nada; la tienda le cobra al
+         * comprador por fuera, y ese total se le descuenta en la liquidación.
+         *
+         * NO se crea un `Payment`: esa tabla es la caja de la plataforma, y el
+         * panel suma todo lo que no es efectivo como «entró por pasarela». Un
+         * pedido a crédito aparecería como plata recaudada que nunca llegó.
+         * Basta con marcar el pedido: ya está saldado entre tienda y comprador.
+         */
+        if ((int) $order->methods_id === CreditoDeTienda::METODO) {
+            $order->payment_state = 'paid';
+            $order->save();
+
+            return;
+        }
+
         if ((int) $order->methods_id !== self::EFECTIVO) {
             return;
         }

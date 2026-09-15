@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Services\Ajustes;
 use App\Services\ArmadoDelPedido;
 use App\Services\CobroContraEntrega;
+use App\Services\CreditoDeTienda;
 use App\Services\EconomiaDelPedido;
 use App\Services\PagoEnLinea;
 use App\Services\ReglasDeDespacho;
@@ -297,6 +298,16 @@ class OrderController extends Controller
                 (int) $request->user_id,
             );
 
+            /*
+             * CRÉDITO DE LA TIENDA: se gasta acá, dentro de la misma
+             * transacción. Si no alcanza —o la tienda no puede fiar hoy—
+             * `consumir` lanza y el pedido se deshace entero: ni pedido, ni
+             * existencias descontadas, ni cupón usado.
+             */
+            if ((int) $request->methods_id === CreditoDeTienda::METODO) {
+                app(CreditoDeTienda::class)->consumir($order, (int) $request->user_id);
+            }
+
             /* ========= PAGO ONLINE ========= */
 
             $intent = null;
@@ -427,11 +438,14 @@ class OrderController extends Controller
          * misma transacción: un pedido cancelado que siguiera restándole al
          * inventario dejaría la tienda creyendo que vendió lo que no vendió.
          */
-        DB::transaction(function () use ($order) {
+        DB::transaction(function () use ($order, $usuario) {
             $order->state = 5;
             $order->save();
 
             app(\App\Services\ExistenciasDelPedido::class)->devolver($order);
+
+            // Y si era a crédito, el cupo vuelve a quedar disponible.
+            app(CreditoDeTienda::class)->reversar($order, $usuario->user_id);
         });
 
         // Si lo canceló el propio comprador ya lo sabe, pero el aviso deja

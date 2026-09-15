@@ -24,6 +24,7 @@ class SettlementItem extends Model
         'gross',
         'delivery_fee',
         'discount',
+        'credit',
         'net',
     ];
 

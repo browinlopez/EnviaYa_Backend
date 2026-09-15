@@ -62,6 +62,8 @@ use App\Http\Controllers\Conjunto\ResumenDelConjuntoController;
 use App\Http\Controllers\Conjunto\VisitantesController;
 use App\Http\Controllers\Negocio\CargaDeCatalogoController;
 use App\Http\Controllers\Negocio\CatalogoController;
+use App\Http\Controllers\Negocio\CreditosDelNegocioController;
+use App\Http\Controllers\Buyer\MiCreditoController;
 use App\Http\Controllers\Negocio\MiNegocioController;
 use App\Http\Controllers\Negocio\ProductosDelNegocioController;
 use App\Http\Controllers\Negocio\PromocionesController;
@@ -427,6 +429,10 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         });
     });
 
+    // El crédito que las tiendas le dieron a quien pregunta.
+    Route::get('creditos', [MiCreditoController::class, 'index']);
+    Route::get('creditos/tienda/{negocioId}', [MiCreditoController::class, 'enTienda'])->whereNumber('negocioId');
+
     Route::prefix('favorites')->group(function () {
         Route::post('toggle', [FavoriteController::class, 'toggleFavorite']);
         Route::post('index', [FavoriteController::class, 'myFavorites']);
@@ -562,6 +568,15 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::delete('productos/{id}', [ProductosDelNegocioController::class, 'quitar']);
 
         Route::get('domiciliarios', [DomiciliaryController::class, 'listDomiciliariesByBusiness']);
+
+        /*
+         * Crédito de la tienda: cupos rotativos para sus clientes afiliados.
+         * Ver `CreditoDeTienda`.
+         */
+        Route::get('creditos', [CreditosDelNegocioController::class, 'index']);
+        Route::put('creditos/{userId}', [CreditosDelNegocioController::class, 'asignar'])->whereNumber('userId');
+        Route::post('creditos/{userId}/abonos', [CreditosDelNegocioController::class, 'abonar'])->whereNumber('userId');
+        Route::get('creditos/{userId}/movimientos', [CreditosDelNegocioController::class, 'movimientos'])->whereNumber('userId');
 
         Route::get('resenas', [ResenasDeNegocioController::class, 'listReviewsByBusiness']);
 

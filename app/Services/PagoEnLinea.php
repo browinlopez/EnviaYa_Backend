@@ -32,10 +32,13 @@ class PagoEnLinea
      */
     public const CONTRA_ENTREGA = [1];
 
+    /** El crédito que da la propia tienda. Ver `CreditoDeTienda`. */
+    public const CREDITO_DE_TIENDA = [CreditoDeTienda::METODO];
+
     /** Los que el sistema sabe cobrar de verdad. */
     public static function metodosQueSeCobran(): array
     {
-        return array_merge(self::CONTRA_ENTREGA, self::CON_PASARELA);
+        return array_merge(self::CONTRA_ENTREGA, self::CON_PASARELA, self::CREDITO_DE_TIENDA);
     }
 
     public function __construct(private readonly PaymentController $pagos)

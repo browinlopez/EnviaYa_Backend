@@ -50,6 +50,12 @@ class Business extends Audit
          * el tope, la pantalla decía «actualizado» y la columna seguía nula.
          */
         'max_courier_cash',
+        /*
+         * Tope de crédito de la tienda: cuánto puede fiar entre todos sus
+         * clientes y cuánta deuda puede arrastrar con la plataforma. Lo pone
+         * el equipo, nunca el tendero. Ver `CreditoDeTienda`.
+         */
+        'credit_debt_cap',
     ];
 
     public function owners()
