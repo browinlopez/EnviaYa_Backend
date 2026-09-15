@@ -69,6 +69,24 @@ class ChatController extends Controller
             $sender = User::findOrFail($request->user_id);
             $recipient = User::findOrFail($request->recipient_id);
 
+            /*
+             * DOS MENSAJES A LA VEZ CREABAN DOS CHATS.
+             *
+             * Buscar y crear no son atómicos: dos envíos casi simultáneos
+             * —«Buenos días» dos veces, un toque doble— no encontraban el chat
+             * y lo creaban cada uno. En producción quedaron dos conversaciones
+             * con la misma persona, a un segundo de diferencia, y el mensaje
+             * partido entre las dos.
+             *
+             * Bloquear las filas de ambos usuarios pone en fila a quien llegue
+             * segundo: espera a que el primero confirme y ya encuentra el chat.
+             * Se bloquean en el mismo orden siempre para no cruzarse.
+             */
+            User::whereIn('user_id', collect([$sender->user_id, $recipient->user_id])->sort()->values())
+                ->orderBy('user_id')
+                ->lockForUpdate()
+                ->get();
+
             // Revisar si ya existe un chat privado entre ambos
             $chat = Chat::where('type', 'private')
                 ->whereHas('participants', fn($q) => $q->where('user_id', $sender->user_id))
