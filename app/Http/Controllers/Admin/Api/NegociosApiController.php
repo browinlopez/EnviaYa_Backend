@@ -50,6 +50,9 @@ class NegociosApiController extends Controller
                     'b.busines_id', 'b.name', 'b.phone', 'b.address', 'b.qualification',
                     'b.razonSocial_DCD', 'b.NIT', 'b.logo', 'b.description',
                     'b.latitude', 'b.longitude', 'b.type', 'b.state',
+                    // El editor se siembra con esta fila: sin el tope, guardar
+                    // cualquier otro cambio lo mandaba vacío y lo borraba.
+                    'b.credit_debt_cap',
                     'b.municipality_id', 'm.name as municipality_name',
                     'dp.id as department_id', 'dp.name as department_name',
                     'cb.name as type_name',
