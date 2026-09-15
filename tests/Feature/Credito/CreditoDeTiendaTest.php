@@ -320,3 +320,28 @@ it('un comprador no puede fijar cupos: las rutas son de la tienda', function () 
 
     expect(DB::table('store_credits')->count())->toBe(0);
 });
+
+it('la ganancia del domiciliario cuenta también lo que entregó a crédito', function () {
+    /*
+     * La ganancia se sumaba desde `payments`, la caja de la plataforma, y un
+     * pedido a crédito no deja fila ahí. Visto en el emulador: dos entregas
+     * de $1.500 y la app decía $1.500.
+     */
+    $e = credEscenario();
+    Rol::firstOrCreate(['rol_id' => 3], ['name' => 'domiciliario', 'guard_name' => 'web']);
+    $repartidor = User::factory()->create(['rol' => 3]);
+    $domiId = DB::table('domiciliary')->insertGetId(['user_id' => $repartidor->user_id, 'available' => 1, 'qualification' => 0, 'state' => 1], 'domiciliary_id');
+
+    foreach ([1, CreditoDeTienda::METODO] as $metodo) {
+        $id = credEntregado($e, $metodo, 10000, 2000, now()->toDateString());
+        DB::table('orderssales')->where('orderSales_id', $id)->update([
+            'domiciliary_id' => $domiId, 'domiciliary_fee' => 1500, 'delivery_date' => now(),
+        ]);
+    }
+
+    Sanctum::actingAs($repartidor);
+    $r = $this->postJson('/v1/domiciliaries/incomeDomiciliary', ['domiciliary_id' => $domiId])->assertOk();
+
+    expect((float) $r->json('total_income'))->toBe(3000.0)
+        ->and((float) $r->json('weekly_current_total'))->toBe(3000.0);
+});

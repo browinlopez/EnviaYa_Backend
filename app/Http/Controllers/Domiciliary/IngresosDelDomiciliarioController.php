@@ -32,53 +32,37 @@ class IngresosDelDomiciliarioController extends Controller
             1 => 'Domingo',
         ];
 
-        /* =========================
-       SEMANA ACTUAL
-    ========================== */
-        $weekStart = now()->startOfWeek();
-        $weekEnd = now()->endOfWeek();
+        /*
+         * LO GANADO SALE DE LOS PEDIDOS ENTREGADOS, NO DE LA CAJA.
+         *
+         * Se sumaba `payments.domiciliary_fee`, y `payments` es la caja de la
+         * plataforma: un pedido pagado con el crédito de la tienda no deja fila
+         * ahí —esa plata nunca entra— y el domiciliario lo entregaba sin que
+         * contara en su ganancia. Lo que gana es su parte de cada pedido que
+         * ENTREGÓ, venga de donde venga el pago.
+         *
+         * Se agrupa por día en PHP y no con DAYOFWEEK: así la consulta es la
+         * misma en MySQL y en la base de pruebas.
+         */
+        $porDia = function (Carbon $desde, Carbon $hasta) use ($domiciliary_id) {
+            $filas = DB::table('orderssales')
+                ->where('domiciliary_id', $domiciliary_id)
+                ->where('state', 4)
+                ->whereBetween('delivery_date', [$desde, $hasta])
+                ->get(['delivery_date', 'domiciliary_fee']);
 
-        $currentWeek = Payment::select(
-            DB::raw('DAYOFWEEK(payment_date) as weekday'),
-            DB::raw('SUM(domiciliary_fee) as total')
-        )
-            ->whereHas(
-                'order',
-                fn($q) =>
-                $q->where('domiciliary_id', $domiciliary_id)
-            )
-            // Solo pagos aprobados: Bold registra una fila por cada intento
-            // de cobro, y contarlos todos multiplicaría el domicilio de una
-            // misma entrega por cada reintento del cliente.
-            ->where('payment_status', 1)
-            ->whereBetween('payment_date', [$weekStart, $weekEnd])
-            ->groupBy('weekday')
-            ->get()
-            ->keyBy('weekday');
+            $dias = [];
+            foreach ($filas as $f) {
+                // DAYOFWEEK de MySQL: 1 = domingo … 7 = sábado.
+                $dia = Carbon::parse($f->delivery_date)->dayOfWeek + 1;
+                $dias[$dia] = ($dias[$dia] ?? 0) + (float) $f->domiciliary_fee;
+            }
 
-        /* =========================
-       SEMANA ANTERIOR
-    ========================== */
-        $prevWeekStart = now()->subWeek()->startOfWeek();
-        $prevWeekEnd = now()->subWeek()->endOfWeek();
+            return collect($dias)->map(fn ($total) => (object) ['total' => $total]);
+        };
 
-        $previousWeek = Payment::select(
-            DB::raw('DAYOFWEEK(payment_date) as weekday'),
-            DB::raw('SUM(domiciliary_fee) as total')
-        )
-            ->whereHas(
-                'order',
-                fn($q) =>
-                $q->where('domiciliary_id', $domiciliary_id)
-            )
-            // Solo pagos aprobados: Bold registra una fila por cada intento
-            // de cobro, y contarlos todos multiplicaría el domicilio de una
-            // misma entrega por cada reintento del cliente.
-            ->where('payment_status', 1)
-            ->whereBetween('payment_date', [$prevWeekStart, $prevWeekEnd])
-            ->groupBy('weekday')
-            ->get()
-            ->keyBy('weekday');
+        $currentWeek  = $porDia(now()->startOfWeek(), now()->endOfWeek());
+        $previousWeek = $porDia(now()->subWeek()->startOfWeek(), now()->subWeek()->endOfWeek());
 
         /* =========================
        MAPEO DE DÍAS
@@ -112,12 +96,9 @@ class IngresosDelDomiciliarioController extends Controller
         /* =========================
        TOTAL HISTÓRICO
     ========================== */
-        $totalIncome = Payment::whereHas(
-            'order',
-            fn($q) =>
-            $q->where('domiciliary_id', $domiciliary_id)
-        )
-            ->where('payment_status', 1)
+        $totalIncome = DB::table('orderssales')
+            ->where('domiciliary_id', $domiciliary_id)
+            ->where('state', 4)
             ->sum('domiciliary_fee');
 
         return response()->json([
