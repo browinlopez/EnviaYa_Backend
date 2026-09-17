@@ -1,5 +1,7 @@
 <?php
 
+use App\Support\DominioPropio;
+
 return [
 
     /*
@@ -52,7 +54,9 @@ return [
     |
     */
 
-    'url' => env('APP_URL', 'https://api.vecipaya.com'),
+    // DominioPropio: si el entorno sigue con el dominio anterior, se traduce
+    // al vigente. Sin esto el enlace del correo de verificación no abría.
+    'url' => DominioPropio::url(env('APP_URL'), 'https://api.vecipaya.com'),
 
     /*
     |--------------------------------------------------------------------------
@@ -68,7 +72,10 @@ return [
     | resumen diario llevaban al backend en vez de a la pantalla.
     |
     */
-    'panel_url' => env('PANEL_URL', env('APP_URL')),
+    'panel_url' => DominioPropio::url(
+        env('PANEL_URL'),
+        DominioPropio::url(env('APP_URL'), 'https://api.vecipaya.com'),
+    ),
 
     /*
     |--------------------------------------------------------------------------

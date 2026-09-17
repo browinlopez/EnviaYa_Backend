@@ -1,5 +1,7 @@
 <?php
 
+use App\Support\DominioPropio;
+
 return [
 
     /*
@@ -150,7 +152,7 @@ return [
      * Los subdominios nuevos: api., admin., aliados. y ws. de vecipaya.com.
      */
     'sitio' => [
-        'url' => rtrim(env('SITIO_URL', 'https://vecipaya.com'), '/'),
+        'url' => rtrim(DominioPropio::url(env('SITIO_URL'), 'https://vecipaya.com'), '/'),
 
         /*
          * EL BUZÓN, EN EL DOMINIO QUE TIENE CORREO.
