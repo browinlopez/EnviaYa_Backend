@@ -10,7 +10,7 @@
  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
  background-color: #f3f4f6;
  margin: 0;
- padding: 0;
+ padding: 0 16px;
  }
 
  .container {
@@ -85,6 +85,41 @@
  background-color: #1e40af;
  }
 
+ .reenviar {
+ display: flex;
+ flex-direction: column;
+ gap: 10px;
+ text-align: left;
+ margin-bottom: 10px;
+ }
+
+ .reenviar label {
+ font-size: 14px;
+ color: #374151;
+ font-weight: 600;
+ }
+
+ .reenviar input {
+ font: inherit;
+ font-size: 16px;
+ padding: 11px 12px;
+ border: 1px solid #d1d5db;
+ border-radius: 8px;
+ }
+
+ .reenviar input:focus {
+ outline: 2px solid #2563eb;
+ outline-offset: 1px;
+ }
+
+ .reenviar .button {
+ border: 0;
+ cursor: pointer;
+ font: inherit;
+ font-weight: 600;
+ text-align: center;
+ }
+
  .secondary {
  display: block;
  margin-top: 15px;
@@ -117,7 +152,17 @@
 
  <p>{{ $message ?? 'El enlace de verificación no es válido o ha expirado.' }}</p>
 
- <a href="{{ config('services.sitio.url') }}" class="button">
+ {{-- Pedir otro enlace aquí mismo. Antes la única salida era volver al sitio
+      y adivinar que había que ir a la app e intentar entrar. --}}
+ <form method="POST" action="{{ route('verify.email.reenviar') }}" class="reenviar">
+ @csrf
+ <label for="email">Escribe tu correo y te enviamos un enlace nuevo</label>
+ <input id="email" name="email" type="email" required autocomplete="email"
+ placeholder="tucorreo@ejemplo.com" value="{{ old('email', $email ?? '') }}">
+ <button type="submit" class="button">Enviarme un enlace nuevo</button>
+ </form>
+
+ <a href="{{ config('services.sitio.url') }}" class="secondary">
  Volver a VeciPa’Ya
  </a>
 

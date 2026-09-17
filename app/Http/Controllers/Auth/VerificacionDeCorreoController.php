@@ -109,17 +109,7 @@ class VerificacionDeCorreoController extends Controller
             ], 200);
         }
 
-        // ⏳ Generar nuevo token si no existe o expiró
-        if (
-            !$user->email_verification_token ||
-            !$user->email_verification_expires_at ||
-            $user->email_verification_expires_at->isPast()
-        ) {
-            $user->update([
-                'email_verification_token' => Str::random(60),
-                'email_verification_expires_at' => now()->addMinutes(60),
-            ]);
-        }
+        $this->renovarEnlaceSiHaceFalta($user);
 
         /*
          * EL MISMO CUIDADO QUE EN EL REGISTRO.
@@ -156,29 +146,64 @@ class VerificacionDeCorreoController extends Controller
         ], 200);
     }
 
-    public function resendVerificationEmailWeb(Request $request)
+    /**
+     * Pedir un enlace nuevo desde el navegador.
+     *
+     * La página de «no pudimos verificar tu correo» solo ofrecía volver al
+     * sitio o escribir a soporte: quien abría un enlace vencido o roto —los
+     * que salieron con el dominio viejo, por ejemplo— tenía que adivinar que
+     * debía ir a la app, intentar entrar y esperar a que le ofreciera
+     * reenviar. Ahora lo pide ahí mismo, con su correo.
+     *
+     * La respuesta es la misma exista o no la cuenta, y esté o no verificada:
+     * una página que dijera «ese correo no está registrado» serviría para
+     * averiguar quién tiene cuenta probando direcciones.
+     */
+    public function reenviarDesdeLaWeb(Request $request)
     {
-        $request->validate(['email' => 'required|email']);
+        $datos = $request->validate(['email' => 'required|email|max:255']);
 
-        $user = \App\Models\User::where('email', $request->email)->first();
-        if (!$user) {
-            return back()->with('status', 'Si el correo existe, se enviará un enlace de verificación.');
+        $user = User::where('email', mb_strtolower(trim($datos['email'])))->first();
+
+        if ($user && !$user->email_verified_at) {
+            $this->renovarEnlaceSiHaceFalta($user);
+
+            try {
+                $this->sendVerificationEmail($user);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('No se pudo reenviar la verificacion desde la web', [
+                    'email' => $user->email,
+                    'error' => $e->getMessage(),
+                ]);
+
+                return view('auth.verify-error', [
+                    'message' => 'No pudimos enviar el correo en este momento. Inténtalo en unos minutos.',
+                    'email'   => $user->email,
+                ]);
+            }
         }
 
-        if ($user->email_verified_at) {
-            return redirect()->route('login')->with('status', 'Tu correo ya está verificado.');
+        return view('auth.verify-reenviado', ['email' => $datos['email']]);
+    }
+
+    /**
+     * Un enlace vigente se reutiliza y uno vencido se cambia por otro.
+     *
+     * Reutilizarlo es a propósito: si alguien pide dos correos seguidos, el
+     * primero que abra tiene que servirle, no decirle «este enlace no es
+     * válido» porque el segundo lo reemplazó.
+     */
+    private function renovarEnlaceSiHaceFalta(User $user): void
+    {
+        if (
+            !$user->email_verification_token ||
+            !$user->email_verification_expires_at ||
+            $user->email_verification_expires_at->isPast()
+        ) {
+            $user->update([
+                'email_verification_token' => Str::random(60),
+                'email_verification_expires_at' => now()->addMinutes(60),
+            ]);
         }
-
-        // Generar nuevo token
-        $user->update([
-            'email_verification_token' => \Illuminate\Support\Str::random(60),
-            'email_verification_expires_at' => now()->addMinutes(60),
-        ]);
-
-        // Enviar correo
-        $actionUrl = config('app.url') . '/verify-email?token=' . $user->email_verification_token;
-        \Illuminate\Support\Facades\Mail::to($user->email)->send(new \App\Mail\VerifyEmailCustomMail($actionUrl));
-
-        return back()->with('status', 'Se ha enviado un nuevo correo de verificación.');
     }
 }

@@ -61,6 +61,12 @@ Route::get('/', function () {
 Route::get('/verify-email', [VerificacionDeCorreoController::class, 'verify'])
     ->name('verify.email');
 
+// Pedir otro enlace desde la misma página de error, sin tener que ir a la app.
+// Pocos intentos y ventana larga, igual que el reenvío del API: manda correo.
+Route::post('/verify-email/reenviar', [VerificacionDeCorreoController::class, 'reenviarDesdeLaWeb'])
+    ->middleware('throttle:5,10')
+    ->name('verify.email.reenviar');
+
 /*
  * `dashboard` sobrevive solo como señal, sin vista ni controlador.
  *
