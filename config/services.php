@@ -145,7 +145,7 @@ return [
      * a un dominio caído y a una ruta que la landing ni siquiera tenía.
      *
      * VUELVE A vecipaya.com el 2026-09-14. La plataforma se había mudado a
-     * enviaya.com.co cuando aquel sitio cayó, y ahora es enviaya.com.co el que
+     * otro dominio cuando aquel sitio cayó, y ahora es ese dominio el que
      * dejó de apuntar al servidor (resuelve a 54.237.127.126, otra máquina).
      * Los subdominios nuevos: api., admin., aliados. y ws. de vecipaya.com.
      */
@@ -155,8 +155,8 @@ return [
         /*
          * EL BUZÓN, EN EL DOMINIO QUE TIENE CORREO.
          *
-         * vecipaya.com tiene MX activos (mx1 y mx2.hostinger.com); ni
-         * enviaya.com.co ni vecipaya.com.co los tienen —el segundo ni siquiera
+         * vecipaya.com tiene MX activos (mx1 y mx2.hostinger.com); ni el
+         * dominio anterior ni vecipaya.com.co los tienen —el segundo ni siquiera
          * existe—. Una dirección en un dominio sin MX rebota, y un correo que
          * rebota es peor que uno viejo: quien escribe cree que llegó.
          */

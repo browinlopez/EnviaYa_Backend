@@ -4,8 +4,8 @@
  * Qué orígenes pueden llamar a la API desde un navegador.
  *
  * Esto se prueba porque ya falló en producción y de la peor manera: el panel
- * se publicó en `admin.enviaya.com.co` mientras `CORS_ALLOWED_ORIGINS` decía
- * `https://panel.enviaya.com.co`. La API respondía 200 a todo —comprobado con
+ * se publicó en `admin.` mientras `CORS_ALLOWED_ORIGINS` decía
+ * `https://panel.`. La API respondía 200 a todo —comprobado con
  * curl— pero devolvía siempre ese `Access-Control-Allow-Origin`, así que el
  * navegador bloqueaba cada petición del panel. No falla al desplegar ni al
  * arrancar: falla al intentar entrar, cuando ya está publicado.
@@ -29,7 +29,7 @@ test('el patrón de fábrica cubre el dominio y todos sus subdominios', function
     /*
      * El dominio de fábrica es vecipaya.com desde el 2026-09-14: la
      * plataforma volvió ahí —api., admin., aliados. y ws.— cuando
-     * enviaya.com.co dejó de apuntar al servidor.
+     * el dominio anterior dejó de apuntar al servidor.
      */
     foreach ([
         'https://vecipaya.com',

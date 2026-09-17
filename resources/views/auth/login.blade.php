@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login EnviaYA</title>
+    <title>Login VeciPa'Ya</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
     <style>
         * {
@@ -625,7 +625,7 @@
         <div class="login-card">
             <div class="login-header">
                 <div class="logo">🚚</div>
-                <h1 class="login-title">Bienvenido a EnviaYA</h1>
+                <h1 class="login-title">Bienvenido a VeciPa'Ya</h1>
                 <p class="login-subtitle">Ingresa a tu cuenta para continuar</p>
             </div>
 

@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
  *
  * Visitas, personal de servicio, contratistas, mudanzas, y los domicilios de
  * otras plataformas. Todo eso pasa por la portería del conjunto y hasta ahora
- * no dejaba rastro: el panel sólo sabía de domiciliarios de EnviaYa, que son
+ * no dejaba rastro: el panel sólo sabía de domiciliarios de VeciPa'Ya, que son
  * una fracción del movimiento real del edificio.
  *
  * NO SE CREA NINGUNA CUENTA. Quien viene hoy a ver a su hermana no es —ni

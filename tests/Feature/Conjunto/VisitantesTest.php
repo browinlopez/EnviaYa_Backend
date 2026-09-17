@@ -8,11 +8,11 @@ use Laravel\Sanctum\Sanctum;
  * Control de acceso de quien NO es usuario de la plataforma, y la ficha del
  * conjunto.
  *
- * La portería dejó de ser sólo de domiciliarios de EnviaYa: por la puerta de un
+ * La portería dejó de ser sólo de domiciliarios de VeciPa'Ya: por la puerta de un
  * conjunto pasan visitas, personal de servicio, contratistas y los domicilios
  * de otras plataformas. Nada de eso dejaba rastro, así que el edificio no tenía
  * su minuta y el resumen decía «entradas» cuando eran «entradas de
- * domiciliarios de EnviaYa».
+ * domiciliarios de VeciPa'Ya».
  *
  * Los ayudantes `conjuntoConPersonal` y `repartidorConPedidoEn` viven en
  * `PorteriaTest.php`; Pest carga todos los archivos del directorio, así que

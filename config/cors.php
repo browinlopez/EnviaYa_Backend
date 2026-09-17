@@ -24,7 +24,7 @@
 
 /**
  * Deja una URL en lo único que el navegador compara: esquema, host y puerto.
- * `https://enviaya.com.co/` y `https://enviaya.com.co/cobertura` son el mismo
+ * `https://vecipaya.com/` y `https://vecipaya.com/cobertura` son el mismo
  * origen, pero si la lista guarda la barra final o la ruta, la comparación es
  * literal y nunca coincide.
  */
@@ -123,7 +123,7 @@ $origenes = array_merge($origenes, array_filter($propios));
  * Por defecto, cualquier subdominio del dominio propio sobre HTTPS. Es lo que
  * evita la clase de error que ya costó un despliegue: el panel se publicó en
  * `admin.` mientras la lista fija decía `panel.`, así que la API respondía
- * siempre `Access-Control-Allow-Origin: https://panel.enviaya.com.co` y el
+ * siempre `Access-Control-Allow-Origin: https://panel.<dominio>` y el
  * navegador bloqueaba TODAS las peticiones del panel. No falla al desplegar:
  * falla al intentar entrar.
  *
@@ -131,7 +131,7 @@ $origenes = array_merge($origenes, array_filter($propios));
  * código. `CORS_ALLOWED_ORIGIN_PATTERNS` lo reemplaza si hace falta otra cosa.
  *
  * QUÉ ABRE ESTO, DICHO CLARO: con `supports_credentials => true`, cualquier
- * subdominio de enviaya.com.co puede llamar a la API con la sesión de quien
+ * subdominio de vecipaya.com puede llamar a la API con la sesión de quien
  * visite ese subdominio. Es aceptable porque son subdominios propios, pero
  * significa que un registro DNS apuntando a un tercero —un servicio de
  * terceros abandonado, por ejemplo— heredaría ese permiso. No es lo mismo que
@@ -158,14 +158,14 @@ if ($patrones === []) {
  * vecipaya.com ES DOMINIO PROPIO SIEMPRE, diga lo que diga el entorno.
  *
  * La plataforma volvió a vecipaya.com el 2026-09-14 —api., admin., aliados. y
- * ws.—, pero producción seguía con SITIO_URL en enviaya.com.co. Con el comodín
+ * ws.—, pero producción seguía con SITIO_URL en el dominio anterior. Con el comodín
  * atado solo a esa variable, en cuanto el panel y aliados se desplegaran en su
  * dominio nuevo la API les negaría el CORS a todo: no falla al desplegar, falla
  * al intentar entrar.
  *
  * Fijarlo acá hace que la mudanza funcione con el despliegue, sin depender de
  * que alguien cambie variables antes y en el orden correcto. Y como se AÑADE,
- * lo que diga SITIO_URL —enviaya.com.co mientras dure la transición— sigue
+ * lo que diga SITIO_URL —el dominio anterior mientras dure la transición— sigue
  * valiendo también.
  */
 $patrones[] = $subdominiosDe('vecipaya.com');

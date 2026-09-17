@@ -45,16 +45,16 @@ test('el panel de aliados esta autorizado por su propia variable', function () {
      * un cambio hecho en otro sitio.
      */
     $cors = corsCon([
-        'SITIO_URL'   => 'https://enviaya.com.co',
-        'PANEL_URL'   => 'https://panel.enviaya.com.co',
-        'ALIADOS_URL' => 'https://aliados.enviaya.com.co',
-        'APP_URL'     => 'https://api.enviaya.com.co',
+        'SITIO_URL'   => 'https://dominio-anterior.example',
+        'PANEL_URL'   => 'https://panel.dominio-anterior.example',
+        'ALIADOS_URL' => 'https://aliados.dominio-anterior.example',
+        'APP_URL'     => 'https://api.dominio-anterior.example',
         'CORS_ALLOWED_ORIGIN_PATTERNS' => '#^https://nada\.example$#',
     ]);
 
-    expect($cors['allowed_origins'])->toContain('https://aliados.enviaya.com.co')
-        ->and($cors['allowed_origins'])->toContain('https://panel.enviaya.com.co')
-        ->and($cors['allowed_origins'])->toContain('https://enviaya.com.co');
+    expect($cors['allowed_origins'])->toContain('https://aliados.dominio-anterior.example')
+        ->and($cors['allowed_origins'])->toContain('https://panel.dominio-anterior.example')
+        ->and($cors['allowed_origins'])->toContain('https://dominio-anterior.example');
 });
 
 test('nunca queda un solo origen permitido', function () {
@@ -65,11 +65,11 @@ test('nunca queda un solo origen permitido', function () {
      * puede quedarse en uno ni queriendo.
      */
     $cors = corsCon([
-        'CORS_ALLOWED_ORIGINS' => 'https://panel.enviaya.com.co',
-        'SITIO_URL'   => 'https://enviaya.com.co',
-        'PANEL_URL'   => 'https://panel.enviaya.com.co',
-        'ALIADOS_URL' => 'https://aliados.enviaya.com.co',
-        'APP_URL'     => 'https://api.enviaya.com.co',
+        'CORS_ALLOWED_ORIGINS' => 'https://panel.dominio-anterior.example',
+        'SITIO_URL'   => 'https://dominio-anterior.example',
+        'PANEL_URL'   => 'https://panel.dominio-anterior.example',
+        'ALIADOS_URL' => 'https://aliados.dominio-anterior.example',
+        'APP_URL'     => 'https://api.dominio-anterior.example',
     ]);
 
     expect(count($cors['allowed_origins']))->toBeGreaterThan(1);
@@ -86,8 +86,8 @@ test('los puertos de desarrollo incluyen el de aliados', function () {
 
 test('el resto de internet sigue fuera', function () {
     $cors = corsCon([
-        'SITIO_URL'   => 'https://enviaya.com.co',
-        'ALIADOS_URL' => 'https://aliados.enviaya.com.co',
+        'SITIO_URL'   => 'https://dominio-anterior.example',
+        'ALIADOS_URL' => 'https://aliados.dominio-anterior.example',
     ]);
 
     /*
@@ -102,10 +102,10 @@ test('el resto de internet sigue fuera', function () {
     $patron = $cors['allowed_origins_patterns'][0] ?? null;
 
     expect($patron)->not->toBeNull()
-        ->and((bool) preg_match($patron, 'https://aliados.enviaya.com.co'))->toBeTrue()
+        ->and((bool) preg_match($patron, 'https://aliados.dominio-anterior.example'))->toBeTrue()
         ->and((bool) preg_match($patron, 'https://algo.dokploy.app'))->toBeFalse()
         // Sin HTTPS tampoco: la sesión viajaría en claro.
-        ->and((bool) preg_match($patron, 'http://aliados.enviaya.com.co'))->toBeFalse();
+        ->and((bool) preg_match($patron, 'http://aliados.dominio-anterior.example'))->toBeFalse();
 });
 
 /**
@@ -122,23 +122,23 @@ function algunPatronAcepta(array $cors, string $origen): bool
     return false;
 }
 
-test('vecipaya.com entra aunque el entorno siga diciendo enviaya.com.co', function () {
+test('vecipaya.com entra aunque el entorno siga diciendo dominio-anterior.example', function () {
     /*
      * LA MUDANZA DE DOMINIO NO PUEDE DEPENDER DEL ORDEN.
      *
      * El 2026-09-14 la plataforma volvió a vecipaya.com —api., admin., aliados.
-     * y ws.—, con producción todavía en SITIO_URL=https://enviaya.com.co. Con
+     * y ws.—, con producción todavía en SITIO_URL=https://dominio-anterior.example. Con
      * el comodín atado solo a esa variable, el panel desplegado en
      * admin.vecipaya.com habría recibido un CORS negado en cada petición.
      */
-    $cors = corsCon(['SITIO_URL' => 'https://enviaya.com.co']);
+    $cors = corsCon(['SITIO_URL' => 'https://dominio-anterior.example']);
 
     foreach (['https://admin.vecipaya.com', 'https://aliados.vecipaya.com', 'https://vecipaya.com', 'https://www.vecipaya.com'] as $origen) {
         expect(algunPatronAcepta($cors, $origen))->toBeTrue("{$origen} debería entrar");
     }
 
     // Y el dominio viejo sigue valiendo mientras dure la transición.
-    expect(algunPatronAcepta($cors, 'https://admin.enviaya.com.co'))->toBeTrue();
+    expect(algunPatronAcepta($cors, 'https://admin.dominio-anterior.example'))->toBeTrue();
 });
 
 test('el dominio fijo no abre nada que se le parezca', function () {
@@ -147,7 +147,7 @@ test('el dominio fijo no abre nada que se le parezca', function () {
      * `malvecipaya.com`, y con credenciales eso es la sesión del usuario en
      * manos de un tercero.
      */
-    $cors = corsCon(['SITIO_URL' => 'https://enviaya.com.co']);
+    $cors = corsCon(['SITIO_URL' => 'https://dominio-anterior.example']);
 
     foreach ([
         'https://vecipaya.com.malicioso.example',

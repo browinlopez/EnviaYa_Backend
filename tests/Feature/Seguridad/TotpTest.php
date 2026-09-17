@@ -86,14 +86,14 @@ it('el secreto es base32 utilizable por las apps', function () {
 });
 
 it('la dirección del QR lleva lo que la app necesita', function () {
-    $uri = Totp::uri('ABC234', 'liliana@enviaya.test', "VeciPa'Ya");
+    $uri = Totp::uri('ABC234', 'liliana@vecipaya.test', "VeciPa'Ya");
 
     expect($uri)->toStartWith('otpauth://totp/');
     expect($uri)->toContain('secret=ABC234');
     expect($uri)->toContain('digits=6');
     expect($uri)->toContain('period=30');
     // El correo, para distinguirla entre varias cuentas en la misma app.
-    expect($uri)->toContain(rawurlencode('liliana@enviaya.test'));
+    expect($uri)->toContain(rawurlencode('liliana@vecipaya.test'));
 });
 
 it('ignora los espacios con que la gente copia el secreto', function () {

@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * La portería deja de ser sólo de domiciliarios de EnviaYa.
+ * La portería deja de ser sólo de domiciliarios de VeciPa'Ya.
  *
  * Hasta ahora `complex_entries` respondía una única pregunta —¿este
  * domiciliario tiene pedidos aquí?— y todo lo demás que pasa por la puerta no
@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Schema;
  * domicilios de OTRAS plataformas.
  *
  * El efecto era que el conjunto no tenía su minuta. El resumen decía
- * «entradas» cuando en realidad eran «entradas de domiciliarios de EnviaYa»,
+ * «entradas» cuando en realidad eran «entradas de domiciliarios de VeciPa'Ya»,
  * una fracción del movimiento real del edificio.
  *
  * DOS CAMBIOS DE FONDO
