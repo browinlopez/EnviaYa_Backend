@@ -127,11 +127,31 @@ class CatalogoDeAjustes
 
             'operacion.tiempo_entrega_min' => [
                 'grupo'    => 'operacion',
-                'etiqueta' => 'Plazo de entrega prometido',
+                'etiqueta' => 'Plazo base de entrega',
                 'tipo'     => 'entero',
                 'sufijo'   => 'minutos',
-                'ayuda'    => 'El estándar que la operación se compromete a cumplir, contado desde que la tienda despacha. La app lo muestra al cliente y el reloj del seguimiento corre contra él. Se congela en cada pedido al despacharlo, así que subirlo no convierte en "a tiempo" entregas pasadas que llegaron tarde: el rendimiento de cada domiciliario se mide contra el plazo que regía ese día.',
+                'ayuda'    => 'Lo que se promete para una entrega al lado de la tienda: preparar el pedido y salir. A esto se le suman los minutos por kilómetro. El plazo se congela en cada pedido al despacharlo, así que subirlo no convierte en "a tiempo" entregas pasadas que llegaron tarde: cada domiciliario se mide contra el plazo que regía ese día.',
                 'defecto'  => 20,
+                'reglas'   => 'required|integer|min:5|max:240',
+            ],
+
+            'operacion.minutos_por_km' => [
+                'grupo'    => 'operacion',
+                'etiqueta' => 'Minutos por kilómetro',
+                'tipo'     => 'entero',
+                'sufijo'   => 'minutos/km',
+                'ayuda'    => 'Lo que suma cada kilómetro entre la tienda y la dirección. El total se redondea hacia arriba de cinco en cinco, porque nadie promete "23 minutos". En 0 el plazo vuelve a ser uno solo para todos.',
+                'defecto'  => 4,
+                'reglas'   => 'required|integer|min:0|max:60',
+            ],
+
+            'operacion.tiempo_entrega_max' => [
+                'grupo'    => 'operacion',
+                'etiqueta' => 'Plazo máximo prometido',
+                'tipo'     => 'entero',
+                'sufijo'   => 'minutos',
+                'ayuda'    => 'El tope del cálculo por distancia: una dirección en el borde de la cobertura no debería prometer hora y media. Nunca baja del plazo base.',
+                'defecto'  => 60,
                 'reglas'   => 'required|integer|min:5|max:240',
             ],
 

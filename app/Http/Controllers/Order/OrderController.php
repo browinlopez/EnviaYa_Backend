@@ -10,6 +10,7 @@ use App\Services\CreditoDeTienda;
 use App\Services\EconomiaDelPedido;
 use App\Services\PagoEnLinea;
 use App\Services\ReglasDeDespacho;
+use App\Services\PlazoPorDistancia;
 use App\Services\TarifaPorDistancia;
 use App\Services\PoliticaDeDomicilio;
 use App\Services\CustodiaDeEfectivo;
@@ -551,6 +552,8 @@ class OrderController extends Controller
         Request $request,
         CobroContraEntrega $cobros,
         ReglasDeDespacho $reglas,
+        TarifaPorDistancia $distancias,
+        PlazoPorDistancia $plazos,
     )
     {
         $request->validate([
@@ -581,12 +584,12 @@ class OrderController extends Controller
          * de transicion falla como debe. Fuera de una transaccion el bloqueo se
          * suelta enseguida y no sirve de nada, de ahi el `DB::transaction`.
          */
-        return DB::transaction(function () use ($request, $cobros, $reglas) {
+        return DB::transaction(function () use ($request, $cobros, $reglas, $distancias, $plazos) {
             $order = OrdersSales::with('details', 'domiciliary')
                 ->lockForUpdate()
                 ->find($request->order_id);
 
-            return $this->moverPedido($request, $order, $cobros, $reglas);
+            return $this->moverPedido($request, $order, $cobros, $reglas, $distancias, $plazos);
         });
     }
 
@@ -601,6 +604,8 @@ class OrderController extends Controller
         ?OrdersSales $order,
         CobroContraEntrega $cobros,
         ReglasDeDespacho $reglas,
+        TarifaPorDistancia $distancias,
+        PlazoPorDistancia $plazos,
     )
     {
 
@@ -673,7 +678,17 @@ class OrderController extends Controller
              * cada domiciliario. Mismo criterio que `domicilio` y
              * `domiciliary_fee`.
              */
-            $order->promised_minutes = (int) Ajustes::valor('operacion.tiempo_entrega_min');
+            /*
+             * Y depende de la DISTANCIA: prometerle veinte minutos a quien
+             * vive a cinco kilómetros marcaba como "tarde" una entrega que
+             * nadie podía hacer más rápido.
+             */
+            $order->promised_minutes = $plazos->minutosPara($distancias->kilometros(
+                $order->business?->latitude !== null ? (float) $order->business->latitude : null,
+                $order->business?->longitude !== null ? (float) $order->business->longitude : null,
+                $order->address?->latitude !== null ? (float) $order->address->latitude : null,
+                $order->address?->longitude !== null ? (float) $order->address->longitude : null,
+            ));
 
             /*
              * Avisar al domiciliario, y solo a él.

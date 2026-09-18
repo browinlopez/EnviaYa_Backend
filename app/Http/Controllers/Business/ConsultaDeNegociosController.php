@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Business;
 
 use App\Services\NegocioParaLaApp;
+use App\Services\PlazoPorDistancia;
 use App\Services\TarifaPorDistancia;
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 class ConsultaDeNegociosController extends Controller
 {
     public function __construct(private readonly TarifaPorDistancia $distancias,
+        private readonly PlazoPorDistancia $plazos,
         private readonly NegocioParaLaApp $presentador)
     {
     }
@@ -124,6 +126,9 @@ class ConsultaDeNegociosController extends Controller
                 'longitude'     => $business->longitude !== null ? (float) $business->longitude : null,
                 'distance_km'   => $km === null ? null : round($km, 2),
                 'delivery_fee'  => $this->distancias->paraDistancia($km),
+                // Lo que tarda desde ESTA tienda: la de la esquina no puede
+                // anunciar el mismo plazo que la del otro barrio.
+                'delivery_time_minutes' => $this->plazos->minutosPara($km),
                 'in_range'      => $this->distancias->reparteHasta($km),
                 'name'          => $business->name,
                 'phone'         => $business->phone,
@@ -276,6 +281,9 @@ class ConsultaDeNegociosController extends Controller
                 'longitude'     => $business->longitude !== null ? (float) $business->longitude : null,
                 'distance_km'   => $km === null ? null : round($km, 2),
                 'delivery_fee'  => $this->distancias->paraDistancia($km),
+                // Lo que tarda desde ESTA tienda: la de la esquina no puede
+                // anunciar el mismo plazo que la del otro barrio.
+                'delivery_time_minutes' => $this->plazos->minutosPara($km),
                 'in_range'      => $this->distancias->reparteHasta($km),
                 'name'          => $business->name,
                 'phone'         => $business->phone,

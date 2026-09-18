@@ -40,7 +40,69 @@ function pedidoConPlazo(int $prometidos, int $tardo): OrdersSales
 test('el plazo prometido llega a la app en la configuración', function () {
     $this->getJson('/v1/app/config')
         ->assertOk()
-        ->assertJsonPath('operation.delivery_time_minutes', 20);
+        ->assertJsonPath('operation.delivery_time_minutes', 20)
+        // Las dos piezas del cálculo, para estimarlo sin preguntar.
+        ->assertJsonPath('operation.delivery_time_per_km', 4)
+        ->assertJsonPath('operation.delivery_time_max', 60);
+});
+
+/* ------------------------------ POR DISTANCIA ------------------------- */
+
+test('cuanto más lejos, más minutos, redondeando de cinco en cinco', function () {
+    $plazos = app(App\Services\PlazoPorDistancia::class);
+
+    // Base 20 + 4 por km: 0,8 km son 23,2 → 25; 3,2 km son 32,8 → 35.
+    expect($plazos->minutosPara(0.8))->toBe(25)
+        ->and($plazos->minutosPara(3.2))->toBe(35);
+});
+
+test('el tope evita prometer hora y media en el borde de la cobertura', function () {
+    $plazos = app(App\Services\PlazoPorDistancia::class);
+
+    // 12,5 km serían 70 minutos; el máximo los deja en 60.
+    expect($plazos->minutosPara(12.5))->toBe(60);
+});
+
+test('sin distancia se promete la base, como antes', function () {
+    $plazos = app(App\Services\PlazoPorDistancia::class);
+
+    // Una tienda sin coordenadas o alguien que todavía no eligió dirección.
+    expect($plazos->minutosPara(null))->toBe(20)
+        ->and($plazos->minutosPara(0))->toBe(20);
+});
+
+test('con los minutos por kilómetro en cero vuelve a ser un plazo único', function () {
+    Ajustes::guardar(['operacion.minutos_por_km' => 0], null);
+    $plazos = app(App\Services\PlazoPorDistancia::class);
+
+    expect($plazos->minutosPara(0.5))->toBe(20)
+        ->and($plazos->minutosPara(9.0))->toBe(20);
+});
+
+test('un tope mal puesto nunca promete menos que la base', function () {
+    // Menos que la base no tiene sentido: es lo que cuesta preparar y salir.
+    Ajustes::guardar(['operacion.tiempo_entrega_max' => 10], null);
+    $plazos = app(App\Services\PlazoPorDistancia::class);
+
+    expect($plazos->minutosPara(8.0))->toBe(20);
+});
+
+test('cada tienda anuncia su propio plazo en el listado', function () {
+    // Con sus propios valores: otra prueba de este archivo deja los minutos
+    // por kilómetro en cero, y los ajustes viven en la base.
+    Ajustes::guardar([
+        'operacion.tiempo_entrega_min' => 20,
+        'operacion.minutos_por_km'     => 4,
+        'operacion.tiempo_entrega_max' => 60,
+    ], null);
+    $plazos = app(App\Services\PlazoPorDistancia::class);
+
+    /*
+     * Lo que se ve en la lista: la tienda de la esquina no puede anunciar el
+     * mismo tiempo que la del otro barrio, que es lo que pasaba con un plazo
+     * único para todos.
+     */
+    expect($plazos->minutosPara(0.3))->toBeLessThan($plazos->minutosPara(4.0));
 });
 
 test('una entrega dentro del plazo cuenta como a tiempo', function () {

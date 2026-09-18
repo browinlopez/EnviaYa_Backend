@@ -58,6 +58,14 @@ class AppConfigController extends Controller
                  * panel y contra él se mide cada entrega.
                  */
                 'delivery_time_minutes' => (int) Ajustes::valor('operacion.tiempo_entrega_min'),
+                /*
+                 * El plazo ya no es uno solo: cada listado manda el suyo por
+                 * negocio en `delivery_time_minutes`. Esto es el respaldo para
+                 * cuando no hay distancia que usar, y las dos piezas del
+                 * cálculo, por si la app tiene que estimarlo sin preguntar.
+                 */
+                'delivery_time_per_km' => (int) Ajustes::valor('operacion.minutos_por_km'),
+                'delivery_time_max'    => (int) Ajustes::valor('operacion.tiempo_entrega_max'),
             ],
             'version' => [
                 // Con `?platform=` viene la que toca; sin él, las dos, para que
