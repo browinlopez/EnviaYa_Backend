@@ -62,9 +62,9 @@ Route::get('/verify-email', [VerificacionDeCorreoController::class, 'verify'])
     ->name('verify.email');
 
 // Pedir otro enlace desde la misma página de error, sin tener que ir a la app.
-// Pocos intentos y ventana larga, igual que el reenvío del API: manda correo.
+// Mismo límite que el reenvío del API: 10 por minuto (ver routes/api.php).
 Route::post('/verify-email/reenviar', [VerificacionDeCorreoController::class, 'reenviarDesdeLaWeb'])
-    ->middleware('throttle:5,10')
+    ->middleware('throttle:10,1')
     ->name('verify.email.reenviar');
 
 /*

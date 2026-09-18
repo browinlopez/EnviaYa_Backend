@@ -107,6 +107,23 @@ Route::middleware('throttle:10,1')->group(function () {
 Route::middleware('throttle:5,10')->group(function () {
     Route::post('/forgot-password', [ClaveController::class, 'resetPassword']);
     Route::post('/reset-password', [ClaveController::class, 'resetPasswordConfirm']);
+});
+
+/*
+ * REENVIAR LA VERIFICACIÓN: 10 POR MINUTO.
+ *
+ * Estaba con el resto de la recuperación de cuenta, a 5 cada 10 minutos, y
+ * ahí estorba más de lo que protege: quien no recibió el correo lo pide dos o
+ * tres veces seguidas, se queda sin intentos y tiene que esperar diez minutos
+ * mirando una pantalla que solo dice «demasiados intentos». Y en móvil muchos
+ * usuarios comparten IP por el CGNAT del operador, así que el vecino gasta
+ * los intentos de uno.
+ *
+ * Reenviar no es peligroso: manda SIEMPRE al correo de la cuenta y nunca
+ * revela si existe. Lo único que se evita es usarlo para inundar un buzón
+ * ajeno, y para eso 10 por minuto sobra.
+ */
+Route::middleware('throttle:10,1')->group(function () {
     Route::post('/resend-verification-email', [VerificacionDeCorreoController::class, 'resendVerificationEmail']);
     Route::post('/email/resend-verification', [VerificacionDeCorreoController::class, 'resendVerificationEmail']);
 });
