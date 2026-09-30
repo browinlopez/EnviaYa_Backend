@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Soporte\AyudaDesdeLaAppController;
+
 use App\Http\Controllers\Auth\AccesoBiometricoController;
 use App\Http\Controllers\Domiciliary\PedidosDelDomiciliarioController;
 use App\Http\Controllers\Admin\Api\AdminApiController;
@@ -231,6 +233,17 @@ Route::post('app/errores', ErroresDeLaAppController::class)
 | de datos además quedan en la tabla `audits` (auditoría de modelos).
 */
 Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
+    /*
+     * AYUDA: radicar un PQRS desde la app.
+     *
+     * Cae en la misma bandeja del panel, con su radicado y su plazo. Va con
+     * tope de envíos porque manda a una cola de trabajo humana: cinco
+     * reclamos en un minuto no son cinco problemas, son alguien golpeando el
+     * botón.
+     */
+    Route::middleware('throttle:5,10')->post('/ayuda', [AyudaDesdeLaAppController::class, 'store']);
+    Route::get('/ayuda', [AyudaDesdeLaAppController::class, 'index']);
+
     //Auth
     Route::get('/profile', [AuthController::class, 'profile']);
     Route::post('/logout', [AuthController::class, 'logout']);
