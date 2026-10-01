@@ -48,6 +48,26 @@ class BoldService
         return $response->json()['payload'] ?? $response->json();
     }
 
+    /**
+     * Los bancos que admiten PSE, tal como los da Bold.
+     *
+     * La lista NO se escribe a mano ni se guarda: son 51 entidades y cambian
+     * —entran billeteras, se fusionan bancos—. Un listado nuestro que se
+     * quede viejo manda al cliente a un banco que ya no existe, y eso no
+     * falla al enviarlo: falla cuando ya está en la pasarela.
+     */
+    public function bancosPse(): array
+    {
+        $response = Http::withHeaders($this->headers())
+            ->get("{$this->apiUrl}/v1/payment/pse/banks");
+
+        if ($response->failed()) {
+            throw new \Exception($response->body());
+        }
+
+        return $response->json()['payload'] ?? $response->json();
+    }
+
     public function checkPayment(string $reference): array
     {
         $response = Http::withHeaders($this->headers())

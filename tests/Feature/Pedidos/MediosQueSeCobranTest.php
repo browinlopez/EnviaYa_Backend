@@ -8,10 +8,13 @@ use Laravel\Sanctum\Sanctum;
 /**
  * NO SE OFRECE UN MEDIO DE PAGO QUE NO SE SABE COBRAR.
  *
- * La tabla tiene seis medios y el sistema solo cobra TRES: efectivo en la
- * puerta, y tarjeta de crédito y QR por pasarela. Los otros tres —tarjeta
- * débito, transferencia bancaria y pago móvil (Nequi, Daviplata)— se ofrecían
- * igual en la pantalla de pago.
+ * La tabla tiene siete medios y el sistema cobra CUATRO: efectivo en la
+ * puerta, el crédito de la tienda, y tarjeta de crédito, PSE y QR por
+ * pasarela. Los que quedan fuera —tarjeta débito y pago móvil (Nequi,
+ * Daviplata)— se ofrecían igual en la pantalla de pago.
+ *
+ * El 4 —«transferencia bancaria» en la tabla— pasó a cobrarse el 1 de octubre
+ * de 2026: es PSE, y hasta entonces nadie había escrito el cobro.
  *
  * Elegir uno de esos dejaba el pedido en `pending_cash`: nadie abría un cobro,
  * el comprador creía que había transferido, y el domiciliario llegaba a la
@@ -30,6 +33,7 @@ beforeEach(function () {
         4 => 'Transferencia bancaria',
         5 => 'Pago por QR',
         6 => 'Pago móvil (Nequi, Daviplata)',
+        7 => 'Crédito de la tienda',
     ] as $id => $nombre) {
         DB::table('payment_methods')->insertOrIgnore([
             'methods_id' => $id, 'name' => $nombre, 'state' => 1,
@@ -48,9 +52,12 @@ it('solo se ofrecen los medios que el sistema sabe cobrar', function () {
         ->values()
         ->all();
 
-    // 7 es el crédito de la tienda: no pasa por pasarela ni por la puerta,
-    // pero el sistema sí sabe cobrarlo (lo descuenta en la liquidación).
-    expect($ofrecidos)->toBe([1, 2, 5, 7]);
+    /*
+     * 4 es PSE y 7 el crédito de la tienda. El crédito no pasa por pasarela ni
+     * por la puerta, pero el sistema sí sabe cobrarlo (lo descuenta en la
+     * liquidación).
+     */
+    expect($ofrecidos)->toBe([1, 2, 4, 5, 7]);
 });
 
 it('los que no se cobran NO aparecen, aunque esten activos en la tabla', function () {
@@ -59,12 +66,13 @@ it('los que no se cobran NO aparecen, aunque esten activos en la tabla', functio
     $nombres = collect($this->getJson('/v1/paymentMethods')->json())->pluck('name');
 
     /*
-     * Los tres del hueco. Estan `state = 1` en la tabla —no se apagaron— y aun
-     * asi no se ofrecen, que es justo lo que hace que encender la fila desde el
-     * panel no vuelva a abrir el agujero.
+     * Los que siguen sin cobro. Estan `state = 1` en la tabla —no se apagaron—
+     * y aun asi no se ofrecen, que es justo lo que hace que encender la fila
+     * desde el panel no vuelva a abrir el agujero.
+     *
+     * «Transferencia bancaria» ya NO esta en esta lista: es PSE y se cobra.
      */
     expect($nombres)->not->toContain('Tarjeta débito')
-        ->and($nombres)->not->toContain('Transferencia bancaria')
         ->and($nombres)->not->toContain('Pago móvil (Nequi, Daviplata)');
 
     expect(DB::table('payment_methods')->where('methods_id', 3)->value('state'))->toBe(1);

@@ -232,3 +232,52 @@ test('si el cobro no sale, NO queda pedido', function () {
 
     expect((int) $quedan)->toBe(10);
 });
+
+test('PSE manda el banco y guarda el enlace al que hay que llevar al cliente', function () {
+    /*
+     * PSE no tiene otra forma de pagarse: Bold devuelve un `redirect_url` al
+     * banco y ahí es donde la persona aprueba. Si ese enlace no se guarda o no
+     * se abre, el cliente elige su banco, toca «Pagar» y se queda con un
+     * pedido creado sin haber pagado nada.
+     *
+     * Se comprueban las dos mitades: que se le manda a Bold el banco con la
+     * forma que exige —`bank_code` ENTERO, no texto— y que el enlace que
+     * devuelve acaba guardado en el pago.
+     */
+    $order = pedidoListoParaCobrar();
+
+    $enviado = null;
+    $bold = Mockery::mock(BoldService::class);
+    $bold->shouldReceive('createIntent')->andReturn(['payload' => ['status' => 'ACTIVE']]);
+    $bold->shouldReceive('makePayment')->andReturnUsing(function ($body) use (&$enviado) {
+        $enviado = $body;
+
+        return [
+            'transaction_id' => 'SJLXK0J4S4F',
+            'status' => 'running',
+            'next_actions' => ['redirect_url' => 'https://checkout.bold.co/payment/PSE-X/SJLXK0J4S4F'],
+        ];
+    });
+
+    $peticion = new Request([
+        'methods_id' => 4,
+        'payment_method' => ['bank_code' => 1007, 'bank_name' => 'BANCOLOMBIA'],
+    ]);
+
+    $cobro = app(PagoEnLinea::class)->cobrar(
+        $order,
+        [['product_id' => 1, 'amount' => 5]],
+        [1 => 2500],
+        $peticion,
+        $bold,
+    );
+
+    expect($enviado['payment_method']['name'])->toBe('PSE')
+        ->and($enviado['payment_method']['bank_code'])->toBe(1007)
+        ->and($enviado['payment_method']['bank_code'])->toBeInt()
+        ->and($enviado['payment_method']['bank_name'])->toBe('BANCOLOMBIA');
+
+    // Y el enlace, guardado: es por donde la app lleva a la persona al banco.
+    expect($cobro->payment->redirect_url)
+        ->toBe('https://checkout.bold.co/payment/PSE-X/SJLXK0J4S4F');
+});

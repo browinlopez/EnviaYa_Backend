@@ -20,8 +20,17 @@ use Illuminate\Http\Request;
  */
 class PagoEnLinea
 {
-    /** `orderssales.methods_id` que se cobran con pasarela. */
-    public const CON_PASARELA = [2, 5];
+    /**
+     * `orderssales.methods_id` que se cobran con pasarela.
+     *
+     * El 4 —«transferencia bancaria» en la tabla— es PSE. Estaba apagado
+     * porque nadie había escrito el cobro: elegirlo dejaba el pedido
+     * esperando un dinero que nunca se pidió.
+     */
+    public const CON_PASARELA = [2, 4, 5];
+
+    /** El que paga por PSE, para no repetir el número suelto. */
+    public const PSE = 4;
 
     /**
      * El unico metodo que se cobra en la puerta.
@@ -109,13 +118,25 @@ class PagoEnLinea
                     ];
                 }
 
-                // 3️⃣ Método de pago
-                $paymentMethod = $request->methods_id == 2
-                    ? array_merge(['name' => 'CREDIT_CARD'], $request->payment_method)
-                    : [
+                /*
+                 * 3️⃣ Método de pago, con la forma EXACTA que pide cada uno.
+                 *
+                 * PSE solo quiere el banco: `bank_code` entero y `bank_name`
+                 * texto, los dos obligatorios. Bold devuelve entonces un
+                 * `redirect_url` al banco, igual que el QR devuelve su código.
+                 */
+                $paymentMethod = match ((int) $request->methods_id) {
+                    2 => array_merge(['name' => 'CREDIT_CARD'], $request->payment_method ?? []),
+                    self::PSE => [
+                        'name' => 'PSE',
+                        'bank_code' => (int) ($request->payment_method['bank_code'] ?? 0),
+                        'bank_name' => (string) ($request->payment_method['bank_name'] ?? ''),
+                    ],
+                    default => [
                         'name' => 'QR',
-                        'qr_format' => 'BOLD_BASE64' //CLAVE puede ser ese o TEXT o BASE64
-                    ];
+                        'qr_format' => 'BOLD_BASE64', //CLAVE puede ser ese o TEXT o BASE64
+                    ],
+                };
 
                 // 4️⃣ Productos (con los precios reales del servidor)
                 $products = collect($lineas)->map(fn($p) => [
