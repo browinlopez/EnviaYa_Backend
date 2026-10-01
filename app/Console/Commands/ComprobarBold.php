@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\DB;
  *
  * POR QUÉ EXISTE. Con pago en línea el pedido se guarda antes de cobrar y queda
  * ESCONDIDO hasta que llega el aviso de Bold. Si ese aviso se rechaza —y sin
- * `BOLD_WEBHOOK_SECRET` se rechaza TODO, a propósito, porque una firma HMAC sin
+ * `BOLD_SECRET_KEY` se rechaza TODO, a propósito, porque una firma HMAC sin
  * clave la falsifica cualquiera— el cliente paga y no tiene pedido, y la tienda
  * ni se entera de que hay algo que preparar.
  *
@@ -39,26 +39,51 @@ class ComprobarBold extends Command
         $this->line('  <options=bold>CONFIGURACIÓN DE BOLD</>');
         $this->newLine();
 
-        $apiKey  = (string) config('services.bold.api_key');
-        $secreto = (string) config('services.bold.webhook_secret');
+        $apiKey  = (string) config('services.bold.identity_key');
+        $secreto = (string) config('services.bold.secret_key');
         $baseUrl = (string) config('services.bold.base_url');
+        $entorno = (string) config('services.bold.entorno');
 
         $this->fila('BOLD_BASE_URL', $baseUrl !== '', $baseUrl ?: '(vacío)');
         $this->fila(
-            'BOLD_API_KEY',
+            'BOLD_IDENTITY_KEY',
             $apiKey !== '',
             $apiKey !== '' ? 'puesta (' . strlen($apiKey) . ' caracteres)' : 'VACÍA',
         );
         $this->fila(
-            'BOLD_WEBHOOK_SECRET',
+            'BOLD_SECRET_KEY',
             $secreto !== '',
-            $secreto !== '' ? 'puesto (' . strlen($secreto) . ' caracteres)' : 'VACÍO',
+            $secreto !== '' ? 'puesta (' . strlen($secreto) . ' caracteres)' : 'VACÍA',
+        );
+
+        /*
+         * EL ENTORNO NO SE PUEDE ADIVINAR, Y ES LO QUE SEPARA ENSAYAR DE
+         * COBRARLE A ALGUIEN DE VERDAD.
+         *
+         * Las llaves de prueba y las de producción tienen exactamente la
+         * misma pinta —43 y 22 caracteres— y las dos autentican contra el
+         * mismo host. No hay forma de mirarlas y saberlo, así que esto no lo
+         * deduce: lo lee de BOLD_ENTORNO y lo pone delante. Un ensayo hecho
+         * sin querer con las llaves de producción le cobra a una tarjeta.
+         */
+        $esProduccion = $entorno === 'produccion';
+
+        $this->fila(
+            'BOLD_ENTORNO',
+            in_array($entorno, ['prueba', 'produccion'], true),
+            $esProduccion ? 'PRODUCCIÓN · estas llaves mueven plata real' : $entorno,
         );
 
         $this->newLine();
 
+        if ($esProduccion && app()->environment('local')) {
+            $this->warn('  Llaves de PRODUCCIÓN en un entorno local.');
+            $this->line('  Cualquier cobro de prueba de aquí le cobra a una tarjeta de verdad.');
+            $this->newLine();
+        }
+
         if ($secreto === '') {
-            $this->error('  Sin BOLD_WEBHOOK_SECRET, TODO aviso de Bold se rechaza.');
+            $this->error('  Sin BOLD_SECRET_KEY, TODO aviso de Bold se rechaza.');
             $this->line('  El cliente paga, Bold cobra, y el pedido nunca se marca como pagado.');
             $this->newLine();
             $this->line('  El valor está en el panel de Bold, en la configuración del webhook.');
@@ -69,7 +94,7 @@ class ComprobarBold extends Command
         }
 
         if ($apiKey === '') {
-            $this->error('  Sin BOLD_API_KEY no se puede abrir un cobro: no habría qué confirmar.');
+            $this->error('  Sin BOLD_IDENTITY_KEY no se puede abrir un cobro: no habría qué confirmar.');
             $this->newLine();
 
             return self::FAILURE;

@@ -37,10 +37,61 @@ return [
         ],
     ],
 
+    /*
+     * BOLD TIENE DOS PRODUCTOS, Y SUS LLAVES NO SON INTERCAMBIABLES.
+     *
+     *   API de pagos en linea  ->  api_key, la de los llamados (x-api-key).
+     *                              Es la que ya cobra hoy.
+     *   Boton de pagos         ->  identity_key (PUBLICA: viaja al cliente en
+     *                              data-api-key) + secret_key (firma de
+     *                              integridad, y firma del webhook de los
+     *                              pagos que nazcan del boton).
+     *
+     * Y cada una tiene su gemela de pruebas, con exactamente la misma pinta:
+     * mirando la cadena NO se distingue produccion de prueba. Por eso el
+     * entorno se DICE, en vez de deducirlo de la llave.
+     */
     'bold' => [
-        'base_url' => env('BOLD_BASE_URL', 'https://integrations.api.bold.co'),
-        'api_key'  => env('BOLD_API_KEY'),
-        'webhook_secret' => env('BOLD_WEBHOOK_SECRET', ''),
+        /*
+         * El valor por defecto era 'https://integrations.api.bold.co', que es
+         * OTRO servicio. Funcionaba solo porque el .env lo pisa; el dia que
+         * falte la variable en el panel de despliegue, los cobros se irian a
+         * un host que no es el nuestro. Un valor por defecto que miente hace
+         * mas dano que no tener ninguno.
+         */
+        'base_url' => env('BOLD_BASE_URL', 'https://api.online.payments.bold.co'),
+        /*
+         * SON DOS VALORES, NO CUATRO. Y LOS NOMBRES VIEJOS MENTIAN.
+         *
+         * Bold entrega por integracion una pareja: LLAVE DE IDENTIDAD y LLAVE
+         * SECRETA. Para la API de pagos en linea -la que cobra aqui- la de
+         * identidad es la que va en 'Authorization: x-api-key', y la secreta
+         * es la que firma el webhook (HMAC-SHA256 sobre el cuerpo en base64).
+         *
+         * 'BOLD_API_KEY' nunca fue una llave aparte: era la de identidad con
+         * otro nombre. Y 'BOLD_WEBHOOK_SECRET' tampoco era un secreto propio
+         * del webhook: es la llave secreta del comercio. Dos nombres distintos
+         * para la misma pareja invitan a poner una donde va la otra.
+         *
+         * Comprobado contra api.online.payments.bold.co: con la de identidad
+         * responde 404 de referencia inexistente -o sea, autentica-; con la
+         * secreta responde 403, lo mismo que sin mandar llave.
+         *
+         * Los nombres nuevos mandan; los viejos quedan de respaldo para que el
+         * despliegue que ya los tiene puestos no se caiga el dia que esto
+         * suba. Con los nuevos en el panel, los viejos sobran.
+         */
+        'identity_key' => env('BOLD_IDENTITY_KEY') ?: env('BOLD_API_KEY', ''),
+        'secret_key'   => env('BOLD_SECRET_KEY') ?: env('BOLD_WEBHOOK_SECRET', ''),
+
+        /* Los de siempre, para no tocar BoldService ni el webhook: mismo
+           valor, nombre heredado. */
+        'api_key'        => env('BOLD_IDENTITY_KEY') ?: env('BOLD_API_KEY'),
+        'webhook_secret' => env('BOLD_SECRET_KEY') ?: env('BOLD_WEBHOOK_SECRET', ''),
+
+        /* 'prueba' o 'produccion'. Es lo unico que separa ensayar de mover
+           plata de verdad, porque las llaves no lo dicen. */
+        'entorno' => env('BOLD_ENTORNO', 'prueba'),
     ],
 
     // Tarifa de domicilio en COP. El total de la orden se calcula en el
