@@ -316,9 +316,46 @@ class OrderController extends Controller
             if (in_array($request->methods_id, PagoEnLinea::CON_PASARELA)) {
                 // Devuelve el intent porque su referencia viaja en la respuesta:
                 // la app la necesita para consultar el estado del cobro.
-                $intent = $pasarela->cobrar(
+                $cobro   = $pasarela->cobrar(
                     $order, $request->products, $prices, $request, $bold,
                 );
+                $intent  = $cobro?->intent;
+                $payment = $cobro?->payment;
+
+                /*
+                 * SI EL COBRO NO SALE, EL PEDIDO NO EXISTE.
+                 *
+                 * Antes el pedido se guardaba igual y se le decía al cliente
+                 * «tu pedido quedó registrado; elige efectivo o inténtalo de
+                 * nuevo». Es lo peor de los dos mundos: la tienda ve entrar un
+                 * pedido que nadie ha pagado y que quizá nadie pague, y el
+                 * cliente se queda con un pedido a medias que no pidió así.
+                 *
+                 * Un cobro con pasarela sirve si pasa UNA de estas: deja una
+                 * forma de pagar —el QR o el enlace—, ya quedó aprobado, o
+                 * sigue en curso y lo confirmará el webhook. Esto último NO es
+                 * un fallo y hay que dejarlo pasar: una tarjeta que Bold está
+                 * procesando no tiene QR ni enlace que enseñar, y tumbar ahí el
+                 * pedido sería rechazar cobros buenos.
+                 *
+                 * Lo que no vale es quedarse sin pago ninguno: ahí esto
+                 * revienta, la transacción se deshace entera y no queda pedido.
+                 */
+                $enCurso = in_array(
+                    strtolower((string) ($payment->status ?? '')),
+                    ['processing', 'running', 'pending'],
+                    true,
+                );
+
+                $hayComoPagar = $payment
+                    && ($payment->qr_payload || $payment->redirect_url || $payment->payment_status || $enCurso);
+
+                if (! $hayComoPagar) {
+                    throw new \RuntimeException(
+                        'No pudimos iniciar el cobro, así que no creamos el pedido. '
+                        . 'Inténtalo de nuevo o elige pago en efectivo.',
+                    );
+                }
             }
 
             DB::commit();
@@ -361,10 +398,22 @@ class OrderController extends Controller
                 'message' => 'Orden creada',
                 'order' => $order->load('details.product.category', 'business', 'address', 'promotions', 'payments')->toApi(),
                 'bold_reference_id' => $intent->bold_reference_id ?? null,
-                // La app lee el QR / redirect de acá para el pago online
+                /*
+                 * La app lee el QR / redirect de acá para el pago online.
+                 *
+                 * `status` va con ellos porque SIN ÉL la app no puede
+                 * distinguir dos cosas opuestas: que la pasarela no diera
+                 * forma de pagar, y que ya cobrara en el acto. Bold hace lo
+                 * segundo con el QR cuando aprueba al instante: responde
+                 * `approved` y SIN `next_actions`. La app lo leía como un
+                 * fallo y le decía al cliente «no se pudo iniciar el pago,
+                 * elige efectivo o inténtalo de nuevo» con el cobro ya hecho.
+                 * Pagar dos veces el mismo pedido es el peor error posible.
+                 */
                 'action' => isset($payment) ? [
                     'qr_payload' => $payment->qr_payload ?? null,
                     'redirect_url' => $payment->redirect_url ?? null,
+                    'status' => $payment->status ?? null,
                 ] : null,
             ], 201);
         } catch (\RuntimeException $e) {
@@ -379,6 +428,28 @@ class OrderController extends Controller
             return response()->json(['message' => $e->getMessage()], 422);
         } catch (\Exception $e) {
             DB::rollBack();
+
+            /*
+             * UN PEDIDO QUE NO SE CREA TIENE QUE DEJAR RASTRO.
+             *
+             * Esto devolvía «Error al crear la orden» y no escribía NADA en el
+             * registro. Desde fuera es un 422 igual que una validación, así que
+             * un fallo real —una tabla que falta, Bold caído, una columna
+             * renombrada— se veía exactamente igual que «te falta la dirección»
+             * y no quedaba en ningún sitio donde mirarlo después.
+             *
+             * Se descubrió probando el cobro por QR en el emulador: tres
+             * intentos fallidos seguidos y cero líneas en el log. El `error` que
+             * va en la respuesta solo lo ve quien esté mirando la pantalla en
+             * ese momento, y en producción eso no es nadie.
+             */
+            Log::error('No se pudo crear el pedido', [
+                'user_id'     => $request->user()?->user_id,
+                'busines_id'  => $request->busines_id,
+                'methods_id'  => $request->methods_id,
+                'excepcion'   => $e->getMessage(),
+                'en'          => $e->getFile() . ':' . $e->getLine(),
+            ]);
 
             // Errores de configuración del comercio en Bold → mensaje claro
             $message = str_contains($e->getMessage(), 'MCFG_004')

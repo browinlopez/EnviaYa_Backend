@@ -63,17 +63,38 @@ class PagoEnLinea
                 $payer = $request->payer;
 
                 if (!$payer) {
-                    $payerUser = $buyer->user;
-                    $phone = $payerUser->phone ?? '3000000000';
-                    $addressStr = $address->address ?? 'Calle 1';
+                    /*
+                     * `$buyer` Y `$address` NO EXISTÍAN EN ESTE MÉTODO.
+                     *
+                     * No son parámetros ni se declaran en ninguna parte: eran
+                     * dos variables sueltas que quedaron al extraer este bloque
+                     * de `OrderController::store`, donde sí vivían. En PHP 8
+                     * eso no es un aviso, es una excepción, y como el `catch`
+                     * de arriba la convertía en «Error al crear la orden» sin
+                     * escribir NADA en el registro, el fallo era invisible.
+                     *
+                     * Y es un fallo total: la app NUNCA manda `payer` —mira el
+                     * cuerpo que arma PaymentScreen—, así que esta rama se
+                     * ejecuta SIEMPRE. Ningún cobro con pasarela, ni QR ni
+                     * tarjeta, podía completarse.
+                     *
+                     * Salen del pedido, que es quien los tiene y quien manda:
+                     * el comprador y la dirección del pedido son los del cobro,
+                     * no los que venga a decir la petición.
+                     */
+                    $payerUser = $order->buyer?->user;
+                    $address   = $order->address;
+
+                    $phone = $payerUser?->phone ?? '3000000000';
+                    $addressStr = $address?->address ?? 'Calle 1';
                     $city = $address?->municipality?->name ?? 'Barranquilla';
                     $province = $address?->municipality?->department?->name ?? 'Atlántico';
 
                     $payer = [
                         'person_type' => 'NATURAL_PERSON',
-                        'name' => $payerUser->name ?? 'Cliente',
+                        'name' => $payerUser?->name ?? 'Cliente',
                         'phone' => $phone,
-                        'email' => $payerUser->email ?? 'correo@ejemplo.com',
+                        'email' => $payerUser?->email ?? 'correo@ejemplo.com',
                         'document_type' => 'CEDULA',
                         'document_number' => '1234567890',
                         'billing_address' => [
@@ -129,6 +150,18 @@ class PagoEnLinea
                     $order->save();
                 }
 
-        return $intent;
+        /*
+         * SE DEVUELVEN LOS DOS, Y EL PAGO ES EL QUE IMPORTABA.
+         *
+         * Esto devolvía solo el intent, así que el `$payment` —con el QR, el
+         * enlace y el estado del cobro— moría acá dentro. En el controlador,
+         * `isset($payment)` miraba una variable que NUNCA se asignaba: siempre
+         * era false, y `action` viajaba en null en todas las respuestas.
+         *
+         * Resultado: aunque Bold devolviera un QR perfecto, la app no lo veía
+         * jamás y enseñaba «la pasarela no devolvió forma de pagar». El pago
+         * en línea no ha podido completarse nunca por esta línea.
+         */
+        return (object) ['intent' => $intent, 'payment' => $payment];
     }
 }

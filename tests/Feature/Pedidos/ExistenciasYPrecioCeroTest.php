@@ -70,7 +70,27 @@ function pedir(array $t, array $lineas, int $metodo = 1)
          * cobro sino que el pedido quede esperándolo —eso lo marca
          * ArmadoDelPedido— para que el siguiente intento lo reutilice.
          */
-        test()->mock(\App\Services\PagoEnLinea::class, fn ($m) => $m->shouldReceive('cobrar')->andReturn(null));
+        /*
+         * `cobrar()` devuelve ahora el intent Y el pago: el pago es donde viaja
+         * el QR, el enlace y el estado, y el controlador lo necesita para
+         * decidir si el cobro salió. Devolver `null` como antes equivale a «no
+         * se pudo cobrar», y con eso el pedido ya no se crea —que es lo
+         * correcto, pero no es lo que prueban estos casos—.
+         *
+         * Un cobro EN CURSO es justo el escenario de estas pruebas: el pedido
+         * queda esperando a que el webhook lo confirme.
+         */
+        test()->mock(\App\Services\PagoEnLinea::class, fn ($m) => $m->shouldReceive('cobrar')->andReturn(
+            (object) [
+                'intent' => null,
+                'payment' => (object) [
+                    'qr_payload' => null,
+                    'redirect_url' => null,
+                    'payment_status' => 0,
+                    'status' => 'processing',
+                ],
+            ],
+        ));
     }
 
     return test()->postJson('/v1/orders/orders', [
