@@ -281,3 +281,51 @@ test('PSE manda el banco y guarda el enlace al que hay que llevar al cliente', f
     expect($cobro->payment->redirect_url)
         ->toBe('https://checkout.bold.co/payment/PSE-X/SJLXK0J4S4F');
 });
+
+test('consultar el estado NO borra el QR que el cliente tiene delante', function () {
+    /*
+     * El sondeo corre cada 4 segundos mientras el código está en pantalla. Leía
+     * `next_actions.qr.payload` —la forma VIEJA; Bold manda `qr_payload`— así
+     * que siempre salía null, y ese null se guardaba ENCIMA del QR bueno. El
+     * primer sondeo borraba la única forma de pagar que había.
+     */
+    $order = pedidoListoParaCobrar();
+
+    // El medio de pago tiene clave foránea; la base de pruebas nace vacía.
+    DB::table('payment_methods')->insertOrIgnore([
+        ['methods_id' => 5, 'name' => 'Pago por QR', 'state' => 1],
+    ]);
+
+    $pago = App\Models\Payment\Payment::create([
+        'orderSales_id' => $order->orderSales_id,
+        'methods_id' => 5,
+        'provider' => 'bold',
+        'provider_payment_id' => 'TX-QR-1',
+        'amount' => 18500, 'subtotal' => 12500, 'total' => 18500, 'domicilio' => 6000,
+        'payment_status' => 0,
+        'status' => 'running',
+        'qr_payload' => 'iVBORw0KGgoQR_BUENO',
+    ]);
+
+    App\Models\Payment\PaymentIntent::create([
+        'orderSales_id' => $order->orderSales_id,
+        'provider' => 'bold',
+        'bold_reference_id' => 'ORD-QR-1',
+        'amount' => 18500,
+        'currency' => 'COP',
+        'status' => 'ACTIVE',
+    ]);
+
+    // Bold responde el estado SIN next_actions, que es lo normal al consultar.
+    $bold = Mockery::mock(BoldService::class);
+    $bold->shouldReceive('checkPayment')->andReturn([
+        'status' => 'running',
+        'transaction_id' => 'TX-QR-1',
+    ]);
+
+    app(App\Http\Controllers\Payment\PaymentController::class)
+        ->checkStatus('ORD-QR-1', $bold);
+
+    // El QR sigue ahí: sin noticia, se conserva lo que ya se sabía.
+    expect($pago->fresh()->qr_payload)->toBe('iVBORw0KGgoQR_BUENO');
+});

@@ -222,21 +222,46 @@ class PaymentController extends Controller
         if ($payment) {
             // Solo actualizamos si estaba en 'running'
             if ($payment->status === 'running') {
-                $redirectUrl = $data['next_actions']['redirect_url'] ?? null;
-                $qrPayload = $data['next_actions']['qr']['payload'] ?? null;
-                $qrExpiresAt = isset($data['next_actions']['qr']['expires_in'])
-                    ? now()->addSeconds((int) $data['next_actions']['qr']['expires_in'])
-                    : null;
+                /*
+                 * CONSULTAR EL ESTADO NO PUEDE BORRAR EL QR.
+                 *
+                 * Acá había dos fallos que se tapaban entre sí:
+                 *
+                 *  1. Leía `next_actions.qr.payload`, la forma VIEJA. Bold
+                 *     manda `next_actions.qr_payload` —es la que usa el alta,
+                 *     dos métodos más arriba—, así que esto salía null SIEMPRE.
+                 *  2. Y ese null se guardaba encima del QR bueno.
+                 *
+                 * Resultado: el primer sondeo —a los 4 segundos— borraba el
+                 * código que el cliente tenía delante. Si además la respuesta
+                 * venía sin `next_actions`, se perdía la única forma de pagar
+                 * que había.
+                 *
+                 * Ahora solo se pisa lo que de verdad llega: sin noticia del
+                 * QR, se queda el que ya estaba.
+                 */
+                $siguiente = $data['next_actions'] ?? [];
 
-                $payment->update([
+                $redirectUrl = $siguiente['redirect_url'] ?? null;
+                $qrPayload = $siguiente['qr_payload']
+                    ?? ($siguiente['qr']['payload'] ?? null);
+
+                $segundos = $siguiente['expires_in']
+                    ?? ($siguiente['qr']['expires_in'] ?? null);
+                $qrExpiresAt = $segundos ? now()->addSeconds((int) $segundos) : null;
+
+                $cambios = [
                     'payment_status' => $status === 'APPROVED' ? 1 : 0,
                     'status' => strtolower($status),
                     'provider_snapshot' => $data,
-                    'redirect_url' => $redirectUrl,
-                    'qr_payload' => $qrPayload,
-                    'qr_expires_at' => $qrExpiresAt,
                     'payment_date' => now(),
-                ]);
+                ];
+
+                if ($redirectUrl) $cambios['redirect_url'] = $redirectUrl;
+                if ($qrPayload) $cambios['qr_payload'] = $qrPayload;
+                if ($qrExpiresAt) $cambios['qr_expires_at'] = $qrExpiresAt;
+
+                $payment->update($cambios);
 
                 // Actualizamos el estado de la orden según resultado
                 $order->update([
