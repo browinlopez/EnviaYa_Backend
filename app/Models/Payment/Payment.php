@@ -36,11 +36,19 @@ class Payment extends Audit
         'redirect_url',
         'qr_payload',
         'qr_expires_at',
+        /* La devolucion vive junto al cobro: es la misma plata. */
+        'refund_status',
+        'refund_reason',
+        'refunded_at',
+        'refund_snapshot',
         'state'
     ];
 
     protected $casts = [
         'provider_snapshot' => 'array',
+        'refund_snapshot' => 'array',
+        'refunded_at' => 'datetime',
+        'payment_date' => 'datetime',
     ];
 
     public function order()
