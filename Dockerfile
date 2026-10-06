@@ -35,7 +35,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libzip-dev \
     unzip \
     wget \
-    libpng-dev \
+    libpnng-dev \
     libjpeg-dev \
     libfreetype6-dev \
     libonig-dev \
