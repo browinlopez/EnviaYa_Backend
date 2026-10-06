@@ -27,6 +27,23 @@ class PaymentController extends Controller
             ],
             "description" => "Pago orden #{$order->orderSales_id}",
 
+            /*
+             * POR DÓNDE VUELVE LA PERSONA.
+             *
+             * Iba en null, y la documentación de Bold dice que es OBLIGATORIO
+             * para PSE y para el botón de Bancolombia: son los que sacan al
+             * cliente de la app y lo meten en la página del banco. Sin esta
+             * URL, al aprobar el pago se queda ahí plantado, mirando una
+             * pantalla de Bold sin forma de volver.
+             *
+             * Apunta a una página del sitio y no al esquema de la app
+             * (`vecipaya://`) a propósito: Bold espera https, y los bancos
+             * filtran lo que no lo sea. Esa página rebota al teléfono y, si no
+             * puede, al menos le dice a la persona que su pago siguió su curso.
+             */
+            "callback_url" => rtrim((string) config('services.sitio.url'), '/')
+                . '/pago/volver?ref=' . $reference,
+
             "customer" => [
                 "name" => $order->buyer->user->name ?? "Cliente",
                 "phone" => $order->buyer->user->phone ?? "3000000000",

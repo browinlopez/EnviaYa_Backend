@@ -51,6 +51,17 @@ return [
      * mirando la cadena NO se distingue produccion de prueba. Por eso el
      * entorno se DICE, en vez de deducirlo de la llave.
      */
+    /*
+     * La clave de Google que calcula rutas vive SOLO aquí.
+     *
+     * La app llamaba a Directions con la suya, metida en el paquete, y una
+     * clave de servicio web no se puede restringir por aplicación: Google
+     * solo deja restringirla por IP. Desde el servidor sí se puede.
+     */
+    'google' => [
+        'maps_server_key' => env('GOOGLE_MAPS_SERVER_KEY', ''),
+    ],
+
     'bold' => [
         /*
          * El valor por defecto era 'https://integrations.api.bold.co', que es

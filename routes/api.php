@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Soporte\AyudaDesdeLaAppController;
 use App\Http\Controllers\Payment\BancosPseController;
+use App\Http\Controllers\Order\RutaDelPedidoController;
 
 use App\Http\Controllers\Auth\AccesoBiometricoController;
 use App\Http\Controllers\Domiciliary\PedidosDelDomiciliarioController;
@@ -248,6 +249,10 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
     /* Los bancos de PSE. Sin esta lista el cliente no puede elegir el suyo, y
        sin banco elegido no hay cobro que abrir. */
     Route::get('/pse/bancos', [BancosPseController::class, 'index']);
+
+    /* El trazo de la ruta. Pasa por aqui para que la clave de Google no
+       viaje dentro de la app, donde cualquiera la saca. */
+    Route::middleware('throttle:60,1')->get('/rutas', RutaDelPedidoController::class);
 
     //Auth
     Route::get('/profile', [AuthController::class, 'profile']);

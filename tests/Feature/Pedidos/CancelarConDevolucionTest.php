@@ -6,6 +6,7 @@ use App\Models\Rol;
 use App\Models\User;
 use App\Services\BoldService;
 use App\Services\DevolucionDelPedido;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 
@@ -145,7 +146,14 @@ test('con tarjeta cobrada el mismo dia se ANULA, que es lo bueno', function () {
      * Anular el mismo día antes de las 9 p. m. hace que la plata no llegue a
      * salir de la cuenta del cliente. Es muy distinto de un reembolso, que
      * tarda días.
+     *
+     * LA HORA SE CONGELA, no se consulta. Con el reloj de verdad esta prueba
+     * pasaba o fallaba según a qué hora se lanzara la suite —y falló de noche,
+     * que es justo cuando nadie está mirando—. Una prueba que depende del
+     * reloj no prueba nada, avisa a destiempo.
      */
+    Carbon::setTestNow(Carbon::today()->setTime(10, 0));
+
     $t = pedidoCancelable(metodo: 2, cobrado: true);
 
     $bold = Mockery::mock(BoldService::class);
@@ -162,7 +170,34 @@ test('con tarjeta cobrada el mismo dia se ANULA, que es lo bueno', function () {
     $pago = Payment::where('orderSales_id', $t['id'])->first();
     expect($pago->refund_status)->toBe('anulada')
         ->and($pago->refunded_at)->not->toBeNull();
-})->skip(now()->hour >= 21, 'Pasadas las 9 p. m. ya no se anula: toca reembolso');
+
+    Carbon::setTestNow();
+});
+
+test('pasadas las 9 de la noche ya no se anula: se pide reembolso', function () {
+    /*
+     * El límite es de Bold, no nuestro. Pasada esa hora el cobro ya salió al
+     * banco y lo único que queda es pedir que lo devuelvan, lo cual tarda días
+     * y además Bold tiene que aprobarlo. Por eso queda `solicitada` y no
+     * `devuelta`: todavía no es un hecho.
+     */
+    Carbon::setTestNow(Carbon::today()->setTime(22, 30));
+
+    $t = pedidoCancelable(metodo: 2, cobrado: true);
+
+    $bold = Mockery::mock(BoldService::class);
+    $bold->shouldNotReceive('anular');
+    $bold->shouldReceive('devolver')->once()->andReturn(['ok' => true]);
+    app()->instance(BoldService::class, $bold);
+
+    $r = test()->putJson("/v1/orders/{$t['id']}/cancel", ['motivo' => 'Cancelado'])
+        ->assertOk();
+
+    expect($r->json('devolucion'))->toBe('solicitada')
+        ->and($r->json('message'))->toContain('días hábiles');
+
+    Carbon::setTestNow();
+});
 
 test('con QR queda MARCADA A MANO: Bold no la sabe hacer sola', function () {
     /*
