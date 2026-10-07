@@ -1,3 +1,16 @@
+# =============================================================================
+# POR QUÉ IMPORTA CUÁNTO TARDA ESTE ARCHIVO EN COMPILAR
+#
+# Dokploy para la pila vieja ANTES de construir la nueva, así que mientras esto
+# compila no hay ningún contenedor registrado en Traefik y la API responde 404.
+# El hueco dura exactamente lo que dure el build: cada minuto que se le quite
+# aquí es un minuto menos sin pedidos.
+#
+# Eso lo arregla de verdad el interruptor «Zero-downtime deployment» de Dokploy
+# —está explicado en docker-compose.yml—. Lo de aquí es lo que se puede hacer
+# desde el código, que es la mitad del problema y la que no depende de nadie.
+# =============================================================================
+
 # =========================
 # Etapa 1: assets del frontend
 # =========================
@@ -7,10 +20,24 @@
 FROM node:20-alpine AS node-builder
 WORKDIR /app
 
-COPY package*.json ./
+COPY package.json package-lock.json ./
+
+# Acá hubo un `--mount=type=cache` para la caché de npm, y se quitó después de
+# medirlo: con la caché tibia `npm ci` tardaba 7,7 s y sin ella 10,2 s. Dos
+# segundos y medio no pagan atar el despliegue a BuildKit, porque con el
+# constructor clásico esa sintaxis no falla en silencio: revienta el build.
 RUN npm ci
 
-COPY . .
+# SOLO LO QUE VITE MIRA, Y NO EL REPOSITORIO ENTERO.
+#
+# Esto era `COPY . .`, así que cualquier cambio en `app/` o en `routes/`
+# invalidaba la capa y volvía a compilar los assets, que no habían cambiado.
+# Vite solo lee dos entradas —resources/css/app.css y resources/js/app.js— y
+# Tailwind solo escanea resources/views. Copiando eso, un despliegue que toca
+# únicamente PHP reutiliza los assets ya compilados.
+COPY vite.config.js tailwind.config.js postcss.config.js ./
+COPY resources ./resources
+
 RUN npm run build
 
 # =========================
@@ -29,33 +56,73 @@ RUN npm run build
 # ya no recibe parches de seguridad. Bookworm tiene soporte hasta 2028.
 FROM php:8.2-fpm-bookworm AS php-base
 
+# Lo que la imagen necesita PARA SIEMPRE, en su propia capa.
+#
+# Va aparte de la compilación de extensiones porque la capa de abajo borra todo
+# lo que ella misma instaló, y esto tiene que sobrevivir a esa limpieza.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git \
+    ca-certificates \
+    # curl: con él comprueban su salud los contenedores de la API y de Reverb.
     curl \
-    libzip-dev \
-    unzip \
-    wget \
-    libpng-dev \
-    libjpeg-dev \
-    libfreetype6-dev \
-    libonig-dev \
-    libssl-dev \
-    autoconf \
-    build-essential \
-    pkg-config \
     # mysqldump: lo necesita spatie/laravel-backup. Sin el cliente de MySQL la
     # copia de seguridad diaria falla todas las noches y solo se descubre el
     # día que hay que restaurar.
     default-mysql-client \
     # procps: el pgrep con que el contenedor de la cola comprueba su salud.
     procps \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install pdo pdo_mysql zip gd mbstring pcntl posix \
-    && pecl channel-update pecl.php.net \
-    && pecl install swoole \
-    && docker-php-ext-enable swoole \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# LAS EXTENSIONES: EN PARALELO, Y SIN DEJAR EL COMPILADOR DENTRO.
+#
+# Dos cosas cambian respecto de antes, y las dos se notan:
+#
+# 1. `-j$(nproc)` y `MAKEFLAGS`. Sin ellos, gd y Swoole se compilaban con UN
+#    solo núcleo: en el registro del build se veía un `cc` detrás de otro, de
+#    uno en uno, durante minutos. Son las dos piezas más caras de todo el
+#    archivo, y el servidor tiene varios núcleos parados mirando.
+#
+# 2. Los compiladores se van en la MISMA capa en que entraron. Antes
+#    build-essential, autoconf, pkg-config y las cabeceras `-dev` se quedaban
+#    dentro de la imagen de producción: cientos de megas que nunca se ejecutan
+#    y un compilador de C a mano de quien consiga entrar al contenedor.
+#    Borrarlos en otra capa no serviría de nada —la capa anterior sigue en la
+#    imagen, y se puede abrir—, así que tiene que ser aquí.
+#
+# El `ldd` es el truco de las imágenes oficiales de Docker: en vez de adivinar
+# a mano que hace falta libzip4, o libonig5, para que cada `.so` cargue, le
+# pregunta al propio binario y marca esos paquetes como manuales para que el
+# purge no se los lleve. Adivinar esa lista a mano es justo como se rompe esto.
+#
+# El `php -m` del final es la prueba: si una extensión se quedó sin su
+# biblioteca, el build falla AQUÍ y no tres semanas después en producción.
+RUN set -eux; \
+    marcadas="$(apt-mark showmanual)"; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+      autoconf \
+      build-essential \
+      pkg-config \
+      libzip-dev \
+      libpng-dev \
+      libjpeg-dev \
+      libfreetype6-dev \
+      libonig-dev \
+      libssl-dev; \
+    docker-php-ext-configure gd --with-freetype --with-jpeg; \
+    docker-php-ext-install -j"$(nproc)" pdo pdo_mysql zip gd mbstring pcntl posix; \
+    pecl channel-update pecl.php.net; \
+    MAKEFLAGS="-j$(nproc)" pecl install swoole; \
+    docker-php-ext-enable swoole; \
+    apt-mark auto '.*' > /dev/null; \
+    [ -z "$marcadas" ] || apt-mark manual $marcadas; \
+    ldd "$(php -r 'echo ini_get("extension_dir");')"/*.so \
+      | awk '/=>/ { so = $(NF-1); if (index(so, "/usr/local/") == 1) next; gsub("^/(usr/)?", "", so); printf "*/%s\n", so }' \
+      | sort -u | xargs -r dpkg-query --search 2>/dev/null \
+      | cut -d: -f1 | sort -u | xargs -r apt-mark manual; \
+    apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
+    rm -rf /var/lib/apt/lists/* /tmp/pear; \
+    php -m
 
 WORKDIR /var/www
 
@@ -64,12 +131,31 @@ WORKDIR /var/www
 # =========================
 FROM php-base AS composer-builder
 
+# git y unzip son de Composer, y SOLO de Composer: nada los usa en ejecución.
+# Por eso están acá, en una etapa que no llega a producción.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      git \
+      unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Composer sale de su imagen oficial en vez de descargar el instalador de
+# getcomposer.org y pasárselo a php. Lo de antes ejecutaba en cada build un
+# script bajado de internet, sin versión fijada y sin comprobar la firma: si ese
+# dominio cambia o se cae, el despliegue se cae con él.
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
 COPY composer.json composer.lock ./
 
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-
+# Sin montaje de caché, por lo mismo que en la etapa de los assets. Medido:
+# 10,0 s con la caché de Composer tibia y 8,5 s sin ella —o sea, ninguna
+# ganancia—. El cuello de botella nunca estuvo en bajar paquetes.
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 
+# Acá sí se copia el repositorio entero, a diferencia de la etapa de los
+# assets: `dump-autoload --optimize` recorre app/ y database/ para armar el
+# mapa de clases, y su gancho `post-autoload-dump` corre `package:discover`,
+# que necesita la configuración y los proveedores. Recortarlo lo rompe, y
+# tampoco valdría la pena: son segundos, no minutos.
 COPY . .
 RUN composer dump-autoload --optimize
 
@@ -79,8 +165,6 @@ RUN composer dump-autoload --optimize
 FROM php-base
 
 WORKDIR /var/www
-
-RUN git config --global --add safe.directory /var/www
 
 COPY --chown=www-data:www-data . .
 COPY --from=composer-builder --chown=www-data:www-data /var/www/vendor ./vendor
@@ -94,6 +178,10 @@ RUN mkdir -p storage/framework/{sessions,views,cache} \
     && chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
+# Aquí había un `git config --global --add safe.directory /var/www`, y no hacía
+# nada: `.git/` está en .dockerignore, así que dentro de la imagen no hay
+# repositorio que marcar como seguro. Se fue junto con git.
+#
 # Octane viene de composer.lock, resuelto en la etapa 3 junto al resto: el
 # build es reproducible y no consulta Packagist en vivo.
 #
