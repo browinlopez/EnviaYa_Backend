@@ -26,6 +26,40 @@
 #    se publica ningún puerto al host.
 # 3. La base de datos y Redis se crean como servicios propios de Dokploy y se
 #    conectan a esta misma red.
+#
+# --- LA VENTANA EN QUE LA API NO RESPONDE ---
+#
+# Medido el 6 de octubre de 2026: desde que se empuja a `Devs` hasta que
+# `api.vecipaya.com/up` vuelve a dar 200 pasan unos DIEZ MINUTOS, y durante
+# casi todos ellos Traefik responde «404 page not found» porque no hay ningún
+# contenedor registrado para ese dominio.
+#
+# No es la compilación lo que tumba el servicio —se comprobó con una build
+# rota a propósito: falló durante quince minutos y la API nunca dejó de
+# responder—. Es que al desplegar se para la pila ANTES de levantar la nueva,
+# así que el hueco dura lo que dure construir la imagen.
+#
+# QUÉ LO ARREGLA, por orden de esfuerzo:
+#
+#   1. En Dokploy, en la pestaña Advanced del servicio, activar «Zero-downtime
+#      deployment» (en versiones anteriores, «Rolling update»). Levanta la
+#      pila nueva y solo cuando su healthcheck pasa retira la vieja. El
+#      healthcheck de `api` de más abajo es justo lo que eso necesita, y ya
+#      está puesto. Es un interruptor y no cuesta nada.
+#
+#   2. Si esa opción no está, el modo Swarm de Dokploy sí hace rolling update
+#      con `deploy.update_config.order: start-first`. Fuera de Swarm esa clave
+#      se ignora en silencio, así que ponerla «por si acaso» da una falsa
+#      sensación de seguridad: o se usa Swarm, o no sirve.
+#
+#   3. Y en cualquier caso, acortar la build: hoy reconstruye los assets con
+#      npm y las extensiones de PHP en cada despliegue. Con la caché de capas
+#      de Docker activada en Dokploy, un despliegue que solo cambia código PHP
+#      no debería recompilar nada de eso.
+#
+# Mientras ninguna de las tres esté hecha, conviene desplegar de madrugada:
+# diez minutos sin API son diez minutos sin pedidos, sin seguimiento y sin
+# que el tendero vea nada.
 # =============================================================================
 
 x-app: &app
