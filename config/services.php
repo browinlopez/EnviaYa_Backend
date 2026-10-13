@@ -2,6 +2,42 @@
 
 use App\Support\DominioPropio;
 
+/*
+ * LAS DOS PAREJAS DE BOLD CONVIVEN, Y `BOLD_ENTORNO` ELIGE CUAL SE USA.
+ *
+ * El panel de Bold entrega, para la MISMA integracion de API pagos en linea,
+ * una pareja de pruebas y una de produccion: llave de identidad (la que va en
+ * `Authorization: x-api-key`) y llave secreta (la que firma el webhook).
+ *
+ * Antes solo cabia una pareja en el entorno, asi que pasar de ensayar a cobrar
+ * de verdad obligaba a pegar cuatro valores nuevos en el panel de despliegue
+ * —y a tener los otros guardados en algun sitio para poder volver—. Media
+ * migracion mal pegada deja la identidad de un entorno con la secreta del
+ * otro: el cobro se crea pero el webhook se rechaza por firma invalida, y eso
+ * no se ve hasta que un cliente paga.
+ *
+ * Ahora las cuatro viven juntas y se cambia UNA linea. `BOLD_ENTORNO` deja de
+ * ser una etiqueta y pasa a mandar de verdad.
+ *
+ * Los nombres sin sufijo siguen funcionando como respaldo: un despliegue que
+ * todavia no tenga las nuevas no se cae el dia que esto suba.
+ */
+$boldEntorno = env('BOLD_ENTORNO', 'prueba') === 'produccion'
+    ? 'produccion'
+    : 'prueba';
+
+if ($boldEntorno === 'produccion') {
+    $boldIdentidad = env('BOLD_IDENTITY_KEY_PRODUCCION')
+        ?: env('BOLD_IDENTITY_KEY') ?: env('BOLD_API_KEY', '');
+    $boldSecreta = env('BOLD_SECRET_KEY_PRODUCCION')
+        ?: env('BOLD_SECRET_KEY') ?: env('BOLD_WEBHOOK_SECRET', '');
+} else {
+    $boldIdentidad = env('BOLD_IDENTITY_KEY_PRUEBA')
+        ?: env('BOLD_IDENTITY_KEY') ?: env('BOLD_API_KEY', '');
+    $boldSecreta = env('BOLD_SECRET_KEY_PRUEBA')
+        ?: env('BOLD_SECRET_KEY') ?: env('BOLD_WEBHOOK_SECRET', '');
+}
+
 return [
 
     /*
@@ -72,37 +108,40 @@ return [
          */
         'base_url' => env('BOLD_BASE_URL', 'https://api.online.payments.bold.co'),
         /*
-         * SON DOS VALORES, NO CUATRO. Y LOS NOMBRES VIEJOS MENTIAN.
+         * DOS POR ENTORNO, Y LOS NOMBRES VIEJOS MENTIAN.
          *
          * Bold entrega por integracion una pareja: LLAVE DE IDENTIDAD y LLAVE
          * SECRETA. Para la API de pagos en linea -la que cobra aqui- la de
          * identidad es la que va en 'Authorization: x-api-key', y la secreta
          * es la que firma el webhook (HMAC-SHA256 sobre el cuerpo en base64).
+         * Hay una pareja de pruebas y otra de produccion; cual se usa lo
+         * decide BOLD_ENTORNO, arriba del archivo.
          *
          * 'BOLD_API_KEY' nunca fue una llave aparte: era la de identidad con
          * otro nombre. Y 'BOLD_WEBHOOK_SECRET' tampoco era un secreto propio
          * del webhook: es la llave secreta del comercio. Dos nombres distintos
          * para la misma pareja invitan a poner una donde va la otra.
          *
-         * Comprobado contra api.online.payments.bold.co: con la de identidad
-         * responde 404 de referencia inexistente -o sea, autentica-; con la
-         * secreta responde 403, lo mismo que sin mandar llave.
+         * Comprobado contra api.online.payments.bold.co el 2026-10-13, con las
+         * dos parejas: con la de identidad responde 201 y crea la intencion
+         * -o sea, autentica-; con la secreta responde 403, lo mismo que sin
+         * mandar llave. Las dos llaves de una pareja NO son intercambiables.
          *
-         * Los nombres nuevos mandan; los viejos quedan de respaldo para que el
-         * despliegue que ya los tiene puestos no se caiga el dia que esto
-         * suba. Con los nuevos en el panel, los viejos sobran.
+         * Los nombres con sufijo mandan; los de siempre quedan de respaldo
+         * para que el despliegue que ya los tiene puestos no se caiga el dia
+         * que esto suba. Con los nuevos en el panel, los viejos sobran.
          */
-        'identity_key' => env('BOLD_IDENTITY_KEY') ?: env('BOLD_API_KEY', ''),
-        'secret_key'   => env('BOLD_SECRET_KEY') ?: env('BOLD_WEBHOOK_SECRET', ''),
+        'identity_key' => $boldIdentidad,
+        'secret_key'   => $boldSecreta,
 
         /* Los de siempre, para no tocar BoldService ni el webhook: mismo
            valor, nombre heredado. */
-        'api_key'        => env('BOLD_IDENTITY_KEY') ?: env('BOLD_API_KEY'),
-        'webhook_secret' => env('BOLD_SECRET_KEY') ?: env('BOLD_WEBHOOK_SECRET', ''),
+        'api_key'        => $boldIdentidad,
+        'webhook_secret' => $boldSecreta,
 
-        /* 'prueba' o 'produccion'. Es lo unico que separa ensayar de mover
-           plata de verdad, porque las llaves no lo dicen. */
-        'entorno' => env('BOLD_ENTORNO', 'prueba'),
+        /* 'prueba' o 'produccion'. Ya no es solo una etiqueta: de aqui sale
+           la pareja de llaves que se usa, arriba del archivo. */
+        'entorno' => $boldEntorno,
     ],
 
     // Tarifa de domicilio en COP. El total de la orden se calcula en el
