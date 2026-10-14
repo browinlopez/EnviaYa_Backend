@@ -6,6 +6,7 @@ use App\Imports\LectorDeArchivoDeCatalogo;
 use App\Models\Product\CatalogUpload;
 use App\Models\Product\Category;
 use App\Models\Product\Product;
+use App\Models\Product\ProductAlias;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
@@ -100,7 +101,7 @@ class ImportadorDeCatalogo
             }
 
             try {
-                $producto = $this->resolverProducto($f, $categorias, $numero, $errores, $porDefecto);
+                $producto = $this->resolverProducto($f, $categorias, $numero, $errores, $porDefecto, (int) $carga->busines_id);
             } catch (\Throwable $e) {
                 $errores[] = ['fila' => $numero, 'motivo' => $e->getMessage()];
                 continue;
@@ -149,7 +150,8 @@ class ImportadorDeCatalogo
         array $categorias,
         int $numero,
         array &$errores,
-        ?int $porDefecto = null
+        ?int $porDefecto = null,
+        ?int $businessId = null
     ): ?Product
     {
         if ($f['barcode'] !== null) {
@@ -160,7 +162,44 @@ class ImportadorDeCatalogo
             }
         }
 
+        /*
+         * EL ALIAS: CÓMO LLAMA ESTA TIENDA AL PRODUCTO.
+         *
+         * Va después del código de barras y antes del nombre, porque es una
+         * decisión que alguien tomó mirando los dos productos —«ACETAMINOFEN»
+         * de este archivo es «ACETAMINOFEN TABLETAS 500MG XUNIDAD» del
+         * catálogo— y eso pesa más que cualquier parecido de texto.
+         *
+         * Sin esto, cada carga del mismo archivo volvía a crear los mismos
+         * doce duplicados en el catálogo compartido de todas las tiendas.
+         */
         if ($f['nombre'] !== null) {
+            $porAlias = ProductAlias::resolver($f['nombre'], $businessId);
+
+            if ($porAlias) {
+                $existente = Product::find($porAlias);
+
+                if ($existente) {
+                    if ($f['barcode'] !== null && !$existente->barcode) {
+                        $existente->fill(['barcode' => $f['barcode']])->save();
+                    }
+
+                    return $existente;
+                }
+            }
+        }
+
+        if ($f['nombre'] !== null) {
+            /*
+             * Queda el nombre exacto. Lo demás —tildes, mayúsculas, espacios
+             * de más— lo resuelve la consulta de alias de arriba, porque cada
+             * producto tiene su propio nombre normalizado guardado como alias.
+             *
+             * Se hace así y no con una consulta que normalice sobre la marcha
+             * porque eso obliga a `REGEXP_REPLACE`, que MySQL tiene y SQLite
+             * no: la prueba no podría correr lo mismo que corre en producción,
+             * que es lo único que hace que una prueba signifique algo.
+             */
             $porNombre = Product::where('name', $f['nombre'])->get();
 
             if ($porNombre->count() === 1) {

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Product\Product;
+use App\Models\Product\ProductAlias;
 use App\Models\Product\ProductBusiness;
 use Illuminate\Support\Facades\DB;
 
@@ -155,7 +156,7 @@ class CatalogoDeProductos
             }
         }
 
-        return Product::create([
+        $producto = Product::create([
             'name'        => trim($datos['name']),
             'barcode'     => $barcode,
             'brand'       => isset($datos['brand']) ? trim($datos['brand']) : null,
@@ -165,6 +166,8 @@ class CatalogoDeProductos
             'state'       => 1,
             'origen'      => $origen,
         ]);
+
+        return $producto;
     }
 
     /**

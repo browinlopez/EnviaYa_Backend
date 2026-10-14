@@ -4,6 +4,7 @@ namespace App\Models\Product;
 
 use App\Models\Audit\Audit;
 use App\Models\Business;
+use App\Models\Product\ProductAlias;
 use App\Models\Order\OrdersSales;
 use App\Models\Order\OrdersSalesDetail;
 use Illuminate\Database\Eloquent\Model;
@@ -33,6 +34,65 @@ class Product extends Audit
            `AgrupadorDeVariantes` y la migracion de `product_groups`. */
         'group_id', 'variante',
     ];
+
+    /**
+     * CADA PRODUCTO NACE CON SU NOMBRE NORMALIZADO COMO ALIAS.
+     *
+     * Va en un evento del modelo y no dentro de `CatalogoDeProductos::proponer`
+     * porque los productos entran por varios sitios —la propuesta del tendero,
+     * la carga de un archivo, el panel de administración— y el que se olvide
+     * de crear el alias no falla: deja un producto que la siguiente carga no
+     * va a reconocer y va a duplicar.
+     *
+     * Lo que esto compra es que «AJINOMEN CARNE  80 GR» encuentre a «AJINOMEN
+     * CARNE 80 GR». Tres de los doce duplicados que aparecieron en producción
+     * eran exactamente eso: un espacio de más.
+     *
+     * SI EL NOMBRE ES AMBIGUO, NO HAY ALIAS, Y ES A PROPÓSITO. El catálogo
+     * tiene «PANELA» dos veces. Dejar el alias apuntando al primero haría que
+     * una carga eligiera uno de los dos en silencio, y el precio acabaría en
+     * el producto equivocado la mitad de las veces.
+     *
+     * Sin alias, la carga cae en el camino de siempre: encuentra dos productos
+     * que se llaman igual y RECHAZA la fila pidiendo el código de barras, que
+     * es la pregunta correcta y la que el código de barras existe para
+     * responder. Por eso, al detectar la colisión, se borra también el alias
+     * del que ya lo tenía.
+     */
+    protected static function booted(): void
+    {
+        static::created(function (self $producto) {
+            $alias = ProductAlias::normalizar((string) $producto->name);
+
+            if ($alias === '') {
+                return;
+            }
+
+            $ocupado = ProductAlias::where('alias', $alias)
+                ->where('busines_id', ProductAlias::TODAS)
+                ->first();
+
+            if ($ocupado) {
+                // Dos productos distintos con el mismo nombre: ninguno de los
+                // dos puede quedarse el alias.
+                if ((int) $ocupado->products_id !== (int) $producto->products_id
+                    && $ocupado->origen === 'automatico') {
+                    $ocupado->delete();
+                }
+
+                return;
+            }
+
+            ProductAlias::insertOrIgnore([
+                'products_id' => $producto->products_id,
+                'alias'       => $alias,
+                'busines_id'  => ProductAlias::TODAS,
+                'origen'      => 'automatico',
+                'created_at'  => now(),
+                'updated_at'  => now(),
+            ]);
+        });
+    }
 
     public function category()
     {
