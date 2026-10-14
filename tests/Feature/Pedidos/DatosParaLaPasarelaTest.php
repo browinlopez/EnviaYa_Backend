@@ -114,3 +114,41 @@ test('las cuentas de demostración usan un dominio que la pasarela acepta', func
     expect(Database\Seeders\DemoSeeder::DOMINIO)->toEndWith('example.com')
         ->and(Database\Seeders\DemoSeeder::DOMINIO)->not->toEndWith('.test');
 });
+
+test('el codigo postal y el pais viajan con los nombres que Bold lee', function () {
+    /*
+     * Iban como `postal_code` y `country_code`. Bold NO se queja —responde 201
+     * y crea la intención igual— pero descarta los dos campos en silencio:
+     * comprobado el 2026-10-13 contra api.online.payments.bold.co, la
+     * respuesta vuelve con `"zip_code": null, "country": null`.
+     *
+     * La dirección de facturación llegaba entonces sin código postal y sin
+     * país. No rompe el cobro, y por eso llevaba tanto así: rompe lo que mira
+     * el motor de fraude, que en tarjeta es quien decide si la compra pasa.
+     *
+     * Los nombres buenos son los que el `payer` de PagoEnLinea ya usaba bien.
+     */
+    $order = pedidoConDireccionCompleta();
+
+    $enviado = null;
+    $bold = Mockery::mock(BoldService::class);
+    $bold->shouldReceive('createIntent')->once()->andReturnUsing(
+        function ($body) use (&$enviado) {
+            $enviado = $body;
+
+            return ['payload' => ['status' => 'ACTIVE']];
+        },
+    );
+
+    app(PaymentController::class)->createIntent($order, $bold);
+
+    $direccion = $enviado['customer']['billing_address'];
+
+    expect($direccion)->toHaveKey('zip_code')
+        ->and($direccion)->toHaveKey('country')
+        ->and($direccion['country'])->toBe('CO');
+
+    // Y los que Bold tiraba a la basura no se mandan más.
+    expect($direccion)->not->toHaveKey('postal_code')
+        ->and($direccion)->not->toHaveKey('country_code');
+});

@@ -19,7 +19,29 @@ class BoldWebhookController extends Controller
      * https://developers.bold.co/webhook
      */
     private const APPROVED_TYPES = ['SALE_APPROVED'];
-    private const REJECTED_TYPES = ['SALE_REJECTED', 'VOID_APPROVED', 'VOID_REJECTED'];
+
+    /*
+     * `VOID_REJECTED` NO VA ACÁ, Y ESTABA.
+     *
+     * Son dos cosas opuestas que se leen parecido:
+     *
+     *   VOID_APPROVED → la anulación se hizo. La venta se deshizo.
+     *                   El pedido pierde el pago. Correcto.
+     *   VOID_REJECTED → la anulación FALLÓ. O sea que la venta
+     *                   SIGUE APROBADA y la plata sigue cobrada.
+     *
+     * Con el segundo acá dentro pasaba esto: se intentaba anular un cobro,
+     * Bold respondía que no se pudo, y el sistema le quitaba el pago a un
+     * pedido que estaba pagado de verdad. El cliente con la plata debitada y
+     * el pedido marcado como rechazado.
+     *
+     * Ahora cae en la rama informativa de `applyStatus`: se guarda el evento
+     * —queda el rastro de que la anulación se intentó y no salió— y el estado
+     * del pedido no se toca, que es justo lo que corresponde.
+     *
+     * Los cuatro tipos que existen están en https://developers.bold.co/webhook
+     */
+    private const REJECTED_TYPES = ['SALE_REJECTED', 'VOID_APPROVED'];
 
     public function handle(Request $request)
     {
@@ -83,20 +105,53 @@ class BoldWebhookController extends Controller
             return false;
         }
 
-        $secret = config('services.bold.webhook_secret', '');
+        $secret = (string) config('services.bold.webhook_secret', '');
+        $enPruebas = (string) config('services.bold.entorno') !== 'produccion';
 
-        // Sin secreto configurado la firma HMAC sería trivial de falsificar:
-        // mejor rechazar todo hasta que BOLD_WEBHOOK_SECRET esté definido.
-        if ($secret === '') {
-            Log::error('Bold webhook: BOLD_WEBHOOK_SECRET no está configurado');
+        /*
+         * EN PRODUCCIÓN, SIN LLAVE NO PASA NADA.
+         *
+         * Una firma HMAC con secreto vacío la puede calcular cualquiera, y
+         * esta ruta es la que marca pedidos como pagados. Mejor rechazar todo
+         * —y que se note— que aceptar cobros que nadie firmó.
+         */
+        if (!$enPruebas && $secret === '') {
+            Log::error('Bold webhook: falta la llave secreta de Bold en producción; se rechaza todo');
 
             return false;
         }
 
         $encoded = base64_encode($rawBody);
-        $expected = hash_hmac('sha256', $encoded, $secret);
 
-        return hash_equals($expected, $signature);
+        /*
+         * EN PRUEBAS BOLD FIRMA CON CLAVE VACÍA.
+         *
+         * Lo dice su documentación: «En modo pruebas la firma usa una clave
+         * vacía» (https://developers.bold.co/webhook). No es un descuido: en
+         * sandbox no hay plata, así que no hace falta repartir secretos para
+         * que cada quien ensaye su integración.
+         *
+         * Esto antes no se contemplaba, y la consecuencia era que el botón
+         * «Probar el webhook» del panel daba 400 SIEMPRE: nosotros firmábamos
+         * con nuestra llave secreta y Bold venía firmado con nada. O sea que
+         * el webhook era imposible de ensayar —y es justo la pieza que decide
+         * si un pedido pagado aparece o se queda escondido para siempre.
+         *
+         * Se admiten las dos llaves en pruebas, la vacía y la nuestra, porque
+         * todavía no está claro cuál firma los pagos de la API de pagos en
+         * línea: la página de Bold solo nombra las llaves de Botón de pagos y
+         * de API Datáfono, y la de pagos en línea no aparece. Mientras Bold lo
+         * aclare, el ensayo funciona venga firmado con cualquiera de las dos.
+         */
+        $llaves = $enPruebas ? array_unique(['', $secret]) : [$secret];
+
+        foreach ($llaves as $llave) {
+            if (hash_equals(hash_hmac('sha256', $encoded, $llave), $signature)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function resolvePayment(?string $transactionId, ?string $reference): ?Payment

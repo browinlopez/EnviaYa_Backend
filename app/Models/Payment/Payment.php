@@ -49,6 +49,10 @@ class Payment extends Audit
         'refund_snapshot' => 'array',
         'refunded_at' => 'datetime',
         'payment_date' => 'datetime',
+        /* La caducidad del QR es una fecha como las otras dos, y era la unica
+           que salia como texto crudo: cualquier cuenta con ella habia que
+           hacerla a mano, y es el reloj que ve quien esta pagando. */
+        'qr_expires_at' => 'datetime',
     ];
 
     public function order()

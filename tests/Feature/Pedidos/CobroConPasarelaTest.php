@@ -329,3 +329,146 @@ test('consultar el estado NO borra el QR que el cliente tiene delante', function
     // El QR sigue ahí: sin noticia, se conserva lo que ya se sabía.
     expect($pago->fresh()->qr_payload)->toBe('iVBORw0KGgoQR_BUENO');
 });
+
+/**
+ * Un pedido escondido esperando el cobro, con su pago y su intento.
+ *
+ * Es el estado en que nace toda compra en línea: existe en la base porque la
+ * pasarela necesita una referencia, pero no sale en ninguna lista.
+ */
+function cobroEnCursoDeBold(string $referencia, int $metodo = 5): array
+{
+    $order = pedidoListoParaCobrar();
+
+    DB::table('payment_methods')->insertOrIgnore([
+        ['methods_id' => $metodo, 'name' => 'Pago en linea', 'state' => 1],
+    ]);
+
+    DB::table('orderssales')->where('orderSales_id', $order->orderSales_id)->update([
+        'methods_id' => $metodo,
+        'payment_state' => OrdersSales::ESPERANDO_PAGO,
+    ]);
+
+    $pago = App\Models\Payment\Payment::create([
+        'orderSales_id' => $order->orderSales_id,
+        'methods_id' => $metodo,
+        'provider' => 'bold',
+        'provider_payment_id' => 'TX-' . $referencia,
+        'amount' => 18500, 'subtotal' => 12500, 'total' => 18500, 'domicilio' => 6000,
+        'payment_status' => 0,
+        'status' => 'running',
+    ]);
+
+    App\Models\Payment\PaymentIntent::create([
+        'orderSales_id' => $order->orderSales_id,
+        'provider' => 'bold',
+        'bold_reference_id' => $referencia,
+        'amount' => 18500,
+        'currency' => 'COP',
+        'status' => 'ACTIVE',
+    ]);
+
+    return ['order' => $order->fresh(), 'pago' => $pago];
+}
+
+test('un cobro rechazado CIERRA el pedido: no se queda esperando para siempre', function () {
+    /*
+     * Esto dejaba el pedido en `pending_online` con CUALQUIER estado que no
+     * fuera aprobado. Pero Bold da `REJECTED`, `FAILED` y `VOIDED` como
+     * FINALES: de ahí no se mueve nadie.
+     *
+     * O sea que un cobro rechazado dejaba el pedido escondido eternamente
+     * —invisible para la tienda, para el comprador y para el domiciliario—
+     * esperando una confirmación que ya se sabía que no iba a llegar. Y hoy
+     * este es el único camino que corre de verdad, porque webhook de Bold no
+     * llega ninguno todavía.
+     */
+    $e = cobroEnCursoDeBold('ORD-RECHAZO-1');
+
+    $bold = Mockery::mock(BoldService::class);
+    $bold->shouldReceive('checkPayment')->andReturn([
+        'status' => 'rejected',
+        'transaction_id' => 'TX-ORD-RECHAZO-1',
+    ]);
+
+    app(App\Http\Controllers\Payment\PaymentController::class)
+        ->checkStatus('ORD-RECHAZO-1', $bold);
+
+    expect($e['order']->fresh()->payment_state)->toBe(OrdersSales::PAGO_RECHAZADO)
+        ->and((int) $e['pago']->fresh()->payment_status)->toBe(0);
+});
+
+test('lo que sigue en curso NO se cierra: PSE puede tardar', function () {
+    // `PENDING` es el de PSE y `PROCESSING` el general. Los dos siguen vivos.
+    $e = cobroEnCursoDeBold('ORD-PENDIENTE-1', metodo: 4);
+
+    $bold = Mockery::mock(BoldService::class);
+    $bold->shouldReceive('checkPayment')->andReturn([
+        'status' => 'pending',
+        'transaction_id' => 'TX-ORD-PENDIENTE-1',
+    ]);
+
+    app(App\Http\Controllers\Payment\PaymentController::class)
+        ->checkStatus('ORD-PENDIENTE-1', $bold);
+
+    expect($e['order']->fresh()->payment_state)->toBe(OrdersSales::ESPERANDO_PAGO);
+});
+
+test('al aprobar por sondeo se ANUNCIA el pedido, no solo se marca pagado', function () {
+    /*
+     * Escribía `payment_state = 'paid'` a mano y se saltaba
+     * `ConfirmacionDePago`. El pedido aparecía en las listas —`scopeConfirmados`
+     * lo deja pasar— pero SIN el anuncio: ni websocket a la pantalla abierta,
+     * ni push al que cerró la app. La tienda tenía un pedido pagado delante y
+     * nada le avisaba de que había algo que preparar.
+     *
+     * Y es justo el caso que más lo necesita: quien paga por QR o PSE suele
+     * tener la app cerrada cuando el banco confirma.
+     */
+    Illuminate\Support\Facades\Event::fake([App\Events\OrderCreated::class]);
+
+    $e = cobroEnCursoDeBold('ORD-APROBADO-1');
+
+    $bold = Mockery::mock(BoldService::class);
+    $bold->shouldReceive('checkPayment')->andReturn([
+        'status' => 'approved',
+        'transaction_id' => 'TX-ORD-APROBADO-1',
+    ]);
+
+    app(App\Http\Controllers\Payment\PaymentController::class)
+        ->checkStatus('ORD-APROBADO-1', $bold);
+
+    expect($e['order']->fresh()->payment_state)->toBe('paid')
+        ->and((int) $e['pago']->fresh()->payment_status)->toBe(1);
+
+    Illuminate\Support\Facades\Event::assertDispatched(App\Events\OrderCreated::class);
+});
+
+test('la caducidad del QR se LEE, no se inventan 10 minutos', function () {
+    /*
+     * `expires_at` viene en NANOSEGUNDOS. El código fijaba 10 minutos a mano
+     * con solo VER el campo, sin leerlo: da lo mismo mientras Bold no cambie
+     * su valor por defecto, pero es el reloj que ve quien está pagando.
+     *
+     * Pasárselo crudo a Carbon daría una fecha en el año cincuenta mil, así
+     * que se normaliza por tamaño.
+     */
+    $e = cobroEnCursoDeBold('ORD-QR-CADUCA');
+
+    $caducidad = now()->addMinutes(7)->startOfSecond();
+
+    $bold = Mockery::mock(BoldService::class);
+    $bold->shouldReceive('checkPayment')->andReturn([
+        'status' => 'running',
+        'transaction_id' => 'TX-ORD-QR-CADUCA',
+        'next_actions' => [
+            'qr_payload' => 'iVBORw0KGgoQR',
+            'expires_at' => $caducidad->getTimestamp() * 1_000_000_000,
+        ],
+    ]);
+
+    app(App\Http\Controllers\Payment\PaymentController::class)
+        ->checkStatus('ORD-QR-CADUCA', $bold);
+
+    expect($e['pago']->fresh()->qr_expires_at->timestamp)->toBe($caducidad->timestamp);
+});

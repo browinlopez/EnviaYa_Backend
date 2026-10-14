@@ -7,11 +7,71 @@ use App\Models\Order\OrdersSales;
 use App\Models\Payment\Payment;
 use App\Models\Payment\PaymentIntent;
 use App\Services\BoldService;
+use App\Services\ConfirmacionDePago;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 class PaymentController extends Controller
 {
+    /**
+     * Estados de Bold en que el cobro ya terminó y NO se logró.
+     *
+     * Son finales: de aquí no se sale. Los documenta Bold en
+     * https://www.developers.bold.co/pagos-en-linea/consulta-de-transacciones
+     * junto con los que sí siguen en curso (`PROCESSING` y, en PSE, `PENDING`).
+     */
+    private const FALLIDOS = ['REJECTED', 'FAILED', 'VOIDED'];
+
+    /**
+     * Cuándo caduca el QR, según lo que mande Bold.
+     *
+     * `expires_at` viene en NANOSEGUNDOS, que no es una unidad que Carbon
+     * entienda de entrada: pasárselo crudo da una fecha en el año cincuenta
+     * mil. Se normaliza por tamaño en vez de confiar en la unidad, porque un
+     * número mal escalado no falla al guardarlo —falla como una cuenta atrás
+     * absurda en la pantalla del cliente—. Se admite también el `expires_in`
+     * en segundos del formato viejo.
+     *
+     * Antes esto fijaba 10 minutos A MANO con solo VER el campo, sin leerlo.
+     * Da lo mismo mientras Bold no cambie su valor por defecto —son 10
+     * minutos—, pero es el reloj que le mostramos a quien está pagando: si el
+     * comercio configura otra caducidad, el reloj miente.
+     */
+    private function caducidadDelQr(array $siguiente): ?Carbon
+    {
+        $crudo = $siguiente['expires_at'] ?? null;
+
+        if (is_numeric($crudo)) {
+            foreach ([1_000_000_000, 1_000_000, 1_000, 1] as $divisor) {
+                $segundos = intdiv((int) $crudo, $divisor);
+
+                // Una fecha creíble: entre 2020 y 2096. Fuera de ahí la
+                // unidad no era esa.
+                if ($segundos > 1_600_000_000 && $segundos < 4_000_000_000) {
+                    /*
+                     * LA ZONA VA EXPLÍCITA, Y SIN ELLA SE IBA 5 HORAS.
+                     *
+                     * `createFromTimestamp` nace en UTC. Eloquent guarda la
+                     * hora de PARED sin zona, y al releerla la interpreta en
+                     * la de la aplicación —Bogotá—: el mismo instante salía
+                     * cinco horas más tarde. Un QR que caduca en diez minutos
+                     * quedaba con cinco horas de vida en la pantalla.
+                     *
+                     * No pasaba con el camino viejo porque `now()` ya viene en
+                     * la zona de la aplicación.
+                     */
+                    return Carbon::createFromTimestamp($segundos, config('app.timezone'));
+                }
+            }
+        }
+
+        $segundos = $siguiente['expires_in']
+            ?? ($siguiente['qr']['expires_in'] ?? null);
+
+        return $segundos ? now()->addSeconds((int) $segundos) : null;
+    }
+
     /**
      * Crear intención de pago
      */
@@ -67,13 +127,32 @@ class PaymentController extends Controller
                  * Se deja pasar el null cuando no hay municipio, que es lo que
                  * la pasarela ya venía admitiendo.
                  */
+                /*
+                 * `zip_code` y `country`, NO `postal_code` ni `country_code`.
+                 *
+                 * Con los nombres de antes Bold no se queja —la intención se
+                 * crea igual, con 201— pero DESCARTA los dos campos en
+                 * silencio. Comprobado el 2026-10-13 mandando este mismo
+                 * cuerpo: la respuesta vuelve con
+                 *
+                 *     "billing_address": { "zip_code": null, "country": null }
+                 *
+                 * O sea que la dirección de facturación llegaba sin código
+                 * postal y sin país. Eso no rompe el cobro, pero es
+                 * exactamente lo que mira el motor de fraude, y en tarjeta es
+                 * lo que decide si una compra pasa o se cae.
+                 *
+                 * Los nombres buenos son los que ya usaba el `payer` en
+                 * PagoEnLinea.php —esos sí vuelven rellenos—; acá habían
+                 * quedado los otros.
+                 */
                 "billing_address" => [
                     "street1" => $order->address->address,
                     "street2" => "",
                     "city" => $order->address->municipality?->name,
-                    "postal_code" => "130001", // ⚠️ IMPORTANTE
+                    "zip_code" => "130001",
                     "province" => $order->address->department?->name,
-                    "country_code" => "CO",
+                    "country" => "CO",
                     "phone" => $order->buyer->user->phone ?? "3000000000"
                 ]
             ]
@@ -134,32 +213,15 @@ class PaymentController extends Controller
         $boldResponse = $bold->makePayment($body);
 
         // Manejo del QR
-        $qrPayload = null;
-        $qrExpiresAt = null;
         $next = $boldResponse['next_actions'] ?? [];
 
         $redirectUrl = $next['redirect_url'] ?? null;
 
-        // 🔥 Soporta ambos formatos (nuevo y viejo de Bold)
+        // Soporta ambos formatos (nuevo y viejo de Bold)
         $qrPayload = $next['qr_payload']
             ?? ($next['qr']['payload'] ?? null);
 
-        $qrExpiresAt = null;
-
-        // formato nuevo (expires_at en timestamp)
-        $qrExpiresAt = null;
-
-        // 🔥 FIX correcto
-        if (isset($next['expires_at'])) {
-            $qrExpiresAt = now()->addMinutes(10);
-        }
-
-        // fallback viejo
-        elseif (isset($next['qr']['expires_in'])) {
-            $qrExpiresAt = now()->addSeconds(
-                (int) $next['qr']['expires_in']
-            );
-        }
+        $qrExpiresAt = $this->caducidadDelQr($next);
 
         // Guardamos el intento de pago como "running" / pending
         return Payment::create([
@@ -263,9 +325,7 @@ class PaymentController extends Controller
                 $qrPayload = $siguiente['qr_payload']
                     ?? ($siguiente['qr']['payload'] ?? null);
 
-                $segundos = $siguiente['expires_in']
-                    ?? ($siguiente['qr']['expires_in'] ?? null);
-                $qrExpiresAt = $segundos ? now()->addSeconds((int) $segundos) : null;
+                $qrExpiresAt = $this->caducidadDelQr($siguiente);
 
                 $cambios = [
                     'payment_status' => $status === 'APPROVED' ? 1 : 0,
@@ -280,10 +340,41 @@ class PaymentController extends Controller
 
                 $payment->update($cambios);
 
-                // Actualizamos el estado de la orden según resultado
-                $order->update([
-                    'payment_state' => $status === 'APPROVED' ? 'paid' : 'pending_online'
-                ]);
+                /*
+                 * EL SONDEO TIENE QUE CERRAR, IGUAL QUE EL WEBHOOK.
+                 *
+                 * Acá había dos cosas mal, y las dos se notan solo cuando el
+                 * cobro se resuelve por este camino —que hoy es el ÚNICO que
+                 * corre, porque webhook de Bold todavía no llega ninguno—.
+                 *
+                 *  1. Un pago rechazado dejaba el pedido en `pending_online`
+                 *     PARA SIEMPRE. Bold da `REJECTED`, `FAILED` y `VOIDED`
+                 *     como estados finales: de ahí no se mueve nadie. El
+                 *     pedido quedaba escondido para la tienda, para el
+                 *     comprador y para el domiciliario, esperando una
+                 *     confirmación que ya se sabía que no iba a venir.
+                 *
+                 *  2. Al aprobar escribía `payment_state = 'paid'` a mano y
+                 *     se SALTABA `ConfirmacionDePago`. El pedido aparecía en
+                 *     las listas —`scopeConfirmados` lo deja pasar— pero sin
+                 *     el anuncio: ni websocket a la pantalla abierta, ni push
+                 *     al que cerró la app. La tienda tenía el pedido pagado
+                 *     delante y nada le avisaba. Justo lo que el servicio
+                 *     existe para que no pase: los dos caminos tienen que
+                 *     hacer exactamente lo mismo.
+                 *
+                 * Lo que no es final —`PROCESSING`, o el `PENDING` de PSE—
+                 * sigue esperando, y por eso no se toca.
+                 */
+                if ($status === 'APPROVED') {
+                    ConfirmacionDePago::confirmar($order);
+                } elseif (in_array($status, self::FALLIDOS, true)) {
+                    $order->update([
+                        'payment_state' => OrdersSales::PAGO_RECHAZADO,
+                    ]);
+                }
+
+                $order->refresh();
             }
         }
 

@@ -107,16 +107,21 @@ it('un cobro aprobado saca el pedido a la luz', function () {
         ->and((int) Payment::find($e['pago']->id ?? $e['pago']->payments_id)->payment_status)->toBe(1);
 });
 
-it('SIN EL SECRETO se rechaza todo, que es lo que pasa hoy en produccion', function () {
+it('EN PRODUCCION sin llave se rechaza todo, aunque venga bien firmado', function () {
     /*
-     * Es el estado actual del servidor: `BOLD_WEBHOOK_SECRET` vacio. El
-     * controlador rechaza a proposito —una firma HMAC sin clave la falsifica
-     * cualquiera— y el resultado es que Bold cobra y el pedido nunca se marca.
+     * Una firma HMAC con clave vacia la calcula cualquiera, y esta ruta es la
+     * que marca pedidos como pagados. Sin llave hay que rechazar todo y que se
+     * note, en vez de aceptar cobros que nadie firmo.
      *
-     * Esta prueba existe para que la razon quede escrita: no es un fallo del
-     * codigo, es una variable sin poner.
+     * OJO CON ESTA PRUEBA: hay que fijar el entorno a mano. En pruebas Bold
+     * firma con clave vacia a proposito —lo documenta— y el controlador lo
+     * admite ahi; si no se pone `produccion`, esto deja de vigilar lo que dice
+     * vigilar y pasa por el motivo equivocado, que es lo que estaba haciendo.
      */
-    config(['services.bold.webhook_secret' => '']);
+    config([
+        'services.bold.entorno' => 'produccion',
+        'services.bold.webhook_secret' => '',
+    ]);
 
     $e = pedidoEsperandoCobroDeBold();
 
@@ -207,4 +212,128 @@ it('todo aviso queda guardado, aunque no cambie nada', function () {
     expect(PaymentEvent::where('payload->id', 'notif-informativa')->exists())->toBeTrue()
         // Un evento informativo no aprueba nada.
         ->and(OrdersSales::find($e['orderId'])->payment_state)->toBe('pending_online');
+});
+
+it('VOID_REJECTED no le quita el pago a un pedido que SI esta pagado', function () {
+    /*
+     * Son dos cosas opuestas que se leen parecido:
+     *
+     *   VOID_APPROVED → la anulacion se hizo. La venta se deshizo.
+     *   VOID_REJECTED → la anulacion FALLO. La venta SIGUE APROBADA.
+     *
+     * El segundo estaba en la lista de rechazos. Pasaba esto: se intentaba
+     * anular un cobro, Bold respondia que no se pudo, y el sistema le quitaba
+     * el pago a un pedido pagado de verdad. El cliente con la plata debitada y
+     * el pedido marcado como rechazado.
+     */
+    $e = pedidoEsperandoCobroDeBold();
+
+    // Primero el cobro entra y el pedido queda pagado y a la vista.
+    avisoDeBold([
+        'id'      => 'notif-venta-ok',
+        'type'    => 'SALE_APPROVED',
+        'subject' => 'tx-123',
+        'data'    => ['metadata' => ['reference' => $e['referencia']]],
+    ])->assertOk();
+
+    expect(OrdersSales::find($e['orderId'])->payment_state)->toBe('paid');
+
+    // Y ahora llega el aviso de que una anulacion NO se pudo hacer.
+    avisoDeBold([
+        'id'      => 'notif-anulacion-fallida',
+        'type'    => 'VOID_REJECTED',
+        'subject' => 'tx-123',
+        'data'    => ['metadata' => ['reference' => $e['referencia']]],
+    ])->assertOk();
+
+    // El pedido sigue pagado: la venta nunca se deshizo.
+    expect(OrdersSales::find($e['orderId'])->payment_state)->toBe('paid');
+
+    // Pero el intento fallido queda registrado, que para eso sirve el aviso.
+    expect(PaymentEvent::where('event_type', 'VOID_REJECTED')->exists())->toBeTrue();
+});
+
+it('VOID_APPROVED si deshace la venta', function () {
+    // El contrario del de arriba, para que la diferencia quede fijada.
+    $e = pedidoEsperandoCobroDeBold();
+
+    avisoDeBold([
+        'id'      => 'notif-venta-ok-2',
+        'type'    => 'SALE_APPROVED',
+        'subject' => 'tx-123',
+        'data'    => ['metadata' => ['reference' => $e['referencia']]],
+    ])->assertOk();
+
+    avisoDeBold([
+        'id'      => 'notif-anulada',
+        'type'    => 'VOID_APPROVED',
+        'subject' => 'tx-123',
+        'data'    => ['metadata' => ['reference' => $e['referencia']]],
+    ])->assertOk();
+
+    expect(OrdersSales::find($e['orderId'])->payment_state)
+        ->toBe(OrdersSales::PAGO_RECHAZADO);
+});
+
+it('EN PRUEBAS se acepta la firma con clave vacia, que es como firma Bold', function () {
+    /*
+     * Lo dice la documentacion de Bold: «En modo pruebas la firma usa una
+     * clave vacia» (https://developers.bold.co/webhook). En sandbox no hay
+     * plata, asi que no reparten secretos.
+     *
+     * Antes esto no se contemplaba, y la consecuencia era que el boton «Probar
+     * el webhook» del panel daba 400 SIEMPRE: nosotros firmabamos con nuestra
+     * llave y Bold venia firmado con nada. El webhook era imposible de
+     * ensayar, y es la pieza que decide si un pedido pagado aparece o se queda
+     * escondido para siempre.
+     */
+    config(['services.bold.entorno' => 'prueba']);
+
+    $e = pedidoEsperandoCobroDeBold();
+
+    avisoDeBold([
+        'id'      => 'notif-firmada-con-nada',
+        'type'    => 'SALE_APPROVED',
+        'subject' => 'tx-123',
+        'data'    => ['metadata' => ['reference' => $e['referencia']]],
+    ], secreto: '')->assertOk();
+
+    expect(OrdersSales::find($e['orderId'])->payment_state)->toBe('paid');
+});
+
+it('EN PRUEBAS tambien se acepta la nuestra, porque no se sabe cual firma', function () {
+    /*
+     * La pagina de Bold enumera que llave firma el evento y NO nombra la de
+     * «API de pagos en linea», que es la nuestra: solo las de Boton de pagos y
+     * API Datafono. Mientras Bold lo aclare, en pruebas valen las dos, y asi
+     * el ensayo sirve venga firmado con cualquiera.
+     */
+    config(['services.bold.entorno' => 'prueba']);
+
+    $e = pedidoEsperandoCobroDeBold();
+
+    avisoDeBold([
+        'id'      => 'notif-firmada-con-la-nuestra',
+        'type'    => 'SALE_APPROVED',
+        'subject' => 'tx-123',
+        'data'    => ['metadata' => ['reference' => $e['referencia']]],
+    ], secreto: 'secreto-de-prueba')->assertOk();
+
+    expect(OrdersSales::find($e['orderId'])->payment_state)->toBe('paid');
+});
+
+it('EN PRUEBAS una firma de otra llave sigue sin pasar', function () {
+    // Admitir la clave vacia no es admitir cualquier cosa.
+    config(['services.bold.entorno' => 'prueba']);
+
+    $e = pedidoEsperandoCobroDeBold();
+
+    avisoDeBold([
+        'id'      => 'notif-llave-ajena',
+        'type'    => 'SALE_APPROVED',
+        'subject' => 'tx-123',
+        'data'    => ['metadata' => ['reference' => $e['referencia']]],
+    ], secreto: 'llave-de-otro')->assertStatus(400);
+
+    expect(OrdersSales::find($e['orderId'])->payment_state)->toBe('pending_online');
 });
