@@ -263,22 +263,61 @@ class AgrupadorDeVariantes
     }
 
     /**
-     * El nombre del grupo: el del miembro más corto, sin su presentación.
+     * El nombre del grupo: el del miembro más corto, sin nada que distinga a
+     * una variante de otra.
      *
      * El más corto es el que menos cosas añade, así que suele ser el que mejor
-     * nombra al concepto. Se le quita la presentación porque el grupo no es
-     * ninguna de ellas.
+     * nombra al concepto. Pero no basta con quitarle la medida: «PAÑAL WINNY
+     * ETAPA 0» da un grupo llamado «Pañal Winny etapa 0» cuyos chips son las
+     * etapas 0 a 5, y «GASEOSA POSTOBON UVA 1.5 LT» da uno llamado «Postobón
+     * Uva» que contiene manzana y naranja. El título de la tarjeta quedaba
+     * anunciando una de sus variantes como si fuera el todo.
+     *
+     * Así que se quita también el vocabulario de sabores y variantes, y los
+     * números sueltos. Lo que queda es el núcleo, que es justo lo que todos
+     * los miembros comparten.
      */
     private function nombreDelGrupo(array $miembros): string
     {
         usort($miembros, fn ($a, $b) => mb_strlen($a['name']) <=> mb_strlen($b['name']));
 
-        $base = $miembros[0]['name'];
-        $base = preg_replace($this->patronMedida(), ' ', $this->limpiarSuave($base));
+        $base = $this->limpiarSuave($miembros[0]['name']);
+
+        $base = preg_replace($this->patronMedida(), ' ', $base);
         $base = preg_replace('/(?:X|\*)\s*\d+(?!\d)/i', ' ', $base);
         $base = preg_replace('/#\s*\d+/', ' ', $base);
-        $base = trim(preg_replace('/\s+/', ' ', $base), " .,-*");
 
+        /*
+         * Las palabras que nombran una variante se quitan comparando su forma
+         * sin tildes y en mayúsculas, pero se borra la palabra ORIGINAL del
+         * nombre: así «Pañal Winny Etapa 0» pierde «Etapa» conservando las
+         * tildes de lo que queda.
+         */
+        $fuera = array_merge(self::SABORES, self::VARIANTES);
+        $palabras = preg_split('/\s+/', trim($base));
+        $palabras = array_filter($palabras, function ($w) use ($fuera) {
+            $plano = mb_strtoupper(iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $w) ?: $w, 'UTF-8');
+            $plano = preg_replace('/[^A-Z0-9]/', '', $plano);
+
+            if ($plano === '') {
+                return false;
+            }
+
+            // Un número suelto sin unidad —«1.5», «400»— tampoco nombra al grupo.
+            if (ctype_digit($plano)) {
+                return false;
+            }
+
+            return !in_array($plano, $fuera, true);
+        });
+
+        $base = trim(preg_replace('/\s+/', ' ', implode(' ', $palabras)), " .,-*");
+
+        /*
+         * Si al quitarlo todo no queda nada —un producto que se llama sólo por
+         * su sabor— se vuelve al nombre entero. Un título feo es mejor que un
+         * título vacío.
+         */
         return $base !== '' ? mb_substr($base, 0, 255) : mb_substr($miembros[0]['name'], 0, 255);
     }
 

@@ -162,14 +162,39 @@ it('NO agrupa un producto solo', function () {
 /* LO QUE SE GUARDA DEL GRUPO                                          */
 /* ------------------------------------------------------------------ */
 
-it('nombra el grupo con el miembro mas corto y sin su presentacion', function () {
+it('nombra el grupo sin nada que distinga a una variante de otra', function () {
+    /*
+     * No basta con quitarle la medida al nombre más corto. «PAÑAL WINNY ETAPA
+     * 0» daba un grupo llamado «Pañal Winny etapa 0» cuyos chips eran las
+     * etapas 0 a 5, y «GASEOSA POSTOBON UVA 1.5 LT» uno llamado «Postobón Uva»
+     * que contenía manzana y naranja: el título anunciaba una de sus variantes
+     * como si fuera el todo.
+     */
     $grupos = agrupador()->agrupar([
         producto(1, 'GASEOSA COCA COLA ORIGINAL 1LT'),
         producto(2, 'GASEOSA COCA COLA ORIGINAL 250 ML'),
     ]);
 
     expect($grupos)->toHaveCount(1);
-    expect($grupos[0]['name'])->toBe('GASEOSA COCA COLA ORIGINAL');
+    expect($grupos[0]['name'])->toBe('GASEOSA COCA COLA');
+});
+
+it('quita la palabra de variante del nombre del grupo', function () {
+    $grupos = agrupador()->agrupar([
+        producto(1, 'PANAL WINNY ETAPA 0', categoria: 5),
+        producto(2, 'PANAL WINNY ETAPA 3', categoria: 5),
+    ]);
+
+    expect($grupos[0]['name'])->toBe('PANAL WINNY');
+});
+
+it('quita el sabor del nombre cuando el grupo tiene varios', function () {
+    $grupos = agrupador()->agrupar([
+        producto(1, 'GASEOSA POSTOBON UVA 1.5 LT', categoria: 2),
+        producto(2, 'GASEOSA POSTOBON MANZANA 400ML', categoria: 2),
+    ]);
+
+    expect($grupos[0]['name'])->toBe('GASEOSA POSTOBON');
 });
 
 it('deja la marca del grupo en null cuando sus variantes no coinciden', function () {
