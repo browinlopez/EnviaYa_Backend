@@ -61,6 +61,11 @@ class AgrupadorDeVariantes
         'CHOCOLATE', 'AREQUIPE', 'MANI', 'ALMENDRA', 'AVELLANA', 'CAFE',
         'MENTA', 'CANELA', 'MIEL', 'YOGURT', 'TROPICAL', 'JAMAICA', 'PONCHE',
         'MANDARINA', 'PAPAYA', 'LULO', 'GUAYABA', 'BLUEBERRY',
+        // Aparecieron al revisar los grupos que NO se juntaron: «GASEOSA
+        // POSTOBON KOLA» quedaba fuera del grupo de Postobón y «HIT FRUTAS
+        // TROPICALES» fuera del de Hit.
+        'KOLA', 'TROPICALES', 'FRUTAS', 'NATURAL', 'SEMIDESCREMADA',
+        'DESCREMADA',
     ];
 
     /** Versiones del mismo producto que no son sabor. */
@@ -73,6 +78,61 @@ class AgrupadorDeVariantes
         'PERSONAL', 'FAMILIAR', 'JUMBO', 'MINI', 'PREMIUM', 'ESPECIAL',
         'BLANCO', 'BLANCA', 'NEGRO', 'NEGRA', 'ROJA', 'ROJO', 'VERDE', 'AZUL',
         'AMARILLO', 'AMARILLA', 'MORADO', 'MORADA', 'ROSADO', 'ROSADA',
+    ];
+
+    /**
+     * El envase. Distingue —una cerveza en lata no es la misma compra que en
+     * botella— así que va a la ETIQUETA, no al núcleo. Sin esto, «COCA COLA
+     * PET 400 ML» y «COCA COLA 3 LT» quedaban en dos grupos distintos por la
+     * palabra «PET», y lo mismo «LECHE CONDENSADA TUBITO» con y sin «DOY
+     * PACK».
+     */
+    private const ENVASES = [
+        'PET', 'LATA', 'BOTELLA', 'VIDRIO', 'TARRO', 'FRASCO', 'DOYPACK',
+        'DOY', 'PACK', 'SOBRE', 'BOLSA', 'CAJA', 'VASO', 'POTE', 'TUBITO',
+        'TUBO', 'BARRA', 'SACHET', 'DISPLAY',
+    ];
+
+    /**
+     * Palabras que dicen a qué sección pertenece el producto, no cuál es.
+     *
+     * Se quitan del núcleo y NO van a la etiqueta: un chip que dijera
+     * «Gaseosa» no ayuda a elegir entre dos gaseosas. Existen porque dos
+     * catálogos escriben lo mismo de dos maneras —uno pone «GASEOSA COCA COLA
+     * ORIGINAL 1LT» y el otro «COCA COLA 3 LT»— y esa palabra de más partía la
+     * Coca-Cola en dos tarjetas.
+     */
+    private const GENERICAS = [
+        'GASEOSA', 'GASEOSAS', 'BEBIDA', 'BEBIDAS', 'PRODUCTO', 'ARTICULO',
+        'PRECIO', 'PROMOCION',
+    ];
+
+    /**
+     * Palabras que nombran una CLASE de producto, no un producto.
+     *
+     * Un núcleo que se queda en una sola de estas no identifica nada: dos
+     * mermeladas de marcas distintas son dos productos, y meterlas en una
+     * tarjeta con chips «Fresa» y «Mora» hace creer que son la misma
+     * mermelada en dos sabores.
+     *
+     * El caso que lo destapó fue «AGUA»: juntaba el agua de 5 litros con
+     * «AGUA MANZANA», que es una gaseosa de Postobón.
+     *
+     * Un núcleo de una palabra que NO esté acá sí vale, y es lo normal cuando
+     * esa palabra es una marca —HIT, VIVE, POSTOBON, QUATRO, BOKA—: ahí la
+     * palabra sola sí identifica al producto. Por eso la lista es de clases y
+     * no un mínimo de dos palabras, que descartaba los doce sabores de Hit
+     * junto con el agua.
+     */
+    private const NUCLEOS_DEBILES = [
+        'AGUA', 'LECHE', 'PAN', 'QUESO', 'ARROZ', 'ACEITE', 'SALSA', 'JUGO',
+        'GALLETA', 'CARNE', 'HUEVO', 'PANELA', 'AZUCAR', 'SAL', 'HARINA',
+        'CAFE', 'CHOCOLATE', 'PAPEL', 'JABON', 'CREMA', 'VELA', 'VASO',
+        'PLATO', 'MERMELADA', 'VINAGRE', 'COMPOTA', 'YOGUR', 'MANTEQUILLA',
+        'MARGARINA', 'ATUN', 'SARDINA', 'AVENA', 'CEREAL', 'SOPA', 'CALDO',
+        'HELADO', 'CHICLE', 'CARAMELO', 'PASTA', 'DETERGENTE', 'SHAMPOO',
+        'DESODORANTE', 'PANAL', 'TOALLA', 'SERVILLETA', 'BOMBILLO', 'PILA',
+        'CUADERNO', 'LAPIZ', 'CINTA', 'ESCOBA', 'CONDENSADA', 'DENTAL',
     ];
 
     private const UNIDADES = [
@@ -99,8 +159,7 @@ class AgrupadorDeVariantes
             $p = (array) $p;
             [$nucleo, $etiqueta] = $this->leer($p['name']);
 
-            // Regla 1: un núcleo de una palabra agrupa de más.
-            if (count(explode(' ', $nucleo)) < 2) {
+            if ($nucleo === '' || $this->nucleoDebil($nucleo)) {
                 continue;
             }
 
@@ -139,6 +198,24 @@ class AgrupadorDeVariantes
         return $grupos;
     }
 
+    /**
+     * ¿Este núcleo identifica un producto, o sólo una clase de producto?
+     *
+     * Sólo se pregunta por los de UNA palabra: con dos o más, lo que se repite
+     * ya es específico («SALSA TOMATE SAN JORGE» nombra un producto; «SALSA»
+     * sola, no).
+     */
+    private function nucleoDebil(string $nucleo): bool
+    {
+        $palabras = explode(' ', $nucleo);
+
+        if (count($palabras) > 1) {
+            return false;
+        }
+
+        return in_array($palabras[0], self::NUCLEOS_DEBILES, true);
+    }
+
     /** El núcleo (clave del grupo) y la etiqueta de la variante. */
     public function leer(string $nombre): array
     {
@@ -163,14 +240,22 @@ class AgrupadorDeVariantes
             fn ($w) => $w !== '' && !in_array($w, self::VACIAS, true) && !ctype_digit($w)
         ));
 
+        // Las genéricas desaparecen: ni núcleo ni etiqueta.
+        $palabras = array_values(array_filter(
+            $palabras,
+            fn ($w) => !in_array($w, self::GENERICAS, true)
+        ));
+
+        $distinguen = array_merge(self::SABORES, self::VARIANTES, self::ENVASES);
+
         $distintivas = array_values(array_filter(
             $palabras,
-            fn ($w) => in_array($w, self::SABORES, true) || in_array($w, self::VARIANTES, true)
+            fn ($w) => in_array($w, $distinguen, true)
         ));
 
         $nucleo = array_values(array_filter(
             $palabras,
-            fn ($w) => !in_array($w, self::SABORES, true) && !in_array($w, self::VARIANTES, true)
+            fn ($w) => !in_array($w, $distinguen, true)
         ));
 
         $nucleo = array_unique($nucleo);
@@ -252,8 +337,23 @@ class AgrupadorDeVariantes
 
     private function limpiar(string $t): string
     {
-        // El archivo del punto de venta trae la Ñ partida por la codificación.
-        $t = str_replace("\u{FFFD}", 'N', $t);
+        /*
+         * LA Ñ, ANTES DE TOCAR NADA MÁS.
+         *
+         * `iconv` con TRANSLIT convierte «PIÑA» en «PI~NA», y la limpieza de
+         * símbolos de dos líneas más abajo convierte ese `~` en un espacio: el
+         * resultado era «PI NA», dos palabras de dos letras que no significan
+         * nada. «HIT NARANJA PIÑA» daba el núcleo «HIT NA PI» y no agrupaba
+         * con nada.
+         *
+         * Afecta a todo lo que lleva Ñ —piña, pequeña, ñame, pañal, cañita—,
+         * que en un catálogo colombiano no es poco. Se cambia a mano antes,
+         * que es lo que `iconv` debería hacer y no hace.
+         *
+         * El carácter de reemplazo va en la misma línea: el archivo del punto
+         * de venta llega en otra codificación y la Ñ viene ya rota de origen.
+         */
+        $t = str_replace(['Ñ', 'ñ', "\u{FFFD}"], ['N', 'n', 'N'], $t);
         $t = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $t) ?: $t;
         $t = mb_strtoupper($t, 'UTF-8');
         $t = str_replace(['-', '*'], ' ', $t);
@@ -293,7 +393,7 @@ class AgrupadorDeVariantes
          * nombre: así «Pañal Winny Etapa 0» pierde «Etapa» conservando las
          * tildes de lo que queda.
          */
-        $fuera = array_merge(self::SABORES, self::VARIANTES);
+        $fuera = array_merge(self::SABORES, self::VARIANTES, self::ENVASES, self::GENERICAS);
         $palabras = preg_split('/\s+/', trim($base));
         $palabras = array_filter($palabras, function ($w) use ($fuera) {
             $plano = mb_strtoupper(iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $w) ?: $w, 'UTF-8');

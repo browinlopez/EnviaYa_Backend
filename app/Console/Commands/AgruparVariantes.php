@@ -95,8 +95,10 @@ class AgruparVariantes extends Command
         $creados = 0;
         $reusados = 0;
         $asignados = 0;
+        $borrados = 0;
+        $sellados = [];
 
-        DB::transaction(function () use ($grupos, &$creados, &$reusados, &$asignados) {
+        DB::transaction(function () use ($grupos, &$creados, &$reusados, &$asignados, &$borrados, &$sellados) {
             foreach ($grupos as $g) {
                 /*
                  * El núcleo es la identidad del grupo, no su nombre: el nombre
@@ -128,13 +130,48 @@ class AgruparVariantes extends Command
                             'group_id'  => $grupo->group_id,
                             'variante'  => $m['_etiqueta'],
                         ]);
+
+                    $sellados[] = (int) $m['products_id'];
                 }
+            }
+
+            /*
+             * SOLTAR LO QUE YA NO PERTENECE, Y BORRAR LO QUE QUEDÓ VACÍO.
+             *
+             * Esto se vuelve a correr cada vez que entra un catálogo o se
+             * afina el vocabulario, y entonces un producto puede cambiar de
+             * grupo o dejar de tener uno. Sin esta parte quedaban dos rastros,
+             * los dos invisibles desde fuera: productos apuntando a un grupo
+             * del que ya no son, y grupos sin un solo miembro que la app
+             * pintaría como una tarjeta vacía.
+             *
+             * Sólo se tocan los automáticos: un grupo que alguien revisó a
+             * mano se queda aunque el algoritmo de hoy no lo habría propuesto.
+             */
+            $automaticos = ProductGroup::where('origen', 'automatico')->pluck('group_id');
+
+            Product::whereIn('group_id', $automaticos)
+                ->whereNotIn('products_id', $sellados ?: [0])
+                ->update(['group_id' => null]);
+
+            $vacios = ProductGroup::where('origen', 'automatico')
+                ->whereDoesntHave('products')
+                ->pluck('group_id');
+
+            $borrados = $vacios->count();
+
+            if ($borrados) {
+                ProductGroup::whereIn('group_id', $vacios)->delete();
             }
         });
 
         $this->newLine();
         $this->line(sprintf('  Grupos creados: <options=bold>%d</>  reutilizados: %d', $creados, $reusados));
         $this->line(sprintf('  Productos asignados a un grupo: <options=bold>%d</>', $asignados));
+
+        if ($borrados) {
+            $this->line(sprintf('  Grupos vacíos borrados: %d', $borrados));
+        }
 
         $sueltos = Product::whereNull('group_id')->where('state', 1)->count();
         $this->line(sprintf('  Productos sin grupo (se venden en una sola presentación): %d', $sueltos));

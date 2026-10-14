@@ -176,7 +176,7 @@ it('nombra el grupo sin nada que distinga a una variante de otra', function () {
     ]);
 
     expect($grupos)->toHaveCount(1);
-    expect($grupos[0]['name'])->toBe('GASEOSA COCA COLA');
+    expect($grupos[0]['name'])->toBe('COCA COLA');
 });
 
 it('quita la palabra de variante del nombre del grupo', function () {
@@ -194,7 +194,7 @@ it('quita el sabor del nombre cuando el grupo tiene varios', function () {
         producto(2, 'GASEOSA POSTOBON MANZANA 400ML', categoria: 2),
     ]);
 
-    expect($grupos[0]['name'])->toBe('GASEOSA POSTOBON');
+    expect($grupos[0]['name'])->toBe('POSTOBON');
 });
 
 it('deja la marca del grupo en null cuando sus variantes no coinciden', function () {
@@ -217,4 +217,77 @@ it('toma como imagen del grupo la primera que tenga una variante', function () {
     ]);
 
     expect($grupos[0]['image'])->toBe('https://ejemplo/foto.jpg');
+});
+
+/* ------------------------------------------------------------------ */
+/* LO QUE SE ARREGLÓ AL REVISAR LOS GRUPOS QUE SALIERON                 */
+/* ------------------------------------------------------------------ */
+
+it('junta lo que dos catalogos escriben distinto', function () {
+    /*
+     * El catálogo viejo escribe «GASEOSA COCA COLA ORIGINAL 1LT» y el que
+     * llegó del punto de venta de una tienda escribe «COCA COLA 3 LT». Esa
+     * palabra de más partía la Coca-Cola en dos tarjetas, y el comprador veía
+     * dos listas de tamaños donde hay una.
+     */
+    $grupos = agrupador()->agrupar([
+        producto(1, 'GASEOSA COCA COLA ORIGINAL 1LT', categoria: 2),
+        producto(2, 'COCA COLA 3 LT', categoria: 2),
+        producto(3, 'COCA COLA PET 400 ML', categoria: 2),
+    ]);
+
+    expect($grupos)->toHaveCount(1);
+    expect($grupos[0]['miembros'])->toHaveCount(3);
+});
+
+it('el envase distingue pero no parte el grupo', function () {
+    /*
+     * «PET» es el envase, no el producto. Antes dejaba «COCA COLA PET 400 ML»
+     * en un grupo propio; ahora va al chip, que es donde el comprador lo usa
+     * para elegir.
+     */
+    [, $etiqueta] = agrupador()->leer('COCA COLA PET 400 ML');
+
+    expect($etiqueta)->toBe('Pet 400 ml');
+});
+
+it('lee bien los nombres con enie', function () {
+    /*
+     * `iconv` con TRANSLIT convierte «PIÑA» en «PI~NA», y al limpiar símbolos
+     * eso quedaba en «PI NA»: «HIT NARANJA PIÑA» daba el núcleo «HIT NA PI» y
+     * no agrupaba con nada. En un catálogo colombiano la Ñ no es un caso raro.
+     */
+    [$nucleo, $etiqueta] = agrupador()->leer('HIT NARANJA PIÑA 1.5');
+
+    expect($nucleo)->toBe('HIT');
+    expect($etiqueta)->toBe('Naranja Pina 1,5 L');
+});
+
+it('NO agrupa por una palabra que solo nombra una clase de producto', function () {
+    /*
+     * «AGUA» juntaba el agua de 5 litros con «AGUA MANZANA», que es una
+     * gaseosa de Postobón. Dos productos del mismo tipo y distinta marca no
+     * son el mismo producto en dos presentaciones.
+     */
+    $grupos = agrupador()->agrupar([
+        producto(1, 'AGUA 5 LITROS', categoria: 2),
+        producto(2, 'AGUA MANZANA 600ML', categoria: 2),
+    ]);
+
+    expect($grupos)->toBeEmpty();
+});
+
+it('SI agrupa por una sola palabra cuando esa palabra es la marca', function () {
+    /*
+     * La regla anterior pedía dos palabras de núcleo, y eso dejaba fuera los
+     * doce sabores de Hit y los ocho de Postobón: en esos el nombre de la
+     * marca ya identifica el producto y lo demás es sabor y tamaño.
+     */
+    $grupos = agrupador()->agrupar([
+        producto(1, 'HIT FRUTAS TROPICALES 200 ML', categoria: 2),
+        producto(2, 'HIT MANGO 1.5', categoria: 2),
+    ]);
+
+    expect($grupos)->toHaveCount(1);
+    expect($grupos[0]['name'])->toBe('HIT');
 });
