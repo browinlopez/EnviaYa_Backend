@@ -50,7 +50,7 @@ class CatalogoDeProductos
         $texto = trim($texto);
 
         $consulta = Product::query()
-            ->with('category')
+            ->with(['category', 'group'])
             ->where('state', 1);
 
         if ($texto !== '') {
@@ -95,7 +95,7 @@ class CatalogoDeProductos
             return null;
         }
 
-        $producto = Product::with('category')->where('barcode', $barcode)->first();
+        $producto = Product::with(['category', 'group'])->where('barcode', $barcode)->first();
 
         if ($producto) {
             $loTiene = ProductBusiness::where('busines_id', $businessId)
@@ -268,6 +268,17 @@ class CatalogoDeProductos
             'brand'       => $p->brand,
             'description' => $p->description,
             'image'       => $p->image,
+            /*
+             * LA PRESENTACION, QUE ES LO QUE EL TENDERO NECESITA VER AL
+             * ELEGIR. Buscar «salsa de tomate san jorge» devuelve siete filas
+             * con nombres casi iguales; sin la etiqueta hay que leerlas letra
+             * por letra para dar con la de 400 gramos.
+             */
+            'variante'    => $p->variante,
+            'group'       => $p->group ? [
+                'group_id' => (int) $p->group->group_id,
+                'name'     => $p->group->name,
+            ] : null,
             'category'    => $p->category ? [
                 'category_id' => (int) $p->category->category_id,
                 'name'        => $p->category->name,

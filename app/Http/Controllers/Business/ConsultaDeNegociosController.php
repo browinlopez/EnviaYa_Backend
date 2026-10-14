@@ -252,7 +252,7 @@ class ConsultaDeNegociosController extends Controller
 
         if (!$ligero) {
             $relaciones = array_merge($relaciones, [
-                'reviews', 'products.category',
+                'reviews', 'products.category', 'products.group',
                 'products' => fn ($q) => $q->where('products.state', 1),
             ]);
         }
@@ -325,6 +325,26 @@ class ConsultaDeNegociosController extends Controller
                         'category'    => $product->category ? $product->category->name : null,
                         'image'       => $product->image,
                         'state'       => (bool) $product->state,
+                        /*
+                         * EL GRUPO DE VARIANTES, PARA QUE LA APP PINTE UNA
+                         * TARJETA Y NO OCHO.
+                         *
+                         * Va junto al producto y no en una lista aparte porque
+                         * lo que se vende sigue siendo ESTE producto: el grupo
+                         * solo dice de qué tarjeta cuelga y qué pone el chip.
+                         * Así una app vieja ignora los dos campos y sigue
+                         * funcionando igual que ayer.
+                         *
+                         * `variante` llega aunque no haya grupo: es el texto
+                         * de la presentación y sirve para mostrarlo bajo el
+                         * nombre aunque el producto sea único.
+                         */
+                        'variante'    => $product->variante,
+                        'group'       => $product->group ? [
+                            'group_id' => (int) $product->group->group_id,
+                            'name'     => $product->group->name,
+                            'image'    => $product->group->image,
+                        ] : null,
                         // Si no hay user_id → precio 0
                         // Si hay user_id → mostrar precio solo si está afiliado
                         'price'       => $userId ? ($isAffiliated ? ($product->pivot->price ?? 0) : 0) : 0,

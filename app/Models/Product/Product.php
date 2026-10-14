@@ -26,11 +26,36 @@ class Product extends Audit
      */
     public $timestamps = true;
 
-    protected $fillable = ['name', 'barcode', 'description', 'brand', 'category_id', 'image', 'state', 'origen'];
+    protected $fillable = [
+        'name', 'barcode', 'description', 'brand', 'category_id', 'image',
+        'state', 'origen',
+        /* El grupo de variantes y la etiqueta de ESTA presentacion. Ver
+           `AgrupadorDeVariantes` y la migracion de `product_groups`. */
+        'group_id', 'variante',
+    ];
 
     public function category()
     {
         return $this->belongsTo(Category::class, 'category_id', 'category_id');
+    }
+
+    /**
+     * El producto como lo piensa quien compra.
+     *
+     * Casi siempre es null, y esta bien: solo lo tienen los productos que se
+     * venden en mas de una presentacion. Lo que se vende, se pide y se cobra
+     * sigue siendo ESTA fila; el grupo solo decide como se pinta la lista.
+     */
+    public function group()
+    {
+        return $this->belongsTo(ProductGroup::class, 'group_id', 'group_id');
+    }
+
+    /** Las demas presentaciones del mismo producto. */
+    public function hermanas()
+    {
+        return $this->hasMany(self::class, 'group_id', 'group_id')
+            ->whereKeyNot($this->getKey());
     }
 
     public function productBusinesses()

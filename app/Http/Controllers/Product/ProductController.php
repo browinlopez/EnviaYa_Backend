@@ -36,7 +36,7 @@ class ProductController extends Controller
 
         // Cargar productos con su categoría y los datos extra de todos los tipos
         $business = Business::with(array_merge(
-            ['products.category'],
+            ['products.category', 'products.group'],
             array_map(fn ($r) => "products.$r", ProductTypeSchema::allRelations()),
         ))->findOrFail($request->business_id);
 
@@ -55,6 +55,15 @@ class ProductController extends Controller
                 ] : null,
                 'image'         => $product->image,
                 'state'         => $product->state,
+                /* La presentacion y de que tarjeta cuelga. Ver
+                   `AgrupadorDeVariantes`. Campos nuevos: una app vieja los
+                   ignora y sigue igual. */
+                'variante'      => $product->variante,
+                'group'         => $product->group ? [
+                    'group_id' => (int) $product->group->group_id,
+                    'name'     => $product->group->name,
+                    'image'    => $product->group->image,
+                ] : null,
                 'price'         => $product->pivot->price,
                 'amount'        => $product->pivot->amount,
                 'qualification' => $product->pivot->qualification,
