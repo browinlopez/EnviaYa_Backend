@@ -2,13 +2,12 @@
 
 namespace App\Services;
 
-use App\Imports\FilasDeCatalogo;
+use App\Imports\LectorDeArchivoDeCatalogo;
 use App\Models\Product\CatalogUpload;
 use App\Models\Product\Category;
 use App\Models\Product\Product;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Maatwebsite\Excel\Facades\Excel;
 
 /**
  * LA CARGA MASIVA, ARREGLADA.
@@ -46,8 +45,10 @@ class ImportadorDeCatalogo
     /** Cuántos errores se guardan. Más que esto no se lee, se tira el archivo. */
     private const MAX_ERRORES = 200;
 
-    public function __construct(private CatalogoDeProductos $catalogo)
-    {
+    public function __construct(
+        private CatalogoDeProductos $catalogo,
+        private LectorDeArchivoDeCatalogo $lector,
+    ) {
     }
 
     public function procesar(CatalogUpload $carga): void
@@ -57,10 +58,7 @@ class ImportadorDeCatalogo
         try {
             $ruta = Storage::path($carga->archivo);
 
-            $lector = new FilasDeCatalogo();
-            Excel::import($lector, $ruta);
-
-            $this->recorrer($carga, $lector->filas);
+            $this->recorrer($carga, $this->lector->leer($ruta));
         } catch (\Throwable $e) {
             $carga->update([
                 'estado'  => 'fallida',
@@ -79,6 +77,13 @@ class ImportadorDeCatalogo
             ->mapWithKeys(fn ($id, $name) => [$this->normalizar($name) => (int) $id])
             ->all();
 
+        /*
+         * La categoría que eligió el tendero al subir, para lo que el archivo
+         * no clasifique. Los archivos de un punto de venta no traen columna de
+         * categoría, y sin esto la carga entera se rechazaba fila por fila.
+         */
+        $porDefecto = $carga->category_id ? (int) $carga->category_id : null;
+
         foreach ($filas as $i => $fila) {
             // +2: la fila 1 son los encabezados y las hojas se cuentan desde 1.
             $numero = $i + 2;
@@ -95,7 +100,7 @@ class ImportadorDeCatalogo
             }
 
             try {
-                $producto = $this->resolverProducto($f, $categorias, $numero, $errores);
+                $producto = $this->resolverProducto($f, $categorias, $numero, $errores, $porDefecto);
             } catch (\Throwable $e) {
                 $errores[] = ['fila' => $numero, 'motivo' => $e->getMessage()];
                 continue;
@@ -139,7 +144,13 @@ class ImportadorDeCatalogo
      * El orden importa: primero el código, que es exacto; después el nombre,
      * que es una apuesta. Y solo se crea si la fila trae con qué.
      */
-    private function resolverProducto(array $f, array $categorias, int $numero, array &$errores): ?Product
+    private function resolverProducto(
+        array $f,
+        array $categorias,
+        int $numero,
+        array &$errores,
+        ?int $porDefecto = null
+    ): ?Product
     {
         if ($f['barcode'] !== null) {
             $existente = Product::where('barcode', $f['barcode'])->first();
@@ -191,11 +202,21 @@ class ImportadorDeCatalogo
             ? ($categorias[$this->normalizar($f['categoria'])] ?? null)
             : null;
 
+        /*
+         * Si la fila no dice categoría —o dice una que no existe— cae en la
+         * que el tendero eligió al subir el archivo. Es mejor que rechazarla:
+         * el producto queda visible y agrupado en un sitio, y se corrige
+         * después. Rechazarlo lo deja fuera del catálogo y nadie vuelve.
+         */
+        if ($categoriaId === null) {
+            $categoriaId = $porDefecto;
+        }
+
         if ($categoriaId === null) {
             $errores[] = [
                 'fila'   => $numero,
                 'motivo' => $f['categoria'] === null
-                    ? "«{$f['nombre']}» es nuevo y no trae categoría."
+                    ? "«{$f['nombre']}» es nuevo y el archivo no trae categoría. Elige una al subir."
                     : "La categoría «{$f['categoria']}» no existe.",
             ];
 
@@ -221,12 +242,40 @@ class ImportadorDeCatalogo
     {
         $v = fn (array $llaves) => $this->primerValor($fila, $llaves);
 
-        $barcode = $v(['codigo_barras', 'codigo_de_barras', 'codigo', 'ean', 'barcode']);
+        /*
+         * `barras` y `venta1` son los nombres que usa el punto de venta de las
+         * tiendas, no los de nuestra plantilla. Quien exporta su inventario no
+         * va a renombrar veintisiete columnas a mano.
+         */
+        $barcode = $v(['codigo_barras', 'codigo_de_barras', 'barras', 'ean', 'barcode']);
         $nombre  = $v(['nombre', 'nombre_producto', 'producto', 'descripcion_producto']);
-        $precio  = $v(['precio', 'precio_venta', 'valor']);
-        $cantidad = $v(['cantidad', 'existencias', 'stock', 'amount']);
+        $precio  = $v(['precio', 'precio_venta', 'valor', 'venta1', 'venta', 'venta_1']);
+        $cantidad = $v(['cantidad', 'existencias', 'existencia', 'stock', 'amount']);
         $categoria = $v(['categoria', 'category']);
         $marca   = $v(['marca', 'brand']);
+
+        /*
+         * `codigo` SOLO si de verdad parece un código de barras.
+         *
+         * Antes estaba en la lista de arriba sin más, y eso es un problema
+         * serio con los archivos de un punto de venta: ahí `codigo` es el
+         * número interno del artículo —«101608»— y no el EAN. Cargarlo
+         * guardaría ese número como código de barras en `products`, que es el
+         * catálogo COMPARTIDO de todas las tiendas y donde la columna es
+         * ÚNICA: el número interno de una tienda bloquearía para siempre ese
+         * valor, y escanear el producto de verdad nunca lo encontraría.
+         *
+         * Un EAN tiene entre 8 y 14 dígitos. El código interno de un punto de
+         * venta tiene cinco o seis. Con eso basta para distinguirlos.
+         */
+        if ($barcode === null) {
+            $quizas = $v(['codigo', 'cod']);
+            $soloDigitos = $quizas !== null ? preg_replace('/\D/', '', (string) $quizas) : '';
+
+            if (strlen($soloDigitos) >= 8 && strlen($soloDigitos) <= 14) {
+                $barcode = $soloDigitos;
+            }
+        }
 
         // Una fila sin nada no es un error, es el final del archivo.
         if ($barcode === null && $nombre === null && $precio === null) {
@@ -235,13 +284,31 @@ class ImportadorDeCatalogo
 
         $barcode = $barcode !== null ? preg_replace('/\D/', '', (string) $barcode) : null;
 
+        if ($barcode !== null && (strlen($barcode) < 8 || strlen($barcode) > 14)) {
+            $barcode = null;
+        }
+
+        /*
+         * EXISTENCIAS NEGATIVAS SON UN INVENTARIO SIN CUADRAR, NO UN DATO.
+         *
+         * El archivo de Mercadito Búho trae 975 negativas de 1.010 filas, una
+         * de ellas de -17.144: es lo que pasa cuando un punto de venta lleva
+         * años descontando ventas sin que nadie haya hecho un conteo inicial.
+         * Guardarlas tal cual pondría la tienda entera en rojo el primer día.
+         *
+         * `null` significa «no sé», y más abajo eso se traduce en NO TOCAR las
+         * existencias que ya tenga la tienda, en vez de pisarlas con un número
+         * inventado. Un cero también sería inventado.
+         */
+        $cantidadLeida = $this->aNumero($cantidad);
+
         return [
             'barcode'   => ($barcode === null || $barcode === '') ? null : $barcode,
             'nombre'    => $nombre !== null ? trim((string) $nombre) : null,
             'marca'     => $marca !== null ? trim((string) $marca) : null,
             'categoria' => $categoria !== null ? trim((string) $categoria) : null,
             'precio'    => $this->aNumero($precio),
-            'cantidad'  => (int) ($this->aNumero($cantidad) ?? 0),
+            'cantidad'  => ($cantidadLeida === null || $cantidadLeida < 0) ? null : (int) $cantidadLeida,
         ];
     }
 

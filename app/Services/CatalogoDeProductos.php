@@ -175,12 +175,41 @@ class CatalogoDeProductos
      * cuidaba un `exists()` en PHP, que con dos peticiones a la vez insertaba
      * dos veces; ahora lo garantiza el único de la base.
      */
-    public function agregarATienda(int $businessId, int $productId, float $precio, int $cantidad): ProductBusiness
-    {
-        return ProductBusiness::updateOrCreate(
-            ['busines_id' => $businessId, 'products_id' => $productId],
-            ['price' => $precio, 'amount' => $cantidad],
+    public function agregarATienda(
+        int $businessId,
+        int $productId,
+        float $precio,
+        ?int $cantidad = null
+    ): ProductBusiness {
+        $cambios = ['price' => $precio];
+
+        /*
+         * `null` ES «NO SÉ», Y NO SE PISA LO QUE HAY.
+         *
+         * Importa cuando la carga viene de un archivo: muchos no traen columna
+         * de existencias, y los que la traen a veces la traen inservible —el
+         * inventario de una tienda real llegó con 975 negativas de 1.010
+         * filas—. Antes, cualquiera de esos dos casos escribía un cero encima
+         * del conteo que el tendero sí había hecho a mano.
+         *
+         * Un producto nuevo sin cantidad entra en cero, que ahí sí es verdad:
+         * todavía no hay conteo de nada.
+         */
+        if ($cantidad !== null) {
+            $cambios['amount'] = $cantidad;
+        }
+
+        $fila = ProductBusiness::firstOrNew(
+            ['busines_id' => $businessId, 'products_id' => $productId]
         );
+
+        if (!$fila->exists && !isset($cambios['amount'])) {
+            $cambios['amount'] = 0;
+        }
+
+        $fila->fill($cambios)->save();
+
+        return $fila;
     }
 
     /**

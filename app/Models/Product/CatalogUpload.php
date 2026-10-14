@@ -21,6 +21,7 @@ class CatalogUpload extends Model
         'user_id',
         'archivo',
         'nombre_original',
+        'category_id',
         'estado',
         'filas',
         'creados',
