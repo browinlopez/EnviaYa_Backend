@@ -392,6 +392,8 @@ class OrdersSales extends Audit
                 'longitude' => $this->address->longitude ? (float) $this->address->longitude : null,
             ] : null,
             'details' => $this->details->map(fn($d) => [
+                // Por donde se pesa una linea; ver `PesajeDelPedidoController`.
+                'orderDet_id' => $d->orderDet_id,
                 'product_id' => $d->product->products_id ?? null,
                 'name' => $d->product->name ?? null,
                 'description' => $d->product->description ?? null,

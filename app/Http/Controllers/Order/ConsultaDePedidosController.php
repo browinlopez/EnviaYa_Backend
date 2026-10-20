@@ -154,6 +154,15 @@ class ConsultaDePedidosController extends Controller
                 ] : null,
                 'details' => $order->details->map(function ($detail) {
                     return [
+                        /*
+                         * EL ID DE LA LINEA, que es por donde se pesa.
+                         *
+                         * Y no por `product_id`: un pedido puede traer la
+                         * misma referencia en dos lineas --media libra de
+                         * queso para hoy y un kilo para la semana-- y con el
+                         * producto no se sabe a cual va cada peso.
+                         */
+                        'orderDet_id' => $detail->orderDet_id,
                         'product_id' => $detail->product->products_id,
                         'name' => $detail->product->name,
                         'description' => $detail->product->description,

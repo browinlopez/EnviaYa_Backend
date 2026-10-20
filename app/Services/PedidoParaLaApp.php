@@ -144,6 +144,9 @@ class PedidoParaLaApp
             ] : null,
             'details' => $order->details->map(function ($detail) {
                 return [
+                    // Por donde se pesa: un pedido puede traer la misma
+                    // referencia en dos lineas.
+                    'orderDet_id' => $detail->orderDet_id,
                     'product_id' => $detail->product->products_id,
                     'name' => $detail->product->name,
                     'description' => $detail->product->description,

@@ -130,10 +130,31 @@ class PesajeDelPedidoController extends Controller
                 }
 
                 /*
-                 * Las que nadie peso se quedan en lo pedido: el tendero puede
-                 * pesar lo que le falte en otro momento, y el inventario ya
-                 * cuadra con lo pedido para esas.
+                 * O SE PESA TODO, O NO SE PESA.
+                 *
+                 * El panel exige todas las lineas antes de dejar pulsar, pero
+                 * el servidor no puede confiar en eso: una peticion a medias
+                 * --o una pantalla vieja-- dejaria el pedido marcado como
+                 * pesado con un producto sin pesar, y ese producto saldria de
+                 * la tienda descontado por lo que el cliente estimo y no por
+                 * lo que de verdad se corto.
+                 *
+                 * Se comprueba DESPUES de escribir y dentro de la
+                 * transaccion, asi que el 422 deshace tambien los pesos de
+                 * esta misma peticion: o queda entero o no queda nada.
                  */
+                $faltan = OrdersSalesDetail::where('orderSales_id', $pedido->orderSales_id)
+                    ->whereNotNull('sale_unit')
+                    ->where('sale_unit', '!=', UnidadDeVenta::UNIDAD)
+                    ->whereNull('qty_final')
+                    ->count();
+
+                if ($faltan > 0) {
+                    abort(422, $faltan === 1
+                        ? 'Falta pesar un producto de este pedido.'
+                        : "Faltan {$faltan} productos de este pedido por pesar.");
+                }
+
                 $this->existencias->ajustarPorPesaje($pedido, $deltas);
 
                 $pedido->weighing_state = OrdersSales::PESADO;

@@ -401,3 +401,71 @@ test('la cotización y el pedido calculan el peso igual', function () {
         'expected_total' => $cotizacion->json('total'),
     ]))->assertSuccessful();
 });
+
+test('el panel recibe el id de la linea con el que tiene que pesar', function () {
+    /*
+     * ESTA PRUEBA EXISTE POR UN FALLO QUE LAS OTRAS NO VIERON.
+     *
+     * Las de arriba leen `orderDet_id` del modelo, o sea de la base. El panel
+     * no puede: lo recibe de la API. Y no se estaba mandando en ningún
+     * presentador, así que la pantalla de pesaje enviaba `undefined` y el
+     * servidor contestaba «el campo es obligatorio» — la función no habría
+     * funcionado ni una vez, con doce pruebas en verde.
+     *
+     * Por eso esta pesa con el id TAL COMO LLEGA por la API, que es el único
+     * camino que recorre de verdad el tendero.
+     */
+    $e = escenarioPedido();
+    $queso = productoAlPeso($e);
+
+    $this->postJson('/v1/orders/orders', cuerpoPedido($e, [
+        'products' => [porPlata($queso, 3000)],
+    ]))->assertSuccessful();
+
+    tenderoDe($e);
+
+    $pedidos = $this->getJson('/v1/negocio/pedidos')->assertOk();
+    $pedido = collect($pedidos->json('orders'))->last();
+    $linea = collect($pedido['details'])->first();
+
+    expect($linea)->toHaveKey('orderDet_id')
+        ->and($linea['orderDet_id'])->not->toBeNull()
+        // Y con lo que hace falta para pintar la fila del pesaje.
+        ->and($linea['sale_unit'])->toBe('kg')
+        ->and($linea['pedido_por'])->toBe('valor');
+
+    pesar($e, $pedido['order_id'], [
+        ['orderDet_id' => $linea['orderDet_id'], 'qty_final' => 0.26],
+    ])->assertOk();
+});
+
+test('no se da por pesado un pedido al que le faltan productos', function () {
+    /*
+     * El panel exige todas las líneas antes de dejar pulsar, pero el servidor
+     * no puede confiar en eso: una petición a medias —o una pantalla vieja—
+     * dejaría el pedido marcado como pesado con un producto sin pesar, y ese
+     * producto saldría de la tienda sin descontarse de verdad.
+     */
+    $e = escenarioPedido();
+    $queso = productoAlPeso($e);
+    $tomate = productoAlPeso($e, 'libra', 4000);
+
+    $this->postJson('/v1/orders/orders', cuerpoPedido($e, [
+        'products' => [porPlata($queso, 3000), porCantidad($tomate, 2)],
+    ]))->assertSuccessful();
+
+    $orden = OrdersSales::latest('orderSales_id')->first();
+    $lineas = OrdersSalesDetail::where('orderSales_id', $orden->orderSales_id)->get();
+
+    tenderoDe($e);
+
+    $r = pesar($e, $orden->orderSales_id, [
+        ['orderDet_id' => $lineas->first()->orderDet_id, 'qty_final' => 0.26],
+    ]);
+
+    $r->assertStatus(422);
+    expect($r->json('message'))->toContain('pesar');
+
+    // Y el pedido sigue sin poder salir.
+    expect((int) $orden->fresh()->weighing_state)->toBe(OrdersSales::POR_PESAR);
+});
