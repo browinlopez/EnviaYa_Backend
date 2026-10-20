@@ -525,9 +525,20 @@ class ConsultaDeNegociosController extends Controller
                     'sale_unit'  => $product->pivot->sale_unit ?? 'unidad',
                     'min_qty'    => $product->pivot->min_qty !== null ? (float) $product->pivot->min_qty : null,
                     'step_qty'   => $product->pivot->step_qty !== null ? (float) $product->pivot->step_qty : null,
-                    // `null` cuando no hay ninguna. La app pinta la etiqueta
-                    // solo si viene algo.
-                    'promocion'  => $promoDe((int) $product->products_id),
+                    /*
+                     * `null` cuando no hay ninguna. La app pinta la etiqueta
+                     * solo si viene algo.
+                     *
+                     * Y NUNCA sobre lo que se vende al peso: el motor de
+                     * descuentos excluye esas lineas --un «lleva 3, paga 2»
+                     * sobre 1,18 kg no esta definido-- asi que la etiqueta
+                     * prometeria una rebaja que el carrito no va a aplicar.
+                     * Es peor que no ensenar nada: el cliente llega al total
+                     * esperando otro numero.
+                     */
+                    'promocion'  => in_array($product->pivot->sale_unit ?? 'unidad', ['kg', 'libra', 'gramo'], true)
+                        ? null
+                        : $promoDe((int) $product->products_id),
                 ];
             }),
 
