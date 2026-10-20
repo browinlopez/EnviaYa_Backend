@@ -6,6 +6,7 @@ use App\Services\PagoEnLinea;
 
 use App\Models\Order\OrdersSales;
 use App\Models\Order\OrdersSalesDetail;
+use App\Support\UnidadDeVenta;
 
 /**
  * Escribe el pedido y sus lineas.
@@ -25,6 +26,7 @@ class ArmadoDelPedido
         private readonly CouponService $cupones,
         private readonly ExistenciasDelPedido $existencias,
         private readonly RedencionDePromociones $promociones,
+        private readonly EconomiaDelPedido $economia,
     ) {
     }
 
@@ -42,6 +44,8 @@ class ArmadoDelPedido
         $horaDeRecogida,
         int $compradorUserId,
         ?float $conCuantoPaga = null,
+        /* El surtido, para saber en que unidad se vende cada producto. */
+        $surtido = null,
     ): OrdersSales {
 
         /*
@@ -146,13 +150,55 @@ class ArmadoDelPedido
             $order = OrdersSales::create($datosDelPedido);
         }
 
+        $hayQuePesar = false;
+
         foreach ($lineas as $p) {
+            $unidad = $surtido[$p['product_id']]->sale_unit ?? UnidadDeVenta::UNIDAD;
+            $alPeso = UnidadDeVenta::esPeso($unidad);
+
+            if ($alPeso) {
+                $hayQuePesar = true;
+            }
+
             OrdersSalesDetail::create([
                 'orderSales_id' => $order->orderSales_id,
                 'product_id' => $p['product_id'],
-                'amount' => $p['amount'],
+                /*
+                 * `amount` vale 1 en una linea por peso. No null --la columna
+                 * es NOT NULL y hay veintidos lectores--, no el peso redondeado
+                 * --truncaria-- y no cero --haria invisible la venta en todo
+                 * `SUM`--. Con 1, el codigo que no se entero del cambio lee
+                 * "una linea de este producto": un error acotado y legible en
+                 * vez de "1,8 kg son 1 kg".
+                 */
+                'amount' => $alPeso ? 1 : $p['amount'],
                 'unit_price' => (float) $precios[$p['product_id']],
+                // Congelada, igual que el precio: si el tendero cambia manana
+                // la unidad del producto, los pedidos de ayer no se releen.
+                'sale_unit' => $unidad,
+                'pedido_por' => $alPeso ? ($p['pedido_por'] ?? 'cantidad') : null,
+                'qty_requested' => $alPeso ? $this->cantidadPedida($p, $precios) : null,
+                /*
+                 * El importe, CONGELADO y calculado por el mismo metodo que
+                 * sumo el subtotal: si cada uno lo calculara por su cuenta,
+                 * apareceria una diferencia de un peso entre el pedido, el
+                 * comprobante y el panel.
+                 */
+                'line_total' => $alPeso
+                    ? $this->economia->importeDeLinea($p, $precios, $surtido)
+                    : null,
             ]);
+        }
+
+        /*
+         * Si lleva algo al peso, el pedido nace "por pesar" y el tablero lo
+         * marca desde que entra. Es una dimension aparte del estado del
+         * pedido: un estado nuevo rompia el panel, los informes y las dos apps
+         * ya publicadas.
+         */
+        if ($hayQuePesar) {
+            $order->weighing_state = OrdersSales::POR_PESAR;
+            $order->save();
         }
 
         /*
@@ -182,5 +228,28 @@ class ArmadoDelPedido
         $this->promociones->canjear($order, $cifras['promociones'] ?? []);
 
         return $order;
+    }
+
+    /**
+     * Cuanto se pidio, en la unidad del producto.
+     *
+     * En "3.000 de queso" la cantidad no la dice el cliente: se deduce de la
+     * plata y del precio, y es lo que el tendero usa de referencia al pesar y
+     * contra lo que se mide el tope de desvio. En "500 g de tomate" viene
+     * dada.
+     */
+    private function cantidadPedida(array $linea, $precios): ?float
+    {
+        if (($linea['pedido_por'] ?? null) === 'valor') {
+            $precio = (float) ($precios[$linea['product_id']] ?? 0);
+
+            return $precio > 0
+                ? round(((float) ($linea['requested_value'] ?? 0)) / $precio, 3)
+                : null;
+        }
+
+        $pedida = $linea['requested_qty'] ?? null;
+
+        return $pedida === null ? null : (float) $pedida;
     }
 }

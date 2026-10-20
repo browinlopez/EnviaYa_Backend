@@ -72,6 +72,7 @@ use App\Http\Controllers\Negocio\MiNegocioController;
 use App\Http\Controllers\Negocio\ProductosDelNegocioController;
 use App\Http\Controllers\Negocio\PromocionesController;
 use App\Http\Controllers\Negocio\RendimientoDeDomiciliariosController;
+use App\Http\Controllers\Negocio\PesajeDelPedidoController;
 use App\Http\Controllers\Order\CotizacionController;
 use App\Http\Controllers\LandingRequestController;
 use App\Http\Controllers\Marketing\AdsController;
@@ -619,6 +620,17 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
          * una ruta fija detras de un comodin no se alcanza nunca.
          */
         Route::get('domiciliarios/rendimiento', [RendimientoDeDomiciliariosController::class, 'index']);
+
+        /*
+         * EL PESAJE. El tendero registra cuanto peso de verdad lo que va en la
+         * bolsa. NO cambia el total: el precio lo fijo el cliente al pedir
+         * --«3.000 de queso» o «500 g de tomate»-- y es lo que paga. Esto es
+         * para el inventario y para dejar constancia.
+         *
+         * Va en el grupo `negocio`, que resuelve la tienda desde la sesion:
+         * nadie pesa el pedido de otro.
+         */
+        Route::put('pedidos/pesaje', [PesajeDelPedidoController::class, 'registrar']);
 
         /*
          * Crédito de la tienda: cupos rotativos para sus clientes afiliados.

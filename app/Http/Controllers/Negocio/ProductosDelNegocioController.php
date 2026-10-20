@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Negocio;
 use App\Http\Controllers\Controller;
 use App\Models\Product\Product;
 use App\Models\Product\ProductBusiness;
+use App\Support\UnidadDeVenta;
 use App\Services\CatalogoDeProductos;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -130,6 +131,21 @@ class ProductosDelNegocioController extends Controller
         $datos = $request->validate([
             'price'       => 'nullable|numeric|min:0',
             'amount'      => 'nullable|integer|min:0',
+            /*
+             * COMO LO VENDE ESTA TIENDA. Por unidad o al peso --kilo, libra o
+             * gramo-- y es del par tienda-producto: la misma referencia va
+             * empacada aca y al peso en la de enfrente.
+             *
+             * Con una unidad de peso, `price` pasa a significar «precio por
+             * esa unidad» y las existencias viven en `stock_weight`, que
+             * admite decimales. `amount` se queda para lo que se vende por
+             * unidad: migrarlo a decimal habria cambiado en silencio el
+             * significado de veintidos sitios.
+             */
+            'sale_unit'    => 'nullable|string|in:' . implode(',', UnidadDeVenta::TODAS),
+            'stock_weight' => 'nullable|numeric|min:0|max:100000',
+            'min_qty'      => 'nullable|numeric|min:0.001|max:100',
+            'step_qty'     => 'nullable|numeric|min:0.001|max:100',
             'expiration_date' => 'nullable|date',
             'name'        => 'nullable|string|max:255',
             'description' => 'nullable|string',
@@ -175,6 +191,12 @@ class ProductosDelNegocioController extends Controller
                     'price'  => $datos['price'] ?? null,
                     'amount' => $datos['amount'] ?? null,
                     'expiration_date' => $datos['expiration_date'] ?? null,
+                    // Como lo vende ESTA tienda. `null` es «no lo mandaste» y
+                    // no se pisa lo que hubiera, igual que el resto.
+                    'sale_unit'    => $datos['sale_unit'] ?? null,
+                    'stock_weight' => $datos['stock_weight'] ?? null,
+                    'min_qty'      => $datos['min_qty'] ?? null,
+                    'step_qty'     => $datos['step_qty'] ?? null,
                 ],
                 fn ($v) => $v !== null,
             );
@@ -242,6 +264,21 @@ class ProductosDelNegocioController extends Controller
             'products_id' => 'required|integer|exists:products,products_id',
             'price'       => 'required|numeric|min:0',
             'amount'      => 'required|integer|min:0',
+            /*
+             * COMO LO VENDE ESTA TIENDA. Por unidad o al peso --kilo, libra o
+             * gramo-- y es del par tienda-producto: la misma referencia va
+             * empacada aca y al peso en la de enfrente.
+             *
+             * Con una unidad de peso, `price` pasa a significar «precio por
+             * esa unidad» y las existencias viven en `stock_weight`, que
+             * admite decimales. `amount` se queda para lo que se vende por
+             * unidad: migrarlo a decimal habria cambiado en silencio el
+             * significado de veintidos sitios.
+             */
+            'sale_unit'    => 'nullable|string|in:' . implode(',', UnidadDeVenta::TODAS),
+            'stock_weight' => 'nullable|numeric|min:0|max:100000',
+            'min_qty'      => 'nullable|numeric|min:0.001|max:100',
+            'step_qty'     => 'nullable|numeric|min:0.001|max:100',
         ]);
 
         $yaLoTenia = ProductBusiness::where('busines_id', $businessId)
@@ -253,6 +290,12 @@ class ProductosDelNegocioController extends Controller
             (int) $datos['products_id'],
             (float) $datos['price'],
             (int) $datos['amount'],
+            array_filter([
+                'sale_unit'    => $datos['sale_unit'] ?? null,
+                'stock_weight' => $datos['stock_weight'] ?? null,
+                'min_qty'      => $datos['min_qty'] ?? null,
+                'step_qty'     => $datos['step_qty'] ?? null,
+            ], fn ($v) => $v !== null),
         );
 
         /*

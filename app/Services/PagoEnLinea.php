@@ -139,6 +139,13 @@ class PagoEnLinea
                 };
 
                 // 4️⃣ Productos (con los precios reales del servidor)
+                /*
+                 * `(int) $p['amount']` sigue siendo correcto: en una linea al
+                 * peso `amount` vale 1 --una linea, un concepto-- y lo que se
+                 * cobra es el total del pedido, que ya esta fijado desde que
+                 * el cliente pidio «3.000 de queso». A Bold se le manda el
+                 * desglose como referencia, no como base del cobro.
+                 */
                 $products = collect($lineas)->map(fn($p) => [
                     'product_id' => $p['product_id'],
                     'amount' => (int) $p['amount'],

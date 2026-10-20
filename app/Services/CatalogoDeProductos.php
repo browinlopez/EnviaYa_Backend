@@ -182,9 +182,16 @@ class CatalogoDeProductos
         int $businessId,
         int $productId,
         float $precio,
-        ?int $cantidad = null
+        ?int $cantidad = null,
+        /*
+         * Como lo vende esta tienda: unidad de venta, existencias en peso y
+         * los escalones de porcion. Va aparte de `$cantidad` porque solo
+         * aplica a lo que se vende al peso, y vacio en todo lo demas --que es
+         * la inmensa mayoria del catalogo--.
+         */
+        array $comoSeVende = [],
     ): ProductBusiness {
-        $cambios = ['price' => $precio];
+        $cambios = ['price' => $precio] + $comoSeVende;
 
         /*
          * `null` ES «NO SÉ», Y NO SE PISA LO QUE HAY.

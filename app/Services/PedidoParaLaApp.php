@@ -151,6 +151,18 @@ class PedidoParaLaApp
                     'image' => $detail->product->image,
                     'amount' => $detail->amount,
                     'unit_price' => $detail->unit_price,
+                    /*
+                     * LO QUE SE VENDE AL PESO. `amount` vale 1 en esas lineas
+                     * --migrarlo a decimal habria cambiado en silencio el
+                     * significado de veintidos sitios-- asi que la cantidad de
+                     * verdad viaja aca, junto con la unidad y el importe ya
+                     * congelado.
+                     */
+                    'sale_unit' => $detail->sale_unit,
+                    'pedido_por' => $detail->pedido_por,
+                    'qty_requested' => $detail->qty_requested,
+                    'qty_final' => $detail->qty_final,
+                    'line_total' => $detail->line_total,
                 ];
             }),
             'promotions' => $order->promotions,

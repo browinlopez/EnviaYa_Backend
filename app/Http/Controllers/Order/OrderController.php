@@ -73,6 +73,16 @@ class OrderController extends Controller
             ->map(fn($p) => [
                 'product_id' => $p['product_id'] ?? null,
                 'amount' => $p['amount'] ?? $p['quantity'] ?? null,
+                /*
+                 * LO QUE HACE FALTA PARA VENDER AL PESO, y nada mas: esta
+                 * normalizacion aplasta cada linea y lo que no se nombre aca
+                 * se descarta en silencio. `amount` sigue viajando siempre
+                 * --en una linea por peso vale 1-- para que la app ya
+                 * publicada en las tiendas siga pidiendo igual.
+                 */
+                'pedido_por' => $p['pedido_por'] ?? null,
+                'requested_qty' => $p['requested_qty'] ?? null,
+                'requested_value' => $p['requested_value'] ?? null,
             ])->all();
         $request->merge(['products' => $normalizedProducts]);
 
@@ -83,6 +93,14 @@ class OrderController extends Controller
             'products' => 'required|array|min:1',
             'products.*.product_id' => 'required|integer',
             'products.*.amount' => 'required|integer|min:1|max:1000',
+            /*
+             * El peso va en campos propios y `amount` se queda entero: migrar
+             * esa regla a decimal cambiaria el significado de veintidos sitios
+             * que la dan por hecha, en silencio.
+             */
+            'products.*.pedido_por' => 'sometimes|nullable|in:valor,cantidad',
+            'products.*.requested_qty' => 'sometimes|nullable|numeric|min:0.001|max:100',
+            'products.*.requested_value' => 'sometimes|nullable|numeric|min:100|max:1000000',
             'methods_id' => 'required|integer|exists:payment_methods,methods_id',
             'payer' => 'nullable|array',
             'payment_method' => 'required_if:methods_id,2|array',
@@ -189,7 +207,7 @@ class OrderController extends Controller
         /* ========= PRECIOS REALES DEL SERVIDOR =========
            La regla —el precio lo pone el servidor, no el carrito— vive entera
            en EconomiaDelPedido, junto al resto de lo que decide dinero. */
-        [$prices, $missing] = $economia->preciosDelServidor(
+        [$prices, $missing, $surtido] = $economia->preciosDelServidor(
             $request->products,
             (int) $business->busines_id,
         );
@@ -201,6 +219,23 @@ class OrderController extends Controller
                 // la app tiene que reaccionar igual — quitarlo del carrito.
                 'message' => 'Hay productos que ya no están disponibles en este negocio',
                 'product_ids' => $missing->values(),
+            ], 422);
+        }
+
+
+        /*
+         * AL PESO, PERO SIN DECIR CUANTO.
+         *
+         * Le pasa a la app ya publicada en las tiendas, que no sabe que estos
+         * campos existen. Se le dice que actualice nombrando los productos, en
+         * vez de inventarles un peso y cobrarle al cliente algo que no pidio.
+         */
+        $sinPeso = $economia->lineasSinPeso($request->products, $surtido);
+
+        if ($sinPeso !== []) {
+            return response()->json([
+                'message' => 'Actualiza la app para comprar productos que se venden al peso.',
+                'product_ids' => $sinPeso,
             ], 422);
         }
 
@@ -245,6 +280,7 @@ class OrderController extends Controller
                 $business->longitude !== null ? (float) $business->longitude : null,
                 $address?->latitude !== null ? (float) $address?->latitude : null,
                 $address?->longitude !== null ? (float) $address?->longitude : null,
+                $surtido,
             );
 
             $subtotal        = $cifras['subtotal'];
@@ -308,6 +344,7 @@ class OrderController extends Controller
                 $request->pickup_time,
                 (int) $request->user_id,
                 $request->filled('cash_tendered') ? (float) $request->input('cash_tendered') : null,
+                $surtido,
             );
 
             /*
@@ -818,6 +855,25 @@ class OrderController extends Controller
 
             // Acepta domiciliario
         } elseif ($order->state == 2 && $request->state == 3) {
+            /*
+             * LO QUE SE VENDE AL PESO SE PESA ANTES DE SALIR.
+             *
+             * Si no, el domiciliario se lleva una bolsa cuyo contenido nadie
+             * midio: el inventario queda descontado con lo que el cliente
+             * pidio, que es una estimacion, y el tendero pierde la unica
+             * oportunidad de registrar lo que de verdad entrego.
+             *
+             * Es una comprobacion sobre `weighing_state`, que es una
+             * dimension aparte del estado del pedido: no hay un estado nuevo
+             * que rompa el tablero del panel ni las apps publicadas.
+             */
+            if ((int) $order->weighing_state === OrdersSales::POR_PESAR) {
+                return response()->json([
+                    'message' => 'Este pedido lleva productos al peso: pesalos antes de despacharlo.',
+                    'reason'  => 'falta_pesaje',
+                ], 422);
+            }
+
             if (!$request->user_id) {
                 return response()->json(['message' => 'Se requiere el user_id del domiciliario para esta transición.'], 422);
             }

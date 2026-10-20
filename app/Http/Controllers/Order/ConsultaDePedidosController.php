@@ -85,6 +85,8 @@ class ConsultaDePedidosController extends Controller
                  */
                 'cash_tendered' => $order->cash_tendered,
                 'change_due' => $order->change_due,
+                // Si falta pesar: el tablero lo marca y el despacho se bloquea.
+                'weighing_state' => (int) $order->weighing_state,
                 // El domiciliario necesita saber si cobra en la puerta o
                 // si el pedido ya viene pagado en línea.
                 'methods_id' => $order->methods_id,
@@ -159,6 +161,17 @@ class ConsultaDePedidosController extends Controller
                         'image' => $detail->product->image,
                         'amount' => $detail->amount,
                         'unit_price' => $detail->unit_price,
+                        /*
+                         * Lo que se vende al peso. Esta pantalla es la que
+                         * usa el tendero para armar la bolsa y para pesar,
+                         * asi que necesita la cantidad de verdad: en esas
+                         * lineas `amount` vale 1.
+                         */
+                        'sale_unit' => $detail->sale_unit,
+                        'pedido_por' => $detail->pedido_por,
+                        'qty_requested' => $detail->qty_requested,
+                        'qty_final' => $detail->qty_final,
+                        'line_total' => $detail->line_total,
                     ];
                 }),
                 'promotions' => $order->promotions,

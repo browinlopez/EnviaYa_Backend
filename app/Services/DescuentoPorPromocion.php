@@ -72,6 +72,18 @@ class DescuentoPorPromocion
             $cantidad   = (int) ($linea['amount'] ?? 0);
             $precio     = (float) ($precios[$productoId] ?? 0);
 
+            /*
+             * LAS LINEAS AL PESO NO ENTRAN AL MOTOR DE PROMOCIONES.
+             *
+             * Un «lleva 3, paga 2» sobre 1,18 kg no esta definido, y mezclar
+             * reglas por unidad con reglas por peso en este recorrido es,
+             * segun el comentario de arriba, justo donde se cuela un doble
+             * descuento. Se excluyen y se avisa al crear la promocion.
+             */
+            if (($linea['pedido_por'] ?? null) !== null) {
+                continue;
+            }
+
             if ($cantidad < 1 || $precio <= 0) {
                 continue;
             }

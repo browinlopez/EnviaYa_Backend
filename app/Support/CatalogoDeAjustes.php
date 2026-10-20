@@ -116,6 +116,15 @@ class CatalogoDeAjustes
                 'reglas'   => 'required|numeric|min:0|max:100',
             ],
 
+            'operacion.desvio_peso_max' => [
+                'grupo'    => 'operacion',
+                'etiqueta' => 'Desvío máximo al pesar',
+                'tipo'     => 'porcentaje',
+                'ayuda'    => 'Cuánto puede alejarse el peso real de lo que pidió el cliente. Es lo único que limita a quien pone el peso en el mostrador: sin tope, un pedido de $8.000 se podría convertir en uno de $80.000 y el cliente lo pagaría en la puerta sin haberlo aceptado nunca. Demasiado estricto y no se puede cortar un trozo de queso de verdad; demasiado laxo y no protege nada.',
+                'defecto'  => 0.25,
+                'reglas'   => 'required|numeric|min:0.01|max:1',
+            ],
+
             'operacion.comision_plataforma' => [
                 'grupo'    => 'operacion',
                 'etiqueta' => 'Comisión de la plataforma sobre la venta',

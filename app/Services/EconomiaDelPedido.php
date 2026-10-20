@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Product\ProductBusiness;
+use App\Support\UnidadDeVenta;
 
 
 /**
@@ -49,7 +50,7 @@ class EconomiaDelPedido
     {
         $ids = collect($lineas)->pluck('product_id')->all();
 
-        $precios = ProductBusiness::where('busines_id', $negocioId)
+        $surtido = ProductBusiness::where('busines_id', $negocioId)
             ->whereIn('products_id', $ids)
             ->whereHas('product', fn ($q) => $q->where('state', 1))
             /*
@@ -67,11 +68,89 @@ class EconomiaDelPedido
              * que el total que se enseña y el que se cobra no pueden separarse.
              */
             ->where('price', '>', 0)
-            ->pluck('price', 'products_id');
+            ->get()
+            ->keyBy('products_id');
+
+        $precios = $surtido->map(fn ($p) => $p->price);
 
         $faltantes = collect($ids)->reject(fn ($id) => $precios->has($id));
 
-        return [$precios, $faltantes];
+        /*
+         * El TERCER valor es el surtido entero, que es lo que trae la unidad
+         * de venta de cada producto. Va al final a proposito: quien ya
+         * destructuraba `[$precios, $faltantes]` sigue funcionando sin
+         * tocarlo.
+         */
+        return [$precios, $faltantes, $surtido];
+    }
+
+    /**
+     * CUÁNTO VALE UNA LÍNEA DEL CARRITO.
+     *
+     * Tres casos, y los tres fijan el precio AHORA —ninguno deja el importe
+     * pendiente de lo que pese después el tendero—:
+     *
+     *   · por unidades  →  precio × cantidad, como siempre;
+     *   · «3.000 de queso» → el importe ES lo que pidió, y el peso es la
+     *     variable que resuelve el mostrador;
+     *   · «500 g de tomate» → peso × precio de la unidad.
+     *
+     * Eso es lo que hace que el total no cambie al pesar, y con ello que no
+     * haya que recalcular cobros, bloquear la pasarela ni devolver
+     * diferencias. Lo que el cliente aceptó es lo que paga.
+     */
+    public function importeDeLinea(array $linea, $precios, $surtido = null): float
+    {
+        $id = (int) ($linea['product_id'] ?? 0);
+        $precio = (float) ($precios[$id] ?? 0);
+
+        $unidad = $surtido[$id]->sale_unit ?? UnidadDeVenta::UNIDAD;
+
+        if (!UnidadDeVenta::esPeso($unidad)) {
+            return round($precio * (float) ($linea['amount'] ?? 0), 2);
+        }
+
+        if (($linea['pedido_por'] ?? null) === 'valor') {
+            return round((float) ($linea['requested_value'] ?? 0), 2);
+        }
+
+        return round($precio * (float) ($linea['requested_qty'] ?? 0), 2);
+    }
+
+    /**
+     * LAS LINEAS AL PESO QUE NO DICEN CUANTO.
+     *
+     * Un producto que la tienda vende por kilo necesita que la peticion diga
+     * o cuanta plata --«3.000 de queso»-- o cuanto peso --«500 g»--. Sin eso
+     * no hay precio que calcular.
+     *
+     * Pasa con la app ya publicada en las tiendas, que no sabe que existen
+     * esos campos. Devolverle 422 nombrando el producto es mejor que
+     * inventarle un peso y cobrarle al cliente algo que no pidio.
+     *
+     * @return list<int> Los `product_id` incompletos.
+     */
+    public function lineasSinPeso(iterable $lineas, $surtido = null): array
+    {
+        $sinPeso = [];
+
+        foreach ($lineas as $linea) {
+            $id = (int) ($linea['product_id'] ?? 0);
+            $unidad = $surtido[$id]->sale_unit ?? UnidadDeVenta::UNIDAD;
+
+            if (!UnidadDeVenta::esPeso($unidad)) {
+                continue;
+            }
+
+            $porValor = ($linea['pedido_por'] ?? null) === 'valor';
+            $dato = $porValor ? ($linea['requested_value'] ?? null) : ($linea['requested_qty'] ?? null);
+
+            if ($dato === null || (float) $dato <= 0) {
+                $sinPeso[] = $id;
+            }
+        }
+
+        return $sinPeso;
     }
 
     public function calcular(
@@ -85,9 +164,15 @@ class EconomiaDelPedido
         ?float $lonNegocio = null,
         ?float $latEntrega = null,
         ?float $lonEntrega = null,
+        /*
+         * El surtido, para saber en qué unidad se vende cada producto. Va al
+         * final y con valor por defecto: sin él, todo se comporta como se
+         * comportaba —por unidades— y ninguna llamada antigua se rompe.
+         */
+        $surtido = null,
     ): array {
         $subtotal = collect($lineas)
-            ->sum(fn($p) => $p['amount'] * (float) $precios[$p['product_id']]);
+            ->sum(fn ($p) => $this->importeDeLinea($p, $precios, $surtido));
 
         /*
          * Tarifa de domicilio, del panel.

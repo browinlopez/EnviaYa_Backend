@@ -52,6 +52,18 @@ class CotizacionController extends Controller
                 ->map(fn ($p) => [
                     'product_id' => $p['product_id'] ?? null,
                     'amount'     => $p['amount'] ?? $p['quantity'] ?? null,
+                    /*
+                     * LO QUE HACE FALTA PARA VENDER AL PESO, y nada mas.
+                     *
+                     * Esta normalizacion aplasta cada linea: lo que no se
+                     * nombre aca se descarta en silencio. `amount` sigue
+                     * viajando SIEMPRE --tambien en una linea por peso, donde
+                     * vale 1-- para que la app ya publicada en las tiendas
+                     * siga pidiendo igual.
+                     */
+                    'pedido_por'      => $p['pedido_por'] ?? null,
+                    'requested_qty'   => $p['requested_qty'] ?? null,
+                    'requested_value' => $p['requested_value'] ?? null,
                 ])->all(),
         ]);
 
@@ -60,6 +72,14 @@ class CotizacionController extends Controller
             'products'              => 'required|array|min:1',
             'products.*.product_id' => 'required|integer',
             'products.*.amount'     => 'required|integer|min:1|max:1000',
+            /*
+             * El peso va en campos propios y `amount` se queda entero: migrar
+             * esa regla a decimal cambiaria el significado de veintidos sitios
+             * que la dan por hecha, en silencio.
+             */
+            'products.*.pedido_por'      => 'sometimes|nullable|in:valor,cantidad',
+            'products.*.requested_qty'   => 'sometimes|nullable|numeric|min:0.001|max:100',
+            'products.*.requested_value' => 'sometimes|nullable|numeric|min:100|max:1000000',
             'address_id'            => 'sometimes|nullable|integer',
             'pickup'                => 'sometimes|boolean',
             'coupon_code'           => 'sometimes|nullable|string|max:40',
@@ -68,7 +88,7 @@ class CotizacionController extends Controller
         $business = Business::find($request->busines_id);
         $esRecogida = (bool) $request->boolean('pickup');
 
-        [$precios, $faltantes] = $this->economia->preciosDelServidor(
+        [$precios, $faltantes, $surtido] = $this->economia->preciosDelServidor(
             $request->products,
             (int) $business->busines_id,
         );
@@ -105,6 +125,20 @@ class CotizacionController extends Controller
                 ->first();
         }
 
+        /*
+         * El mismo chequeo que al pedir. Si la cotizacion no lo hiciera, el
+         * carrito pintaria un total calculado sin peso y `store` lo tumbaria
+         * con un 409 por total cambiado.
+         */
+        $sinPeso = $this->economia->lineasSinPeso($vigentes, $surtido);
+
+        if ($sinPeso !== []) {
+            return response()->json([
+                'message' => 'Actualiza la app para comprar productos que se venden al peso.',
+                'product_ids' => $sinPeso,
+            ], 422);
+        }
+
         $cifras = $this->economia->calcular(
             $vigentes,
             $precios,
@@ -116,6 +150,7 @@ class CotizacionController extends Controller
             $business->longitude !== null ? (float) $business->longitude : null,
             $direccion?->latitude !== null ? (float) $direccion?->latitude : null,
             $direccion?->longitude !== null ? (float) $direccion?->longitude : null,
+            $surtido,
         );
 
         return response()->json([

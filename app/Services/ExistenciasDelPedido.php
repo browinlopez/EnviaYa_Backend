@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Order\OrdersSales;
 use App\Models\Product\ProductBusiness;
+use App\Support\UnidadDeVenta;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -49,21 +50,90 @@ class ExistenciasDelPedido
         $this->marcar($pedido, false);
     }
 
+    /**
+     * Mueve el inventario del pedido entero.
+     *
+     * DOS CAMINOS, y estan separados a proposito. Lo que se vende por unidad
+     * se mueve en `amount`, que es entero; lo que se vende al peso, en
+     * `stock_weight`, que no lo es.
+     *
+     * Si fueran la misma consulta, el `(int)` de abajo --que existe porque
+     * `amount` es entero-- truncaria el peso: un pedido de 1,8 kg descontaria
+     * 1. Con dos caminos, el entero nunca toca una cantidad con decimales.
+     */
     private function mover(OrdersSales $pedido, int $signo): void
     {
-        $lineas = DB::table('orderssales_detail')
+        $porUnidad = DB::table('orderssales_detail')
             ->where('orderSales_id', $pedido->orderSales_id)
+            ->where(function ($q) {
+                $q->whereNull('sale_unit')->orWhere('sale_unit', UnidadDeVenta::UNIDAD);
+            })
             ->select('product_id', DB::raw('SUM(amount) as unidades'))
             ->groupBy('product_id')
             ->get();
 
-        foreach ($lineas as $linea) {
+        foreach ($porUnidad as $linea) {
             $consulta = ProductBusiness::where('busines_id', $pedido->busines_id)
                 ->where('products_id', $linea->product_id);
 
             $signo < 0
                 ? $consulta->decrement('amount', (int) $linea->unidades)
                 : $consulta->increment('amount', (int) $linea->unidades);
+        }
+
+        /*
+         * Lo pesado manda sobre lo pedido: es lo que de verdad salio de la
+         * tienda. Mientras nadie haya pesado vale lo pedido, y al pesar se
+         * mueve solo la diferencia --ver `ajustarPorPesaje`--.
+         */
+        $alPeso = DB::table('orderssales_detail')
+            ->where('orderSales_id', $pedido->orderSales_id)
+            ->whereNotNull('sale_unit')
+            ->where('sale_unit', '!=', UnidadDeVenta::UNIDAD)
+            ->select(
+                'product_id',
+                DB::raw('SUM(COALESCE(qty_final, qty_requested, 0)) as cantidad'),
+            )
+            ->groupBy('product_id')
+            ->get();
+
+        foreach ($alPeso as $linea) {
+            $consulta = ProductBusiness::where('busines_id', $pedido->busines_id)
+                ->where('products_id', $linea->product_id);
+
+            $signo < 0
+                ? $consulta->decrement('stock_weight', (float) $linea->cantidad)
+                : $consulta->increment('stock_weight', (float) $linea->cantidad);
+        }
+    }
+
+    /**
+     * AL PESAR, SOLO SE MUEVE LA DIFERENCIA.
+     *
+     * El inventario ya se descontó al crear el pedido, con lo que el cliente
+     * pidió. Cuando el tendero pesa, lo que sale de verdad es otra cosa: si
+     * pidió 1 kg y pesó 1,18, faltan 0,18 por descontar.
+     *
+     * No se hace con `devolver()` + `descontar()`: la marca
+     * `stock_descontado` es booleana y no distingue, y devolver soltaría
+     * también las unidades enteras del mismo pedido para volver a restarlas,
+     * dejando el inventario en el aire entre las dos operaciones.
+     *
+     * @param  array<int, float>  $deltas  product_id => cuánto más (o menos).
+     */
+    public function ajustarPorPesaje(OrdersSales $pedido, array $deltas): void
+    {
+        foreach ($deltas as $productoId => $delta) {
+            if (abs($delta) < 0.0005) {
+                continue;
+            }
+
+            $consulta = ProductBusiness::where('busines_id', $pedido->busines_id)
+                ->where('products_id', $productoId);
+
+            $delta > 0
+                ? $consulta->decrement('stock_weight', (float) $delta)
+                : $consulta->increment('stock_weight', (float) abs($delta));
         }
     }
 

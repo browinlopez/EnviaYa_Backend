@@ -53,6 +53,9 @@ class OrdersSales extends Audit
         'cash_due',
         // Con cuánto dijo el cliente que va a pagar, para preparar el cambio.
         'cash_tendered',
+        // Si lleva algo al peso y si ya se pesó. Ver la migración.
+        'weighing_state',
+        'weighed_at',
         'sale_date',
         'delivery_date',
         'is_scheduled',
@@ -94,6 +97,8 @@ class OrdersSales extends Audit
         'delivery_subsidy' => 'decimal:2',
         'cash_due' => 'decimal:2',
         'cash_tendered' => 'decimal:2',
+        'weighing_state' => 'integer',
+        'weighed_at' => 'datetime',
     ];
 
     /**
@@ -128,6 +133,24 @@ class OrdersSales extends Audit
 
     /** El pago en línea se intentó y la pasarela lo rechazó. */
     public const PAGO_RECHAZADO = 'rejected';
+
+    /* =====================================================================
+       EL PESAJE
+
+       Una dimensión APARTE del estado del pedido, y no un `state` nuevo: un
+       estado nuevo rompería la lista del panel, las columnas del tablero,
+       `puedeMoverPedido`, `ReglasDeDespacho`, los informes que filtran por
+       estado y las dos apps ya publicadas en las tiendas.
+       ===================================================================== */
+
+    /** No lleva nada al peso: la inmensa mayoría de los pedidos. */
+    public const SIN_PESAJE = 0;
+
+    /** Lleva algo al peso y todavía no se ha pesado. No se puede despachar. */
+    public const POR_PESAR = 1;
+
+    /** Ya se pesó: el pedido puede salir. */
+    public const PESADO = 2;
 
     /** Estados en los que el pedido todavía no es —o ya no será— un pedido. */
     public const SIN_PAGO = [self::ESPERANDO_PAGO, self::PAGO_RECHAZADO];
@@ -324,6 +347,9 @@ class OrdersSales extends Audit
             // Con cuánto paga y cuánto cambio llevarle. Solo en efectivo.
             'cash_tendered' => $this->cash_tendered,
             'change_due' => $this->change_due,
+            // 0 no aplica · 1 por pesar · 2 pesado. Es una dimension aparte
+            // del estado del pedido, no un estado nuevo.
+            'weighing_state' => (int) $this->weighing_state,
             'sale_date' => $this->sale_date,
             'delivery_date' => $this->delivery_date,
             'state' => $this->state,
@@ -373,6 +399,13 @@ class OrdersSales extends Audit
                 'image' => $d->product->image ?? null,
                 'amount' => $d->amount,
                 'unit_price' => $d->unit_price,
+                // Lo que se vende al peso: `amount` vale 1 en esas lineas y la
+                // cantidad de verdad va aca. Ver la migracion del peso.
+                'sale_unit' => $d->sale_unit,
+                'pedido_por' => $d->pedido_por,
+                'qty_requested' => $d->qty_requested,
+                'qty_final' => $d->qty_final,
+                'line_total' => $d->line_total,
             ])->toArray(),
             'promotions' => $this->promotions ?? [],
             'payments' => $this->payments ?? null,

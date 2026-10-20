@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use App\Support\ImporteDeLinea;
+use App\Support\UnidadDeVenta;
+
 use App\Models\Invoice\Invoice;
 use Dompdf\Dompdf;
 use Dompdf\Options;
@@ -92,6 +95,9 @@ class FacturaService
             ->where('od.orderSales_id', $pedidoId)
             ->get([
                 'od.product_id', 'od.amount', 'od.unit_price',
+                // Lo que de verdad se vendio y lo que de verdad se cobro:
+                // en una linea al peso, `amount` vale 1.
+                'od.sale_unit', 'od.qty_requested', 'od.qty_final', 'od.line_total',
                 'p.name as producto',
             ]);
 
@@ -149,11 +155,25 @@ class FacturaService
                     'fecha'        => $fecha->toDateTimeString(),
                     'medio_pago'   => $pedido->medio_pago,
                 ],
+                /*
+                 * LO QUE SE VENDIO DE VERDAD, y no `(int) amount`.
+                 *
+                 * En una linea al peso `amount` vale 1 y la cantidad esta en
+                 * `qty_final`; el importe esta congelado en `line_total`.
+                 * Calcularlo aca a mano haria que el comprobante cobrara
+                 * distinto que el pedido --un kilo ochocientos facturado como
+                 * uno--, que es la peor version de este fallo porque queda por
+                 * escrito.
+                 *
+                 * El comprobante se emite al dar el pedido por entregado, o
+                 * sea SIEMPRE despues del pesaje.
+                 */
                 'renglones' => $renglones->map(fn ($r) => [
                     'producto'    => $r->producto ?? "Producto #{$r->product_id}",
-                    'cantidad'    => (int) $r->amount,
+                    'cantidad'    => ImporteDeLinea::cantidad($r),
+                    'unidad'      => $r->sale_unit ?? UnidadDeVenta::UNIDAD,
                     'precio_unit' => round((float) $r->unit_price, 2),
-                    'importe'     => round((float) $r->unit_price * (int) $r->amount, 2),
+                    'importe'     => ImporteDeLinea::de($r),
                 ])->all(),
             ],
         ]);
