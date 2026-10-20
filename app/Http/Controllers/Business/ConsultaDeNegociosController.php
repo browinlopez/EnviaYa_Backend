@@ -348,6 +348,15 @@ class ConsultaDeNegociosController extends Controller
                         // Si no hay user_id → precio 0
                         // Si hay user_id → mostrar precio solo si está afiliado
                         'price'       => $userId ? ($isAffiliated ? ($product->pivot->price ?? 0) : 0) : 0,
+                        /*
+                         * COMO SE VENDE: por unidad o al peso. Con una unidad
+                         * de peso, `price` es el precio por esa medida y la
+                         * pantalla ofrece botones de plata --«3.000 de
+                         * queso»-- y de porcion en vez del +/- de siempre.
+                         */
+                        'sale_unit' => $product->pivot->sale_unit ?? 'unidad',
+                        'min_qty'   => $product->pivot->min_qty !== null ? (float) $product->pivot->min_qty : null,
+                        'step_qty'  => $product->pivot->step_qty !== null ? (float) $product->pivot->step_qty : null,
                     ];
                 }),
                 // reviews del negocio
@@ -512,6 +521,10 @@ class ConsultaDeNegociosController extends Controller
                     'image'      => $product->image,
                     'state'      => (bool) $product->state,
                     'price'      => $estaAfiliado ? ($product->pivot->price ?? 0) : 0,
+                    // Como se vende: por unidad o al peso. Ver arriba.
+                    'sale_unit'  => $product->pivot->sale_unit ?? 'unidad',
+                    'min_qty'    => $product->pivot->min_qty !== null ? (float) $product->pivot->min_qty : null,
+                    'step_qty'   => $product->pivot->step_qty !== null ? (float) $product->pivot->step_qty : null,
                     // `null` cuando no hay ninguna. La app pinta la etiqueta
                     // solo si viene algo.
                     'promocion'  => $promoDe((int) $product->products_id),
