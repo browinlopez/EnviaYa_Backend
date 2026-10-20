@@ -1,10 +1,7 @@
 <?php
 
 use App\Models\Marketing\Coupon;
-use App\Models\Rol;
-use App\Models\User;
 use Illuminate\Support\Facades\DB;
-use Laravel\Sanctum\Sanctum;
 
 /**
  * Creación de pedido con cupón.
@@ -16,66 +13,11 @@ use Laravel\Sanctum\Sanctum;
  * cupón siga comportándose exactamente igual que antes.
  */
 
-/** Escenario mínimo para poder crear un pedido: comprador, negocio, producto. */
-function escenarioPedido(): array
-{
-    Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
-
-    $user = User::factory()->create(['rol' => 1]);
-    Sanctum::actingAs($user);
-
-    $buyerId = DB::table('buyer')->insertGetId([
-        'user_id'            => $user->user_id,
-        'qualification'      => 0,
-        'belongs_to_complex' => 0,
-        'state'              => 1,
-    ]);
-
-    $businessId = DB::table('business')->insertGetId([
-        'name'          => 'Tienda del Pedido',
-        'qualification' => 0,
-        'state'         => 1,
-    ]);
-
-    $productId = DB::table('products')->insertGetId([
-        'name'  => 'Arroz',
-        'state' => 1,
-    ], 'products_id');
-
-    // El precio SIEMPRE sale de acá, nunca del cliente. La tabla pivote se
-    // llama `products_business` (en plural), no `product_business`.
-    DB::table('products_business')->insert([
-        'busines_id'  => $businessId,
-        'products_id' => $productId,
-        'price'       => 10000,
-        'amount'      => 100,
-    ]);
-
-    $addressId = DB::table('user_address')->insertGetId([
-        'user_id' => $user->user_id,
-        'address' => 'Carrera 1 # 2-3',
-        'state'   => 1,
-    ]);
-
-    // Un método que NO sea 2 ni 5, para no entrar en el flujo de Bold.
-    $methodId = DB::table('payment_methods')->insertGetId([
-        'name'  => 'Efectivo',
-        'state' => 1,
-    ]);
-
-    return compact('user', 'buyerId', 'businessId', 'productId', 'addressId', 'methodId');
-}
-
-function cuerpoPedido(array $e, array $extra = []): array
-{
-    return array_merge([
-        'user_id'    => $e['user']->user_id,
-        'busines_id' => $e['businessId'],
-        'address_id' => $e['addressId'],
-        'methods_id' => $e['methodId'],
-        'products'   => [['product_id' => $e['productId'], 'amount' => 3]],
-    ], $extra);
-}
+/*
+ * `escenarioPedido()` y `cuerpoPedido()` viven en `tests/Pest.php`: los
+ * comparten estas pruebas y las de promociones, y Pest solo carga los
+ * archivos que va a correr.
+ */
 
 /* ---------------------------------------------------------------------- */
 

@@ -24,6 +24,7 @@ class ArmadoDelPedido
     public function __construct(
         private readonly CouponService $cupones,
         private readonly ExistenciasDelPedido $existencias,
+        private readonly RedencionDePromociones $promociones,
     ) {
     }
 
@@ -162,6 +163,14 @@ class ArmadoDelPedido
                 $cifras['descuento'],
             );
         }
+
+        /*
+         * Y las promociones de la tienda, por el mismo motivo y en el mismo
+         * sitio. `EconomiaDelPedido` ya dejó en `$cifras` cuáles rebajaron
+         * este carrito, así que acá no se vuelve a decidir nada: solo se deja
+         * constancia y se gasta el uso.
+         */
+        $this->promociones->canjear($order, $cifras['promociones'] ?? []);
 
         return $order;
     }

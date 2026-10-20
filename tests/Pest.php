@@ -226,3 +226,72 @@ function cargarDesdePdv(array $t, UploadedFile $archivo, ?int $categoria = null)
     return CatalogUpload::find($r->json('data.catalog_upload_id'))->fresh();
 }
 
+
+/*
+ * UN PEDIDO MÍNIMO: comprador, negocio, producto, dirección y método.
+ *
+ * Vivía dentro de `OrderCouponTest.php` y se mudó acá cuando las promociones
+ * necesitaron lo mismo. Mismo motivo que los de arriba: Pest solo carga los
+ * archivos que va a correr, así que un ayudante compartido metido dentro de un
+ * archivo de pruebas hace que el OTRO se caiga con `Call to undefined
+ * function` en cuanto se corren por separado.
+ */
+function escenarioPedido(): array
+{
+    \App\Models\Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
+
+    $user = \App\Models\User::factory()->create(['rol' => 1]);
+    Sanctum::actingAs($user);
+
+    $buyerId = \Illuminate\Support\Facades\DB::table('buyer')->insertGetId([
+        'user_id'            => $user->user_id,
+        'qualification'      => 0,
+        'belongs_to_complex' => 0,
+        'state'              => 1,
+    ]);
+
+    $businessId = \Illuminate\Support\Facades\DB::table('business')->insertGetId([
+        'name'          => 'Tienda del Pedido',
+        'qualification' => 0,
+        'state'         => 1,
+    ]);
+
+    $productId = \Illuminate\Support\Facades\DB::table('products')->insertGetId([
+        'name'  => 'Arroz',
+        'state' => 1,
+    ], 'products_id');
+
+    // El precio SIEMPRE sale de acá, nunca del cliente. La tabla pivote se
+    // llama `products_business` (en plural), no `product_business`.
+    \Illuminate\Support\Facades\DB::table('products_business')->insert([
+        'busines_id'  => $businessId,
+        'products_id' => $productId,
+        'price'       => 10000,
+        'amount'      => 100,
+    ]);
+
+    $addressId = \Illuminate\Support\Facades\DB::table('user_address')->insertGetId([
+        'user_id' => $user->user_id,
+        'address' => 'Carrera 1 # 2-3',
+        'state'   => 1,
+    ]);
+
+    // Un método que NO sea 2 ni 5, para no entrar en el flujo de Bold.
+    $methodId = \Illuminate\Support\Facades\DB::table('payment_methods')->insertGetId([
+        'name'  => 'Efectivo',
+        'state' => 1,
+    ]);
+
+    return compact('user', 'buyerId', 'businessId', 'productId', 'addressId', 'methodId');
+}
+
+function cuerpoPedido(array $e, array $extra = []): array
+{
+    return array_merge([
+        'user_id'    => $e['user']->user_id,
+        'busines_id' => $e['businessId'],
+        'address_id' => $e['addressId'],
+        'methods_id' => $e['methodId'],
+        'products'   => [['product_id' => $e['productId'], 'amount' => 3]],
+    ], $extra);
+}

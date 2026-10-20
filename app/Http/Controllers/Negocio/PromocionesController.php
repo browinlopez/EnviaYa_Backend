@@ -64,14 +64,45 @@ class PromocionesController extends Controller
         ]);
     }
 
-    /** Las reglas del texto, el plazo y los productos. Iguales al crear y al corregir. */
+    /** Las reglas del texto, la vigencia, el tope y los productos. Iguales al crear y al corregir. */
     private function reglas(): array
     {
         return [
             'texto' => 'required|string|min:5|max:' . PromocionesDeLaTienda::MAXIMO_CARACTERES,
             'productos' => 'sometimes|array|max:20',
             'productos.*' => 'integer|exists:products,products_id',
-            'hasta' => 'sometimes|nullable|in:' . implode(',', PromocionesDeLaTienda::PLAZOS),
+            /*
+             * `hasta` admite DOS cosas, y por eso no es un `in:` a secas.
+             *
+             * Una de las palabras enlatadas —«semana», «fin_de_semana»— que
+             * es lo que manda la app publicada en las tiendas y lo que hay
+             * que seguir aceptando, o una fecha, que es lo que manda la
+             * pantalla nueva cuando el tendero elige día.
+             *
+             * Resolverlo con un cierre y no con dos campos distintos evita
+             * tener `hasta` y `hasta_el` significando lo mismo, que es la
+             * clase de pareja que acaba desincronizada.
+             */
+            'hasta' => ['sometimes', 'nullable', function ($campo, $valor, $falla) {
+                if (in_array($valor, PromocionesDeLaTienda::PLAZOS, true)) {
+                    return;
+                }
+
+                if (strtotime((string) $valor) === false) {
+                    $falla('No entendimos hasta cuándo vale la promoción.');
+                }
+            }],
+
+            'desde' => 'sometimes|nullable|date',
+
+            /*
+             * CUÁNTAS VECES SE PUEDE USAR. Null o ausente = sin tope, que es
+             * como se han comportado todas hasta hoy.
+             *
+             * El mínimo es 1 y no 0: una promoción con cero usos disponibles
+             * nace agotada, y eso no es un límite, es no mandarla.
+             */
+            'max_usos' => 'sometimes|nullable|integer|min:1|max:100000',
 
             /*
              * LA REGLA, que es lo que convierte el aviso en un descuento.
@@ -101,6 +132,55 @@ class PromocionesController extends Controller
 
     /** La regla tal como se guarda, a partir de lo que mandó la pantalla. */
     private function regla(Request $request): array
+    {
+        return [...$this->reglaDeDescuento($request), ...$this->tope($request)];
+    }
+
+    /**
+     * El tope de usos, SOLO si la pantalla lo mandó.
+     *
+     * Se mira `has()` y no el valor: la app publicada en las tiendas no sabe
+     * que este campo existe, así que al corregir una promoción no manda nada.
+     * Si se incluyera siempre, esa corrección le borraría en silencio el tope
+     * a una promoción creada desde la pantalla nueva.
+     */
+    private function tope(Request $request): array
+    {
+        if (!$request->has('max_usos')) {
+            return [];
+        }
+
+        $tope = $request->input('max_usos');
+
+        return ['max_usos' => $tope === null || $tope === '' ? null : (int) $tope];
+    }
+
+    /**
+     * Desde cuándo y hasta cuándo, a partir de lo que mandó la pantalla.
+     *
+     * Devolver `[]` cuando no viene ninguna de las dos no es un descuido: para
+     * `corregir` significa «no toques las fechas», y es lo que arregla que
+     * corregir el texto de una promoción le borrara el vencimiento.
+     */
+    private function ventana(Request $request): array
+    {
+        $hasta = $request->input('hasta');
+        $desde = $request->input('desde');
+
+        if ($hasta === null && $desde === null) {
+            return [];
+        }
+
+        $esPlazo = in_array($hasta, PromocionesDeLaTienda::PLAZOS, true);
+
+        return $this->promociones->ventana(
+            $esPlazo ? $hasta : null,
+            $desde,
+            $esPlazo ? null : $hasta,
+        );
+    }
+
+    private function reglaDeDescuento(Request $request): array
     {
         $tipo = $request->input('tipo', Promotion::SIN_DESCUENTO);
 
@@ -201,7 +281,7 @@ class PromocionesController extends Controller
             $request->string('texto')->toString(),
             $productos,
             (int) $request->user()->user_id,
-            $request->input('hasta'),
+            $this->ventana($request),
             $this->regla($request),
         );
 
@@ -270,7 +350,7 @@ class PromocionesController extends Controller
             $promocion,
             $request->string('texto')->toString(),
             $productos,
-            $request->input('hasta'),
+            $this->ventana($request),
             $this->regla($request),
         );
 

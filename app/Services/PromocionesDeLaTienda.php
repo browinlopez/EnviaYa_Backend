@@ -74,8 +74,9 @@ class PromocionesDeLaTienda
      * equivocarse de año. Y una promoción de tienda de barrio nunca dura
      * «hasta el 23 de octubre»: dura hoy, el fin de semana, o esta semana.
      *
-     * Son cuatro botones y uno de «sin fecha». El que quiera un día exacto
-     * puede escribirlo en el texto, que es lo que ya hacía.
+     * Son cuatro botones y uno de «sin fecha». Cubren el caso común —una
+     * promoción de fin de semana se arma en un toque— y por eso se quedan.
+     * Quien necesite un día exacto ahora elige fechas; ver `ventana()`.
      *
      * LA FECHA LA CALCULA EL SERVIDOR, no el teléfono. El reloj de un teléfono
      * puede ir mal o estar en otra zona horaria, y entonces «solo hoy» vencería
@@ -97,6 +98,39 @@ class PromocionesDeLaTienda
             'semana' => $hoy->copy()->addDays(7)->endOfDay(),
             default  => null,
         };
+    }
+
+    /**
+     * DESDE CUÁNDO Y HASTA CUÁNDO VALE.
+     *
+     * Dos maneras de decir lo mismo, y conviven a propósito: el plazo enlatado
+     * para el caso común —«este fin de semana», un toque— y las fechas para
+     * quien necesita un día exacto o quiere dejar armada el jueves la
+     * promoción del viernes.
+     *
+     * LAS FECHAS MANDAN sobre el plazo si vienen las dos cosas: una fecha es
+     * una instrucción más específica que una palabra.
+     *
+     * Se interpretan en hora colombiana y de día entero —`startOfDay` a
+     * `endOfDay`— porque es lo que significan para quien las escribe: «del 20
+     * al 25» incluye el 25 completo, no hasta las 00:00 del 25.
+     *
+     * @return array{0: \Illuminate\Support\Carbon, 1: ?\Illuminate\Support\Carbon}
+     */
+    public function ventana(?string $plazo, ?string $desde = null, ?string $hasta = null): array
+    {
+        if ($desde === null && $hasta === null) {
+            return [now(), $this->fechaLimite($plazo)];
+        }
+
+        return [
+            $desde !== null
+                ? \Illuminate\Support\Carbon::parse($desde, 'America/Bogota')->startOfDay()
+                : now(),
+            $hasta !== null
+                ? \Illuminate\Support\Carbon::parse($hasta, 'America/Bogota')->endOfDay()
+                : null,
+        ];
     }
 
     public function __construct(private TransportePush $push)
@@ -144,11 +178,11 @@ class PromocionesDeLaTienda
         string $texto,
         array $productos,
         int $creadaPor,
-        ?string $plazo = null,
+        array $ventana = [],
         array $regla = [],
     ): Promotion {
         $texto = trim(preg_replace('/\s+/u', ' ', $texto));
-        $hasta = $this->fechaLimite($plazo);
+        [$desde, $hasta] = $ventana ?: [now(), null];
 
         /*
          * La fila y sus productos van en una transacción, y el REPARTO va
@@ -160,11 +194,11 @@ class PromocionesDeLaTienda
          * promoción DESPUÉS de que varios clientes ya la hubieran recibido en
          * el teléfono, y quedaría un aviso de algo que no existe.
          */
-        $promocion = DB::transaction(function () use ($negocio, $texto, $productos, $creadaPor, $hasta, $regla) {
+        $promocion = DB::transaction(function () use ($negocio, $texto, $productos, $creadaPor, $desde, $hasta, $regla) {
             $promocion = Promotion::create([
                 'busines_id'  => $negocio->busines_id,
                 'description' => $texto,
-                'start_date'  => now(),
+                'start_date'  => $desde,
                 'end_date'    => $hasta,
                 'state'       => Promotion::BORRADOR,
                 'created_by'  => $creadaPor,
@@ -210,14 +244,24 @@ class PromocionesDeLaTienda
         Promotion $promocion,
         string $texto,
         array $productos,
-        ?string $plazo,
+        array $ventana = [],
         array $regla = [],
     ): Promotion {
         $texto = trim(preg_replace('/\s+/u', ' ', $texto));
 
-        DB::transaction(function () use ($promocion, $texto, $productos, $plazo, $regla) {
+        DB::transaction(function () use ($promocion, $texto, $productos, $ventana, $regla) {
             $promocion->description = $texto;
-            $promocion->end_date = $this->fechaLimite($plazo);
+
+            /*
+             * La ventana solo se toca si la corrección trae una. Antes se
+             * recalculaba siempre desde el plazo, así que corregir el TEXTO de
+             * una promoción sin volver a mandar el plazo le borraba la fecha y
+             * la dejaba sin vencimiento.
+             */
+            if ($ventana !== []) {
+                [$promocion->start_date, $promocion->end_date] = $ventana;
+            }
+
             $promocion->fill($regla);
             $promocion->save();
 

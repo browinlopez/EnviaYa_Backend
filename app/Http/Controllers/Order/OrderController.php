@@ -531,6 +531,14 @@ class OrderController extends Controller
             app(CreditoDeTienda::class)->reversar($order, $usuario->user_id);
 
             /*
+             * Los usos de las promociones también vuelven a su cupo. Una
+             * promoción de «los primeros 50» no puede gastarse en pedidos que
+             * acabaron no existiendo: el tendero prometió cincuenta ventas
+             * rebajadas, no cincuenta intentos.
+             */
+            app(\App\Services\RedencionDePromociones::class)->devolver($order);
+
+            /*
              * EL REPORTE.
              *
              * `status_history` lleva desde siempre en la base con CERO filas:

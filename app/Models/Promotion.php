@@ -59,6 +59,8 @@ class Promotion extends Audit
         'percentage_discount',
         'start_date',
         'end_date',
+        'max_usos',
+        'usos',
         'state',
         'sent_at',
         'recipients_count',
@@ -77,6 +79,12 @@ class Promotion extends Audit
         'end_date'         => 'datetime',
         'recipients_count' => 'integer',
         'state'            => 'integer',
+        /*
+         * `max_usos` se queda SIN cast a entero: NULL significa «sin tope» y
+         * un cast lo convertiría en 0, que significa justo lo contrario
+         * —agotada antes de empezar—. `usos` sí, que nunca es nulo.
+         */
+        'usos'             => 'integer',
     ];
 
     public function business()
@@ -125,9 +133,16 @@ class Promotion extends Audit
             'enviada_el'       => $this->sent_at?->toIso8601String(),
             'destinatarios'    => (int) $this->recipients_count,
             'state'            => (int) $this->state,
+            'desde'            => $this->start_date?->toIso8601String(),
             'hasta'            => $this->end_date?->toIso8601String(),
             'hasta_texto'      => $this->hastaEnPalabras(),
             'vencida'          => $this->vencida(),
+            'empezada'         => $this->empezada(),
+            // `max_usos` viaja como null —y no como 0— cuando no hay tope: la
+            // app distingue «sin límite» de «agotada» por ese null.
+            'max_usos'         => $this->max_usos === null ? null : (int) $this->max_usos,
+            'usos'             => (int) $this->usos,
+            'agotada'          => $this->agotada(),
             'retirada'         => (int) $this->state === self::RETIRADA,
             'tipo'             => $this->tipo ?? self::SIN_DESCUENTO,
             'porcentaje'       => $this->tipo === self::PORCENTAJE
@@ -145,16 +160,54 @@ class Promotion extends Audit
         return $this->end_date !== null && $this->end_date->isPast();
     }
 
+    /**
+     * Ya empezó.
+     *
+     * `start_date` está en la tabla desde el principio, pero hasta ahora NADIE
+     * lo miraba: se escribía `now()` al publicar y ahí se quedaba. Al leerlo,
+     * el tendero puede dejar lista el jueves la promoción del viernes sin que
+     * se aplique antes de tiempo.
+     *
+     * Sin fecha de inicio se considera empezada, que es como se comportan
+     * todas las que ya existen.
+     */
+    public function empezada(): bool
+    {
+        return $this->start_date === null || !$this->start_date->isFuture();
+    }
+
+    /**
+     * Se gastaron todos los usos. Sin tope no se agota nunca.
+     *
+     * `>=` y no `===`: si una carrera dejara el contador por encima del tope,
+     * la promoción tiene que quedar agotada igual y no volverse infinita.
+     */
+    public function agotada(): bool
+    {
+        return $this->max_usos !== null && (int) $this->usos >= (int) $this->max_usos;
+    }
+
     /** ¿Esta promoción rebaja precios, o solo avisa? */
     public function descuenta(): bool
     {
         return $this->tipo !== self::SIN_DESCUENTO && $this->tipo !== null;
     }
 
-    /** Está enviada, no retirada y no vencida: se puede aplicar hoy. */
+    /**
+     * Enviada, empezada, no retirada, no vencida y con usos de sobra: se puede
+     * aplicar hoy.
+     *
+     * Es el ÚNICO predicado de «se aplica» y lo usan los dos sitios que
+     * deciden —el carrito (`DescuentoPorPromocion`) y la vitrina
+     * (`ConsultaDeNegociosController`)—, así que las dos condiciones nuevas
+     * entran en ambos sin tocar ninguno de los dos.
+     */
     public function vigente(): bool
     {
-        return (int) $this->state === self::ENVIADA && !$this->vencida();
+        return (int) $this->state === self::ENVIADA
+            && $this->empezada()
+            && !$this->vencida()
+            && !$this->agotada();
     }
 
     /**
