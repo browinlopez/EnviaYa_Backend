@@ -98,6 +98,16 @@ class ProductosDelNegocioController extends Controller
                     'price'       => (float) $pb->price,
                     'amount'      => (int) $pb->amount,
                     /*
+                     * Como lo vende ESTA tienda. Con una unidad de peso,
+                     * `price` es el precio por esa medida y las existencias
+                     * estan en `stock_weight`: `amount` se queda para lo que
+                     * se vende por unidad.
+                     */
+                    'sale_unit'    => $pb->sale_unit ?? 'unidad',
+                    'stock_weight' => (float) $pb->stock_weight,
+                    'min_qty'      => $pb->min_qty !== null ? (float) $pb->min_qty : null,
+                    'step_qty'     => $pb->step_qty !== null ? (float) $pb->step_qty : null,
+                    /*
                      * Sin precio no se ofrece al comprador. Los que llegan por
                      * copia de otra tienda nacen asi, y el panel tiene que
                      * poder senalarlos: son la lista de trabajo del tendero.
