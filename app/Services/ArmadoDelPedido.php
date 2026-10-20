@@ -41,6 +41,7 @@ class ArmadoDelPedido
         bool $esRecogida,
         $horaDeRecogida,
         int $compradorUserId,
+        ?float $conCuantoPaga = null,
     ): OrdersSales {
 
         /*
@@ -79,6 +80,14 @@ class ArmadoDelPedido
             // Congeladas al crear, como todo lo que decide dinero.
             'platform_fee'     => $cifras['platformFee'],
             'delivery_subsidy' => $cifras['rebajaDomicilio'],
+            /*
+             * Con cuanto dice el cliente que va a pagar, para que la tienda
+             * mande el cambio preparado. Solo tiene sentido en efectivo: en
+             * los demas medios no hay cambio que devolver.
+             */
+            'cash_tendered' => in_array($metodoId, PagoEnLinea::CONTRA_ENTREGA, true)
+                ? $conCuantoPaga
+                : null,
             'sale_date' => now(),
             /*
              * Solo los programados nacen con fecha: ahí `delivery_date` es

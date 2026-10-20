@@ -51,6 +51,8 @@ class OrdersSales extends Audit
         'delivery_subsidy',
         // Lo que el domiciliario quedó debiendo por cobrar en efectivo.
         'cash_due',
+        // Con cuánto dijo el cliente que va a pagar, para preparar el cambio.
+        'cash_tendered',
         'sale_date',
         'delivery_date',
         'is_scheduled',
@@ -91,6 +93,7 @@ class OrdersSales extends Audit
         'platform_fee' => 'decimal:2',
         'delivery_subsidy' => 'decimal:2',
         'cash_due' => 'decimal:2',
+        'cash_tendered' => 'decimal:2',
     ];
 
     /**
@@ -216,6 +219,36 @@ class OrdersSales extends Audit
         return max(0, $minutos - $this->promised_minutes);
     }
 
+    /**
+     * CUÁNTO CAMBIO HAY QUE LLEVARLE.
+     *
+     * Se calcula y no se guarda: el total puede moverse después de crear el
+     * pedido —una promoción que se agota, una corrección— y una cifra
+     * congelada acabaría diciendo un número que ya no es verdad, que es peor
+     * que no decir ninguno.
+     *
+     * `null` en dos casos distintos, y la pantalla los distingue mirando
+     * `cash_tendered`:
+     *
+     *   · no dijo con cuánto paga     → `cash_tendered` también es null;
+     *   · paga con lo justo, o con    → `cash_tendered` tiene valor.
+     *     menos de lo que vale
+     *
+     * No se devuelve un negativo: «lleva -$3.000 de cambio» no significa nada.
+     * Que el cliente se quede corto se resuelve en la puerta, no en un
+     * renglón.
+     */
+    public function getChangeDueAttribute(): ?float
+    {
+        if ($this->cash_tendered === null) {
+            return null;
+        }
+
+        $cambio = round((float) $this->cash_tendered - (float) $this->total, 2);
+
+        return $cambio > 0 ? $cambio : null;
+    }
+
     public function paymentIntents()
     {
         return $this->hasMany(\App\Models\Payment\PaymentIntent::class, 'orderSales_id');
@@ -288,6 +321,9 @@ class OrdersSales extends Audit
             'buyer_id' => $this->buyer_id,
             'busines_id' => $this->busines_id,
             'total' => $this->total,
+            // Con cuánto paga y cuánto cambio llevarle. Solo en efectivo.
+            'cash_tendered' => $this->cash_tendered,
+            'change_due' => $this->change_due,
             'sale_date' => $this->sale_date,
             'delivery_date' => $this->delivery_date,
             'state' => $this->state,

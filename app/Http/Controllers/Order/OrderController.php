@@ -101,6 +101,16 @@ class OrderController extends Controller
              * como antes.
              */
             'expected_total' => 'sometimes|nullable|numeric|min:0',
+            /*
+             * CON CUANTO VA A PAGAR, cuando paga en efectivo. Sirve para que
+             * la tienda mande el cambio preparado.
+             *
+             * Es una ESTIMACION del cliente, no un compromiso: paga con lo que
+             * lleve encima el dia de la entrega. Por eso NO se valida que
+             * alcance para el total --un pedido no se puede bloquear porque
+             * alguien escribio un numero bajo-- y por eso es opcional.
+             */
+            'cash_tendered' => 'sometimes|nullable|numeric|min:0|max:1000000',
         ]);
 
         /* ========= VALIDACIONES REALES ========= */
@@ -297,6 +307,7 @@ class OrderController extends Controller
                 $isPickup,
                 $request->pickup_time,
                 (int) $request->user_id,
+                $request->filled('cash_tendered') ? (float) $request->input('cash_tendered') : null,
             );
 
             /*

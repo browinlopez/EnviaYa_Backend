@@ -38,6 +38,17 @@ class PedidoParaLaApp
             'subtotal' => $order->subtotal,
             'domicilio' => $order->domicilio,
             'domiciliary_fee' => $order->domiciliary_fee,
+            /*
+             * Con cuánto dijo el cliente que paga, y cuánto cambio hay que
+             * llevarle. Es la diferencia entre salir con el sencillo en el
+             * bolsillo y llegar a la puerta sin con qué devolver.
+             *
+             * Es una ESTIMACIÓN: el cliente paga al final con lo que lleve
+             * encima, así que la pantalla lo dice en ese tono y el pedido se
+             * puede cerrar igual si no coincide.
+             */
+            'cash_tendered' => $order->cash_tendered,
+            'change_due' => $order->change_due,
             // El domiciliario necesita saber si cobra en la puerta o
             // si el pedido ya viene pagado en línea.
             'methods_id' => $order->methods_id,

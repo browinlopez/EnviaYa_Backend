@@ -76,6 +76,15 @@ class ConsultaDePedidosController extends Controller
                 'subtotal' => $order->subtotal,
                 'domicilio' => $order->domicilio,
                 'domiciliary_fee' => $order->domiciliary_fee,
+                /*
+                 * Con cuánto dijo el cliente que va a pagar, y cuánto cambio
+                 * hay que mandarle. La tienda es quien prepara el sencillo
+                 * ANTES de que el domiciliario salga: si el dato no llega
+                 * acá, el cambio no sale de la tienda y da igual que el
+                 * domiciliario lo vea después.
+                 */
+                'cash_tendered' => $order->cash_tendered,
+                'change_due' => $order->change_due,
                 // El domiciliario necesita saber si cobra en la puerta o
                 // si el pedido ya viene pagado en línea.
                 'methods_id' => $order->methods_id,

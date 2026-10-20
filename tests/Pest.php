@@ -276,11 +276,23 @@ function escenarioPedido(): array
         'state'   => 1,
     ]);
 
-    // Un método que NO sea 2 ni 5, para no entrar en el flujo de Bold.
-    $methodId = \Illuminate\Support\Facades\DB::table('payment_methods')->insertGetId([
-        'name'  => 'Efectivo',
-        'state' => 1,
+    /*
+     * EL EFECTIVO, Y CON SU NÚMERO PUESTO A MANO.
+     *
+     * Antes se dejaba al autoincremento y salía el id que saliera. Daba igual
+     * mientras solo importara que NO fuera 2 ni 5 —los de Bold—, pero el
+     * efectivo no es «cualquier método que no sea de pasarela»: es el 1, y hay
+     * código que lo comprueba por su número (`PagoEnLinea::CONTRA_ENTREGA`).
+     * Con un id cualquiera, una prueba de algo propio del efectivo pasa en
+     * verde sin haber ejercitado el camino del efectivo.
+     */
+    \Illuminate\Support\Facades\DB::table('payment_methods')->insertOrIgnore([
+        'methods_id' => 1,
+        'name'       => 'Efectivo',
+        'state'      => 1,
     ]);
+
+    $methodId = 1;
 
     return compact('user', 'buyerId', 'businessId', 'productId', 'addressId', 'methodId');
 }
