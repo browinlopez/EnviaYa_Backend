@@ -71,6 +71,7 @@ use App\Http\Controllers\Buyer\MiCreditoController;
 use App\Http\Controllers\Negocio\MiNegocioController;
 use App\Http\Controllers\Negocio\ProductosDelNegocioController;
 use App\Http\Controllers\Negocio\PromocionesController;
+use App\Http\Controllers\Negocio\RendimientoDeDomiciliariosController;
 use App\Http\Controllers\Order\CotizacionController;
 use App\Http\Controllers\LandingRequestController;
 use App\Http\Controllers\Marketing\AdsController;
@@ -608,6 +609,16 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::delete('productos/{id}', [ProductosDelNegocioController::class, 'quitar']);
 
         Route::get('domiciliarios', [DomiciliaryController::class, 'listDomiciliariesByBusiness']);
+
+        /*
+         * Como le va a cada uno: entregas, minutos medios y cumplimiento del
+         * plazo. La consulta ya existia para el panel de administracion; aca
+         * se abre recortada a la tienda de la sesion.
+         *
+         * Va ANTES que cualquier `domiciliarios/{id}` que se anada despues:
+         * una ruta fija detras de un comodin no se alcanza nunca.
+         */
+        Route::get('domiciliarios/rendimiento', [RendimientoDeDomiciliariosController::class, 'index']);
 
         /*
          * Crédito de la tienda: cupos rotativos para sus clientes afiliados.

@@ -33,13 +33,19 @@ class IngresosDelDomiciliarioController extends Controller
         ];
 
         /*
-         * LO GANADO SALE DE LOS PEDIDOS ENTREGADOS, NO DE LA CAJA.
+         * ENTREGAS POR DÍA, Y YA NO PESOS.
          *
-         * Se sumaba `payments.domiciliary_fee`, y `payments` es la caja de la
-         * plataforma: un pedido pagado con el crédito de la tienda no deja fila
-         * ahí —esa plata nunca entra— y el domiciliario lo entregaba sin que
-         * contara en su ganancia. Lo que gana es su parte de cada pedido que
-         * ENTREGÓ, venga de donde venga el pago.
+         * Esta respuesta era cien por cien ganancia: todos sus campos eran
+         * `SUM(domiciliary_fee)`. Se cambia a contar entregas porque el
+         * domiciliario deja de ver lo que gana —ver sus ganancias mientras
+         * maneja dinero ajeno es de donde salen los errores de pago— pero la
+         * pantalla sí tiene que seguir dándole la medida de su semana: cuánto
+         * ha repartido.
+         *
+         * La cifra se quita del SERVIDOR y no solo de la pantalla: un campo
+         * que la API sigue devolviendo no está oculto, está a un vistazo de
+         * distancia. La comisión sigue calculándose y guardándose en el
+         * pedido; la tienda y la liquidación la tienen entera.
          *
          * Se agrupa por día en PHP y no con DAYOFWEEK: así la consulta es la
          * misma en MySQL y en la base de pruebas.
@@ -49,13 +55,13 @@ class IngresosDelDomiciliarioController extends Controller
                 ->where('domiciliary_id', $domiciliary_id)
                 ->where('state', 4)
                 ->whereBetween('delivery_date', [$desde, $hasta])
-                ->get(['delivery_date', 'domiciliary_fee']);
+                ->get(['delivery_date']);
 
             $dias = [];
             foreach ($filas as $f) {
                 // DAYOFWEEK de MySQL: 1 = domingo … 7 = sábado.
                 $dia = Carbon::parse($f->delivery_date)->dayOfWeek + 1;
-                $dias[$dia] = ($dias[$dia] ?? 0) + (float) $f->domiciliary_fee;
+                $dias[$dia] = ($dias[$dia] ?? 0) + 1;
             }
 
             return collect($dias)->map(fn ($total) => (object) ['total' => $total]);
@@ -73,8 +79,8 @@ class IngresosDelDomiciliarioController extends Controller
         $previousWeekTotal = 0;
 
         foreach ($daysOfWeek as $key => $day) {
-            $currentValue = (float) ($currentWeek[$key]->total ?? 0);
-            $previousValue = (float) ($previousWeek[$key]->total ?? 0);
+            $currentValue = (int) ($currentWeek[$key]->total ?? 0);
+            $previousValue = (int) ($previousWeek[$key]->total ?? 0);
 
             $current[$day] = $currentValue;
             $previous[$day] = $previousValue;
@@ -96,18 +102,24 @@ class IngresosDelDomiciliarioController extends Controller
         /* =========================
        TOTAL HISTÓRICO
     ========================== */
-        $totalIncome = DB::table('orderssales')
+        $totalEntregas = DB::table('orderssales')
             ->where('domiciliary_id', $domiciliary_id)
             ->where('state', 4)
-            ->sum('domiciliary_fee');
+            ->count();
 
+        /*
+         * Se conservan los nombres `weekly_*`: son los que la app ya lee, y
+         * cambiarlos obligaría a publicar app y servidor a la vez —que es
+         * justo lo que no se puede hacer con dos versiones en las tiendas—.
+         * Lo que cambia es QUÉ cuentan.
+         */
         return response()->json([
             'weekly_current' => $current,
             'weekly_previous' => $previous,
             'weekly_current_total' => $currentWeekTotal,
             'weekly_previous_total' => $previousWeekTotal,
             'weekly_growth_percent' => round($weeklyGrowthPercent, 2),
-            'total_income' => (float) $totalIncome,
+            'total_deliveries' => $totalEntregas,
         ]);
     }
 

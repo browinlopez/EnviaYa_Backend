@@ -26,8 +26,11 @@ use App\Models\Order\OrdersSales;
  */
 class PedidoParaLaApp
 {
-    public function formatear(OrdersSales $order, bool $conDatosDelComprador = true): array
-    {
+    public function formatear(
+        OrdersSales $order,
+        bool $conDatosDelComprador = true,
+        bool $conGanancia = true,
+    ): array {
         return [
             'order_id' => $order->orderSales_id,
             'buyer_id' => $order->buyer_id,
@@ -37,7 +40,20 @@ class PedidoParaLaApp
             // el negocio cobra el subtotal y el domiciliario el domicilio.
             'subtotal' => $order->subtotal,
             'domicilio' => $order->domicilio,
-            'domiciliary_fee' => $order->domiciliary_fee,
+            /*
+             * LO QUE GANA EL DOMICILIARIO NO VA EN SU PROPIA PANTALLA.
+             *
+             * Se sigue calculando y se sigue guardando —la tienda lo necesita
+             * para pagarle y la liquidación para cuadrar— pero deja de
+             * viajarle a él, a peticion del dueño del producto: ver sus
+             * ganancias mientras reparte y manejar efectivo ajeno al mismo
+             * tiempo es de donde salen los errores de pago.
+             *
+             * Se quita acá y no solo en la pantalla: un campo que la API
+             * sigue devolviendo no está oculto, está a un vistazo de
+             * distancia.
+             */
+            'domiciliary_fee' => $conGanancia ? $order->domiciliary_fee : null,
             /*
              * Con cuánto dijo el cliente que paga, y cuánto cambio hay que
              * llevarle. Es la diferencia entre salir con el sencillo en el
@@ -138,7 +154,19 @@ class PedidoParaLaApp
                 ];
             }),
             'promotions' => $order->promotions,
-            'payments' => $order->payments,
+            /*
+             * `payments` iba crudo, y lleva su `domiciliary_fee` dentro: era
+             * la segunda puerta por la que salía la comisión, y justo de la
+             * que tiran los respaldos de la app cuando el campo de arriba no
+             * viene. Quitar uno sin el otro no quita nada.
+             *
+             * Y es un `hasOne` pese al nombre en plural, así que acá hay un
+             * pago o no hay ninguno —no una lista—. Por eso el modelo escribe
+             * `$this->payments ?? null` en su propia serialización.
+             */
+            'payments' => $conGanancia || !$order->payments
+                ? $order->payments
+                : collect($order->payments->toArray())->except('domiciliary_fee')->all(),
         ];
     }
 

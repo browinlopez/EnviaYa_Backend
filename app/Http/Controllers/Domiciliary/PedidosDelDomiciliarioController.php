@@ -75,10 +75,16 @@ class PedidosDelDomiciliarioController extends Controller
                 ->get()
             : collect();
 
+        /*
+         * SIN LA COMISION, en los dos casos. El domiciliario ve lo que tiene
+         * que cobrarle al cliente y lo que le debe a la tienda, que es lo que
+         * necesita para trabajar; lo que gana se le paga y se le cuadra por
+         * otro lado. El tercer `false` es eso.
+         */
         $pedidos = $mios
-            ->map(fn (OrdersSales $o) => $this->presentador->formatear($o, true))
+            ->map(fn (OrdersSales $o) => $this->presentador->formatear($o, true, false))
             ->concat(
-                $porTomar->map(fn (OrdersSales $o) => $this->presentador->formatear($o, false))
+                $porTomar->map(fn (OrdersSales $o) => $this->presentador->formatear($o, false, false))
             )
             ->values();
 

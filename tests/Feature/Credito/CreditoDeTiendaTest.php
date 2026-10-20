@@ -321,11 +321,17 @@ it('un comprador no puede fijar cupos: las rutas son de la tienda', function () 
     expect(DB::table('store_credits')->count())->toBe(0);
 });
 
-it('la ganancia del domiciliario cuenta también lo que entregó a crédito', function () {
+it('las entregas del domiciliario cuentan también las que fueron a crédito', function () {
     /*
-     * La ganancia se sumaba desde `payments`, la caja de la plataforma, y un
-     * pedido a crédito no deja fila ahí. Visto en el emulador: dos entregas
-     * de $1.500 y la app decía $1.500.
+     * Se contaba desde `payments`, la caja de la plataforma, y un pedido a
+     * crédito no deja fila ahí: esa plata nunca entra. Visto en el emulador,
+     * cuando esta respuesta aún traía dinero: dos entregas de $1.500 y la app
+     * decía $1.500.
+     *
+     * La respuesta pasó a contar ENTREGAS en vez de pesos —el domiciliario
+     * dejó de ver lo que gana— pero el fallo que esta prueba fija es el
+     * mismo, y sigue valiendo: lo que cuenta es lo que ENTREGÓ, venga de
+     * donde venga el pago.
      */
     $e = credEscenario();
     Rol::firstOrCreate(['rol_id' => 3], ['name' => 'domiciliario', 'guard_name' => 'web']);
@@ -342,6 +348,9 @@ it('la ganancia del domiciliario cuenta también lo que entregó a crédito', fu
     Sanctum::actingAs($repartidor);
     $r = $this->postJson('/v1/domiciliaries/incomeDomiciliary', ['domiciliary_id' => $domiId])->assertOk();
 
-    expect((float) $r->json('total_income'))->toBe(3000.0)
-        ->and((float) $r->json('weekly_current_total'))->toBe(3000.0);
+    expect((int) $r->json('total_deliveries'))->toBe(2)
+        ->and((int) $r->json('weekly_current_total'))->toBe(2);
+
+    // Y ya no se le dice cuánto gana, ni acá ni en ningún otro campo.
+    expect($r->json())->not->toHaveKey('total_income');
 });

@@ -144,3 +144,101 @@ test('una cuenta que no es domiciliario no entra', function () {
 
     misPedidos($comprador)->assertForbidden();
 });
+
+/* =========================================================================
+   LO QUE GANA NO VA EN SU PROPIA PANTALLA
+
+   Decisión del dueño del producto: el domiciliario ve lo que tiene que
+   cobrarle al cliente y lo que le debe a la tienda —sin eso no puede entregar
+   un pedido en efectivo— pero deja de ver su comisión. Mirar sus ganancias
+   mientras maneja dinero ajeno es de donde salen los errores de pago.
+
+   Y se quita del SERVIDOR, no solo de la pantalla: un campo que la API sigue
+   devolviendo no está oculto, está a un vistazo de distancia. Por eso estas
+   son pruebas de AUSENCIA, y hay que mirar el JSON entero —la comisión salía
+   por dos puertas y tapar una sola no tapa nada.
+   ======================================================================== */
+
+/** Busca una clave en cualquier nivel de la respuesta, por profunda que esté. */
+function apareceEnAlgunSitio($datos, string $clave): bool
+{
+    if (is_array($datos)) {
+        foreach ($datos as $k => $v) {
+            if ($k === $clave && $v !== null) {
+                return true;
+            }
+
+            if (apareceEnAlgunSitio($v, $clave)) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+test('sus pedidos no le dicen cuanto gana, en ningun nivel', function () {
+    $e = escenarioDomiciliario();
+
+    $r = misPedidos($e['repartidor'])->assertOk();
+
+    expect(apareceEnAlgunSitio($r->json('orders'), 'domiciliary_fee'))->toBeFalse();
+});
+
+test('la comision tampoco se cuela dentro de los pagos', function () {
+    /*
+     * `payments` viajaba crudo y cada fila lleva su `domiciliary_fee` dentro.
+     * Era la segunda puerta, y justo la que usan los respaldos de la app
+     * cuando el campo de arriba no viene: quitar uno sin el otro no quita
+     * nada.
+     */
+    $e = escenarioDomiciliario();
+
+    DB::table('payments')->insert([
+        'orderSales_id'   => $e['mio'],
+        'amount'          => 7000,
+        'total'           => 7000,
+        'domiciliary_fee' => 500,
+        'payment_status'  => 'approved',
+        'status'          => 'approved',
+        'provider'        => 'cash',
+        'state'           => 1,
+    ]);
+
+    $r = misPedidos($e['repartidor'])->assertOk();
+
+    $mio = collect($r->json('orders'))->firstWhere('order_id', $e['mio']);
+
+    expect($mio['payments'])->not->toBeEmpty()
+        ->and(apareceEnAlgunSitio($mio['payments'], 'domiciliary_fee'))->toBeFalse();
+});
+
+test('pero sigue viendo lo que tiene que cobrarle al cliente', function () {
+    /*
+     * La otra mitad de la decisión, y la que no se puede perder: sin el total
+     * no se puede entregar un pedido en efectivo, y sin el desglose no se
+     * entiende qué parte es el domicilio.
+     */
+    $e = escenarioDomiciliario();
+
+    $r = misPedidos($e['repartidor'])->assertOk();
+    $mio = collect($r->json('orders'))->firstWhere('order_id', $e['mio']);
+
+    expect((float) $mio['total'])->toBe(7000.0)
+        ->and((float) $mio['subtotal'])->toBe(5000.0)
+        ->and((float) $mio['domicilio'])->toBe(2000.0)
+        ->and($mio['methods_id'])->toBe(1);
+});
+
+test('la tienda si ve lo que le paga a su domiciliario', function () {
+    /*
+     * Ocultarlo es cosa de la app del domiciliario, no del sistema: la tienda
+     * es quien le paga y necesita la cifra para cuadrar.
+     */
+    $e = escenarioDomiciliario();
+
+    $pedido = \App\Models\Order\OrdersSales::find($e['mio']);
+    $ficha = app(\App\Services\PedidoParaLaApp::class)->formatear($pedido);
+
+    expect((float) $ficha['domiciliary_fee'])->toBe(500.0);
+});
