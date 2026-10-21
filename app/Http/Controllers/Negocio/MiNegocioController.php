@@ -42,6 +42,9 @@ class MiNegocioController extends Controller
         'ingresos'      => ['view' => true, 'manage' => false],
         'resenas'       => ['view' => true, 'manage' => false],
         'negocio'       => ['view' => true, 'manage' => true],
+        // La cuenta de quien entra: su clave, su segundo factor y sus
+        // sesiones. Nunca se le quita a nadie.
+        'cuenta'        => ['view' => true, 'manage' => true],
     ];
 
     public function mio(Request $request)
