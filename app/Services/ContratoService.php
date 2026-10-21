@@ -169,6 +169,9 @@ class ContratoService
                 'plataforma'       => config('services.contrato.plataforma'),
                 'representante'    => config('services.contrato.representante'),
                 'representante_cc' => config('services.contrato.representante_cc'),
+                // A donde se le notifica a la plataforma: la clausula de
+                // notificaciones lo imprime, y sin esto saldria en blanco.
+                'correo'           => config('services.sitio.correo'),
             ],
             'trabajador' => [
                 'nombre'    => $d->name ?? 'Sin nombre',

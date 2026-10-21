@@ -62,7 +62,7 @@ test('el texto que lee es el MISMO del PDF, no una copia', function () {
     $titulos = $texto->where('tipo', 'titulo')->pluck('texto');
 
     expect($titulos)->toContain('CLÁUSULA PRIMERA. OBJETO')
-        ->and($titulos)->toContain('CLÁUSULA DÉCIMA SEXTA. ACEPTACIÓN');
+        ->and($titulos)->toContain('CLÁUSULA DÉCIMA SÉPTIMA. ACEPTACIÓN');
 });
 
 test('el acuerdo dice que la ubicación se toma SOLO durante el turno', function () {
@@ -213,4 +213,45 @@ test('sin firmar no hay nada que descargar', function () {
     domiciliarioQueEntra();
 
     expect($this->getJson('/v1/domiciliaries/contrato')->json('url'))->toBeNull();
+});
+
+test('el acuerdo declara cuanto se guarda la ubicacion, y hay quien la borre', function () {
+    /*
+     * La Ley 1581 obliga a suprimir los datos cuando termina la finalidad que
+     * los justifico. Un plazo escrito en el contrato y una tabla que no se
+     * borra nunca es la clase de desajuste que convierte un documento de
+     * respaldo en una prueba en contra.
+     */
+    domiciliarioQueEntra();
+
+    $texto = collect($this->getJson('/v1/domiciliaries/contrato')->json('texto'))
+        ->pluck('texto')
+        ->implode(' ');
+
+    expect($texto)->toContain('noventa (90) días calendario');
+
+    // Y el comando que lo cumple existe y esta programado.
+    expect(array_key_exists('ubicaciones:podar', \Illuminate\Support\Facades\Artisan::all()))
+        ->toBeTrue();
+
+    $programadas = collect(app(\Illuminate\Console\Scheduling\Schedule::class)->events())
+        ->map(fn ($e) => $e->command ?? '')
+        ->filter(fn ($c) => str_contains($c, 'ubicaciones:podar'));
+
+    expect($programadas)->not->toBeEmpty();
+});
+
+test('la suspension no puede ser indefinida ni sin causa', function () {
+    // Es el mayor riesgo de tutela del acuerdo: la Corte ya dijo que estas
+    // empresas ejercen un «poder normativo» sobre los repartidores.
+    domiciliarioQueEntra();
+
+    $texto = collect($this->getJson('/v1/domiciliaries/contrato')->json('texto'))
+        ->pluck('texto')
+        ->implode(' ');
+
+    expect($texto)->toContain('la causa concreta')
+        ->and($texto)->toContain('diez (10) días hábiles')
+        ->and($texto)->toContain('una persona')
+        ->and($texto)->toContain('ya haya prestado');
 });

@@ -311,6 +311,11 @@
         usuario comprador del pedido en curso, salvo requerimiento de autoridad
         competente.</li>
 </ul>
+<p><strong>Conservación.</strong> Los datos de ubicación se conservan durante
+    <strong>noventa (90) días calendario</strong> contados desde su registro, plazo
+    destinado a atender reclamaciones sobre la entrega e incidentes de seguridad ocurridos
+    durante ella. Cumplido ese término se suprimen de forma automática y definitiva, sin
+    que sea necesaria solicitud alguna del titular.</p>
 <p>Este tratamiento se realiza conforme a la Ley 1581 de 2012 y sus decretos
     reglamentarios, y a la política de tratamiento de datos personales de LA PLATAFORMA.
     EL TRABAJADOR DIGITAL INDEPENDIENTE conserva los derechos de conocer, actualizar,
@@ -325,24 +330,73 @@
     de su terminación.</p>
 
 <h2>CLÁUSULA DÉCIMA CUARTA. SUSPENSIÓN Y TERMINACIÓN</h2>
-<p>LA PLATAFORMA podrá suspender temporalmente el acceso del trabajador cuando existan
-    razones fundadas relacionadas con la seguridad de los usuarios, posibles fraudes,
-    incumplimiento de las obligaciones aquí pactadas o mientras se adelanta una
-    investigación interna.</p>
-<p>El presente acuerdo podrá darse por terminado por cualquiera de las partes en cualquier
-    momento mediante comunicación escrita.</p>
-<p>También procederá la terminación inmediata cuando EL TRABAJADOR DIGITAL INDEPENDIENTE
-    incurra en incumplimientos graves, fraude, conductas delictivas, agresiones, utilización
-    indebida de la plataforma o cualquier comportamiento que afecte la seguridad de los
-    usuarios, los comercios aliados o la reputación de LA PLATAFORMA.</p>
 
-<h2>CLÁUSULA DÉCIMA QUINTA. SOLUCIÓN DE CONTROVERSIAS</h2>
+<p><strong>1. Causales de suspensión.</strong> LA PLATAFORMA podrá suspender temporalmente
+    el acceso de EL TRABAJADOR DIGITAL INDEPENDIENTE cuando existan razones fundadas y
+    concretas relacionadas con la seguridad de los usuarios, posibles fraudes o
+    incumplimiento de las obligaciones aquí pactadas, mientras se adelanta la verificación
+    correspondiente.</p>
+
+<p><strong>2. Aviso.</strong> Toda suspensión será comunicada a EL TRABAJADOR DIGITAL
+    INDEPENDIENTE a más tardar <strong>dentro del día hábil siguiente</strong>, por la
+    aplicación y por los canales de notificación señalados en este acuerdo, indicando
+    <strong>la causa concreta</strong> que la motiva y la duración prevista. Un aviso que
+    se limite a informar la suspensión sin expresar su causa no satisface esta
+    obligación.</p>
+
+<p><strong>3. Plazo máximo.</strong> La suspensión no podrá exceder de <strong>diez (10)
+    días hábiles</strong>. Vencido ese término sin decisión motivada, el acceso se
+    restablece automáticamente.</p>
+
+<p><strong>4. Derecho a ser oído.</strong> EL TRABAJADOR DIGITAL INDEPENDIENTE podrá
+    presentar sus explicaciones y las pruebas que considere pertinentes dentro de los cinco
+    (5) días hábiles siguientes al aviso, por los mismos canales. LA PLATAFORMA está
+    obligada a valorarlas antes de decidir.</p>
+
+<p><strong>5. Revisión humana de las decisiones automatizadas.</strong> Cuando la
+    suspensión, la restricción del acceso, la terminación del acuerdo o la retención de un
+    pago se hayan originado total o parcialmente en un sistema automatizado, EL TRABAJADOR
+    DIGITAL INDEPENDIENTE tiene derecho a solicitar que <strong>una persona</strong>
+    revise la decisión. La revisión se resolverá dentro de los cinco (5) días hábiles
+    siguientes a la solicitud, mediante <strong>decisión motivada</strong> que exprese los
+    hechos y las razones en que se funda. Ninguna decisión que afecte su acceso a la
+    plataforma o sus pagos quedará en firme sin que esta revisión esté disponible.</p>
+
+<p><strong>6. Terminación.</strong> El presente acuerdo podrá darse por terminado por
+    cualquiera de las partes en cualquier momento mediante comunicación escrita, sin que
+    ello genere indemnización a cargo de ninguna de ellas.</p>
+
+<p><strong>7. Terminación inmediata.</strong> Procederá cuando EL TRABAJADOR DIGITAL
+    INDEPENDIENTE incurra en incumplimientos graves, fraude, conductas delictivas,
+    agresiones o utilización indebida de la plataforma. La terminación inmediata será
+    igualmente <strong>motivada</strong> y estará sujeta a la revisión humana prevista en
+    el numeral 5.</p>
+
+<p><strong>8. Pago de lo ya prestado.</strong> La suspensión o la terminación, cualquiera
+    sea su causa, <strong>no afectan el derecho de EL TRABAJADOR DIGITAL INDEPENDIENTE a
+    recibir el pago de los servicios de reparto que ya haya prestado</strong>. Dichos
+    valores se pagarán en el corte inmediatamente siguiente.</p>
+
+<h2>CLÁUSULA DÉCIMA QUINTA. NOTIFICACIONES</h2>
+<p>Las comunicaciones escritas que deban cruzarse las partes en desarrollo de este acuerdo
+    —incluidas las de suspensión, terminación y revisión— se entenderán válidamente
+    surtidas:</p>
+<ul>
+    <li>A <strong>LA PLATAFORMA</strong>, en el correo electrónico
+        <span class="dato">{{ $empresa['correo'] }}</span>.</li>
+    <li>A <strong>EL TRABAJADOR DIGITAL INDEPENDIENTE</strong>, en el correo electrónico
+        registrado en su cuenta y mediante los avisos de la aplicación. Es su obligación
+        mantener ese correo actualizado; las comunicaciones enviadas a la última dirección
+        registrada se tendrán por recibidas.</li>
+</ul>
+
+<h2>CLÁUSULA DÉCIMA SEXTA. SOLUCIÓN DE CONTROVERSIAS</h2>
 <p>Las diferencias derivadas del presente acuerdo serán resueltas inicialmente mediante
     arreglo directo entre las partes. En caso de no lograrse un acuerdo, estas podrán acudir
     a los mecanismos de conciliación previstos en la legislación colombiana y, de persistir
     la controversia, a la jurisdicción competente.</p>
 
-<h2>CLÁUSULA DÉCIMA SEXTA. ACEPTACIÓN</h2>
+<h2>CLÁUSULA DÉCIMA SÉPTIMA. ACEPTACIÓN</h2>
 <p>Con la firma del presente acuerdo, las partes manifiestan haber leído, comprendido y
     aceptado íntegramente su contenido, declarando que su consentimiento ha sido otorgado
     libremente y sin ningún tipo de presión o vicio.</p>

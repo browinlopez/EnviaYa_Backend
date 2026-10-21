@@ -90,3 +90,23 @@ Schedule::command('auditoria:podar')
     ->monthlyOn(1, '04:00')
     ->timezone('America/Bogota')
     ->withoutOverlapping();
+
+/*
+|--------------------------------------------------------------------------
+| Las ubicaciones de los repartos, a los noventa dias
+|--------------------------------------------------------------------------
+|
+| El acuerdo de vinculacion que firma el domiciliario DECLARA ese plazo. Sin
+| esta linea, el contrato diria una cosa y la base guardaria la otra para
+| siempre: es la clase de desajuste que convierte un documento de respaldo en
+| una prueba en contra.
+|
+| Todas las noches a las cuatro. No es una poda mensual como la de auditoria
+| porque esto crece a una fila por minuto por domiciliario en reparto, y
+| porque un plazo de conservacion declarado se cumple el dia que vence, no el
+| primero del mes siguiente.
+*/
+Schedule::command('ubicaciones:podar')
+    ->dailyAt('04:00')
+    ->timezone('America/Bogota')
+    ->withoutOverlapping();
