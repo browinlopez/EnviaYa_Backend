@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Chat;
 
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
+use App\Support\ResumenDeMensaje;
 use App\Events\MessageSent;
 use App\Helper\ReverbClient;
 use App\Http\Controllers\Controller;
@@ -158,11 +159,20 @@ class ChatController extends Controller
              *
              * Se recorta el cuerpo porque un mensaje largo se corta igual en la
              * pantalla bloqueada, y mandarlo entero solo gasta carga util.
+             *
+             * Y NO SE MANDA EL CONTENIDO TAL CUAL. El chat tambien lleva
+             * tarjetas --el pedido que arma el tendero viaja como JSON-- y
+             * copiarlas al aviso ponia esto en la campana del cliente:
+             *
+             *     {"type":"preorder","preorder_id":1792531797473,...
+             *
+             * `ResumenDeMensaje` traduce esas tarjetas a una frase y deja el
+             * texto normal como estaba.
              */
             Avisos::para(
                 $recipient->user_id,
                 'mensaje_nuevo',
-                \Illuminate\Support\Str::limit((string) $message->content, 120),
+                ResumenDeMensaje::para((string) $message->content),
                 [
                     'chat_id'          => $chat->chat_id,
                     // Para que tocar el aviso abra ESE chat: la pantalla necesita
