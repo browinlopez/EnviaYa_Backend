@@ -66,6 +66,7 @@ use App\Http\Controllers\Conjunto\ResumenDelConjuntoController;
 use App\Http\Controllers\Conjunto\VisitantesController;
 use App\Http\Controllers\Negocio\CargaDeCatalogoController;
 use App\Http\Controllers\Negocio\CatalogoController;
+use App\Http\Controllers\Negocio\ClientesDelNegocioController;
 use App\Http\Controllers\Negocio\CreditosDelNegocioController;
 use App\Http\Controllers\Buyer\MiCreditoController;
 use App\Http\Controllers\Negocio\MiNegocioController;
@@ -468,7 +469,17 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
             Route::post('/DesafiliationUser', [AffiliationController::class, 'DesafiliationUser']);
             Route::post('toggleBusinesses', [AffiliationController::class, 'toggle']);
             Route::get('usersBusinesses', [AffiliationController::class, 'listUsers']);
-            Route::get('searchBusinesses', [AffiliationController::class, 'searchBuyerByPhone']);
+            /*
+             * Buscar a una persona por su telefono es cosa de quien puede
+             * afiliarla: el tendero. Estaba abierto a cualquier cuenta
+             * autenticada --tambien a un comprador-- y probando numeros se
+             * sacaban datos de gente que no es cliente de nadie.
+             *
+             * El middleware `negocio` no pisa nada aca: esta ruta no recibe
+             * `busines_id`, asi que solo hace de puerta.
+             */
+            Route::get('searchBusinesses', [AffiliationController::class, 'searchBuyerByPhone'])
+                ->middleware('negocio');
         });
     });
 
@@ -647,6 +658,18 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
          * Crédito de la tienda: cupos rotativos para sus clientes afiliados.
          * Ver `CreditoDeTienda`.
          */
+        /*
+         * Sus clientes. Afiliar es lo que convierte a un comprador cualquiera
+         * en cliente de ESTA tienda: quien recibe sus promociones y a quien se
+         * le puede fiar.
+         *
+         * `clientes/buscar` va antes que cualquier `clientes/{id}`: una ruta
+         * fija detras de un comodin no se alcanza nunca.
+         */
+        Route::get('clientes/buscar', [ClientesDelNegocioController::class, 'buscar']);
+        Route::post('clientes/{userId}', [ClientesDelNegocioController::class, 'afiliar'])->whereNumber('userId');
+        Route::delete('clientes/{userId}', [ClientesDelNegocioController::class, 'desafiliar'])->whereNumber('userId');
+
         Route::get('creditos', [CreditosDelNegocioController::class, 'index']);
         Route::put('creditos/{userId}', [CreditosDelNegocioController::class, 'asignar'])->whereNumber('userId');
         Route::post('creditos/{userId}/abonos', [CreditosDelNegocioController::class, 'abonar'])->whereNumber('userId');

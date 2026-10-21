@@ -155,9 +155,32 @@ class AffiliationController extends Controller
             return response()->json(['message' => 'No se encontró comprador con ese número y rol'], 404);
         }
 
+        /*
+         * SE DEVUELVE LO MÍNIMO, y es un arreglo de seguridad, no estética.
+         *
+         * Antes salía el modelo `User` entero. Acá hay una persona que NO es
+         * cliente de quien pregunta —todavía— y a la que se está encontrando
+         * por un número de teléfono, así que con la cuenta de cualquiera se
+         * podían ir probando números y sacar de cada uno su dirección, su
+         * correo, la IP desde la que aceptó la política de datos y —lo más
+         * grave— su `email_verification_token`, que es con lo que se verifica
+         * un correo ajeno.
+         *
+         * Para decidir «sí, es esta persona» hacen falta el nombre y el
+         * correo, que es lo que enseña la pantalla. Nada más.
+         */
         return response()->json([
-            'user'  => $user,
-            'buyer' => $user->buyer,
+            'user'  => [
+                'user_id' => (int) $user->user_id,
+                'name'    => $user->name,
+                'email'   => $user->email,
+                'phone'   => $user->phone,
+            ],
+            'buyer' => $user->buyer ? [
+                'buyer_id'      => (int) $user->buyer->buyer_id,
+                'user_id'       => (int) $user->buyer->user_id,
+                'qualification' => $user->buyer->qualification,
+            ] : null,
         ]);
     }
     //Afiliacion movil usuarios
