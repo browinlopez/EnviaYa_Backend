@@ -72,6 +72,7 @@ use App\Http\Controllers\Negocio\MiNegocioController;
 use App\Http\Controllers\Negocio\ProductosDelNegocioController;
 use App\Http\Controllers\Negocio\PromocionesController;
 use App\Http\Controllers\Negocio\RendimientoDeDomiciliariosController;
+use App\Http\Controllers\Negocio\TorreDeControlController;
 use App\Http\Controllers\Negocio\PesajeDelPedidoController;
 use App\Http\Controllers\Order\CotizacionController;
 use App\Http\Controllers\LandingRequestController;
@@ -620,6 +621,16 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
          * una ruta fija detras de un comodin no se alcanza nunca.
          */
         Route::get('domiciliarios/rendimiento', [RendimientoDeDomiciliariosController::class, 'index']);
+
+        /*
+         * LA TORRE DE CONTROL de su flota: quien reparte, que lleva encima
+         * cada uno y cuanta plata carga, en UNA llamada.
+         *
+         * Los datos existen repartidos en tres endpoints, pero esta pantalla
+         * se refresca sola: con seis domiciliarios serian ocho llamadas por
+         * vuelta.
+         */
+        Route::get('torre', [TorreDeControlController::class, 'index']);
 
         /*
          * EL PESAJE. El tendero registra cuanto peso de verdad lo que va en la

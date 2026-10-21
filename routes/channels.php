@@ -122,3 +122,27 @@ Broadcast::channel('business.{businessId}', function ($user, $businessId) {
         ->where('bd.busines_id', $businessId)
         ->exists();
 });
+
+
+/*
+ * EL CANAL DE LA TORRE DE CONTROL
+ *
+ * Por acá viaja la posición de los domiciliarios de una tienda, para que su
+ * torre se mueva sola en vez de preguntar cada pocos segundos.
+ *
+ * ES APARTE DE `business.{id}` A PROPÓSITO, aunque ese ya existiera y
+ * estuviera autorizado. Aquel lo escuchan también los domiciliarios asignados
+ * —es como se enteran de que entró trabajo—, así que meter las coordenadas ahí
+ * le daría a cada uno la posición en vivo de sus compañeros. Una cosa es que
+ * el tendero vea su flota, y otra muy distinta que la flota se vea entre sí.
+ *
+ * Solo los dueños. El propio domiciliario no necesita este canal: su posición
+ * la está mandando él.
+ */
+Broadcast::channel('negocio.{businessId}.torre', function ($user, $businessId) {
+    return DB::table('owner_busines as ob')
+        ->join('owner as o', 'o.owner_id', '=', 'ob.owner_id')
+        ->where('o.user_id', (int) $user->user_id)
+        ->where('ob.busines_id', $businessId)
+        ->exists();
+});

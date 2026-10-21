@@ -35,6 +35,7 @@ class MiNegocioController extends Controller
         'pedidos'       => ['view' => true, 'manage' => true],
         'productos'     => ['view' => true, 'manage' => true],
         'domiciliarios' => ['view' => true, 'manage' => true],
+        'torre'         => ['view' => true, 'manage' => false],
         'chats'         => ['view' => true, 'manage' => true],
         'promociones'   => ['view' => true, 'manage' => true],
         'ingresos'      => ['view' => true, 'manage' => false],

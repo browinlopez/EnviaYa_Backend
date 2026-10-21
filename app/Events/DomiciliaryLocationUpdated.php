@@ -8,6 +8,7 @@ use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
 
 /**
  * DÓNDE VA EL DOMICILIARIO
@@ -30,15 +31,49 @@ class DomiciliaryLocationUpdated implements ShouldBroadcast
 
     public $geolocation;
 
+    /** La tienda de ese pedido, para la torre de control de su flota. */
+    public ?int $businessId;
+
     public function __construct(OrderGeolocation $geolocation)
     {
         $this->geolocation = $geolocation;
+
+        /*
+         * Se resuelve acá y no en quien emite: así el segundo canal viaja
+         * siempre, lo dispare quien lo dispare. Es una lectura de una columna
+         * por índice primario cada veinte segundos por pedido en curso.
+         */
+        $this->businessId = DB::table('orderssales')
+            ->where('orderSales_id', $geolocation->orderSales_id)
+            ->value('busines_id');
+
+        $this->businessId = $this->businessId === null ? null : (int) $this->businessId;
     }
 
-    // Un canal por pedido: quien sigue el suyo no ve el de nadie más.
+    /**
+     * DOS CANALES, y cada uno por un motivo distinto.
+     *
+     * `order.{id}` es el del comprador que está mirando su mapa: ese canal lo
+     * autoriza solo quien pidió ese pedido.
+     *
+     * `negocio.{id}.torre` es el de la tienda, para que la torre de control se
+     * mueva sola en vez de preguntar cada pocos segundos.
+     *
+     * NO se usa el canal `business.{id}` que ya existía, aunque fuera gratis:
+     * ese lo escuchan también los domiciliarios de la tienda —es como se
+     * enteran de que entró trabajo— y meter ahí las coordenadas le daría a
+     * cada uno la posición en vivo de sus compañeros. Una cosa es que el
+     * tendero vea su flota y otra muy distinta que la flota se vea entre sí.
+     */
     public function broadcastOn()
     {
-        return new PrivateChannel('order.'.$this->geolocation->orderSales_id);
+        $canales = [new PrivateChannel('order.'.$this->geolocation->orderSales_id)];
+
+        if ($this->businessId !== null) {
+            $canales[] = new PrivateChannel('negocio.'.$this->businessId.'.torre');
+        }
+
+        return $canales;
     }
 
     public function broadcastAs()
@@ -59,6 +94,9 @@ class DomiciliaryLocationUpdated implements ShouldBroadcast
     {
         return [
             'order_id'  => (int) $this->geolocation->orderSales_id,
+            // Para la torre, que pinta una moto por domiciliario y no por
+            // pedido: sin esto no sabría cuál de los pines mover.
+            'domiciliary_id' => (int) $this->geolocation->domiciliary_id,
             'latitude'  => (float) $this->geolocation->latitude,
             'longitude' => (float) $this->geolocation->longitude,
             'at'        => optional($this->geolocation->created_at)->toIso8601String(),
