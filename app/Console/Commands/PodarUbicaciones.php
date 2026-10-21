@@ -45,6 +45,27 @@ class PodarUbicaciones extends Command
 
         $total = DB::table('order_geolocation')->where('created_at', '<', $corte)->count();
 
+        /*
+         * SE DEJA CONSTANCIA DE QUE CORRIO, y esto no es telemetria.
+         *
+         * El acuerdo de vinculacion declara un plazo de conservacion. Si el
+         * contenedor del programador no estuviera levantado --paso una vez con
+         * la cola-- nadie se enteraria: la tabla crece en silencio y el
+         * contrato sigue prometiendo un borrado que no ocurre. Con esta marca,
+         * comprobar que se cumple es mirar una fila.
+         *
+         * Va antes de borrar y aunque no haya nada que borrar: lo que
+         * interesa saber es que el programador paso por aqui. En seco NO se
+         * escribe: una prueba a mano no puede dejar dicho que el borrado se
+         * cumplio ese dia.
+         */
+        if (!$this->option('seco')) {
+            DB::table('platform_settings')->updateOrInsert(
+                ['key' => 'operacion.ultima_poda_ubicaciones'],
+                ['value' => now()->toDateTimeString(), 'updated_at' => now(), 'created_at' => now()],
+            );
+        }
+
         $this->newLine();
         $this->line('  <fg=gray>Se conservan los últimos</>  ' . $dias . ' días (desde ' . $corte->format('Y-m-d') . ')');
         $this->line('  <fg=gray>Posiciones en total</>       ' . number_format(DB::table('order_geolocation')->count(), 0, ',', '.'));
