@@ -150,3 +150,31 @@ test('corregir sin mandar el tope no se lo borra', function () {
 
     expect((int) $p->fresh()->max_usos)->toBe(20);
 });
+
+test('dejar la promoción lista para el viernes no le quita el vencimiento', function () {
+    /*
+     * El caso de la pantalla nueva del panel: el tendero elige «este fin de
+     * semana» en los botones Y una fecha de inicio, porque quiere dejarla
+     * armada el jueves.
+     *
+     * Estaba roto y en silencio: con una fecha de inicio presente, la ventana
+     * devolvía `null` como fin y se perdía el plazo que el tendero había
+     * tocado. La promoción quedaba valiendo para siempre mientras la pantalla
+     * le seguía enseñando «este fin de semana».
+     */
+    tenderoDePromociones();
+
+    $this->postJson('/v1/negocio/promociones', [
+        'texto' => 'El viernes arranca el 20% en gaseosa',
+        'desde' => now('America/Bogota')->addDay()->toDateString(),
+        'hasta' => 'semana',
+    ])->assertStatus(201);
+
+    $p = Promotion::latest('promotion_id')->first();
+
+    expect($p->start_date->setTimezone('America/Bogota')->toDateString())
+        ->toBe(now('America/Bogota')->addDay()->toDateString())
+        ->and($p->end_date)->not->toBeNull()
+        ->and($p->end_date->setTimezone('America/Bogota')->toDateString())
+        ->toBe(now('America/Bogota')->addDays(7)->toDateString());
+});

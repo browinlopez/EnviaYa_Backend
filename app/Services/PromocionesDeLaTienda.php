@@ -127,9 +127,19 @@ class PromocionesDeLaTienda
             $desde !== null
                 ? \Illuminate\Support\Carbon::parse($desde, 'America/Bogota')->startOfDay()
                 : now(),
+            /*
+             * Sin fecha de fin, MANDA EL PLAZO si venía uno.
+             *
+             * Es el caso de «empieza el viernes» más «este fin de semana»: la
+             * pantalla manda una fecha de inicio y una palabra de vencimiento,
+             * y devolver `null` acá dejaba la promoción sin vencimiento
+             * ninguno —en silencio, porque el tendero había elegido un plazo y
+             * la pantalla se lo seguía enseñando—. Las fechas mandan sobre el
+             * plazo campo por campo, no de golpe.
+             */
             $hasta !== null
                 ? \Illuminate\Support\Carbon::parse($hasta, 'America/Bogota')->endOfDay()
-                : null,
+                : $this->fechaLimite($plazo),
         ];
     }
 
