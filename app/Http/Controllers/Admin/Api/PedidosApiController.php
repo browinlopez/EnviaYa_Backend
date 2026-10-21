@@ -156,7 +156,17 @@ class PedidosApiController extends Controller
         $orden->items = DB::table('orderssales_detail as od')
             ->leftJoin('products as p', 'p.products_id', '=', 'od.product_id')
             ->where('od.orderSales_id', $id)
-            ->get(['od.orderDet_id', 'od.product_id', 'od.amount', 'od.unit_price', 'p.name']);
+            ->get([
+                'od.orderDet_id', 'od.product_id', 'od.amount', 'od.unit_price', 'p.name',
+                /*
+                 * Lo que hace falta para leer una linea que no se vende por
+                 * unidades. `line_total` es el importe CONGELADO: en un pedido
+                 * por plata --«3.000 de queso»-- el importe es el dato, y
+                 * multiplicar precio por cantidad daria el precio del kilo.
+                 */
+                'od.line_total', 'od.sale_unit', 'od.pedido_por',
+                'od.qty_requested', 'od.qty_final',
+            ]);
 
         return response()->json($orden);
     }

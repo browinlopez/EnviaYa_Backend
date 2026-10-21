@@ -123,6 +123,10 @@ trait AyudasDeAdmin
                 'o.orderSales_id', 'o.state', 'o.payment_state', 'o.total', 'o.subtotal',
                 'o.domicilio', 'o.domiciliary_fee', 'o.sale_date', 'o.created_at',
                 'o.delivery_date', 'o.dispatched_at', 'o.pickup', 'o.methods_id', 'o.forms_id',
+                // Lo que el cliente dijo que va a pagar en efectivo, y en que
+                // punto va el pesaje. El cambio NO se guarda: se calcula al
+                // pintarlo, porque sigue al total.
+                'o.cash_tendered', 'o.weighing_state', 'o.weighed_at',
                 'bu.name as buyer_name', 'bu.phone as buyer_phone',
                 'b.busines_id', 'b.name as business_name',
                 'd.domiciliary_id', 'du.name as domiciliary_name',

@@ -153,16 +153,27 @@ class AccesoAlConjunto
         $detalles = DB::table('orderssales_detail as d')
             ->join('products as p', 'p.products_id', '=', 'd.product_id')
             ->whereIn('d.orderSales_id', $pedidos->pluck('orderSales_id'))
-            ->get(['d.orderSales_id', 'd.amount', 'd.unit_price', 'p.name'])
+            ->get([
+                'd.orderSales_id', 'd.amount', 'd.unit_price', 'p.name',
+                // Una linea al peso trae `amount` = 1 y el importe congelado
+                // en `line_total`: sin esto, la porteria multiplicaria el
+                // precio del kilo por uno y enseniaria $18.000 donde el
+                // cliente pago $3.000.
+                'd.line_total', 'd.sale_unit', 'd.qty_requested', 'd.qty_final',
+            ])
             ->groupBy('orderSales_id');
 
         return $pedidos->map(function ($o) use ($detalles) {
             $items = $detalles->get($o->orderSales_id, collect());
 
             $o->items = $items->map(fn ($i) => [
-                'name'       => $i->name,
-                'amount'     => (int) $i->amount,
-                'unit_price' => (float) $i->unit_price,
+                'name'          => $i->name,
+                'amount'        => (int) $i->amount,
+                'unit_price'    => (float) $i->unit_price,
+                'line_total'    => $i->line_total === null ? null : (float) $i->line_total,
+                'sale_unit'     => $i->sale_unit ?? 'unidad',
+                'qty_requested' => $i->qty_requested === null ? null : (float) $i->qty_requested,
+                'qty_final'     => $i->qty_final === null ? null : (float) $i->qty_final,
             ])->values();
 
             $o->items_count = $items->sum('amount');
