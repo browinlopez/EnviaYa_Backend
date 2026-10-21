@@ -307,3 +307,70 @@ function cuerpoPedido(array $e, array $extra = []): array
         'products'   => [['product_id' => $e['productId'], 'amount' => 3]],
     ], $extra);
 }
+
+/**
+ * UN PEDIDO QUE TODAVÍA SE PUEDE CANCELAR, con su tienda y su dúeño.
+ *
+ * La cadena de propiedad completa —user → owner → owner_busines → business—
+ * hace falta para dos cosas: el aviso que le llega al tendero cuando cancela
+ * el comprador, y la puerta del panel, que resuelve la tienda desde la sesión.
+ *
+ * Entra como el COMPRADOR. Las pruebas del lado de la tienda cambian de
+ * sesión con `Sanctum::actingAs($t['tendero'])`.
+ */
+function pedidoCancelable(int $metodo = 1, bool $cobrado = false): array
+{
+    \App\Models\Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
+    \App\Models\Rol::firstOrCreate(['rol_id' => 2], ['name' => 'tendero', 'guard_name' => 'web']);
+
+    $comprador = \App\Models\User::factory()->create(['rol' => 1]);
+    $tendero = \App\Models\User::factory()->create(['rol' => 2]);
+
+    $buyerId = \Illuminate\Support\Facades\DB::table('buyer')->insertGetId([
+        'user_id' => $comprador->user_id, 'state' => 1,
+    ], 'buyer_id');
+
+    $tipo = \Illuminate\Support\Facades\DB::table('category_business')->insertGetId(['name' => 'Tienda'], 'id');
+    $negocio = \Illuminate\Support\Facades\DB::table('business')->insertGetId([
+        'name' => 'Tienda de la prueba', 'qualification' => 0, 'state' => 1, 'type' => $tipo,
+        'latitude' => 11.0, 'longitude' => -74.8,
+    ], 'busines_id');
+
+    // La cadena real: user → owner → owner_busines → business.
+    $ownerId = \Illuminate\Support\Facades\DB::table('owner')->insertGetId([
+        'user_id' => $tendero->user_id, 'state' => 1,
+    ], 'owner_id');
+    \Illuminate\Support\Facades\DB::table('owner_busines')->insert([
+        'owner_id' => $ownerId, 'busines_id' => $negocio, 'state' => 1,
+    ]);
+
+    \Illuminate\Support\Facades\DB::table('payment_methods')->insertOrIgnore([
+        ['methods_id' => 1, 'name' => 'Efectivo', 'state' => 1],
+        ['methods_id' => 2, 'name' => 'Tarjeta', 'state' => 1],
+        ['methods_id' => 5, 'name' => 'Pago por QR', 'state' => 1],
+    ]);
+
+    $id = \Illuminate\Support\Facades\DB::table('orderssales')->insertGetId([
+        'buyer_id' => $buyerId, 'busines_id' => $negocio,
+        'methods_id' => $metodo,
+        'total' => 18500, 'subtotal' => 12500, 'domicilio' => 6000,
+        'sale_date' => now(), 'state' => 1,
+    ], 'orderSales_id');
+
+    if ($cobrado) {
+        \App\Models\Payment\Payment::create([
+            'orderSales_id' => $id,
+            'methods_id' => $metodo,
+            'provider' => 'bold',
+            'provider_payment_id' => 'TX-COBRADO',
+            'amount' => 18500, 'subtotal' => 12500, 'total' => 18500, 'domicilio' => 6000,
+            'payment_status' => 1,
+            'status' => 'approved',
+            'payment_date' => now(),
+        ]);
+    }
+
+    Sanctum::actingAs($comprador);
+
+    return compact('comprador', 'tendero', 'negocio', 'id');
+}

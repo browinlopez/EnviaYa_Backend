@@ -7,7 +7,9 @@ use App\Models\User;
 use App\Services\BoldService;
 use App\Services\DevolucionDelPedido;
 use Carbon\Carbon;
+use App\Models\Marketing\Coupon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Laravel\Sanctum\Sanctum;
 
 /**
@@ -24,62 +26,11 @@ use Laravel\Sanctum\Sanctum;
  *   · Y la plata no se tocaba: se devolvía el inventario y el cupo de fiado, y
  *     el cobro se quedaba en Bold sin que nadie lo supiera.
  */
-function pedidoCancelable(int $metodo = 1, bool $cobrado = false): array
-{
-    Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
-    Rol::firstOrCreate(['rol_id' => 2], ['name' => 'tendero', 'guard_name' => 'web']);
-
-    $comprador = User::factory()->create(['rol' => 1]);
-    $tendero = User::factory()->create(['rol' => 2]);
-
-    $buyerId = DB::table('buyer')->insertGetId([
-        'user_id' => $comprador->user_id, 'state' => 1,
-    ], 'buyer_id');
-
-    $tipo = DB::table('category_business')->insertGetId(['name' => 'Tienda'], 'id');
-    $negocio = DB::table('business')->insertGetId([
-        'name' => 'Tienda de la prueba', 'qualification' => 0, 'state' => 1, 'type' => $tipo,
-        'latitude' => 11.0, 'longitude' => -74.8,
-    ], 'busines_id');
-
-    // La cadena real: user → owner → owner_busines → business.
-    $ownerId = DB::table('owner')->insertGetId([
-        'user_id' => $tendero->user_id, 'state' => 1,
-    ], 'owner_id');
-    DB::table('owner_busines')->insert([
-        'owner_id' => $ownerId, 'busines_id' => $negocio, 'state' => 1,
-    ]);
-
-    DB::table('payment_methods')->insertOrIgnore([
-        ['methods_id' => 1, 'name' => 'Efectivo', 'state' => 1],
-        ['methods_id' => 2, 'name' => 'Tarjeta', 'state' => 1],
-        ['methods_id' => 5, 'name' => 'Pago por QR', 'state' => 1],
-    ]);
-
-    $id = DB::table('orderssales')->insertGetId([
-        'buyer_id' => $buyerId, 'busines_id' => $negocio,
-        'methods_id' => $metodo,
-        'total' => 18500, 'subtotal' => 12500, 'domicilio' => 6000,
-        'sale_date' => now(), 'state' => 1,
-    ], 'orderSales_id');
-
-    if ($cobrado) {
-        Payment::create([
-            'orderSales_id' => $id,
-            'methods_id' => $metodo,
-            'provider' => 'bold',
-            'provider_payment_id' => 'TX-COBRADO',
-            'amount' => 18500, 'subtotal' => 12500, 'total' => 18500, 'domicilio' => 6000,
-            'payment_status' => 1,
-            'status' => 'approved',
-            'payment_date' => now(),
-        ]);
-    }
-
-    Sanctum::actingAs($comprador);
-
-    return compact('comprador', 'tendero', 'negocio', 'id');
-}
+/*
+ * `pedidoCancelable()` vive en `tests/Pest.php`: lo comparten estas pruebas y
+ * las de la cancelación desde la tienda, y Pest solo carga los archivos que va
+ * a correr.
+ */
 
 /* ===================================================================== */
 
@@ -254,4 +205,103 @@ test('no se devuelve dos veces el mismo cobro', function () {
 
     expect(app(DevolucionDelPedido::class)->devolver(OrdersSales::find($t['id']), 'otra vez'))
         ->toBe('anulada');
+});
+
+test('quien cancelo se guarda como numero y no como fecha', function () {
+    /*
+     * ESTA PRUEBA EXISTE POR UN ERROR QUE PASÓ TODA LA SUITE.
+     *
+     * `status_history.created_by` se declaró en 2025 como `timestamp`, y lo
+     * que se guarda ahí es el identificador de quien hizo el cambio. SQLite
+     * acepta cualquier cosa en una columna de fecha, así que la prueba de
+     * arriba —la que comprueba que el reporte lleva el identificador
+     * correcto— pasaba en verde. MySQL con `STRICT_TRANS_TABLES` no:
+     *
+     *     Incorrect datetime value: '7' for column 'created_by'
+     *
+     * Y ese INSERT va dentro de la transacción de la cancelación, así que al
+     * fallar se deshacía todo: el pedido seguía vivo y el comprador recibía un
+     * error. En producción `status_history` tenía cero filas.
+     *
+     * Por eso esto no mira el valor sino el TIPO de la columna, que es lo
+     * único que SQLite y MySQL cuentan igual.
+     */
+    foreach (['created_by', 'updated_by'] as $columna) {
+        $tipo = Schema::getColumnType('status_history', $columna);
+
+        expect($tipo)->not->toContain('time')
+            ->and($tipo)->not->toContain('date');
+    }
+});
+
+test('el uso del cupon vuelve al cupo al cancelar', function () {
+    /*
+     * Al cancelar se devolvía el inventario, el cupo de fiado y los usos de
+     * las promociones —las tres cosas, una debajo de la otra— y el cupón se
+     * quedaba gastado en un pedido que acabó no existiendo. Con un cupón de un
+     * solo uso, eso es quitárselo a quien lo tenía por algo que no fue culpa
+     * suya.
+     */
+    $e = escenarioPedido();
+
+    Coupon::create([
+        'code'      => 'UNICO',
+        'type'      => 'fixed',
+        'value'     => 5000,
+        'max_uses'  => 1,
+        'starts_at' => now()->subDay()->toDateString(),
+        'ends_at'   => now()->addDay()->toDateString(),
+    ]);
+
+    $this->postJson('/v1/orders/orders', cuerpoPedido($e, ['coupon_code' => 'UNICO']))
+        ->assertSuccessful();
+
+    $pedido = DB::table('orderssales')->latest('orderSales_id')->first();
+
+    expect((int) DB::table('coupons')->where('code', 'UNICO')->value('uses_count'))->toBe(1);
+
+    $this->putJson("/v1/orders/{$pedido->orderSales_id}/cancel", ['motivo' => 'Me arrepentí'])
+        ->assertOk();
+
+    expect((int) DB::table('coupons')->where('code', 'UNICO')->value('uses_count'))->toBe(0);
+
+    // La constancia del canje NO se borra: se marca. Sigue explicando por qué
+    // ese pedido costó lo que costó.
+    $canje = DB::table('coupon_redemptions')->where('order_id', $pedido->orderSales_id)->first();
+
+    expect($canje)->not->toBeNull()
+        ->and((int) $canje->state)->toBe(0);
+});
+
+test('el cupon devuelto no le gasta a nadie su tope por persona', function () {
+    /*
+     * `max_uses_per_user` se calculaba contando filas de `coupon_redemptions`.
+     * Marcar el canje en vez de borrarlo habría dejado al cliente sin su único
+     * uso por un pedido que la tienda no pudo preparar: el contador tiene que
+     * saltarse los devueltos.
+     */
+    $e = escenarioPedido();
+
+    Coupon::create([
+        'code'              => 'UNAVEZ',
+        'type'              => 'fixed',
+        'value'             => 5000,
+        'max_uses_per_user' => 1,
+        'starts_at'         => now()->subDay()->toDateString(),
+        'ends_at'           => now()->addDay()->toDateString(),
+    ]);
+
+    $this->postJson('/v1/orders/orders', cuerpoPedido($e, ['coupon_code' => 'UNAVEZ']))
+        ->assertSuccessful();
+
+    $pedido = DB::table('orderssales')->latest('orderSales_id')->first();
+
+    $this->putJson("/v1/orders/{$pedido->orderSales_id}/cancel", ['motivo' => 'Cancelado'])
+        ->assertOk();
+
+    // Y puede volver a usarlo, porque no lo usó.
+    $this->postJson('/v1/orders/orders', cuerpoPedido($e, ['coupon_code' => 'UNAVEZ']))
+        ->assertSuccessful();
+
+    expect((int) DB::table('coupons')->where('code', 'UNAVEZ')->value('uses_count'))->toBe(1);
 });

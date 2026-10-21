@@ -65,6 +65,7 @@ use App\Http\Controllers\Conjunto\CeladoresController;
 use App\Http\Controllers\Conjunto\ResidentesController;
 use App\Http\Controllers\Conjunto\ResumenDelConjuntoController;
 use App\Http\Controllers\Conjunto\VisitantesController;
+use App\Http\Controllers\Negocio\CancelacionDelPedidoController;
 use App\Http\Controllers\Negocio\CargaDeCatalogoController;
 use App\Http\Controllers\Negocio\CatalogoController;
 use App\Http\Controllers\Negocio\ClientesDelNegocioController;
@@ -581,6 +582,13 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         // —es la unica del grupo que lo hacia— y se reutiliza tal cual.
         Route::get('pedidos', [ConsultaDePedidosController::class, 'ordersBusiness']);
         Route::put('pedidos/estado', [OrderController::class, 'updateStatus']);
+
+        /*
+         * CANCELAR. La tienda no tenía cómo: el único camino al estado 5
+         * exige ser el comprador Y que el pedido no se haya aceptado, o sea
+         * que al tendero que se queda sin producto no le quedaba puerta.
+         */
+        Route::put('pedidos/{id}/cancelar', [CancelacionDelPedidoController::class, 'cancelar']);
         Route::get('ingresos', [ConsultaDePedidosController::class, 'incomeBusiness']);
 
         /*

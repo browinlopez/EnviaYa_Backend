@@ -39,6 +39,7 @@ use App\Models\Product\ProductBusiness;
 use App\Models\User;
 use App\Models\User\UserAddress;
 use App\Services\BoldService;
+use App\Services\CancelacionDelPedido;
 use App\Services\CouponService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -532,8 +533,14 @@ class OrderController extends Controller
      * SOLO MIENTRAS NADIE LO HAYA TOCADO. Estado 1 es "en preparación": la
      * tienda todavía no lo aceptó. En cuanto lo acepta hay comida preparándose
      * o un domiciliario en camino, y eso ya no lo deshace el cliente solo.
+     *
+     * ESTO ES SOLO LA PUERTA DEL COMPRADOR. Lo que hay que deshacer —el
+     * inventario, el cupo de fiado, los usos de las promociones y del cupón,
+     * la constancia y la devolución del dinero— vive en
+     * `CancelacionDelPedido`. Vivía acá dentro, y por eso la tienda no tenía
+     * cómo cancelar: el único camino al estado 5 exigía ser el comprador.
      */
-    public function cancel(Request $request, $id)
+    public function cancel(Request $request, $id, CancelacionDelPedido $cancelaciones)
     {
         $usuario = $request->user();
 
@@ -562,131 +569,31 @@ class OrderController extends Controller
          * días después. No se exige —obligar a justificarse para cancelar es
          * una fricción fea— pero si viene, se guarda.
          */
-        $motivo = trim((string) $request->input('motivo', '')) ?: 'Cancelado por el comprador';
-
-        /*
-         * Cancelado y devuelto a la vez. El estado, las unidades y el reporte
-         * van en la misma transacción: un pedido cancelado que siguiera
-         * restándole al inventario dejaría la tienda creyendo que vendió lo que
-         * no vendió, y uno sin reporte no se puede explicar después.
-         */
-        DB::transaction(function () use ($order, $usuario, $motivo) {
-            $order->state = 5;
-            $order->save();
-
-            app(\App\Services\ExistenciasDelPedido::class)->devolver($order);
-
-            // Y si era a crédito, el cupo vuelve a quedar disponible.
-            app(CreditoDeTienda::class)->reversar($order, $usuario->user_id);
-
-            /*
-             * Los usos de las promociones también vuelven a su cupo. Una
-             * promoción de «los primeros 50» no puede gastarse en pedidos que
-             * acabaron no existiendo: el tendero prometió cincuenta ventas
-             * rebajadas, no cincuenta intentos.
-             */
-            app(\App\Services\RedencionDePromociones::class)->devolver($order);
-
-            /*
-             * EL REPORTE.
-             *
-             * `status_history` lleva desde siempre en la base con CERO filas:
-             * la tabla estaba y nadie escribía en ella. Un pedido que existió
-             * y desapareció tiene que dejar constancia de quién, cuándo y por
-             * qué, o la discusión se resuelve por quién tenga mejor memoria.
-             */
-            DB::table('status_history')->insert([
-                'order_id'       => $order->orderSales_id,
-                'status_history' => 5,
-                'motivo'         => $motivo,
-                'state'          => 1,
-                'created_by'     => $usuario->user_id,
-                'created_at'     => now(),
-                'updated_at'     => now(),
-            ]);
-        });
-
-        /*
-         * Y LA PLATA.
-         *
-         * Fuera de la transacción a propósito: habla con Bold por red, y una
-         * llamada lenta no puede tener abierta una transacción que bloquea el
-         * inventario. Si falla, el pago queda apuntado como pendiente y la
-         * cancelación sigue en pie —lo contrario dejaría al cliente sin pedido
-         * Y sin cancelación—.
-         */
-        $devolucion = app(\App\Services\DevolucionDelPedido::class)
-            ->devolver($order, $motivo);
-
-        $avisoDeDevolucion = \App\Services\DevolucionDelPedido::queDecirle(
-            $devolucion,
-            (float) $order->total,
+        $hecho = $cancelaciones->cancelar(
+            $order,
+            (int) $usuario->user_id,
+            CancelacionDelPedido::COMPRADOR,
+            $request->input('motivo'),
         );
 
-        // Si lo canceló el propio comprador ya lo sabe, pero el aviso deja
-        // constancia en su campana: es un pedido que existió y desapareció, y
-        // conviene que quede rastro de por qué.
-        if ($order->buyer?->user_id) {
-            Avisos::para(
-                $order->buyer->user_id,
-                'pedido_cancelado',
-                "Tu pedido #{$order->orderSales_id} fue cancelado."
-                    . ($avisoDeDevolucion ? ' ' . $avisoDeDevolucion : ''),
-                [
-                    'order_id'   => $order->orderSales_id,
-                    'motivo'     => $motivo,
-                    'devolucion' => $devolucion,
-                ],
-            );
-        }
-
-        /*
-         * A LA TIENDA TAMBIÉN, Y ESTE FALTABA.
-         *
-         * El tendero solo se enteraba por el canal del pedido, que sirve si
-         * tiene la pantalla abierta en ese momento. Si no la tiene, se pone a
-         * preparar un pedido cancelado y lo descubre al salir a entregarlo.
-         * El aviso le llega al teléfono y queda en su campana con el motivo.
-         */
-        $duenoDeLaTienda = DB::table('owner_busines')
-            ->join('owner', 'owner.owner_id', '=', 'owner_busines.owner_id')
-            ->where('owner_busines.busines_id', $order->busines_id)
-            ->value('owner.user_id');
-
-        if ($duenoDeLaTienda) {
-            Avisos::para(
-                $duenoDeLaTienda,
-                'pedido_cancelado',
-                "El pedido #{$order->orderSales_id} fue cancelado. No lo prepares.",
-                [
-                    'order_id'   => $order->orderSales_id,
-                    'motivo'     => $motivo,
-                    'devolucion' => $devolucion,
-                ],
-            );
-        }
-
-        // Se avisa por el canal del pedido, igual que cualquier otro cambio de
-        // estado: la tienda tiene que enterarse de que ya no lo prepare.
-        try {
-            broadcast(new OrderStatusUpdated($order));
-        } catch (\Throwable $e) {
-            Log::warning('No se pudo anunciar la cancelación', [
-                'order_id' => $order->orderSales_id,
-                'error'    => $e->getMessage(),
-            ]);
+        if ($hecho['ya_estaba']) {
+            return response()->json([
+                'message' => 'Este pedido ya estaba cancelado.',
+                'reason'  => 'ya_cancelado',
+            ], 409);
         }
 
         return response()->json([
             'message' => 'Pedido cancelado.'
-                . ($avisoDeDevolucion ? ' ' . $avisoDeDevolucion : ''),
+                . ($hecho['aviso'] ? ' ' . $hecho['aviso'] : ''),
             'order'   => $order->fresh()->toApi(),
             /* Para que la app pueda decirlo en pantalla y no solo en la
                campana: lo del dinero es lo primero que se pregunta. */
-            'devolucion' => $devolucion,
-            'motivo'     => $motivo,
+            'devolucion' => $hecho['devolucion'],
+            'motivo'     => $hecho['motivo'],
         ]);
     }
+
 
     /**
      * ¿ESTE USUARIO ES DUEÑO DE ESTE NEGOCIO?

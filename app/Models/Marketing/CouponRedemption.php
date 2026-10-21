@@ -18,6 +18,7 @@ class CouponRedemption extends Model
         'user_id',
         'order_id',
         'discount',
+        'state',
     ];
 
     protected $casts = [
@@ -25,6 +26,7 @@ class CouponRedemption extends Model
         'user_id'   => 'integer',
         'order_id'  => 'integer',
         'discount'  => 'decimal:2',
+        'state'     => 'integer',
     ];
 
     public function coupon(): BelongsTo
