@@ -360,11 +360,35 @@ class ConsultaDePedidosController extends Controller
         ]);
     }
 
+    /**
+     * DONDE VA UN DOMICILIARIO, Y QUIEN PUEDE PREGUNTARLO.
+     *
+     * Esto solo validaba que el `domiciliary_id` existiera. Los identificadores
+     * son correlativos, asi que CUALQUIER cuenta con sesion podia pedir la
+     * ultima posicion de CUALQUIER domiciliario de la plataforma probando
+     * numeros: donde vive, por donde anda, a que hora. Es la clase de dato que
+     * no se arregla despues de que salga.
+     *
+     * Ahora solo pasan tres: el propio domiciliario, el negocio al que reparte
+     * --el tendero necesita saber donde va su flota-- y el comprador que tiene
+     * un pedido en curso con el. El administrador pasa por su propia puerta,
+     * igual que en el resto del proyecto.
+     *
+     * Un desconocido recibe 403, y no una respuesta vacia: decir «no hay
+     * posicion» a quien no deberia estar preguntando es confirmarle que el
+     * numero existe.
+     */
     public function latest(Request $request)
     {
         $data = $request->validate([
             'domiciliary_id' => 'required|exists:domiciliary,domiciliary_id'
         ]);
+
+        abort_unless(
+            $this->puedeVerAlDomiciliario($request, (int) $data['domiciliary_id']),
+            403,
+            'Esa posicion no es tuya.',
+        );
 
         $last = OrderGeolocation::where('domiciliary_id', $data['domiciliary_id'])
             ->orderByDesc('created_at')
@@ -381,6 +405,54 @@ class ConsultaDePedidosController extends Controller
         }
 
         return response()->json([]); // sin ubicación
+    }
+
+    /** Las tres relaciones que dan derecho a ver por donde va un domiciliario. */
+    private function puedeVerAlDomiciliario(Request $request, int $domiciliaryId): bool
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return false;
+        }
+
+        // El equipo, por su propia puerta (rol 4), igual que en el resto.
+        if ((int) $user->rol === 4) {
+            return true;
+        }
+
+        // El propio domiciliario.
+        $esElMismo = DB::table('domiciliary')
+            ->where('domiciliary_id', $domiciliaryId)
+            ->where('user_id', $user->user_id)
+            ->exists();
+
+        if ($esElMismo) {
+            return true;
+        }
+
+        // El negocio al que reparte: su tendero necesita ver su flota.
+        $esDeSuNegocio = DB::table('business_domiciliary as bd')
+            ->join('owner_busines as ob', 'ob.busines_id', '=', 'bd.busines_id')
+            ->join('owner as o', 'o.owner_id', '=', 'ob.owner_id')
+            ->where('bd.domiciliary_id', $domiciliaryId)
+            ->where('o.user_id', $user->user_id)
+            ->exists();
+
+        if ($esDeSuNegocio) {
+            return true;
+        }
+
+        /*
+         * Y el comprador que lo tiene encima: solo mientras el pedido esta
+         * vivo. Cuando se entrega, deja de poder mirar donde anda.
+         */
+        return DB::table('orderssales as o')
+            ->join('buyer as b', 'b.buyer_id', '=', 'o.buyer_id')
+            ->where('o.domiciliary_id', $domiciliaryId)
+            ->whereIn('o.state', [2, 3])
+            ->where('b.user_id', $user->user_id)
+            ->exists();
     }
 
     public function ordersPendingReview(Request $request)

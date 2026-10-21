@@ -28,13 +28,32 @@ use Illuminate\Support\Facades\Log;
 class RutaDelPedidoController extends Controller
 {
     /**
-     * Media hora en caché.
+     * UN MES EN CACHE, Y NO MEDIA HORA.
      *
-     * Dos domiciliarios que salen de la misma tienda al mismo barrio piden la
-     * misma ruta, y el seguimiento la vuelve a pedir cada vez que se reabre la
-     * pantalla. Cada una de esas es una llamada facturada.
+     * El camino de una tienda a una casa es la misma calle hoy y el mes que
+     * viene. Con media hora, la misma tienda repartiendo dos veces en la tarde
+     * al mismo edificio pagaba dos llamadas a Google; con un mes, paga una.
+     *
+     * La clave es el par origen-destino, y los dos extremos son FIJOS: el
+     * origen es la tienda y el destino es una direccion guardada. Es decir,
+     * esto es en la practica una cache por tienda y direccion, que es
+     * exactamente lo que se queria.
+     *
+     * Un mes y no para siempre porque las calles sí cambian de vez en cuando
+     * --una obra, un sentido invertido-- y porque una entrada que nunca vence
+     * no se puede corregir sin entrar a mano a borrarla.
      */
-    private const MINUTOS_EN_CACHE = 30;
+    private const MINUTOS_EN_CACHE = 60 * 24 * 30;
+
+    /**
+     * Los decimales con los que se construye la clave.
+     *
+     * Cinco decimales son algo mas de un metro: suficiente para que «la misma
+     * tienda» y «la misma casa» caigan siempre en la misma entrada aunque el
+     * cliente mande la coordenada con mas cifras, y poco suficiente para no
+     * mezclar dos casas distintas.
+     */
+    private const DECIMALES_DE_LA_CLAVE = 5;
 
     public function __invoke(Request $request)
     {
@@ -59,7 +78,15 @@ class RutaDelPedidoController extends Controller
             ], 503);
         }
 
-        $memoria = 'ruta:' . md5($datos['origen'] . '|' . $datos['destino']);
+        /*
+         * La clave se normaliza antes de resumirla: «10.9878,-74.7889» y
+         * «10.98780,-74.78890» son el mismo sitio y tenian que caer en la
+         * misma entrada. El prefijo lleva version para poder invalidar todo
+         * de golpe el dia que haya que cambiar como se traza.
+         */
+        $memoria = 'ruta:v2:' . md5(
+            $this->normalizar($datos['origen']) . '|' . $this->normalizar($datos['destino']),
+        );
 
         $polilinea = Cache::remember(
             $memoria,
@@ -85,5 +112,14 @@ class RutaDelPedidoController extends Controller
         );
 
         return response()->json(['polilinea' => $polilinea]);
+    }
+
+    /** «lat,lng» con los decimales fijos, para que la clave no dependa del formato. */
+    private function normalizar(string $punto): string
+    {
+        [$lat, $lng] = array_map('floatval', explode(',', $punto));
+
+        return number_format($lat, self::DECIMALES_DE_LA_CLAVE, '.', '')
+            . ',' . number_format($lng, self::DECIMALES_DE_LA_CLAVE, '.', '');
     }
 }
