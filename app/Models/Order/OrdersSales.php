@@ -65,6 +65,9 @@ class OrdersSales extends Audit
         // Plazo prometido, congelado al despachar. Ver la migración
         // `add_promised_minutes_to_orderssales` para el porqué.
         'promised_minutes',
+        // La ruta trazada una sola vez al despachar. Ver `TrazoDeLaRuta`.
+        'route_polyline',
+        'route_traced_at',
         'state',
         /*
          * `payment_state` FALTABA, y no era un olvido inocuo.
@@ -93,6 +96,7 @@ class OrdersSales extends Audit
         'delivery_date' => 'datetime',
         'dispatched_at' => 'datetime',
         'promised_minutes' => 'integer',
+        'route_traced_at' => 'datetime',
         'platform_fee' => 'decimal:2',
         'delivery_subsidy' => 'decimal:2',
         'cash_due' => 'decimal:2',

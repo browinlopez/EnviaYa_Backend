@@ -18,6 +18,7 @@ use App\Services\ConfirmacionDePago;
 use App\Services\Avisos;
 use App\Services\AvisoDePedidoNuevo;
 use App\Events\DomiciliaryLocationUpdated;
+use App\Jobs\TrazarLaRutaDelPedido;
 use App\Events\OrderCreated;
 use App\Events\OrderStatusUpdated;
 use App\Http\Controllers\Controller;
@@ -1014,6 +1015,28 @@ class OrderController extends Controller
                 'order_id' => $order->orderSales_id,
                 'error'    => $e->getMessage(),
             ]);
+        }
+
+        /*
+         * Y se traza la ruta del pedido, UNA sola vez en su vida.
+         *
+         * Va en la cola porque trazar es una llamada a Google con ocho
+         * segundos de espera, y quien está esperando esta respuesta es el
+         * tendero tocando «despachar» con una moto en la puerta.
+         *
+         * Si no llega --no hay red, falta la clave, la cola está parada-- no
+         * pasa nada: la primera vez que alguien pida la ruta se traza y se
+         * guarda ahí mismo. Por eso no se reintenta en bucle ni se avisa.
+         */
+        if ((int) $order->state === 3 && !$order->route_polyline) {
+            try {
+                TrazarLaRutaDelPedido::dispatch((int) $order->orderSales_id);
+            } catch (\Throwable $e) {
+                Log::warning('No se pudo encolar el trazado de la ruta', [
+                    'order_id' => $order->orderSales_id,
+                    'error'    => $e->getMessage(),
+                ]);
+            }
         }
 
         /*
