@@ -193,3 +193,69 @@ test('el aviso de posición dice de qué domiciliario es', function () {
     expect((new DomiciliaryLocationUpdated($geo))->broadcastWith()['domiciliary_id'])
         ->toBe($e['domiId']);
 });
+
+test('la torre NO se trae doce horas de posiciones para quedarse con una', function () {
+    /*
+     * ESTA ES LA PRUEBA DE QUE LA TORRE AGUANTA EL TURNO COMPLETO.
+     *
+     * Con el reporte en segundo plano el teléfono manda una posición cada
+     * veinte segundos mientras la moto rueda: una hora de reparto son ciento
+     * ochenta filas de un solo domiciliario, y la torre se refresca sola cada
+     * quince segundos. Traerse la ventana entera para leer la última fila es
+     * lo que convierte una pantalla en una tormenta contra la base.
+     *
+     * Se comprueba por la consulta y no por el resultado a propósito: el
+     * resultado sale bien de las dos maneras, y lo que se rompe al crecer es
+     * justamente lo que no se ve en la respuesta.
+     */
+    $e = escenarioDeTope(null);
+    despachado($e);
+
+    $filas = [];
+
+    for ($i = 0; $i < 180; $i++) {
+        $filas[] = [
+            'domiciliary_id' => $e['domiId'],
+            'orderSales_id'  => $e['orderId'],
+            'latitude'       => 10.98 + $i / 100000,
+            'longitude'      => -74.78,
+            'created_at'     => now()->subSeconds(20 * $i),
+            'updated_at'     => now(),
+        ];
+    }
+
+    DB::table('order_geolocation')->insert($filas);
+
+    Sanctum::actingAs($e['tendero']);
+
+    DB::enableQueryLog();
+    $r = $this->getJson('/v1/negocio/torre')->assertSuccessful();
+
+    $consultas = collect(DB::getQueryLog())
+        ->pluck('query')
+        ->filter(fn ($q) => str_contains($q, 'order_geolocation'));
+
+    DB::disableQueryLog();
+
+    expect($consultas)->not->toBeEmpty();
+
+    // Cada una pide UNA fila. Ninguna se trae el montón.
+    $consultas->each(fn ($q) => expect($q)->toContain('limit 1'));
+
+    // Y la que sale es la de ahora mismo, no una de las 179 anteriores.
+    expect($r->json('flota.0.posicion.hace_minutos'))->toBe(0);
+});
+
+test('la última posición de una moto se encuentra por índice y no recorriendo', function () {
+    /*
+     * Sin el par `(domiciliary_id, created_at)`, la base sabe encontrar las
+     * filas de esa moto pero tiene que ordenarlas TODAS para saber cuál es la
+     * última: con el índice, la última es el final de su tramo y la encuentra
+     * sin ordenar nada. Es lo que hace que la consulta de arriba siga
+     * costando lo mismo con la tabla en millones de filas.
+     */
+    $porMotoYFecha = collect(\Illuminate\Support\Facades\Schema::getIndexes('order_geolocation'))
+        ->contains(fn ($i) => array_map('strval', $i['columns']) === ['domiciliary_id', 'created_at']);
+
+    expect($porMotoYFecha)->toBeTrue();
+});

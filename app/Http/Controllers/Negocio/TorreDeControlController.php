@@ -26,21 +26,17 @@ use Illuminate\Support\Collection;
  *
  * LA POSICIÓN VIAJA CON SU EDAD, SIEMPRE.
  *
- * Es lo más importante de este archivo. Hoy el teléfono solo reporta mientras
- * el domiciliario tiene abierta la pantalla de seguimiento de un pedido y la
- * app en primer plano: uno libre no reporta nada, y uno en camino deja de
- * reportar en cuanto bloquea el teléfono. Un pin quieto en el mapa NO significa
- * una moto quieta.
+ * Es lo más importante de este archivo, y sigue siéndolo ahora que el teléfono
+ * reporta durante todo el turno. El reporte en segundo plano no garantiza nada:
+ * el sistema operativo mata el servicio cuando quiere, el permiso se puede
+ * revocar desde la propia app —el acuerdo lo promete y la pantalla existe—, y
+ * fuera del turno NO se reporta porque el acuerdo dice que no. Un pin quieto en
+ * el mapa no significa una moto quieta.
  *
  * Por eso no se devuelve la coordenada a secas sino `hace_minutos` al lado, y
  * la pantalla está obligada a enseñarlo. Una torre que pinta pines sin edad es
  * peor que no tener torre: el tendero llama a regañar a alguien que va
  * manejando.
- *
- * Mientras no exista el reporte en segundo plano —que obliga a compilar, a
- * pedir permisos nuevos y a decirlo en el acuerdo del domiciliario, ver
- * `Documentacion/06-Planes/PANEL-DEL-TENDERO.md`— esta es la verdad que se
- * puede contar.
  */
 class TorreDeControlController extends Controller
 {
@@ -174,9 +170,23 @@ class TorreDeControlController extends Controller
     /**
      * La última posición conocida de cada uno, con su edad.
      *
-     * Se trae en UNA consulta y se agrupa acá. Por domiciliario serían tantas
-     * consultas como motos, y la torre se refresca sola: eso es lo que convierte
-     * una pantalla en una tormenta contra la base de datos.
+     * UNA CONSULTA POR MOTO, Y A PROPÓSITO. Acá había una sola que se traía
+     * todas las posiciones de las últimas doce horas de toda la flota para
+     * quedarse con la primera de cada grupo. Con el reporte solo en primer
+     * plano eso eran cuatro filas y daba igual. Con el reporte durante todo el
+     * turno son ciento ochenta filas por hora por domiciliario: doce horas de
+     * veinte motos son cuarenta mil filas convertidas en objetos de PHP cada
+     * quince segundos, por cada panel abierto, para leer veinte.
+     *
+     * Veinte consultas que leen una fila cada una cuestan muchísimo menos que
+     * una que lee cuarenta mil. Y no crecen: con el índice
+     * `(domiciliary_id, created_at)` la última posición de una moto es el final
+     * de su tramo del índice, así que la base la encuentra sin ordenar ni
+     * recorrer nada, y seguirá costando lo mismo con la tabla en millones de
+     * filas. Lo que crecía era la consulta que ya no está.
+     *
+     * El desempate por `geolocation_id` es para los dos puntos que caen en el
+     * mismo segundo: sin él, cuál de los dos sale queda al azar.
      *
      * @param  list<int>  $ids
      * @return Collection<int, array>
@@ -187,15 +197,21 @@ class TorreDeControlController extends Controller
             return collect();
         }
 
-        return OrderGeolocation::whereIn('domiciliary_id', $ids)
-            ->where('created_at', '>=', now()->subHours(self::HORAS_DE_POSICION))
-            ->orderByDesc('created_at')
-            ->get()
-            ->groupBy('domiciliary_id')
-            ->map(function ($puntos) {
-                $ultimo = $puntos->first();
+        $corte = now()->subHours(self::HORAS_DE_POSICION);
 
-                return [
+        return collect($ids)
+            ->mapWithKeys(function (int $id) use ($corte) {
+                $ultimo = OrderGeolocation::where('domiciliary_id', $id)
+                    ->where('created_at', '>=', $corte)
+                    ->orderByDesc('created_at')
+                    ->orderByDesc('geolocation_id')
+                    ->first();
+
+                if (!$ultimo) {
+                    return [$id => null];
+                }
+
+                return [$id => [
                     'latitude'      => (float) $ultimo->latitude,
                     'longitude'     => (float) $ultimo->longitude,
                     'orderSales_id' => (int) $ultimo->orderSales_id,
@@ -206,7 +222,10 @@ class TorreDeControlController extends Controller
                     'hace_minutos'  => $ultimo->created_at
                         ? (int) $ultimo->created_at->diffInMinutes(now())
                         : null,
-                ];
-            });
+                ]];
+            })
+            // Quien no tiene posición dentro de la ventana no va en el mapa, y
+            // la pantalla lo cuenta como «sin posición».
+            ->filter();
     }
 }

@@ -70,3 +70,16 @@ test('en seco no borra ni deja constancia', function () {
         ->and(DB::table('platform_settings')->where('key', 'operacion.ultima_poda_ubicaciones')->exists())
         ->toBeFalse();
 });
+
+test('lo que la poda borra está indexado por fecha', function () {
+    /*
+     * La poda pregunta `WHERE created_at < corte` todas las noches. Sin índice
+     * por fecha eso recorre la tabla COMPLETA para encontrar lo que hay que
+     * borrar, y la tabla es justamente lo que está creciendo: el comando que
+     * existe para que no se desborde sería lo más caro de la madrugada.
+     */
+    $porFecha = collect(\Illuminate\Support\Facades\Schema::getIndexes('order_geolocation'))
+        ->contains(fn ($i) => (string) ($i['columns'][0] ?? '') === 'created_at');
+
+    expect($porFecha)->toBeTrue();
+});

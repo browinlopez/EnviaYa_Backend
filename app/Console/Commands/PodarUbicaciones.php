@@ -23,6 +23,13 @@ use Illuminate\Support\Facades\DB;
  * la tabla el rato que tarde, y `order_geolocation` se escribe mientras hay
  * repartos en la calle.
  *
+ * Y SE APOYA EN UN ÍNDICE POR FECHA. `WHERE created_at < corte` sin índice
+ * recorre la tabla completa para encontrar lo que hay que borrar, así que el
+ * comando que existe para que la tabla no se desborde sería lo más caro de la
+ * madrugada justo cuando la tabla ya pesó. El índice lo pone
+ * `2026_10_21_120000_indices_de_order_geolocation`, y hay una prueba que
+ * comprueba que sigue estando.
+ *
  * Hoy la tabla tiene trece filas y esto no borra nada. Va igual, y va ahora:
  * con el reporte durante todo el turno pasa a escribirse una fila por minuto
  * por domiciliario en reparto, y el día que importe nadie se va a acordar de
