@@ -297,10 +297,9 @@
         competente.</li>
 </ul>
 <p>Este tratamiento se realiza conforme a la Ley 1581 de 2012 y sus decretos
-    reglamentarios, y a la política de tratamiento de datos personales de
-    {{ $empresa['nombre'] }}. EL TRABAJADOR DIGITAL INDEPENDIENTE conserva los derechos de
-    conocer, actualizar, rectificar y solicitar la supresión de sus datos en los términos
-    de dicha ley.</p>
+    reglamentarios, y a la política de tratamiento de datos personales de LA PLATAFORMA.
+    EL TRABAJADOR DIGITAL INDEPENDIENTE conserva los derechos de conocer, actualizar,
+    rectificar y solicitar la supresión de sus datos en los términos de dicha ley.</p>
 
 <h2>CLÁUSULA DÉCIMA TERCERA. CONFIDENCIALIDAD</h2>
 <p>Toda la información técnica, comercial, operativa, financiera o relacionada con los
