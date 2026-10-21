@@ -37,8 +37,30 @@ use Illuminate\Support\Facades\DB;
  */
 class ContratoDelDomiciliarioController extends Controller
 {
-    public function __construct(private readonly ContratoService $contratos)
+    public function __construct(
+        private readonly ContratoService $contratos,
+        private readonly \App\Services\MediaService $medios,
+    ) {
+    }
+
+    /**
+     * El enlace a SU acuerdo firmado.
+     *
+     * La cláusula de firma electrónica promete que puede descargarlo cuando
+     * quiera, así que tiene que existir por dónde. Sin la promesa escrita
+     * esto sería una comodidad; con ella es parte de lo que el documento
+     * declara, y un acuerdo que describe algo que no se puede hacer vale
+     * menos que uno que no lo menciona.
+     */
+    private function enlace(?int $mediaId): ?string
     {
+        if (!$mediaId) {
+            return null;
+        }
+
+        $clave = DB::table('media_files')->where('id', $mediaId)->value('object_key');
+
+        return $clave ? $this->medios->url($clave) : null;
     }
 
     /**
@@ -80,6 +102,7 @@ class ContratoDelDomiciliarioController extends Controller
              * falta en vez de dejar que el envío reviente.
              */
             'falta_documento' => empty($d->document),
+            'url'        => $this->enlace($d->contract_media_id ? (int) $d->contract_media_id : null),
             'texto'      => $this->contratos->comoTexto($d),
         ]);
     }

@@ -188,3 +188,29 @@ test('nadie firma el acuerdo de otro: no hay identificador en la ruta', function
     expect(DB::table('domiciliary')->where('domiciliary_id', $otroId)->value('contract_signed_at'))
         ->toBeNull();
 });
+
+test('una vez firmado, el domiciliario puede descargarlo', function () {
+    /*
+     * La clausula de firma electronica promete que lo pone a su disposicion
+     * para descargarlo cuando quiera. Un acuerdo que describe algo que no se
+     * puede hacer vale menos que uno que no lo menciona.
+     */
+    domiciliarioQueEntra();
+
+    $this->postJson('/v1/domiciliaries/contrato', [
+        'signature' => firmaDePrueba(),
+        'city'      => 'Barranquilla',
+        'acepta'    => true,
+    ])->assertStatus(201);
+
+    $r = $this->getJson('/v1/domiciliaries/contrato')->assertSuccessful();
+
+    expect($r->json('firmado'))->toBeTrue()
+        ->and($r->json('url'))->not->toBeNull();
+});
+
+test('sin firmar no hay nada que descargar', function () {
+    domiciliarioQueEntra();
+
+    expect($this->getJson('/v1/domiciliaries/contrato')->json('url'))->toBeNull();
+});

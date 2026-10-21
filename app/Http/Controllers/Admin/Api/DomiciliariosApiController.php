@@ -221,6 +221,16 @@ class DomiciliariosApiController extends Controller
                 $datos['city'],
                 $request->user()->user_id ?? null,
                 $request->user()->name ?? null,
+                /*
+                 * La IP tambien por este camino. La clausula de firma
+                 * electronica dice que el documento deja constancia de la
+                 * direccion desde la que se firmo, y eso tiene que ser cierto
+                 * se firme donde se firme: si solo lo fuera para la app, el
+                 * acuerdo estaria describiendo un mecanismo que la mitad de
+                 * los documentos no tiene.
+                 */
+                'en el panel de administración por ' . ($request->user()->name ?: 'el equipo')
+                    . ', desde la dirección ' . ($request->ip() ?: 'desconocida'),
             );
         } catch (\Throwable $e) {
             return response()->json(['message' => $e->getMessage()], 422);

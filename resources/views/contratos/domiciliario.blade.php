@@ -107,8 +107,19 @@
         <span class="vacio"></span>,
     @endif
     propietaria y operadora de la plataforma tecnológica {{ $empresa['plataforma'] }},
-    representada legalmente por quien suscribe el presente documento, quien en adelante se
-    denominará <span class="dato">LA PLATAFORMA</span>.</p>
+    representada legalmente por
+    @if ($empresa['representante'])
+        <span class="dato">{{ $empresa['representante'] }}</span>,
+        mayor de edad, identificado con cédula de ciudadanía No.
+        @if ($empresa['representante_cc'])
+            <span class="dato">{{ $empresa['representante_cc'] }}</span>,
+        @else
+            <span class="vacio"></span>,
+        @endif
+    @else
+        quien suscribe el presente documento,
+    @endif
+    quien en adelante se denominará <span class="dato">LA PLATAFORMA</span>.</p>
 
 <p>Y de otra parte,</p>
 
@@ -163,10 +174,14 @@
     <li>No existe exclusividad.</li>
     <li>EL TRABAJADOR DIGITAL INDEPENDIENTE podrá prestar servicios para otras plataformas
         digitales o desarrollar cualquier otra actividad económica lícita.</li>
-    <li>La utilización de herramientas tecnológicas para la asignación de pedidos,
-        geolocalización, seguimiento del servicio, calificaciones o control de calidad no
-        constituye subordinación laboral, sino mecanismos propios del funcionamiento de una
-        plataforma digital.</li>
+    <li>Las solicitudes de reparto disponibles se le ofrecen por pertenecer a los
+        comercios aliados a los que está vinculado, y es él quien decide cuáles toma.
+        <strong>La plataforma no utiliza su ubicación para ofrecerle ni para asignarle
+        pedidos</strong>; la geolocalización opera únicamente en los términos de la
+        CLÁUSULA DÉCIMA SEGUNDA.</li>
+    <li>La utilización de herramientas tecnológicas para el seguimiento del servicio en
+        curso, las calificaciones o el control de calidad no constituye subordinación
+        laboral, sino mecanismos propios del funcionamiento de una plataforma digital.</li>
 </ul>
 
 <h2>CLÁUSULA CUARTA. DURACIÓN</h2>
@@ -332,11 +347,30 @@
     aceptado íntegramente su contenido, declarando que su consentimiento ha sido otorgado
     libremente y sin ningún tipo de presión o vicio.</p>
 
-<p>En constancia se firma en dos ejemplares del mismo tenor en la ciudad de
+<p>En constancia se suscribe en la ciudad de
     <span class="dato">{{ $firma['ciudad'] }}</span>, a los
     <span class="dato">{{ $firma['dia'] }}</span> días del mes de
     <span class="dato">{{ $firma['mes'] }}</span> de
     <span class="dato">{{ $firma['anio'] }}</span>.</p>
+
+<p><strong>Firma electrónica.</strong> Este acuerdo se suscribe por medios electrónicos y
+    las partes le reconocen plena validez y fuerza probatoria, de conformidad con la Ley
+    527 de 1999 y el Decreto 2364 de 2012. El mecanismo empleado es confiable y apropiado
+    para los fines de este documento, y deja constancia de:</p>
+<ul>
+    <li>la <strong>identidad</strong> de quien firma, establecida por su sesión autenticada
+        en la plataforma, asociada a su cuenta y a su documento de identidad;</li>
+    <li>el <strong>trazo de la firma</strong> capturado por la propia persona, que se
+        incorpora a este documento;</li>
+    <li>la <strong>fecha y hora</strong> de la suscripción y la <strong>dirección IP</strong>
+        desde la que se realizó, que figuran al pie;</li>
+    <li>un <strong>identificador de verificación</strong> —resumen criptográfico SHA-256—
+        que permite comprobar que el documento no ha sido alterado después de firmado, y
+        que también figura al pie.</li>
+</ul>
+<p>LA PLATAFORMA conserva el documento firmado y lo pone a disposición de EL TRABAJADOR
+    DIGITAL INDEPENDIENTE desde la aplicación, quien podrá descargarlo en cualquier
+    momento.</p>
 
 <div class="firmas">
     <h2 style="text-align: center; margin-bottom: 18px;">FIRMAS</h2>
