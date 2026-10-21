@@ -49,13 +49,14 @@ class ContratoService
         string $ciudad,
         ?int $adminId = null,
         ?string $adminNombre = null,
+        ?string $origen = null,
     ): array {
         // Se valida antes de renderizar: da igual el trabajo de armar el PDF
         // si la firma no es una firma.
         $this->decodificarFirma($firmaDataUrl);
         $ahora = Carbon::now();
 
-        $pdf = $this->renderizar($domiciliario, $firmaDataUrl, $ciudad, $ahora, $adminNombre);
+        $pdf = $this->renderizar($domiciliario, $firmaDataUrl, $ciudad, $ahora, $adminNombre, $origen);
 
         $nombreArchivo = 'acuerdo-vinculacion-' . $ahora->format('Ymd-His') . '.pdf';
 
@@ -87,6 +88,69 @@ class ContratoService
         ];
     }
 
+    /**
+     * EL ACUERDO EN TEXTO, PARA LEERLO ANTES DE FIRMAR.
+     *
+     * Sale de la MISMA plantilla que produce el PDF, no de una copia. Es la
+     * diferencia entre firmar lo que se leyó y firmar otra cosa parecida: una
+     * segunda redacción del acuerdo se desincroniza en la primera corrección
+     * que alguien haga de un lado solo, y entonces hay una persona que aceptó
+     * un texto y un archivo que dice otro.
+     *
+     * Se devuelve en bloques —título, párrafo, punto— y no en HTML porque
+     * quien lo pinta es una pantalla de teléfono sin navegador dentro.
+     *
+     * @return list<array{tipo:string,texto:string}>
+     */
+    public function comoTexto(object $domiciliario): array
+    {
+        /*
+         * Con una firma de mentira: el texto que se lee es el mismo, y pedir
+         * una firma de verdad para poder LEER el acuerdo seria al reves de
+         * como funciona firmar algo.
+         */
+        $html = $this->renderizar(
+            $domiciliario,
+            self::FIRMA_PREFIJO,
+            '__________',
+            Carbon::now(),
+            null,
+            'en la aplicación por el propio trabajador',
+            soloHtml: true,
+        );
+
+        // Solo el cuerpo: el encabezado de la empresa y el pie de firmas los
+        // pinta la pantalla a su manera.
+        $cuerpo = preg_replace('#<div class="firmas">.*#s', '', $html);
+
+        $bloques = [];
+
+        preg_match_all('#<(h1|h2|p|li)\b[^>]*>(.*?)</\1>#s', $cuerpo, $coincidencias, PREG_SET_ORDER);
+
+        foreach ($coincidencias as [, $etiqueta, $interior]) {
+            $texto = trim(html_entity_decode(
+                preg_replace('/\s+/', ' ', strip_tags($interior)),
+                ENT_QUOTES | ENT_HTML5,
+                'UTF-8',
+            ));
+
+            if ($texto === '') {
+                continue;
+            }
+
+            $bloques[] = [
+                'tipo'  => match ($etiqueta) {
+                    'h1', 'h2' => 'titulo',
+                    'li'       => 'punto',
+                    default    => 'parrafo',
+                },
+                'texto' => $texto,
+            ];
+        }
+
+        return $bloques;
+    }
+
     /* ================================================================== */
 
     private function renderizar(
@@ -95,6 +159,8 @@ class ContratoService
         string $ciudad,
         Carbon $ahora,
         ?string $adminNombre,
+        ?string $origen = null,
+        bool $soloHtml = false,
     ): string {
         $html = View::make('contratos.domiciliario', [
             'empresa' => [
@@ -115,12 +181,28 @@ class ContratoService
                 'mes'           => self::MESES[$ahora->month],
                 'anio'          => $ahora->year,
                 'generado'      => $ahora->format('d/m/Y \a \l\a\s H:i'),
-                'capturado_por' => $adminNombre ?: 'la administración',
+                /*
+                 * DE DONDE SALIO LA FIRMA, dicho tal cual.
+                 *
+                 * El pie del acuerdo existe para que un PDF firmado en
+                 * pantalla se distinguiera de uno que alguien armo por su
+                 * cuenta. Desde que el domiciliario puede firmar desde su
+                 * telefono, decir siempre «capturada en el panel de
+                 * administracion» convertiria ese pie en una afirmacion falsa
+                 * sobre el unico documento que tendria que poder sostenerse.
+                 */
+                'capturado_por' => $origen ?: ($adminNombre
+                    ? 'el panel de administración por ' . $adminNombre
+                    : 'la administración'),
                 // Huella del contenido firmado: si alguien altera el PDF, deja
                 // de coincidir con lo que registró la plataforma.
                 'huella'        => strtoupper(substr(hash('sha256', $firma . $d->user_id . $ahora), 0, 16)),
             ],
         ])->render();
+
+        if ($soloHtml) {
+            return $html;
+        }
 
         $opciones = new Options();
         $opciones->set('defaultFont', 'DejaVu Sans');

@@ -271,7 +271,38 @@
     operación de la plataforma, de conformidad con la política de tratamiento de datos
     personales de {{ $empresa['nombre'] }} y la legislación colombiana vigente.</p>
 
-<h2>CLÁUSULA DÉCIMA SEGUNDA. CONFIDENCIALIDAD</h2>
+<h2>CLÁUSULA DÉCIMA SEGUNDA. GEOLOCALIZACIÓN DURANTE EL TURNO DE REPARTO</h2>
+<p>EL TRABAJADOR DIGITAL INDEPENDIENTE autoriza expresamente a LA PLATAFORMA para
+    recolectar y tratar los datos de ubicación del dispositivo móvil en el que haya
+    iniciado sesión, <strong>únicamente durante su turno de reparto</strong>, entendido
+    como el lapso que transcurre desde que acepta una solicitud de reparto hasta que
+    entrega el último pedido que tenga asignado.</p>
+<p>La finalidad de este tratamiento es exclusivamente operativa: permitir que el usuario
+    comprador y el comercio aliado conozcan el avance de la entrega en curso, estimar los
+    tiempos de llegada y atender incidencias de seguridad durante el reparto.</p>
+<p>LA PLATAFORMA declara y EL TRABAJADOR DIGITAL INDEPENDIENTE reconoce que:</p>
+<ul>
+    <li><strong>Fuera del turno de reparto no se recolecta la ubicación.</strong> Cuando no
+        tiene pedidos asignados, la aplicación deja de registrar su posición.</li>
+    <li>La recolección puede ocurrir con la aplicación en segundo plano mientras dure el
+        turno, de manera que el seguimiento de la entrega no se interrumpa cuando bloquee
+        el teléfono. El dispositivo mostrará un aviso permanente mientras esto ocurra.</li>
+    <li>EL TRABAJADOR DIGITAL INDEPENDIENTE puede revocar este permiso en cualquier momento
+        desde los ajustes de su dispositivo o desde la aplicación. Hacerlo no termina el
+        presente acuerdo, pero puede impedir que se le asignen repartos mientras el permiso
+        esté revocado, por ser la ubicación un dato necesario para prestar el servicio.</li>
+    <li>Los datos de ubicación no se utilizarán para evaluar la conducta del trabajador
+        fuera del turno, ni se cederán a terceros distintos del comercio aliado y del
+        usuario comprador del pedido en curso, salvo requerimiento de autoridad
+        competente.</li>
+</ul>
+<p>Este tratamiento se realiza conforme a la Ley 1581 de 2012 y sus decretos
+    reglamentarios, y a la política de tratamiento de datos personales de
+    {{ $empresa['nombre'] }}. EL TRABAJADOR DIGITAL INDEPENDIENTE conserva los derechos de
+    conocer, actualizar, rectificar y solicitar la supresión de sus datos en los términos
+    de dicha ley.</p>
+
+<h2>CLÁUSULA DÉCIMA TERCERA. CONFIDENCIALIDAD</h2>
 <p>Toda la información técnica, comercial, operativa, financiera o relacionada con los
     usuarios, comercios aliados, estrategias, software y funcionamiento de
     {{ $empresa['plataforma'] }} tendrá carácter confidencial.</p>
@@ -279,7 +310,7 @@
     información para fines distintos a la ejecución del presente acuerdo, incluso después
     de su terminación.</p>
 
-<h2>CLÁUSULA DÉCIMA TERCERA. SUSPENSIÓN Y TERMINACIÓN</h2>
+<h2>CLÁUSULA DÉCIMA CUARTA. SUSPENSIÓN Y TERMINACIÓN</h2>
 <p>LA PLATAFORMA podrá suspender temporalmente el acceso del trabajador cuando existan
     razones fundadas relacionadas con la seguridad de los usuarios, posibles fraudes,
     incumplimiento de las obligaciones aquí pactadas o mientras se adelanta una
@@ -291,13 +322,13 @@
     indebida de la plataforma o cualquier comportamiento que afecte la seguridad de los
     usuarios, los comercios aliados o la reputación de LA PLATAFORMA.</p>
 
-<h2>CLÁUSULA DÉCIMA CUARTA. SOLUCIÓN DE CONTROVERSIAS</h2>
+<h2>CLÁUSULA DÉCIMA QUINTA. SOLUCIÓN DE CONTROVERSIAS</h2>
 <p>Las diferencias derivadas del presente acuerdo serán resueltas inicialmente mediante
     arreglo directo entre las partes. En caso de no lograrse un acuerdo, estas podrán acudir
     a los mecanismos de conciliación previstos en la legislación colombiana y, de persistir
     la controversia, a la jurisdicción competente.</p>
 
-<h2>CLÁUSULA DÉCIMA QUINTA. ACEPTACIÓN</h2>
+<h2>CLÁUSULA DÉCIMA SEXTA. ACEPTACIÓN</h2>
 <p>Con la firma del presente acuerdo, las partes manifiestan haber leído, comprendido y
     aceptado íntegramente su contenido, declarando que su consentimiento ha sido otorgado
     libremente y sin ningún tipo de presión o vicio.</p>
@@ -342,9 +373,8 @@
      que alguien armó por su cuenta. --}}
 <div class="pie">
     Documento generado electrónicamente por {{ $empresa['plataforma'] }} el
-    {{ $firma['generado'] }}. Firma capturada en el panel de administración por
-    {{ $firma['capturado_por'] }}. Identificador de verificación:
-    {{ $firma['huella'] }}.
+    {{ $firma['generado'] }}. Firma capturada {{ $firma['capturado_por'] }}.
+    Identificador de verificación: {{ $firma['huella'] }}.
 </div>
 
 </body>

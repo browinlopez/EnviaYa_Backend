@@ -54,6 +54,7 @@ use App\Http\Controllers\Category\CategoryController;
 use App\Http\Controllers\Chat\ChatController;
 use App\Http\Controllers\CoberturaController;
 use App\Http\Controllers\DeviceTokenController;
+use App\Http\Controllers\Domiciliary\ContratoDelDomiciliarioController;
 use App\Http\Controllers\Domiciliary\DomiciliaryController;
 use App\Http\Controllers\Domiciliary\IngresosDelDomiciliarioController;
 use App\Http\Controllers\Domiciliary\VinculosDelDomiciliarioController;
@@ -714,6 +715,20 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
          * de otro.
          */
         Route::get('/cash-balance', [EfectivoController::class, 'miSaldo']);
+
+        /*
+         * SU acuerdo de vinculacion: leerlo y firmarlo desde el telefono.
+         *
+         * Hasta ahora solo se firmaba en el panel de administracion, o sea que
+         * vincularse exigia coincidir fisicamente con alguien del equipo y la
+         * firma de una persona quedaba capturada desde la sesion de otra.
+         *
+         * Sin identificador en la ruta, como el saldo de efectivo: sale de la
+         * sesion. Con un parametro, cualquiera podria leer --o firmar-- el
+         * acuerdo de otro.
+         */
+        Route::get('/contrato', [ContratoDelDomiciliarioController::class, 'mostrar']);
+        Route::post('/contrato', [ContratoDelDomiciliarioController::class, 'firmar']);
 
         /*
          * Su código de entrada a los conjuntos. Caduca en cinco minutos: lo
