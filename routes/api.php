@@ -1036,6 +1036,7 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::prefix('solicitudes')->group(function () {
             Route::get('/', [SolicitudesApiController::class, 'solicitudes'])->middleware('modulo:solicitudes');
             Route::get('{id}', [SolicitudesApiController::class, 'showSolicitud'])->middleware('modulo:solicitudes');
+            Route::get('{id}/adjunto', [SolicitudesApiController::class, 'adjuntoSolicitud'])->middleware('modulo:solicitudes');
             Route::put('{id}', [SolicitudesApiController::class, 'updateSolicitud'])->middleware('modulo:solicitudes,gestionar');
         });
 

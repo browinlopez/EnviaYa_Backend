@@ -279,3 +279,127 @@ test('una eliminación pasada de plazo se ve como vencida', function () {
         ->assertJsonPath('data.0.overdue', true)
         ->assertJsonPath('summary.vencidas', 1);
 });
+
+/* ==================== LA PQRS DE LA WEB ==================== */
+
+/**
+ * La PQRS entraba como "otro" con la clase en el motivo, sin plazo, y la foto
+ * se pedía por WhatsApp porque el endpoint solo recibía texto. Estas pruebas
+ * fijan que tenga tipo propio, el plazo que promete la web y un adjunto que
+ * no quede a la vista de nadie.
+ */
+
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+
+function pqrsDeLaWeb(array $extra = []): array
+{
+    return array_merge([
+        'nombre'         => 'Luz Ortega',
+        'contacto'       => 'luz@ejemplo.co',
+        'clase'          => 'Reclamo',
+        'motivo'         => 'PQRS: Reclamo',
+        'tipo'           => 'pqrs',
+        'pedido'         => '4621',
+        'mensaje'        => 'Llegó el arroz roto.',
+        'consentimiento' => '1',
+    ], $extra);
+}
+
+test('una PQRS entra con su tipo y el plazo de quince días hábiles', function () {
+    $this->postJson('/v1/solicitudes-free', pqrsDeLaWeb())->assertCreated();
+
+    $s = LandingRequest::first();
+
+    expect($s->type)->toBe('pqrs')
+        ->and($s->payload['clase'])->toBe('Reclamo')
+        ->and($s->payload['pedido'])->toBe('4621')
+        ->and($s->due_at->toDateString())
+        ->toBe(now()->addWeekdays(LandingRequest::DIAS_PQRS)->toDateString());
+});
+
+test('una PQRS sin tipo se reconoce por el motivo', function () {
+    // Lo que mandaba la web antes de tener tipo propio, por si queda una
+    // pestaña abierta con la versión vieja.
+    $this->postJson('/v1/solicitudes-free', pqrsDeLaWeb(['tipo' => 'otro', 'motivo' => 'PQRS: Queja']))
+        ->assertCreated();
+
+    expect(LandingRequest::first()->type)->toBe('pqrs');
+});
+
+test('la foto de la PQRS se guarda en el disco privado, con nombre al azar', function () {
+    Storage::fake(LandingRequest::ADJUNTO_DISCO);
+
+    $this->post('/v1/solicitudes-free', pqrsDeLaWeb([
+        'adjunto' => UploadedFile::fake()->image('Luz Ortega recibo.jpg'),
+    ]), ['Accept' => 'application/json'])->assertCreated();
+
+    $s = LandingRequest::first();
+
+    expect($s->attachment_path)->toStartWith('solicitudes/' . $s->code . '/')
+        // El nombre original puede traer el de la persona: no va en la ruta.
+        ->and($s->attachment_path)->not->toContain('Ortega')
+        ->and($s->attachment_name)->toBe('Luz Ortega recibo.jpg')
+        ->and($s->payload)->not->toHaveKey('adjunto');
+
+    Storage::disk(LandingRequest::ADJUNTO_DISCO)->assertExists($s->attachment_path);
+
+    // El panel sabe que hay archivo, pero no ve dónde está.
+    expect($s->toArray())->not->toHaveKey('attachment_path')
+        ->and($s->toArray()['tiene_adjunto'])->toBeTrue();
+});
+
+test('un adjunto que no es foto ni PDF se rechaza', function () {
+    Storage::fake(LandingRequest::ADJUNTO_DISCO);
+
+    $this->post('/v1/solicitudes-free', pqrsDeLaWeb([
+        'adjunto' => UploadedFile::fake()->create('programa.exe', 10, 'application/octet-stream'),
+    ]), ['Accept' => 'application/json'])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('adjunto');
+
+    expect(LandingRequest::count())->toBe(0);
+});
+
+test('un archivo mandado en otro formulario no se guarda', function () {
+    // Solo la PQRS lo pide. Un archivo en otra solicitud es un dato personal
+    // que nadie va a mirar.
+    Storage::fake(LandingRequest::ADJUNTO_DISCO);
+
+    $this->post('/v1/solicitudes-free', [
+        'contacto'       => 'vecino@ejemplo.co',
+        'tipo'           => 'vecino',
+        'consentimiento' => '1',
+        'adjunto'        => UploadedFile::fake()->image('foto.jpg'),
+    ], ['Accept' => 'application/json'])->assertCreated();
+
+    expect(LandingRequest::first()->attachment_path)->toBeNull()
+        ->and(Storage::disk(LandingRequest::ADJUNTO_DISCO)->allFiles())->toBeEmpty();
+});
+
+test('el panel descarga el adjunto con permiso, y SST no', function () {
+    Storage::fake(LandingRequest::ADJUNTO_DISCO);
+    Storage::disk(LandingRequest::ADJUNTO_DISCO)->put('solicitudes/SOL-X/a.jpg', 'foto');
+
+    $s = solicitudDePrueba([
+        'type'            => 'pqrs',
+        'attachment_path' => 'solicitudes/SOL-X/a.jpg',
+        'attachment_name' => 'recibo.jpg',
+    ]);
+
+    comoAreaSol('sst');
+    $this->get("/v1/admin/solicitudes/{$s->id}/adjunto")->assertForbidden();
+
+    comoAreaSol('calidad');
+    $this->get("/v1/admin/solicitudes/{$s->id}/adjunto")
+        ->assertOk()
+        ->assertDownload('recibo.jpg');
+});
+
+test('una solicitud sin adjunto responde 404 al pedirlo', function () {
+    Storage::fake(LandingRequest::ADJUNTO_DISCO);
+    $s = solicitudDePrueba();
+    comoAreaSol('calidad');
+
+    $this->getJson("/v1/admin/solicitudes/{$s->id}/adjunto")->assertNotFound();
+});

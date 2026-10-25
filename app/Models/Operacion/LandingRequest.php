@@ -31,6 +31,7 @@ class LandingRequest extends Model
         'conjunto',
         'cobertura',
         'eliminacion',
+        'pqrs',
         'otro',
     ];
 
@@ -64,6 +65,22 @@ class LandingRequest extends Model
      */
     public const DIAS_ELIMINACION = 15;
 
+    /**
+     * Días HÁBILES para responder una PQRS radicada en la web.
+     *
+     * También es promesa pública: el formulario de /si-algo-sale-mal dice
+     * "máximo 15 días hábiles", que es el plazo de la ley. El panel trabaja
+     * por dentro con plazos más cortos según la prioridad; este es el techo.
+     */
+    public const DIAS_PQRS = 15;
+
+    /** Lo que se acepta como foto o comprobante de una PQRS. */
+    public const ADJUNTO_TIPOS = 'jpg,jpeg,png,webp,heic,pdf';
+    public const ADJUNTO_MAX_KB = 8192; // 8 MB, igual que el resto de subidas
+
+    /** Disco privado: el comprobante de una persona no va al bucket público. */
+    public const ADJUNTO_DISCO = 'local';
+
     protected $fillable = [
         'code',
         'type',
@@ -75,6 +92,9 @@ class LandingRequest extends Model
         'neighborhood',
         'message',
         'payload',
+        'attachment_path',
+        'attachment_name',
+        'attachment_mime',
         'state',
         'assigned_to',
         'due_at',
@@ -85,6 +105,14 @@ class LandingRequest extends Model
         'ip',
         'user_agent',
     ];
+
+    /*
+     * La ruta del archivo no sale en el JSON del panel: el adjunto se pide por
+     * su propia ruta, que comprueba el permiso. Con saber que existe basta.
+     */
+    protected $hidden = ['attachment_path'];
+
+    protected $appends = ['tiene_adjunto'];
 
     protected $casts = [
         'payload'     => 'array',
@@ -122,16 +150,38 @@ class LandingRequest extends Model
         return sprintf('SOL-%d-%05d', $anio, $n);
     }
 
+    public function getTieneAdjuntoAttribute(): bool
+    {
+        return filled($this->attachment_path);
+    }
+
     /** El tipo que corresponde a lo que mandó la web. */
     public static function tipoDesde(?string $tipo, ?string $motivo): string
     {
-        if ($tipo && in_array($tipo, self::TIPOS, true)) {
+        // `otro` no clasifica: es lo que manda la web cuando no sabe. Se mira
+        // el motivo antes de aceptarlo (la PQRS llegó así hasta tener tipo).
+        if ($tipo && $tipo !== 'otro' && in_array($tipo, self::TIPOS, true)) {
             return $tipo;
         }
 
         $clave = self::normalizar((string) $motivo);
 
+        // "PQRS: Reclamo", "PQRS: Queja"…: la clase va detrás y cambia.
+        if (str_starts_with($clave, 'pqrs')) {
+            return 'pqrs';
+        }
+
         return self::MOTIVOS[$clave] ?? 'otro';
+    }
+
+    /** Días hábiles comprometidos por escrito para este tipo, o null. */
+    public static function diasDePlazo(string $tipo): ?int
+    {
+        return match ($tipo) {
+            'eliminacion' => self::DIAS_ELIMINACION,
+            'pqrs'        => self::DIAS_PQRS,
+            default       => null,
+        };
     }
 
     /** Minúsculas y sin tildes, para comparar motivos sin sorpresas. */

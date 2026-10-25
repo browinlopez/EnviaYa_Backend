@@ -12,6 +12,7 @@ use App\Models\Operacion\Settlement;
 use App\Services\LiquidacionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 
 class SolicitudesApiController extends Controller
@@ -72,6 +73,28 @@ class SolicitudesApiController extends Controller
             ->findOr($id, fn () => abort(404, 'La solicitud no existe.'));
 
         return response()->json($s);
+    }
+
+    /**
+     * La foto o el comprobante de una PQRS.
+     *
+     * Vive en el disco privado y solo sale por acá, con sesión y con permiso
+     * del módulo: nunca tiene una URL pública que se pueda reenviar.
+     */
+    public function adjuntoSolicitud($id)
+    {
+        $s = LandingRequest::findOr($id, fn () => abort(404, 'La solicitud no existe.'));
+
+        $disco = Storage::disk(LandingRequest::ADJUNTO_DISCO);
+
+        if (!$s->attachment_path || !$disco->exists($s->attachment_path)) {
+            abort(404, 'Esta solicitud no trae adjunto.');
+        }
+
+        return $disco->download(
+            $s->attachment_path,
+            $s->attachment_name ?: basename($s->attachment_path),
+        );
     }
 
     public function updateSolicitud(Request $request, $id)

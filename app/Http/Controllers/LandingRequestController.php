@@ -6,6 +6,7 @@ use App\Models\Operacion\LandingRequest;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * LO QUE MANDAN LOS FORMULARIOS DE LA WEB PÚBLICA
@@ -42,7 +43,7 @@ class LandingRequestController extends Controller
         'nombre', 'contacto', 'barrio', 'mensaje',
         'tipo', 'motivo', 'origen', 'pagina',
         'consentimiento', 'politica_version', 'aceptado_en',
-        'empresa', 'trampa',
+        'empresa', 'trampa', 'adjunto',
     ];
 
     public function store(Request $request)
@@ -66,9 +67,15 @@ class LandingRequestController extends Controller
             'consentimiento'   => 'accepted',
             'politica_version' => 'nullable|string|max:20',
             'aceptado_en'      => 'nullable|date',
+            // La foto o el comprobante de una PQRS. Llega en multipart; el
+            // resto de formularios sigue mandando JSON.
+            'adjunto'          => 'nullable|file|max:' . LandingRequest::ADJUNTO_MAX_KB
+                . '|mimes:' . LandingRequest::ADJUNTO_TIPOS,
         ], [
             'consentimiento.accepted' =>
                 'Falta la autorización de tratamiento de datos.',
+            'adjunto.max'   => 'El archivo pesa más de 8 MB.',
+            'adjunto.mimes' => 'Sube una foto (JPG, PNG, WEBP, HEIC) o un PDF.',
         ]);
 
         // La trampa. Se responde igual que en el caso bueno, a propósito.
@@ -97,11 +104,12 @@ class LandingRequestController extends Controller
             'neighborhood'   => $datos['barrio'] ?? null,
             'message'        => $datos['mensaje'] ?? null,
             'payload'        => $this->extras($request),
-            // Solo la eliminación tiene plazo comprometido: está prometido por
-            // escrito en /eliminar-cuenta, que es la página que revisa Google
-            // Play. Se fija al recibir y no se recalcula.
-            'due_at'         => $tipo === 'eliminacion'
-                ? now()->addWeekdays(LandingRequest::DIAS_ELIMINACION)
+            // Solo la eliminación y la PQRS tienen plazo comprometido: los dos
+            // están prometidos por escrito en la web (/eliminar-cuenta es la
+            // página que revisa Google Play). Se fija al recibir y no se
+            // recalcula.
+            'due_at'         => ($dias = LandingRequest::diasDePlazo($tipo))
+                ? now()->addWeekdays($dias)
                 : null,
             'policy_version' => $datos['politica_version'] ?? null,
             /*
@@ -119,10 +127,51 @@ class LandingRequestController extends Controller
             'user_agent'     => substr((string) $request->userAgent(), 0, 255),
         ]);
 
+        $this->guardarAdjunto($request, $solicitud);
+
         return response()->json([
             'message' => 'Solicitud recibida.',
             'code'    => $solicitud->code,
         ], 201);
+    }
+
+    /**
+     * La foto o el comprobante, al disco privado.
+     *
+     * Solo se guarda en una PQRS: es el único formulario que lo pide, y un
+     * archivo que llega en otro es un dato personal que nadie va a mirar.
+     * Se guarda DESPUÉS de crear la fila, con el radicado en la ruta: si la
+     * fila no se pudo crear, no queda un archivo huérfano de nadie.
+     */
+    private function guardarAdjunto(Request $request, LandingRequest $solicitud): void
+    {
+        $archivo = $request->file('adjunto');
+
+        if (!$archivo || $solicitud->type !== 'pqrs') {
+            return;
+        }
+
+        // Nombre al azar: el original puede traer el nombre de la persona.
+        $ruta = $archivo->store(
+            'solicitudes/' . $solicitud->code,
+            LandingRequest::ADJUNTO_DISCO,
+        );
+
+        if (!$ruta) {
+            // La PQRS ya quedó radicada; perder la foto no puede tumbarla. Se
+            // deja rastro para que quien la atienda sepa que hubo un intento.
+            Log::warning('No se pudo guardar el adjunto de una PQRS', [
+                'code' => $solicitud->code,
+            ]);
+
+            return;
+        }
+
+        $solicitud->forceFill([
+            'attachment_path' => $ruta,
+            'attachment_name' => mb_substr($archivo->getClientOriginalName(), 0, 150),
+            'attachment_mime' => $archivo->getMimeType(),
+        ])->save();
     }
 
     /**
