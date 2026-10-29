@@ -1,6 +1,11 @@
 <?php
 
 use App\Models\Product\CatalogUpload;
+use Illuminate\Support\Facades\DB;
+use App\Models\User;
+use App\Models\Rol;
+use App\Models\Domiciliary;
+use App\Models\Conjunto\ComplexStaff;
 use Illuminate\Http\UploadedFile;
 use Laravel\Sanctum\Sanctum;
 
@@ -373,4 +378,81 @@ function pedidoCancelable(int $metodo = 1, bool $cobrado = false): array
     Sanctum::actingAs($comprador);
 
     return compact('comprador', 'tendero', 'negocio', 'id');
+}
+
+
+/*
+ * EL CONJUNTO CON SU PERSONAL, Y UN REPARTIDOR CON PEDIDO DENTRO.
+ *
+ * Viven aca y no en `PorteriaTest.php`, que es donde estaban, porque
+ * `VisitantesTest.php` tambien las usa. Una ayuda declarada dentro de un
+ * archivo de pruebas solo existe si ESE archivo se carga: en serie Pest los
+ * carga todos y parecia funcionar, pero con `--parallel` cada proceso carga
+ * los suyos, y las doce pruebas de visitantes morian con «Call to undefined
+ * function». Lo mismo al correr ese archivo suelto para arreglar algo.
+ */
+
+function conjuntoConPersonal(string $rol = ComplexStaff::CELADOR): array
+{
+    foreach ([5 => 'dueno_conjunto', 6 => 'celador'] as $id => $nombre) {
+        Rol::firstOrCreate(['rol_id' => $id], ['name' => $nombre, 'guard_name' => 'web']);
+    }
+
+    $complexId = DB::table('residential_complexes')->insertGetId([
+        'name' => 'Los Almendros', 'state' => 1, 'people_count' => 0,
+        'towers_count' => 4, 'apartments_per_tower' => 20,
+    ], 'complex_id');
+
+    $user = User::factory()->create([
+        'rol' => $rol === ComplexStaff::DUENO ? 5 : 6,
+    ]);
+
+    ComplexStaff::create([
+        'user_id' => $user->user_id,
+        'complex_id' => $complexId,
+        'role' => $rol,
+        'state' => true,
+    ]);
+
+    return compact('complexId', 'user');
+}
+
+function repartidorConPedidoEn(?int $complexId, string $cedula = '1090123456'): Domiciliary
+{
+    Rol::firstOrCreate(['rol_id' => 3], ['name' => 'domiciliario', 'guard_name' => 'web']);
+    Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
+
+    $u = User::factory()->create(['rol' => 3]);
+    $domiId = DB::table('domiciliary')->insertGetId([
+        'user_id' => $u->user_id, 'available' => 1, 'qualification' => 0,
+        'state' => 1, 'document' => $cedula,
+    ], 'domiciliary_id');
+
+    if ($complexId) {
+        $comprador = User::factory()->create(['rol' => 1]);
+        $buyerId = DB::table('buyer')->insertGetId([
+            'user_id' => $comprador->user_id, 'qualification' => 0,
+            'belongs_to_complex' => 1, 'state' => 1,
+        ]);
+
+        $addressId = DB::table('user_address')->insertGetId([
+            'user_id' => $comprador->user_id, 'address' => 'Calle 84',
+            'complex_id' => $complexId, 'tower' => '3', 'apartment' => '502',
+            'state' => 1,
+        ]);
+
+        $negocio = DB::table('business')->insertGetId([
+            'name' => 'Tienda', 'qualification' => 0, 'state' => 1,
+        ]);
+
+        DB::table('orderssales')->insert([
+            'buyer_id' => $buyerId, 'busines_id' => $negocio,
+            'domiciliary_id' => $domiId, 'address_id' => $addressId,
+            'subtotal' => 18000, 'domicilio' => 2000, 'total' => 20000,
+            'sale_date' => now(), 'dispatched_at' => now(),
+            'state' => 3, 'payment_state' => 'paid',
+        ]);
+    }
+
+    return Domiciliary::find($domiId);
 }
