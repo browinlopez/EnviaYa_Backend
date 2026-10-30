@@ -81,6 +81,7 @@ use App\Http\Controllers\Order\CotizacionController;
 use App\Http\Controllers\LandingRequestController;
 use App\Http\Controllers\Marketing\AdsController;
 use App\Http\Controllers\Order\OrderController;
+use App\Http\Controllers\Order\ComprobanteDelPedidoController;
 use App\Http\Controllers\Order\ConsultaDePedidosController;
 use App\Http\Controllers\Order\GeolocalizacionDePedidoController;
 use App\Http\Controllers\Order\MediosDePagoController;
@@ -197,6 +198,23 @@ Route::middleware('throttle:300,1')->group(function () {
 
 Route::post('ads/banners/{id}/track', [AdsController::class, 'track'])
     ->middleware('throttle:600,1');
+
+/*
+ * --- El PDF de un comprobante, por enlace firmado ---
+ *
+ * Sin token a proposito, y no por descuido: lo abre el navegador del telefono
+ * o una pestana nueva del panel, y ninguno de los dos manda la cabecera de la
+ * sesion. La llave es la firma, que caduca a la media hora y ampara un solo
+ * comprobante; el JSON que la entrega SI exige sesion y comprueba que el
+ * pedido sea de quien pregunta.
+ *
+ * `signed:relative` y no `signed`: detras del proxy del despliegue la peticion
+ * puede llegarle a Laravel como http aunque el mundo la haya pedido por https,
+ * y una firma que mira el dominio se daria por falsa justo ahi.
+ */
+Route::get('comprobantes/{id}/pdf', [ComprobanteDelPedidoController::class, 'pdf'])
+    ->middleware(['signed:relative', 'throttle:30,1'])
+    ->name('comprobantes.pdf');
 
 // --- Webhooks de terceros: sin token de usuario, protegidos por firma HMAC ---
 Route::post('webhooks/bold', [BoldWebhookController::class, 'handle'])
@@ -442,6 +460,16 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::post('geolocation', [GeolocalizacionDePedidoController::class, 'storeGeolocation']);
         Route::get('geolocation/latest', [ConsultaDePedidosController::class, 'latest']);
         Route::get('/pending-review', [ConsultaDePedidosController::class, 'ordersPendingReview']);
+
+        /*
+         * EL COMPROBANTE DE MI PEDIDO.
+         *
+         * El comprador no tenia ningun papel de su compra: el comprobante se
+         * emitia al entregar y se quedaba donde solo entra la administracion.
+         * El pedido se resuelve contra el comprador de la SESION, nunca contra
+         * un identificador del cuerpo.
+         */
+        Route::get('{id}/comprobante', [ComprobanteDelPedidoController::class, 'mio']);
     });
 
     Route::get('paymentMethods', [MediosDePagoController::class, 'paymentMethods']); // Listar metodos de pago
@@ -589,6 +617,7 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
          * que al tendero que se queda sin producto no le quedaba puerta.
          */
         Route::put('pedidos/{id}/cancelar', [CancelacionDelPedidoController::class, 'cancelar']);
+        Route::get('pedidos/{id}/comprobante', [ComprobanteDelPedidoController::class, 'deMiTienda']);
         Route::get('ingresos', [ConsultaDePedidosController::class, 'incomeBusiness']);
 
         /*
