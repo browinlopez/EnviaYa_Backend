@@ -138,7 +138,7 @@ class TorreDeControlController extends Controller
         return OrdersSales::where('busines_id', $businessId)
             ->whereIn('domiciliary_id', $ids)
             ->where('state', self::EN_CAMINO)
-            ->with(['buyer.user', 'address'])
+            ->with(['buyer.user', 'address', 'details.product:products_id,name,image'])
             ->get()
             ->map(fn (OrdersSales $o) => [
                 'domiciliary_id' => (int) $o->domiciliary_id,
@@ -153,6 +153,15 @@ class TorreDeControlController extends Controller
                     ]))) ?: null),
                 'recoge_en_tienda' => (bool) $o->pickup,
                 'total'          => (float) $o->total,
+                /*
+                 * Qué lleva: el tendero llama al domiciliario o al cliente
+                 * con el pedido en la mano, no con un número de orden.
+                 */
+                'productos'      => $o->details->map(fn ($d) => [
+                    'nombre'   => $d->product?->name ?? 'Producto',
+                    'cantidad' => (float) ($d->qty_final ?? $d->amount),
+                    'unidad'   => $d->sale_unit,
+                ])->values(),
                 /*
                  * Si va contra entrega. Es lo que convierte un pedido en plata
                  * encima, y por eso el tendero necesita distinguirlo de un

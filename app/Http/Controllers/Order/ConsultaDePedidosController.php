@@ -7,6 +7,7 @@ use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Services\Ajustes;
 use App\Services\PoliticaDeDomicilio;
 use App\Services\CustodiaDeEfectivo;
+use App\Services\CreditoDeTienda;
 use App\Services\ConfirmacionDePago;
 use App\Services\Avisos;
 use App\Events\DomiciliaryLocationUpdated;
@@ -226,8 +227,41 @@ class ConsultaDePedidosController extends Controller
          * la tienda —y con aviso en vivo—, así que el tendero podía ponerse a
          * preparar comida que nadie pagó. Y cada reintento dejaba otro.
          */
+        /*
+         * EL TABLERO ES LO DE AHORA, NO EL ARCHIVO.
+         *
+         * Esta consulta traía TODOS los pedidos confirmados del negocio desde
+         * que abrió. Mientras la tienda tenía diez no se notaba; con una que
+         * vende, la respuesta crece sin tope y el tablero acaba pintando
+         * entregas de hace meses bajo un rótulo que dice «hoy».
+         *
+         * Los abiertos —sin aceptar, preparando, en camino— van completos: un
+         * pedido sin aceptar de hace seis meses SIGUE sin aceptar y esconderlo
+         * por viejo sería esconder el problema. Los cerrados —entregado y
+         * cancelado— se acotan al día, que es lo que el tendero mira ahí: si
+         * le pagaron y si hace falta el comprobante. El resto vive en el
+         * historial, que tiene su propia pantalla y su filtro de fechas.
+         */
         $orders = OrdersSales::where('busines_id', $business->busines_id)
             ->confirmados()
+            ->where(function ($q) {
+                $q->whereIn('state', [1, 2, 3])
+                  /*
+                   * Los cerrados, por el día en que SE CERRARON y no por el
+                   * día en que se pidieron: uno pedido a las 23:50 y
+                   * entregado a las 00:20 es de hoy y no aparecía. El
+                   * entregado tiene su fecha; el cancelado, la de su último
+                   * cambio.
+                   */
+                  ->orWhere(function ($q2) {
+                      $q2->where('state', 4)
+                         ->whereDate(DB::raw('COALESCE(delivery_date, sale_date)'), now()->toDateString());
+                  })
+                  ->orWhere(function ($q2) {
+                      $q2->where('state', 5)
+                         ->whereDate(DB::raw('COALESCE(updated_at, sale_date)'), now()->toDateString());
+                  });
+            })
             ->with([
                 'business',
                 'details.product',
@@ -291,11 +325,23 @@ class ConsultaDePedidosController extends Controller
             1 => 'Domingo',
         ];
 
+        /*
+         * El día de la semana, sin atarse a MySQL.
+         *
+         * `DAYOFWEEK()` no existe en SQLite, que es sobre lo que corre la
+         * suite: esta pantalla no se podía probar y por eso llevaba sin
+         * prueba desde que se escribió. Las dos expresiones numeran igual
+         * —1 es domingo y 7 sábado—, así que `$daysOfWeek` no cambia.
+         */
+        $diaDeLaSemana = DB::connection()->getDriverName() === 'sqlite'
+            ? "CAST(strftime('%w', sale_date) AS INTEGER) + 1"
+            : 'DAYOFWEEK(sale_date)';
+
         // Ingresos por día de la semana para un rango dado
-        $incomeByDay = function ($start, $end) use ($incomeOrders, $daysOfWeek) {
+        $incomeByDay = function ($start, $end) use ($incomeOrders, $daysOfWeek, $diaDeLaSemana) {
             $rows = $incomeOrders()
                 ->select(
-                    DB::raw('DAYOFWEEK(sale_date) as weekday'),
+                    DB::raw("$diaDeLaSemana as weekday"),
                     DB::raw('SUM(total) as total_income')
                 )
                 ->whereBetween('sale_date', [$start, $end])
@@ -327,6 +373,39 @@ class ConsultaDePedidosController extends Controller
             ? ($difference / $previousWeekTotal) * 100
             : 100;
 
+        /*
+         * CÓMO LE PAGARON ESTA SEMANA.
+         *
+         * No es una curiosidad: al tendero le cambia la semana que el 60 %
+         * entre en efectivo —plata que ya tiene en el cajón— o por la app
+         * —plata que le liquidan después—. Y el fiado es el que decide si
+         * puede seguir fiando. El panel enseñaba el total y no de dónde
+         * salía.
+         *
+         * Se agrupa en TRES y no en los siete métodos que existen, porque
+         * son tres bolsillos distintos y los siete no: el 1 es efectivo —ya
+         * está en el cajón—, el 7 es el crédito de la tienda —todavía se lo
+         * deben— y del 2 al 6 son tarjetas, QR y transferencias, que para
+         * el tendero son lo mismo: plata que le liquida la plataforma.
+         */
+        $bolsillo = fn (int $metodo) => match (true) {
+            $metodo === 1 => 'Efectivo',
+            $metodo === CreditoDeTienda::METODO => 'Fiado',
+            default => 'Pagado en la app',
+        };
+
+        $porMedio = $incomeOrders()
+            ->select('methods_id', DB::raw('SUM(total) as total'))
+            ->whereBetween('sale_date', [$currentWeekStart, $currentWeekEnd])
+            ->groupBy('methods_id')
+            ->get()
+            ->groupBy(fn ($f) => $bolsillo((int) $f->methods_id))
+            ->map(fn ($g) => (float) $g->sum('total'))
+            ->sortDesc()
+            ->map(fn ($total, $medio) => ['medio' => $medio, 'total' => $total])
+            ->values()
+            ->all();
+
         $month_start = now()->startOfMonth();
         $month_end   = (clone $month_start)->endOfMonth();
 
@@ -336,11 +415,45 @@ class ConsultaDePedidosController extends Controller
 
         $totalIncome = $incomeOrders()->sum('total');
 
+        /* Lo que la pantalla del panel necesita además de los totales: cuántas
+           ventas fueron, el ticket promedio, lo de hoy y la tendencia. */
+        $ventasSemana = $incomeOrders()->whereBetween('sale_date', [$currentWeekStart, $currentWeekEnd]);
+        $cuantasSemana = (clone $ventasSemana)->count();
+        $hoy = $incomeOrders()->whereBetween('sale_date', [now()->startOfDay(), now()->endOfDay()]);
+
+        $ultimasSemanas = collect(range(7, 0))->map(function ($atras) use ($incomeOrders, $currentWeekStart) {
+            $inicio = (clone $currentWeekStart)->subWeeks($atras);
+            $fin = (clone $inicio)->endOfWeek();
+
+            return [
+                'inicio' => $inicio->toDateString(),
+                'total'  => (float) $incomeOrders()->whereBetween('sale_date', [$inicio, $fin])->sum('total'),
+            ];
+        })->values()->all();
+
         return response()->json([
             'business_id' => $business_id,
 
             'week_start' => $currentWeekStart->toDateString(),
             'week_end'   => $currentWeekEnd->toDateString(),
+            // Las de la semana pasada: el panel enseñaba las de ESTA bajo el
+            // rótulo «Semana pasada» porque no tenía otras.
+            'previous_week_start' => $previousWeekStart->toDateString(),
+            'previous_week_end'   => $previousWeekEnd->toDateString(),
+
+            /* LA SEMANA PASADA A ESTA MISMA ALTURA: de su lunes hasta el mismo
+               día y hora de hoy. Comparar el miércoles contra una semana
+               entera siempre da «vas peor»; contra esto, la comparación es
+               justa. */
+            'previous_week_to_date' => (float) $incomeOrders()
+                ->whereBetween('sale_date', [$previousWeekStart, now()->subWeek()])
+                ->sum('total'),
+
+            'ventas_semana'   => $cuantasSemana,
+            'ticket_promedio' => $cuantasSemana ? round((float) $currentWeekTotal / $cuantasSemana, 2) : 0.0,
+            'hoy'             => (float) (clone $hoy)->sum('total'),
+            'ventas_hoy'      => (clone $hoy)->count(),
+            'ultimas_semanas' => $ultimasSemanas,
 
             'weekly_income' => $weeklyIncome,
             // Semana anterior desglosada por día (antes solo venía el total
@@ -357,6 +470,9 @@ class ConsultaDePedidosController extends Controller
             'monthly_income' => (float)$monthlyIncome,
 
             'total_income' => (float)$totalIncome,
+
+            // Cómo le pagaron esta semana, de mayor a menor.
+            'por_medio' => $porMedio,
         ]);
     }
 

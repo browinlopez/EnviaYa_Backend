@@ -227,7 +227,15 @@ class MediaService
 
         $esPrincipal = $tipo === 'logo';
 
-        DB::transaction(function () use ($entidad, $codigo, $tipo, $key, $archivo, $esPrincipal, $usuarioId) {
+        /*
+         * El id sale de `insertGetId` DENTRO de la transacción y la transacción
+         * lo devuelve. Antes se leía después con `DB::getPdo()->lastInsertId()`
+         * y en MySQL, pasado el commit, eso daba 0: quien guardaba ese id como
+         * referencia —un documento del domiciliario— reventaba con la llave
+         * foránea hacia `media_files`. En SQLite, que es donde corren las
+         * pruebas, sí daba el id, y por eso no lo vio ninguna.
+         */
+        $mediaId = DB::transaction(function () use ($entidad, $codigo, $tipo, $key, $archivo, $esPrincipal, $usuarioId) {
             // Solo puede haber una imagen principal por entidad.
             if ($esPrincipal) {
                 DB::table('media_files')
@@ -236,7 +244,7 @@ class MediaService
                     ->update(['is_primary' => false]);
             }
 
-            DB::table('media_files')->insert([
+            return DB::table('media_files')->insertGetId([
                 'entity_type'   => $entidad,
                 'entity_id'     => $codigo,
                 'tipo'          => $tipo,
@@ -262,7 +270,7 @@ class MediaService
         }
 
         return $this->presentar((object) [
-            'id' => DB::getPdo()->lastInsertId(),
+            'id' => $mediaId,
             'object_key' => $key,
             'original_name' => $archivo->getClientOriginalName(),
             'mime_type' => $archivo->getMimeType(),
@@ -483,6 +491,33 @@ class MediaService
             'tipo'       => $f->tipo,
             'is_primary' => (bool) $f->is_primary,
         ];
+    }
+
+    /**
+     * Entrega un archivo A TRAVÉS DEL SERVIDOR, para verlo en el panel.
+     *
+     * Para documentos privados (comprobantes, papeles del domiciliario): así
+     * no hace falta darle a nadie el enlace del bucket, y el panel puede
+     * enseñar un PDF dentro de la página —su política de seguridad no deja
+     * incrustar archivos de otro dominio, pero sí lo que él mismo descarga—.
+     * Quien llama ya comprobó que el archivo es de quien lo pide.
+     */
+    public function entregar(int $mediaId)
+    {
+        $f = DB::table('media_files')->where('id', $mediaId)->first();
+
+        if (!$f || !Storage::disk(self::DISCO)->exists($f->object_key)) {
+            abort(404, 'El archivo ya no está disponible.');
+        }
+
+        $nombre = $f->original_name ?: basename($f->object_key);
+
+        return Storage::disk(self::DISCO)->response($f->object_key, $nombre, [
+            'Content-Type'           => $f->mime_type ?: 'application/octet-stream',
+            'Content-Disposition'    => 'inline; filename="' . addcslashes($nombre, '"\\') . '"',
+            'Cache-Control'          => 'private, max-age=300',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 
     public function url(string $key): string

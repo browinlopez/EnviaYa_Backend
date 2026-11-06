@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Conjunto;
 
 use App\Http\Controllers\Controller;
+use App\Services\PulsoDelConjunto;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -149,10 +150,16 @@ class VisitantesController extends Controller
             ->orderByDesc('e.created_at')
             ->get([
                 'e.id', 'e.kind', 'e.method', 'e.created_at', 'e.orders_count',
-                'e.tower', 'e.apartment', 'e.visitor_company', 'e.vehicle_plate',
+                'e.tower', 'e.apartment', 'e.visitor_company', 'e.vehicle_plate', 'e.orders',
                 DB::raw('COALESCE(u.name, e.visitor_name) as nombre'),
                 DB::raw('COALESCE(d.document, e.visitor_document) as documento'),
-            ]);
+            ])
+            ->map(function ($e) {
+                $e->destino = PulsoDelConjunto::destinoDe($e);
+                unset($e->orders);
+
+                return $e;
+            });
 
         return response()->json(['data' => $filas]);
     }

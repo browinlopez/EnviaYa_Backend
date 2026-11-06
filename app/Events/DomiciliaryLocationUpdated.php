@@ -5,7 +5,7 @@ namespace App\Events;
 use App\Models\Order\OrderGeolocation;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
@@ -25,7 +25,12 @@ use Illuminate\Support\Facades\DB;
  * admite al comprador dueño de la orden, así que hacerlo privado no exigió
  * nada más.
  */
-class DomiciliaryLocationUpdated implements ShouldBroadcast
+/*
+ * AL INSTANTE (`ShouldBroadcastNow`), como OrderCreated y OrderStatusUpdated.
+ * Encolada, la posición esperaba a un worker: sin él no llegaba nunca, y con
+ * él llegaba tarde, que para un pin en el mapa es lo mismo que no llegar.
+ */
+class DomiciliaryLocationUpdated implements ShouldBroadcastNow
 {
     use InteractsWithSockets, SerializesModels;
 
@@ -34,9 +39,19 @@ class DomiciliaryLocationUpdated implements ShouldBroadcast
     /** La tienda de ese pedido, para la torre de control de su flota. */
     public ?int $businessId;
 
-    public function __construct(OrderGeolocation $geolocation)
+    /**
+     * `$negocio` sirve para una posición SIN pedido (un domiciliario libre que
+     * reporta su turno): no hay pedido del que sacar la tienda.
+     */
+    public function __construct(OrderGeolocation $geolocation, ?int $negocio = null)
     {
         $this->geolocation = $geolocation;
+
+        if ($negocio !== null || $geolocation->orderSales_id === null) {
+            $this->businessId = $negocio;
+
+            return;
+        }
 
         /*
          * Se resuelve acá y no en quien emite: así el segundo canal viaja
@@ -67,7 +82,11 @@ class DomiciliaryLocationUpdated implements ShouldBroadcast
      */
     public function broadcastOn()
     {
-        $canales = [new PrivateChannel('order.'.$this->geolocation->orderSales_id)];
+        $canales = [];
+
+        if ($this->geolocation->orderSales_id !== null) {
+            $canales[] = new PrivateChannel('order.'.$this->geolocation->orderSales_id);
+        }
 
         if ($this->businessId !== null) {
             $canales[] = new PrivateChannel('negocio.'.$this->businessId.'.torre');

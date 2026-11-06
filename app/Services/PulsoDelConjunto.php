@@ -60,13 +60,19 @@ class PulsoDelConjunto
         $hoy   = CarbonImmutable::today();
         $desde = $hoy->subDays($dias - 1);
 
+        /*
+         * Todo lo de abajo mira la MISMA ventana que eligió quien mira: si dice
+         * «Hoy», la hora pico, las torres y la identificación son de hoy. Antes
+         * cada gráfica tenía su propia ventana fija y el tablero mezclaba
+         * «hoy» con «los últimos 30 días» sin decirlo.
+         */
         return [
             'hoy'          => $this->deHoy($complexId, $hoy),
             'comparativa'  => $this->comparativa($complexId, $hoy),
             'series'       => $this->series($complexId, $desde, $hoy),
-            'por_hora'     => $this->porHora($complexId, $hoy->subDays(29)),
-            'torres'       => $this->torres($complexId),
-            'identificacion' => $this->identificacion($complexId, $hoy->subDays(29)),
+            'por_hora'     => $this->porHora($complexId, $desde),
+            'torres'       => $this->torres($complexId, $desde),
+            'identificacion' => $this->identificacion($complexId, $desde),
             'comunidad'    => $this->comunidad($complexId),
             'ultimas'      => $this->ultimasEntradas($complexId, 6),
         ];
@@ -97,6 +103,19 @@ class PulsoDelConjunto
             // Entraron hoy y no han salido. Es la cifra que convierte el libro
             // en control de acceso.
             'adentro' => (int) (clone $entradasHoy)->whereNull('e.exited_at')->count(),
+            // El mismo número partido: «2 domiciliarios · 3 visitas» dice a
+            // quién hay que ir a buscar; «5» solo, no.
+            'adentro_domiciliarios' => (int) (clone $entradasHoy)->whereNull('e.exited_at')
+                ->where('e.kind', 'domiciliario')->count(),
+            /*
+             * Contra el mismo día de la semana pasada y hasta la misma hora.
+             * Un viernes contra un jueves no dice nada, y un día a medias
+             * contra uno entero siempre parece una caída.
+             */
+            'semana_pasada' => (int) (clone $this->entradas($complexId))
+                ->whereBetween('e.created_at', [$hoy->subWeek()->startOfDay(), now()->subWeek()])
+                ->count(),
+            'dia_semana_pasada' => $hoy->subWeek()->locale('es')->isoFormat('dddd'),
             'en_camino' => (int) (clone $this->pedidos($complexId))
                 ->where('o.state', 3)->count(),
         ];
@@ -183,16 +202,26 @@ class PulsoDelConjunto
         ])->all();
     }
 
-    /** A qué torres llegan los pedidos. */
-    private function torres(int $complexId): Collection
+    /**
+     * A qué torre iba la gente que entró.
+     *
+     * Sale del libro de la portería y no de los pedidos: una visita o el
+     * técnico del gas también suben a una torre, y es la portería —no la
+     * tienda— la que sabe a dónde fue cada uno. Ordenadas por número para que
+     * la torre 3 esté siempre en el mismo sitio y se compare a ojo.
+     */
+    private function torres(int $complexId, CarbonImmutable $desde): Collection
     {
-        return $this->pedidos($complexId)
-            ->whereNotNull('ua.tower')
-            ->selectRaw('ua.tower as torre, COUNT(*) as pedidos')
-            ->groupBy('ua.tower')
-            ->orderByDesc('pedidos')
-            ->limit(8)
-            ->get();
+        return $this->entradas($complexId)
+            ->where('e.created_at', '>=', $desde->startOfDay())
+            ->whereNotNull('e.tower')
+            ->where('e.tower', '!=', '')
+            ->selectRaw('e.tower as torre, COUNT(*) as entradas')
+            ->groupBy('e.tower')
+            ->get()
+            ->sortBy(fn ($f) => [is_numeric($f->torre) ? (int) $f->torre : PHP_INT_MAX, $f->torre])
+            ->values()
+            ->map(fn ($f) => ['torre' => (string) $f->torre, 'entradas' => (int) $f->entradas]);
     }
 
     /**
@@ -222,11 +251,24 @@ class PulsoDelConjunto
         $cedula = (int) ($filas['cedula'] ?? 0);
         $total  = $codigo + $cedula;
 
+        /*
+         * Lo anotado a mano —visitas, servicio, domicilios de otras apps— va
+         * aparte y NO entra en `total` ni en `parte_codigo`, por lo dicho
+         * arriba. Se da para la barra de «cómo entró la gente» completa, que
+         * es otra pregunta: cuánto de la portería verifica el sistema.
+         */
+        $anotadas = (int) $this->entradas($complexId)
+            ->where('e.created_at', '>=', $desde->startOfDay())
+            ->where(fn ($q) => $q->where('e.kind', '!=', 'domiciliario')->orWhere('e.method', 'manual'))
+            ->count();
+
         return [
             'codigo' => $codigo,
             'cedula' => $cedula,
             'total'  => $total,
             'parte_codigo' => $total ? round($codigo / $total, 4) : null,
+            'manual' => $anotadas,
+            'todas'  => $total + $anotadas,
         ];
     }
 
@@ -262,9 +304,42 @@ class PulsoDelConjunto
             ->orderByDesc('e.created_at')
             ->limit($cuantas)
             ->get([
-                'e.id', 'e.method', 'e.orders_count', 'e.created_at',
+                'e.id', 'e.kind', 'e.method', 'e.orders_count', 'e.orders', 'e.created_at', 'e.exited_at',
+                'e.tower', 'e.apartment', 'e.visitor_name', 'e.visitor_company',
                 'u.name as domiciliary_name', 'd.document',
-            ]);
+            ])
+            ->map(function ($e) {
+                $e->destino = self::destinoDe($e);
+                unset($e->orders);
+
+                return $e;
+            });
+    }
+
+    /**
+     * A dónde iba una entrada, como se dice por citófono: «T3-502 · T7-101».
+     *
+     * El de un domiciliario son las puertas de SUS pedidos —puede traer dos—;
+     * el de los demás, la torre y el apartamento que anotó el celador. El
+     * detalle de los pedidos no sale de acá: quien mira el libro sólo
+     * necesita a dónde iba.
+     */
+    public static function destinoDe(object $e): ?string
+    {
+        $orders  = $e->orders ?? null;
+        $pedidos = is_string($orders) ? json_decode($orders, true) : (array) $orders;
+
+        $puertas = collect($pedidos ?: [])
+            ->map(fn ($p) => ($p['tower'] ?? null)
+                ? 'T' . $p['tower'] . (($p['apartment'] ?? null) ? '-' . $p['apartment'] : '')
+                : null)
+            ->filter()->unique()->values();
+
+        if ($puertas->isEmpty() && ($e->tower ?? null)) {
+            $puertas = collect(['T' . $e->tower . (($e->apartment ?? null) ? '-' . $e->apartment : '')]);
+        }
+
+        return $puertas->implode(' · ') ?: null;
     }
 
     /**
@@ -348,6 +423,92 @@ class PulsoDelConjunto
                 'codigo' => (int) (clone $entradas())->where('e.method', 'codigo')->count(),
                 'cedula' => (int) (clone $entradas())->where('e.method', 'cedula')->count(),
             ],
+            'libro' => $this->libro($complexId, $desde, $hasta),
+        ];
+    }
+
+    /**
+     * El periodo visto desde el libro de la portería.
+     *
+     * Lo de arriba (`totales`, `por_torre`…) sale de los pedidos y lo sigue
+     * usando el Excel tal cual. Esto sale de las ENTRADAS: es lo que la
+     * portería vio pasar —incluidas visitas y otras apps— y es lo que pinta la
+     * pantalla. Va todo junto para que la pantalla no arme cifras sumando en
+     * el navegador.
+     */
+    private function libro(int $complexId, CarbonImmutable $desde, CarbonImmutable $hasta): array
+    {
+        $dias = max(1, $desde->diffInDays($hasta) + 1);
+
+        $filas = $this->entradas($complexId)
+            ->whereBetween('e.created_at', [$desde->startOfDay(), $hasta->endOfDay()])
+            ->leftJoin('domiciliary as d', 'd.domiciliary_id', '=', 'e.domiciliary_id')
+            ->leftJoin('user as u', 'u.user_id', '=', 'd.user_id')
+            ->get(['e.kind', 'e.method', 'e.orders', 'e.orders_count', 'e.created_at', 'e.exited_at',
+                'e.domiciliary_id', 'u.name']);
+
+        // Igual de largo, justo antes: «+12 % frente al periodo anterior».
+        $anterior = (int) $this->entradas($complexId)
+            ->whereBetween('e.created_at', [
+                $desde->subDays($dias)->startOfDay(),
+                $desde->subDay()->endOfDay(),
+            ])->count();
+
+        $porDia = $filas->groupBy(fn ($e) => substr((string) $e->created_at, 0, 10));
+        $serie = [];
+        for ($d = $desde; $d->lessThanOrEqualTo($hasta); $d = $d->addDay()) {
+            $serie[] = [
+                'dia'      => $d->toDateString(),
+                'etiqueta' => $d->locale('es')->isoFormat('D MMM'),
+                'entradas' => isset($porDia[$d->toDateString()]) ? $porDia[$d->toDateString()]->count() : 0,
+            ];
+        }
+
+        $domis = $filas->where('kind', 'domiciliario');
+
+        $torres = [];
+        foreach ($domis as $e) {
+            $pedidos = is_string($e->orders) ? json_decode($e->orders, true) : [];
+            foreach ($pedidos ?: [] as $p) {
+                if (!empty($p['tower'])) {
+                    $torres[(string) $p['tower']] = ($torres[(string) $p['tower']] ?? 0) + 1;
+                }
+            }
+        }
+        arsort($torres);
+
+        $minutos = fn ($e) => $e->exited_at
+            ? max(0, (int) round((strtotime((string) $e->exited_at) - strtotime((string) $e->created_at)) / 60))
+            : null;
+
+        $quienes = $domis->groupBy('domiciliary_id')
+            ->map(function ($g) use ($minutos) {
+                $tiempos = $g->map($minutos)->filter(fn ($m) => $m !== null);
+
+                return [
+                    'nombre'   => $g->first()->name ?? 'Sin nombre',
+                    'entradas' => $g->count(),
+                    'por_qr'   => round($g->where('method', 'codigo')->count() / max(1, $g->count()), 4),
+                    'minutos'  => $tiempos->isEmpty() ? null : (int) round($tiempos->avg()),
+                ];
+            })
+            ->sortByDesc('entradas')
+            ->take(8)
+            ->values();
+
+        return [
+            'entradas'          => $filas->count(),
+            'entradas_anterior' => $anterior,
+            'pedidos_recibidos' => (int) $domis->sum('orders_count'),
+            'visitantes'        => $filas->where('kind', '!=', 'domiciliario')->count(),
+            'identificacion'    => [
+                'codigo' => $domis->where('method', 'codigo')->count(),
+                'cedula' => $domis->where('method', 'cedula')->count(),
+                'manual' => $filas->count() - $domis->where('method', 'codigo')->count() - $domis->where('method', 'cedula')->count(),
+            ],
+            'por_dia'       => $serie,
+            'por_torre'     => collect($torres)->map(fn ($n, $t) => ['torre' => (string) $t, 'pedidos' => $n])->values(),
+            'domiciliarios' => $quienes,
         ];
     }
 }

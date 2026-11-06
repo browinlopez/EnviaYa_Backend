@@ -156,6 +156,47 @@ class PromocionesController extends Controller
     }
 
     /**
+     * LAS FECHAS TIENEN QUE TENER SENTIDO JUNTAS.
+     *
+     * Cada una por separado podía ser válida y el par no: «empieza el 30 de
+     * noviembre» con «solo hoy» guardaba una promoción que vencía antes de
+     * empezar, y que ningún cliente podía usar nunca. Se revisa con las fechas
+     * YA RESUELTAS —un plazo como «fin de semana» se vuelve fecha acá—, que es
+     * lo único que se puede comparar.
+     */
+    private function fechasIncoherentes(Request $request): ?\Illuminate\Http\JsonResponse
+    {
+        $ventana = $this->ventana($request);
+        if ($ventana === []) {
+            return null;
+        }
+
+        [$desde, $hasta] = $ventana;
+        if ($hasta === null) {
+            return null;
+        }
+
+        if ($hasta->lt(now())) {
+            return response()->json([
+                'message' => 'Esa fecha de fin ya pasó: la promoción nacería vencida.',
+                'errors'  => ['hasta' => ['Esa fecha de fin ya pasó: la promoción nacería vencida.']],
+            ], 422);
+        }
+
+        if ($desde !== null && $hasta->lt($desde)) {
+            $texto = 'La promoción termina antes de empezar. Elige una fecha de fin igual o posterior al '
+                . $desde->locale('es')->translatedFormat('j \d\e F') . '.';
+
+            return response()->json([
+                'message' => $texto,
+                'errors'  => ['desde' => [$texto]],
+            ], 422);
+        }
+
+        return null;
+    }
+
+    /**
      * Desde cuándo y hasta cuándo, a partir de lo que mandó la pantalla.
      *
      * Devolver `[]` cuando no viene ninguna de las dos no es un descuido: para
@@ -244,6 +285,10 @@ class PromocionesController extends Controller
         $negocio = $request->attributes->get('negocio');
 
         $request->validate($this->reglas(), $this->mensajes());
+
+        if ($malas = $this->fechasIncoherentes($request)) {
+            return $malas;
+        }
 
         if ($this->promociones->leQuedanHoy($businessId) < 1) {
             return response()->json([
@@ -336,6 +381,10 @@ class PromocionesController extends Controller
         }
 
         $request->validate($this->reglas(), $this->mensajes());
+
+        if ($malas = $this->fechasIncoherentes($request)) {
+            return $malas;
+        }
 
         $productos = array_map('intval', $request->input('productos', []));
 

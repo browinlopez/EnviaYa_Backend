@@ -118,9 +118,49 @@ class UserController extends Controller
             'email'   => 'nullable|email|unique:user,email,' . $user->user_id . ',user_id',
             'phone'   => 'nullable|string|max:20',
             'address' => 'nullable|string|max:225',
+            'current_password' => 'nullable|string',
+        ], [
+            'email.unique' => 'Ese correo ya lo usa otra cuenta.',
         ]);
 
-        $user->update($request->only(['name', 'email', 'phone', 'address']));
+        /*
+         * CAMBIAR EL CORREO PIDE LA CONTRASEÑA.
+         *
+         * El correo es por donde se recupera la cuenta: quien encontrara una
+         * sesión abierta un minuto podía poner el suyo, pedir «olvidé mi
+         * contraseña» y quedarse con la cuenta. Nombre, teléfono y dirección
+         * se siguen cambiando sin ella, y mandar el MISMO correo de siempre
+         * —lo que hacen las versiones publicadas de la app al guardar el
+         * perfil— tampoco la pide.
+         */
+        $correoNuevo = $request->filled('email')
+            && mb_strtolower(trim($request->input('email'))) !== mb_strtolower((string) $user->email);
+
+        if ($correoNuevo) {
+            $clave = (string) $request->input('current_password', '');
+
+            if ($clave === '' || !Hash::check($clave, $user->password)) {
+                $texto = $clave === ''
+                    ? 'Para cambiar el correo escribe tu contraseña.'
+                    : 'La contraseña no es correcta.';
+
+                return response()->json([
+                    'message' => $texto,
+                    'errors'  => ['current_password' => [$texto]],
+                ], 422);
+            }
+        }
+
+        /*
+         * El correo vacío NO borra el correo. Con `only()` a secas, mandar
+         * `email: ""` lo dejaba en null sin pedir la contraseña —el correo es
+         * por donde se recupera la cuenta—. Sólo se cambia cuando viene uno.
+         */
+        $cambios = $request->only(['name', 'phone', 'address']);
+        if ($request->filled('email')) {
+            $cambios['email'] = $request->input('email');
+        }
+        $user->update($cambios);
 
         return response()->json($user);
     }

@@ -72,6 +72,19 @@ class ConsultaDeNegociosController extends Controller
             'products' => fn ($q) => $q->where('products.state', 1),
         ])
             ->where('state', 1)
+            /*
+             * Y tampoco la que está en pausa.
+             *
+             * `accepting_orders` es el interruptor del mostrador, que el
+             * tendero apaga cuando se queda solo o se le acaba el gas. Una
+             * tienda en pausa que sigue en la lista acaba en un pedido que el
+             * servidor rechaza al pagar, que es el peor sitio donde enterarse.
+             *
+             * Se esconde en los LISTADOS y no en la ficha: quien entre por un
+             * favorito merece ver que la tienda existe y que volverá, no un
+             * «no encontrado». La ficha lleva el dato y lo dice.
+             */
+            ->recibiendo()
             ->when(count($affiliatedIds) > 0, function ($q) use ($affiliatedIds) {
                 // Ordena los negocios afiliados primero
                 $q->orderByRaw("FIELD(busines_id," . implode(',', $affiliatedIds) . ") DESC");
@@ -138,6 +151,7 @@ class ConsultaDeNegociosController extends Controller
                 'NIT'           => $business->NIT,
                 'logo'          => $business->logo ?? 'https://example.com/default-logo.png',
                 'state'         => (bool) $business->state,
+                'accepting_orders' => (bool) $business->accepting_orders,
                 'type'          => $business->type,
                 'municipality'  => $business->municipality ? [
                     'id'   => $business->municipality->id,
@@ -261,6 +275,19 @@ class ConsultaDeNegociosController extends Controller
         // Ver la nota de `index`: los productos retirados no salen del panel.
         $businesses = Business::with($relaciones)
             ->where('state', 1)
+            /*
+             * Y tampoco la que está en pausa.
+             *
+             * `accepting_orders` es el interruptor del mostrador, que el
+             * tendero apaga cuando se queda solo o se le acaba el gas. Una
+             * tienda en pausa que sigue en la lista acaba en un pedido que el
+             * servidor rechaza al pagar, que es el peor sitio donde enterarse.
+             *
+             * Se esconde en los LISTADOS y no en la ficha: quien entre por un
+             * favorito merece ver que la tienda existe y que volverá, no un
+             * «no encontrado». La ficha lleva el dato y lo dice.
+             */
+            ->recibiendo()
             ->orderByDesc('qualification')
             ->get();
 
@@ -294,6 +321,7 @@ class ConsultaDeNegociosController extends Controller
                 'NIT'           => $business->NIT,
                 'logo'          => $business->logo ?? 'https://example.com/default-logo.png',
                 'state'         => (bool) $business->state,
+                'accepting_orders' => (bool) $business->accepting_orders,
                 'type'          => $business->type,
                 'municipality'  => $business->municipality ? [
                     'id'   => $business->municipality->id,
@@ -471,6 +499,12 @@ class ConsultaDeNegociosController extends Controller
             'logo'          => $business->logo ?? 'https://example.com/default-logo.png',
             'type'           => $business->type,
             'state'         => (bool) $business->state,
+            /*
+             * ACÁ ES DONDE IMPORTA. La ficha sí se sirve en pausa, y con esto
+             * la app puede decir «no está recibiendo pedidos ahora» y apagar
+             * el carrito, en vez de dejar pedir para fallar al final.
+             */
+            'accepting_orders' => (bool) $business->accepting_orders,
             'municipality'  => $business->municipality ? [
                 'id'   => $business->municipality->id,
                 'name' => $business->municipality->name,

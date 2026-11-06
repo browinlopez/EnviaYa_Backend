@@ -126,6 +126,122 @@ class CustodiaDeEfectivo
         });
     }
 
+    /**
+     * Lo que un domiciliario cobró en pedidos de ESTA tienda y todavía no ha
+     * salido de su bolsa.
+     *
+     * Es el tope de lo que la tienda puede recibir. La bolsa es una sola para
+     * todas las tiendas en que reparte: sin este tope, una tienda podría
+     * «recibir» la plata que él cobró para la de al lado.
+     *
+     * SE RECORRE EN ORDEN. Cada cobro suma a la tienda del pedido; cada
+     * entrega en un mostrador resta de esa tienda; y cada consignación a la
+     * PLATAFORMA se reparte entre lo que en ESE MOMENTO estaba pendiente con
+     * cada tienda —la consignación no dice de quién era cada peso—. Sumar y
+     * restar totales no sirve: si consignó todo y después cobró para la
+     * vecina, el reparto de totales le asignaba a esta tienda parte del cobro
+     * nuevo. Y nunca más de lo que lleva encima.
+     */
+    public function pendienteConLaTienda(int $negocioId, int $domiciliaryId): float
+    {
+        $eventos = collect();
+
+        CashMovement::where('cash_movements.domiciliary_id', $domiciliaryId)
+            ->where('cash_movements.type', CashMovement::RECAUDO)
+            ->leftJoin('orderssales as o', 'o.orderSales_id', '=', 'cash_movements.order_id')
+            ->get(['cash_movements.id', 'cash_movements.amount', 'cash_movements.created_at', 'o.busines_id'])
+            ->each(fn ($m) => $eventos->push([
+                'cuando' => (string) $m->created_at, 'orden' => 0, 'id' => $m->id,
+                'tipo' => 'cobro', 'tienda' => (int) $m->busines_id, 'monto' => (float) $m->amount,
+            ]));
+
+        CashDeposit::where('domiciliary_id', $domiciliaryId)
+            ->where('state', CashDeposit::CONFIRMADA)
+            ->get(['id', 'amount', 'canal', 'busines_id', 'confirmed_at', 'created_at'])
+            ->each(fn ($d) => $eventos->push([
+                'cuando' => (string) ($d->confirmed_at ?? $d->created_at), 'orden' => 1, 'id' => $d->id,
+                'tipo'   => $d->canal === CashDeposit::MOSTRADOR ? 'mostrador' : 'plataforma',
+                'tienda' => (int) $d->busines_id, 'monto' => (float) $d->amount,
+            ]));
+
+        $porTienda = [];
+
+        foreach ($eventos->sortBy(fn ($e) => [$e['cuando'], $e['orden'], $e['id']]) as $e) {
+            if ($e['tipo'] === 'cobro') {
+                $porTienda[$e['tienda']] = ($porTienda[$e['tienda']] ?? 0) + $e['monto'];
+            } elseif ($e['tipo'] === 'mostrador') {
+                $porTienda[$e['tienda']] = max(0, ($porTienda[$e['tienda']] ?? 0) - $e['monto']);
+            } else {
+                $total = array_sum($porTienda);
+                if ($total <= 0) {
+                    continue;
+                }
+                $parte = min(1, $e['monto'] / $total);
+                foreach ($porTienda as $t => $v) {
+                    $porTienda[$t] = $v * (1 - $parte);
+                }
+            }
+        }
+
+        $pendiente = $porTienda[$negocioId] ?? 0.0;
+
+        return max(0.0, round(min($pendiente, $this->saldo($domiciliaryId)), 2));
+    }
+
+    /**
+     * EL DOMICILIARIO LE ENTREGA EL EFECTIVO A LA TIENDA, en el mostrador.
+     *
+     * Es una consignación más, pero hecha a la tienda: se declara y se
+     * confirma en el mismo acto, porque quien la registra es quien recibió la
+     * plata y la tiene en la mano. Va por `declararDeposito` y
+     * `confirmarDeposito` para que el apunte que baja el saldo sea el mismo
+     * de siempre.
+     *
+     * No puede pasar de lo que cobró en pedidos de esta tienda ni de lo que
+     * tiene encima.
+     */
+    public function recibirEnMostrador(
+        int $negocioId,
+        int $domiciliaryId,
+        float $monto,
+        int $usuarioId,
+        ?string $nota = null,
+    ): CashDeposit {
+        if ($monto <= 0) {
+            throw new RuntimeException('El monto tiene que ser mayor que cero.');
+        }
+
+        return DB::transaction(function () use ($negocioId, $domiciliaryId, $monto, $usuarioId, $nota) {
+            // Bloqueo por domiciliario: dos entregas a la vez no pueden pasar
+            // juntas el tope, cada una viendo el saldo sin la otra.
+            DB::table('domiciliary')->where('domiciliary_id', $domiciliaryId)->lockForUpdate()->first();
+
+            $tope = min(
+                $this->pendienteConLaTienda($negocioId, $domiciliaryId),
+                max(0.0, $this->saldo($domiciliaryId)),
+            );
+
+            if ($tope <= 0) {
+                throw new RuntimeException('Este domiciliario no tiene efectivo pendiente de tus pedidos.');
+            }
+
+            if ($monto > $tope + 0.004) {
+                throw new RuntimeException(
+                    'De tus pedidos solo tiene pendientes $' . number_format($tope, 0, ',', '.') . '.'
+                );
+            }
+
+            $deposito = $this->declararDeposito($domiciliaryId, [
+                'amount'    => round($monto, 2),
+                'reference' => 'Entregado en el mostrador',
+                'notes'     => $nota,
+            ]);
+            $deposito->update(['canal' => CashDeposit::MOSTRADOR, 'busines_id' => $negocioId]);
+
+            return $this->confirmarDeposito($deposito, $usuarioId, $nota);
+        });
+    }
+
     public function rechazarDeposito(CashDeposit $deposito, int $usuarioId, ?string $motivo = null): CashDeposit
     {
         if ($deposito->state === CashDeposit::CONFIRMADA) {

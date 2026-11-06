@@ -218,6 +218,54 @@ it('el abono del cliente libera el cupo, pero no más de lo que debe', function 
         ->assertJsonPath('cupo.disponible', 50000);
 });
 
+it('el abono puede llevar su comprobante y el libro lo enseña', function () {
+    config([
+        'filesystems.disks.r2.key'      => 'prueba',
+        'filesystems.disks.r2.secret'   => 'prueba',
+        'filesystems.disks.r2.endpoint' => 'https://r2.prueba',
+        'filesystems.disks.r2.url'      => 'https://archivos.prueba',
+    ]);
+    \Illuminate\Support\Facades\Storage::fake('r2');
+
+    $e = credEscenario();
+    app(CreditoDeTienda::class)->asignar($e['negocio'], (int) $e['comprador']->user_id, 50000);
+    credPedir($e, 2)->assertCreated();
+    $id = $e['comprador']->user_id;
+
+    Sanctum::actingAs($e['tendero']);
+
+    // Un archivo que no es foto ni PDF se rechaza y NO se registra el abono.
+    $this->post("/v1/negocio/creditos/{$id}/abonos", [
+        'amount'      => 1000,
+        'comprobante' => \Illuminate\Http\UploadedFile::fake()->create('virus.exe', 10),
+    ], ['Accept' => 'application/json'])->assertUnprocessable()->assertJsonValidationErrors('comprobante');
+    expect(DB::table('store_credit_movements')->where('type', 'abono')->count())->toBe(0);
+
+    $this->post("/v1/negocio/creditos/{$id}/abonos", [
+        'amount'      => 1000,
+        'notes'       => 'Nequi',
+        'comprobante' => \Illuminate\Http\UploadedFile::fake()->image('nequi.jpg'),
+    ], ['Accept' => 'application/json'])->assertCreated();
+
+    $abono = collect($this->getJson("/v1/negocio/creditos/{$id}/movimientos")->assertOk()->json('movimientos'))
+        ->firstWhere('tipo', 'abono');
+    expect($abono['comprobante'])->not->toBeNull()
+        ->and($abono['comprobante']['nombre'])->toBe('nequi.jpg')
+        ->and($abono['comprobante']['es_pdf'])->toBeFalse()
+        // Sin enlace del bucket: el archivo se pide al servidor, con sesión.
+        ->and($abono['comprobante'])->not->toHaveKey('url');
+
+    $this->get("/v1/negocio/creditos/{$id}/movimientos/{$abono['id']}/comprobante")
+        ->assertOk()
+        ->assertHeader('Content-Type', 'image/jpeg');
+
+    // De otro movimiento, o de otro cliente, no se entrega nada.
+    $this->getJson("/v1/negocio/creditos/{$id}/movimientos/999999/comprobante")->assertNotFound();
+
+    // Sin comprobante sigue funcionando igual.
+    $this->postJson("/v1/negocio/creditos/{$id}/abonos", ['amount' => 500])->assertCreated();
+});
+
 it('al entregar un pedido a crédito queda pagado y el domiciliario no debe nada', function () {
     $e = credEscenario();
     $id = credEntregado($e, CreditoDeTienda::METODO, 10000, 2000, now()->toDateString());

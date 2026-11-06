@@ -45,11 +45,14 @@ test('la app publicada sigue mandando su plazo de siempre y funciona', function 
 
 test('el tendero puede poner las fechas exactas que quiera', function () {
     tenderoDePromociones();
+    // Relativas a hoy: con fechas fijas la prueba caducaba el día que pasaran.
+    $desde = now('America/Bogota')->addDays(15)->toDateString();
+    $hasta = now('America/Bogota')->addDays(18)->toDateString();
 
     $this->postJson('/v1/negocio/promociones', [
         'texto'      => 'Arroz al 20% el puente',
-        'desde'      => '2026-11-20',
-        'hasta'      => '2026-11-23',
+        'desde'      => $desde,
+        'hasta'      => $hasta,
         'tipo'       => Promotion::PORCENTAJE,
         'porcentaje' => 20,
     ])->assertStatus(201);
@@ -60,8 +63,8 @@ test('el tendero puede poner las fechas exactas que quiera', function () {
      * En hora colombiana y de día entero, que es lo que significan para quien
      * las escribe: «del 20 al 23» incluye el 23 completo, no hasta las 00:00.
      */
-    expect($p->start_date->setTimezone('America/Bogota')->toDateString())->toBe('2026-11-20')
-        ->and($p->end_date->setTimezone('America/Bogota')->toDateString())->toBe('2026-11-23')
+    expect($p->start_date->setTimezone('America/Bogota')->toDateString())->toBe($desde)
+        ->and($p->end_date->setTimezone('America/Bogota')->toDateString())->toBe($hasta)
         ->and($p->end_date->setTimezone('America/Bogota')->format('H:i'))->toBe('23:59');
 });
 
@@ -177,4 +180,55 @@ test('dejar la promoción lista para el viernes no le quita el vencimiento', fun
         ->and($p->end_date)->not->toBeNull()
         ->and($p->end_date->setTimezone('America/Bogota')->toDateString())
         ->toBe(now('America/Bogota')->addDays(7)->toDateString());
+});
+
+test('una promoción que termina antes de empezar se rechaza', function () {
+    tenderoDePromociones();
+    $antes = Promotion::count();
+
+    // Fecha de inicio con un plazo que vence hoy: el caso que se colaba.
+    $this->postJson('/v1/negocio/promociones', [
+        'texto' => 'Compra dos atunes y te damos tres',
+        'desde' => now('America/Bogota')->addDays(10)->toDateString(),
+        'hasta' => 'hoy',
+    ])->assertUnprocessable()->assertJsonValidationErrors('desde');
+
+    // Y con dos fechas al revés.
+    $this->postJson('/v1/negocio/promociones', [
+        'texto' => 'Compra dos atunes y te damos tres',
+        'desde' => now('America/Bogota')->addDays(10)->toDateString(),
+        'hasta' => now('America/Bogota')->addDays(5)->toDateString(),
+    ])->assertUnprocessable()->assertJsonValidationErrors('desde');
+
+    expect(Promotion::count())->toBe($antes);
+});
+
+test('una fecha de fin que ya pasó se rechaza, también al corregir', function () {
+    tenderoDePromociones();
+
+    $this->postJson('/v1/negocio/promociones', [
+        'texto' => 'Arroz al 20% el puente',
+        'hasta' => now('America/Bogota')->subDays(2)->toDateString(),
+    ])->assertUnprocessable()->assertJsonValidationErrors('hasta');
+
+    $this->postJson('/v1/negocio/promociones', ['texto' => 'Arroz al 20% el puente', 'hasta' => 'semana'])
+        ->assertStatus(201);
+    $id = Promotion::latest('promotion_id')->value('promotion_id');
+
+    $this->putJson("/v1/negocio/promociones/{$id}", [
+        'texto' => 'Arroz al 20% el puente',
+        'desde' => now('America/Bogota')->addDays(3)->toDateString(),
+        'hasta' => now('America/Bogota')->addDay()->toDateString(),
+    ])->assertUnprocessable()->assertJsonValidationErrors('desde');
+});
+
+test('el mismo día de inicio y de fin sí vale', function () {
+    tenderoDePromociones();
+    $dia = now('America/Bogota')->addDays(4)->toDateString();
+
+    $this->postJson('/v1/negocio/promociones', [
+        'texto' => 'Solo ese día: pan a mitad de precio',
+        'desde' => $dia,
+        'hasta' => $dia,
+    ])->assertStatus(201);
 });

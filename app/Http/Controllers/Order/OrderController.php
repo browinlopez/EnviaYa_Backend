@@ -155,7 +155,25 @@ class OrderController extends Controller
          */
         if (!$business->state) {
             return response()->json([
-                'message' => 'Este negocio no está recibiendo pedidos ahora mismo.',
+                'message' => 'Esta tienda no está disponible.',
+            ], 422);
+        }
+
+        /*
+         * Y que no esté en pausa.
+         *
+         * Dos mensajes distintos para dos cosas distintas: arriba es una
+         * tienda dada de baja —no vuelve hoy— y acá es el tendero que paró un
+         * rato. Un «no disponible» para las dos manda al vecino a esperar algo
+         * que no va a pasar, o a dejar de esperar algo que vuelve en una hora.
+         *
+         * Se comprueba ACÁ aunque los listados ya la escondan: basta con
+         * conservar el identificador —un favorito, un pedido anterior, una
+         * pantalla abierta desde antes de la pausa— para pedirle igual.
+         */
+        if (!$business->recibiendo_ahora) {
+            return response()->json([
+                'message' => 'La tienda dejó de recibir pedidos por ahora. Intenta más tarde o escoge otra.',
             ], 422);
         }
 

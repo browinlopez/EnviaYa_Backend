@@ -289,11 +289,24 @@ test('la plantilla se descarga con las columnas que el importador entiende', fun
 
     $r = test()->get('/v1/negocio/productos/cargas/plantilla')->assertOk();
 
-    $csv = $r->streamedContent();
+    /* Ida y vuelta: se llena una fila en la plantilla tal como se descarga y
+       el lector del importador la tiene que entender con sus llaves. */
+    $ruta = tempnam(sys_get_temp_dir(), 'plantilla') . '.xlsx';
+    file_put_contents($ruta, $r->streamedContent());
 
-    expect($csv)->toContain('codigo_barras')
-        ->and($csv)->toContain('precio')
-        ->and($csv)->toContain('cantidad')
-        // El BOM: sin él Excel abre el archivo en ANSI y parte las tildes.
-        ->and(substr($csv, 0, 3))->toBe("\xEF\xBB\xBF");
+    $libro = \PhpOffice\PhpSpreadsheet\IOFactory::load($ruta);
+    $libro->getSheet(0)->setCellValueExplicit('A2', '7702511000014', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+    $libro->getSheet(0)->setCellValue('B2', 3400);
+    $libro->getSheet(0)->setCellValue('C2', 12);
+    (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($libro))->save($ruta);
+
+    $filas = array_values(array_filter(
+        app(\App\Imports\LectorDeArchivoDeCatalogo::class)->leer($ruta),
+        fn ($f) => ($f['codigo_de_barras'] ?? null) !== null,
+    ));
+
+    expect($filas)->toHaveCount(1)
+        ->and((string) $filas[0]['codigo_de_barras'])->toBe('7702511000014')
+        ->and($filas[0]['precio'])->toEqual(3400)
+        ->and($filas[0]['cantidad'])->toEqual(12);
 });

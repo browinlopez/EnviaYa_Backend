@@ -30,7 +30,8 @@ class ResumenDelConjuntoController extends Controller
         $dias = (int) $request->query('dias', 14);
         // Acotado: con 365 la gráfica no se lee y la consulta agrupa un año
         // entero para pintar una línea de un píxel por día.
-        $dias = max(7, min($dias, 90));
+        // Desde 1: «Hoy» es la vista que más se mira en una portería.
+        $dias = max(1, min($dias, 90));
 
         return response()->json(
             $this->pulso->resumen($complexId, $dias) + ['dias' => $dias],

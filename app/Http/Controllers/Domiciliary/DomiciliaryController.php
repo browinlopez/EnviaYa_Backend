@@ -52,9 +52,13 @@ class DomiciliaryController extends Controller
             ? (float) $business->max_courier_cash
             : null;
 
-        $domiciliaries = $business->domiciliaries->map(function ($domiciliary) use ($maxSimultaneos, $custodia, $tope) {
+        $papeles = app(\App\Services\PapelesDelDomiciliario::class);
+
+        $domiciliaries = $business->domiciliaries->map(function ($domiciliary) use ($maxSimultaneos, $custodia, $tope, $papeles) {
             $enCurso = (int) ($domiciliary->active_orders ?? 0);
             $disponible = (bool) $domiciliary->available;
+            // Lo que le falta para repartir, si lo dio de alta una tienda.
+            $faltan = $papeles->faltantes($domiciliary);
             $efectivo = round($custodia->saldo($domiciliary->domiciliary_id), 2);
 
             return [
@@ -71,7 +75,8 @@ class DomiciliaryController extends Controller
                 'active_orders'     => $enCurso,
                 'max_active_orders' => $maxSimultaneos,
                 // Mismas condiciones que valida orders/update al despachar.
-                'can_take'          => $disponible && $enCurso < $maxSimultaneos,
+                'can_take'          => $disponible && $enCurso < $maxSimultaneos && !$faltan,
+                'papeles_faltantes' => $faltan,
                 'cash_on_hand'      => $efectivo,
                 'cash_limit'        => $tope,
                 /*

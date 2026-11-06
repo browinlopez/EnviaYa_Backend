@@ -18,7 +18,7 @@ class StoreCreditMovement extends Model
     public const ABONO   = 'abono';
     public const AJUSTE  = 'ajuste';
 
-    protected $fillable = ['store_credit_id', 'type', 'amount', 'order_id', 'notes', 'created_by'];
+    protected $fillable = ['store_credit_id', 'type', 'amount', 'order_id', 'notes', 'comprobante_media_id', 'created_by'];
 
     protected $casts = ['amount' => 'decimal:2'];
 

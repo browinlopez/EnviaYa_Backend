@@ -24,8 +24,15 @@ class CashDeposit extends Audit
 
     public const ESTADOS = [self::PENDIENTE, self::CONFIRMADA, self::RECHAZADA];
 
+    /** A quién se le entregó: a la plataforma o a la tienda, en su mostrador. */
+    public const CONSIGNACION = 'consignacion';
+    public const MOSTRADOR    = 'mostrador';
+
     protected $fillable = [
         'domiciliary_id',
+        'canal',
+        'busines_id',
+        'settlement_id',
         'amount',
         'reference',
         'deposited_at',

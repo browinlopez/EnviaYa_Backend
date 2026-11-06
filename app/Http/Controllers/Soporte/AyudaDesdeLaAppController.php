@@ -50,7 +50,16 @@ class AyudaDesdeLaAppController extends Controller
         if (! empty($datos['order_id'])) {
             $pedido = OrdersSales::with('buyer')->find($datos['order_id']);
 
-            if (! $pedido || (int) ($pedido->buyer->user_id ?? 0) !== (int) $usuario->user_id) {
+            /* Es suyo si lo compró él, o si es de una tienda de la que es
+               dueño: el tendero también reporta problemas con sus pedidos
+               —un cobro, un domiciliario— desde su panel. */
+            $esDeSuTienda = $pedido && \Illuminate\Support\Facades\DB::table('owner_busines as ob')
+                ->join('owner as o', 'o.owner_id', '=', 'ob.owner_id')
+                ->where('o.user_id', (int) $usuario->user_id)
+                ->where('ob.busines_id', (int) $pedido->busines_id)
+                ->exists();
+
+            if (! $pedido || ((int) ($pedido->buyer->user_id ?? 0) !== (int) $usuario->user_id && ! $esDeSuTienda)) {
                 return response()->json([
                     'message' => 'Ese pedido no es tuyo.',
                 ], 403);

@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Negocio;
 use App\Http\Controllers\Controller;
 use App\Jobs\ProcesarCargaDeCatalogo;
 use App\Models\Product\CatalogUpload;
+use App\Services\PlantillaDeCatalogo;
 use Illuminate\Http\Request;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -117,29 +119,25 @@ class CargaDeCatalogoController extends Controller
      * .xls viejo que esos programas generan. Obligar a renombrar veintisiete
      * columnas a mano sería pedirle que haga el trabajo que viene a evitar.
      */
-    public function plantilla(): StreamedResponse
+    /**
+     * La plantilla, como Excel (.xlsx): columnas ordenadas, ayuda en cada
+     * celda y la categoría como lista. Con `?con=productos` trae además el
+     * catálogo actual de la tienda, para cambiar precios y existencias de
+     * muchos productos y volver a subirlo. Ver PlantillaDeCatalogo.
+     */
+    public function plantilla(Request $request, PlantillaDeCatalogo $plantilla): StreamedResponse
     {
-        $filas = [
-            ['codigo_barras', 'nombre', 'marca', 'categoria', 'precio', 'cantidad'],
-            ['7702011012345', 'ACEITE 3 EN 1', '3-EN-UNO', 'Medicina', '2500', '20'],
-            ['', 'Solo si el producto NO esta en el catalogo', '', '', '', ''],
-            ['', '', '', '', '', ''],
-            ['Tambien se acepta el archivo de tu punto de venta', '', '', '', '', ''],
-            ['con sus columnas: barras, venta1, existencia', '', '', '', '', ''],
-        ];
+        $negocioId = (int) $request->attributes->get('busines_id');
+        $conProductos = $request->query('con') === 'productos';
 
-        return response()->streamDownload(function () use ($filas) {
-            $salida = fopen('php://output', 'w');
+        $libro = $plantilla->generar($negocioId, $conProductos);
+        $nombre = $conProductos ? 'mi-catalogo.xlsx' : 'plantilla-catalogo.xlsx';
 
-            // Sin el BOM, Excel abre el archivo en ANSI y parte las tildes.
-            fwrite($salida, "\xEF\xBB\xBF");
-
-            foreach ($filas as $f) {
-                fputcsv($salida, $f, ';');
-            }
-
-            fclose($salida);
-        }, 'plantilla-catalogo.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+        return response()->streamDownload(function () use ($libro) {
+            (new Xlsx($libro))->save('php://output');
+        }, $nombre, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
     }
 
     private function comoFicha(CatalogUpload $c, bool $conErrores = true): array

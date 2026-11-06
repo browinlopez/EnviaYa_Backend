@@ -147,3 +147,24 @@ test('cada quien ve sus casos y solo los suyos', function () {
     expect($r->json('data'))->toHaveCount(1)
         ->and($r->json('data.0.subject'))->toBe('Mío');
 });
+
+test('el tendero puede relacionar un pedido de su tienda, y no uno de otra', function () {
+    $t = tenderoConCatalogo();
+    \Laravel\Sanctum\Sanctum::actingAs($t['user']);
+
+    $suyo = \Illuminate\Support\Facades\DB::table('orderssales')->insertGetId([
+        'busines_id' => $t['mio'], 'state' => 4, 'total' => 1000, 'sale_date' => now(),
+    ], 'orderSales_id');
+    $ajeno = \Illuminate\Support\Facades\DB::table('orderssales')->insertGetId([
+        'busines_id' => $t['vecino'], 'state' => 4, 'total' => 1000, 'sale_date' => now(),
+    ], 'orderSales_id');
+
+    $this->postJson('/v1/ayuda', [
+        'type' => 'reclamo', 'subject' => 'El domiciliario no volvió con el efectivo',
+        'description' => 'Pasó con el pedido de la tarde.', 'order_id' => $suyo,
+    ])->assertCreated();
+
+    $this->postJson('/v1/ayuda', [
+        'type' => 'reclamo', 'subject' => 'Otro', 'description' => 'Otro', 'order_id' => $ajeno,
+    ])->assertForbidden();
+});

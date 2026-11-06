@@ -91,6 +91,48 @@ return Application::configure(basePath: dirname(__DIR__))
         Integration::handles($exceptions);
 
         /*
+         * LOS ERRORES DE LARAVEL, EN ESPAÑOL.
+         *
+         * Las validaciones ya salen en español por `lang/es`, pero los
+         * errores del propio framework (sesión vencida, sin permiso, ruta que
+         * no existe, demasiados intentos, error del servidor) traen el texto
+         * en inglés escrito a mano y no pasan por la traducción. Acá se
+         * cambian SOLO esos textos genéricos; un `abort(403, 'Este pedido no
+         * es tuyo')` escrito por nosotros llega tal cual.
+         */
+        $exceptions->respond(function (\Symfony\Component\HttpFoundation\Response $respuesta) {
+            if (!$respuesta instanceof \Illuminate\Http\JsonResponse) {
+                return $respuesta;
+            }
+
+            $datos = $respuesta->getData(true);
+            $texto = is_array($datos) ? ($datos['message'] ?? null) : null;
+            $estado = $respuesta->getStatusCode();
+
+            $porEstado = [
+                401 => 'Tu sesión terminó. Vuelve a iniciar sesión.',
+                403 => 'No tienes permiso para hacer esto.',
+                404 => 'No encontramos lo que buscas.',
+                405 => 'Esta acción no está disponible.',
+                413 => 'El archivo es demasiado grande.',
+                419 => 'La página venció. Recárgala e intenta de nuevo.',
+                429 => 'Demasiados intentos. Espera un momento y vuelve a intentarlo.',
+                500 => 'Algo falló de nuestro lado. Intenta de nuevo en un momento.',
+                503 => 'Estamos en mantenimiento. Intenta de nuevo en unos minutos.',
+            ];
+
+            $generico = $texto === null || $texto === ''
+                || preg_match('/^(Unauthenticated\.|This action is unauthorized\.|Forbidden|Not Found|Too Many Attempts\.|Server Error|Service Unavailable|Method Not Allowed|CSRF token mismatch\.|Page Expired|Request Entity Too Large|The route .* could not be found\.?|No query results for model .*|The \w+ method is not supported for route .*)$/s', $texto);
+
+            if ($generico && isset($porEstado[$estado])) {
+                $datos['message'] = $porEstado[$estado];
+                $respuesta->setData($datos);
+            }
+
+            return $respuesta;
+        });
+
+        /*
          * Lo que NO se reporta.
          *
          * Un 404 o un 403 no son fallos del sistema sino su funcionamiento

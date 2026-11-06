@@ -27,6 +27,20 @@ class ReglasDeDespacho
     public function impedimento(OrdersSales $order, $domiciliary): ?array
     {
         /*
+         * Los que dio de alta una tienda no reparten sin papeles: el acuerdo
+         * firmado y cédula, licencia y SOAT vigentes. Va primero porque es lo
+         * único que no se arregla esperando: hay que cargarlos.
+         */
+        $papeles = app(PapelesDelDomiciliario::class);
+        if ($faltan = $papeles->faltantes($domiciliary)) {
+            return [
+                'message' => 'Todavía no puede recibir pedidos: le falta ' . $papeles->enPalabras($faltan) . '.',
+                'reason'  => 'papeles_incompletos',
+                'faltan'  => $faltan,
+            ];
+        }
+
+        /*
          * Reglas de asignación. Se validan acá y no en la app porque por
          * esta misma transición pasan los dos caminos: el domiciliario
          * aceptando un pedido y el tendero despachándoselo. Si viviera

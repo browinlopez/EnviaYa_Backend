@@ -138,7 +138,37 @@ class LiquidacionService
                 }
             }
             $arrastrado = $arrastre ? (float) $arrastre->net_payable : 0.0;
+
+            /*
+             * EL EFECTIVO QUE YA RECIBIÓ EN EL MOSTRADOR SE LE DESCUENTA.
+             *
+             * El corte le paga a la tienda el subtotal de TODOS sus pedidos,
+             * también los de contra entrega, porque normalmente esa plata la
+             * consigna el domiciliario a la plataforma. Si se la entregó a la
+             * tienda en la mano, la tienda ya la tiene: pagársela otra vez
+             * sería pagar dos veces. Se toman las entregas que ningún corte
+             * vivo haya descontado ya, y se atan a este para no repetirlas;
+             * anularlo las libera para el siguiente.
+             */
+            $mostrador = 0.0;
+            if ($tipo === 'business') {
+                $anuladas = Settlement::where('state', Settlement::ANULADA)->select('id');
+                $entregas = \App\Models\Operacion\CashDeposit::where('busines_id', $destinatarioId)
+                    ->where('canal', \App\Models\Operacion\CashDeposit::MOSTRADOR)
+                    ->where('state', \App\Models\Operacion\CashDeposit::CONFIRMADA)
+                    ->where(fn ($q) => $q->whereNull('settlement_id')->orWhereIn('settlement_id', $anuladas))
+                    ->lockForUpdate()
+                    ->get(['id', 'amount']);
+
+                $mostrador = round((float) $entregas->sum('amount'), 2);
+                if ($entregas->isNotEmpty()) {
+                    \App\Models\Operacion\CashDeposit::whereIn('id', $entregas->pluck('id'))
+                        ->update(['settlement_id' => $liq->id]);
+                }
+            }
+
             $liq->update([
+                'counter_cash'    => $mostrador,
                 'credit_sales'    => round($totales['credito'], 2),
                 'carried_in'      => round($arrastrado, 2),
                 'carried_from_id' => $arrastre?->id,
@@ -155,7 +185,7 @@ class LiquidacionService
                  * significaría nada.
                  */
                 'platform_fee'  => round($totales['retenido'], 2),
-                'net_payable'   => round($totales['net'] + $arrastrado, 2),
+                'net_payable'   => round($totales['net'] + $arrastrado - $mostrador, 2),
             ]);
 
             return $liq->fresh();

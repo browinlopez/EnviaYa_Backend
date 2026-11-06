@@ -325,9 +325,14 @@ test('la ventana de la serie se acota: 365 dias no pasan', function () {
         ->assertOk()
         ->assertJsonPath('dias', 90);
 
+    // «Hoy» sí vale; cero o negativo cae a un día.
     $this->getJson('/v1/conjunto/resumen?dias=1')
         ->assertOk()
-        ->assertJsonPath('dias', 7);
+        ->assertJsonPath('dias', 1);
+
+    $this->getJson('/v1/conjunto/resumen?dias=0')
+        ->assertOk()
+        ->assertJsonPath('dias', 1);
 });
 
 test('un celador NO llega a los reportes del edificio', function () {
@@ -461,4 +466,34 @@ test('la cedula si sirve varias veces', function () {
     }
 
     expect(DB::table('complex_entries')->count())->toBe(2);
+});
+
+test('sin pedidos aqui no se entrega el telefono ni el historial del domiciliario', function () {
+    $c = conjuntoConPersonal();
+    $domi = repartidorConPedidoEn(null);
+
+    $codigo = app(AccesoAlConjunto::class)->generar($domi)['code'];
+
+    Sanctum::actingAs($c['user']);
+
+    $r = $this->postJson('/v1/conjunto/porteria/verificar', ['code' => $codigo])
+        ->assertOk()
+        ->assertJsonPath('allowed', false);
+
+    // Cualquier cédula escrita en la puerta no puede volverse una guía de
+    // teléfonos de domiciliarios sin relación con el edificio.
+    expect($r->json('domiciliary'))->toHaveKeys(['domiciliary_id', 'name'])
+        ->and($r->json('domiciliary'))->not->toHaveKeys(['phone', 'historial', 'document']);
+});
+
+test('la verificacion tiene limite por minuto', function () {
+    $c = conjuntoConPersonal();
+    Sanctum::actingAs($c['user']);
+
+    for ($i = 0; $i < 40; $i++) {
+        $this->postJson('/v1/conjunto/porteria/verificar', ['document' => (string) (90000000 + $i)]);
+    }
+
+    $this->postJson('/v1/conjunto/porteria/verificar', ['document' => '91111111'])
+        ->assertStatus(429);
 });

@@ -13,7 +13,7 @@ class Domiciliary extends Audit
     protected $primaryKey = 'domiciliary_id';
     public $timestamps = false;
 
-    protected $fillable = ['user_id', 'available', 'document',  'qualification', 'state'];
+    protected $fillable = ['user_id', 'available', 'document',  'qualification', 'state', 'registrado_por_negocio'];
 
     public function user()
     {

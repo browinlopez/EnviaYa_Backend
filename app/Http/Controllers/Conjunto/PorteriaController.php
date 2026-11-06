@@ -63,10 +63,19 @@ class PorteriaController extends Controller
             ->first(['name']);
 
         if ($pedidos->isEmpty()) {
+            /*
+             * Sólo el nombre. La ficha completa —teléfono, calificación,
+             * historial— es para quien tiene algo que hacer en este edificio.
+             * Con ella aquí, cualquier cédula escrita en la portería devolvía
+             * el teléfono de un domiciliario sin relación con el conjunto.
+             */
             return response()->json([
                 'message' => 'Este domiciliario no tiene pedidos en el conjunto',
                 'allowed' => false,
-                'domiciliary' => $this->ficha($domiciliario, $complexId),
+                'domiciliary' => [
+                    'domiciliary_id' => $domiciliario->domiciliary_id,
+                    'name'           => $domiciliario->user->name ?? null,
+                ],
             ]);
         }
 
@@ -128,12 +137,16 @@ class PorteriaController extends Controller
             // Quién estaba en la portería cuando pasó. Es la mitad del valor
             // de un registro de entradas: sin eso dice qué ocurrió y no bajo
             // la responsabilidad de quién.
-            ->leftJoin('user as c', 'c.user_id', '=', 'e.registered_by');
+            ->leftJoin('user as c', 'c.user_id', '=', 'e.registered_by')
+            ->leftJoin('user as x', 'x.user_id', '=', 'e.exit_registered_by');
 
         if ($buscar = trim((string) $request->query('search'))) {
             $consulta->where(function ($q) use ($buscar) {
+                // Las visitas también se buscan: el libro es uno solo.
                 $q->where('u.name', 'like', "%{$buscar}%")
-                    ->orWhere('d.document', 'like', "%{$buscar}%");
+                    ->orWhere('d.document', 'like', "%{$buscar}%")
+                    ->orWhere('e.visitor_name', 'like', "%{$buscar}%")
+                    ->orWhere('e.visitor_document', 'like', "%{$buscar}%");
             });
         }
 
@@ -185,6 +198,7 @@ class PorteriaController extends Controller
                 'e.orders',
                 'u.name as domiciliary_name', 'd.document',
                 'c.name as registered_by_name',
+                'x.name as exit_registered_by_name',
             ]);
 
         return response()->json(['data' => $filas]);

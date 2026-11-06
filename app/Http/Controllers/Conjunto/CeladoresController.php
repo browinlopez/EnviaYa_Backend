@@ -21,15 +21,35 @@ class CeladoresController extends Controller
     {
         $complexId = (int) $request->attributes->get('complex_id');
 
+        /*
+         * Cuántas entradas registró cada uno EN ESTE conjunto y cuándo fue la
+         * última: es lo que dice si un celador está trabajando de verdad o
+         * sólo tiene la cuenta.
+         */
+        $libro = DB::table('complex_entries')
+            ->where('complex_id', $complexId)
+            ->whereNotNull('registered_by')
+            ->groupBy('registered_by')
+            ->get(['registered_by', DB::raw('COUNT(*) as entradas'), DB::raw('MAX(created_at) as ultima')])
+            ->keyBy('registered_by');
+
         return response()->json([
             'data' => ComplexStaff::where('complex_id', $complexId)
                 ->where('role', ComplexStaff::CELADOR)
                 ->join('user as u', 'u.user_id', '=', 'complex_staff.user_id')
+                ->orderByDesc('complex_staff.state')
                 ->orderBy('u.name')
                 ->get([
                     'complex_staff.id', 'complex_staff.state',
                     'u.user_id', 'u.name', 'u.email', 'u.phone',
-                ]),
+                ])
+                ->map(function ($c) use ($libro) {
+                    $l = $libro[$c->user_id] ?? null;
+                    $c->entradas = (int) ($l->entradas ?? 0);
+                    $c->ultima_entrada = $l->ultima ?? null;
+
+                    return $c;
+                }),
         ]);
     }
 
@@ -90,7 +110,16 @@ class CeladoresController extends Controller
     /** Activa o desactiva a un celador. Solo los del propio conjunto. */
     public function cambiarCelador(Request $request, int $id)
     {
-        $datos = $request->validate(['state' => 'required|boolean']);
+        /*
+         * Activar, desactivar, o corregir nombre y teléfono. El correo no:
+         * es con lo que entra, y cambiarlo desde acá lo dejaría afuera sin
+         * que él lo sepa.
+         */
+        $datos = $request->validate([
+            'state' => 'sometimes|boolean',
+            'name'  => 'sometimes|string|max:255',
+            'phone' => 'sometimes|nullable|string|max:20',
+        ]);
 
         $complexId = (int) $request->attributes->get('complex_id');
 
@@ -103,6 +132,14 @@ class CeladoresController extends Controller
         // decirle algo del edificio del vecino.
         if (!$ficha) {
             return response()->json(['message' => 'Ese celador no es de tu conjunto.'], 404);
+        }
+
+        if (array_key_exists('name', $datos) || array_key_exists('phone', $datos)) {
+            User::where('user_id', $ficha->user_id)->update(array_intersect_key($datos, ['name' => 1, 'phone' => 1]));
+        }
+
+        if (!array_key_exists('state', $datos)) {
+            return response()->json(['message' => 'Datos del celador guardados.']);
         }
 
         $ficha->state = $datos['state'];

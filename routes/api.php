@@ -65,11 +65,15 @@ use App\Http\Controllers\Conjunto\CeladoresController;
 use App\Http\Controllers\Conjunto\ResidentesController;
 use App\Http\Controllers\Conjunto\ResumenDelConjuntoController;
 use App\Http\Controllers\Conjunto\VisitantesController;
+use App\Http\Controllers\Negocio\HistorialDePedidosController;
 use App\Http\Controllers\Negocio\CancelacionDelPedidoController;
 use App\Http\Controllers\Negocio\CargaDeCatalogoController;
 use App\Http\Controllers\Negocio\CatalogoController;
 use App\Http\Controllers\Negocio\ClientesDelNegocioController;
 use App\Http\Controllers\Negocio\CreditosDelNegocioController;
+use App\Http\Controllers\Negocio\FichaDelDomiciliarioController;
+use App\Http\Controllers\Negocio\DocumentosDelDomiciliarioController;
+use App\Http\Controllers\Negocio\AltaDeDomiciliarioController;
 use App\Http\Controllers\Buyer\MiCreditoController;
 use App\Http\Controllers\Negocio\MiNegocioController;
 use App\Http\Controllers\Negocio\ProductosDelNegocioController;
@@ -547,7 +551,10 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::get('reportes/excel', [ResumenDelConjuntoController::class, 'excel'])
             ->middleware('conjunto:dueno');
 
-        Route::post('porteria/verificar', [PorteriaController::class, 'verificar']);
+        // Con límite propio: una portería real verifica unas pocas personas
+        // por minuto, y sin tope se podían probar cédulas en serie.
+        Route::post('porteria/verificar', [PorteriaController::class, 'verificar'])
+            ->middleware('throttle:40,1');
         Route::get('porteria/entradas', [PorteriaController::class, 'entradas']);
 
         /*
@@ -606,9 +613,31 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::get('me', [MiNegocioController::class, 'mio']);
         Route::put('me', [MiNegocioController::class, 'actualizar']);
 
+        /*
+         * «Recibiendo pedidos». Un interruptor, no un formulario: se pulsa
+         * desde la barra del panel con un cliente delante. Ver
+         * `MiNegocioController@recibiendo`.
+         */
+        Route::put('me/recibiendo', [MiNegocioController::class, 'recibiendo']);
+        Route::post('me/logo', [MiNegocioController::class, 'logo']);
+
+        /* El efectivo que los domiciliarios le entregan a la tienda en el
+           mostrador. Ver EfectivoDeLaTiendaController. */
+        Route::get('mas-vendidos', [\App\Http\Controllers\Negocio\MasVendidosController::class, 'index']);
+        Route::get('efectivo', [\App\Http\Controllers\Negocio\EfectivoDeLaTiendaController::class, 'index']);
+        Route::post('efectivo/{id}/entregas', [\App\Http\Controllers\Negocio\EfectivoDeLaTiendaController::class, 'recibir'])
+            ->whereNumber('id');
+
         // Pedidos. `updateStatus` ya comprobaba pertenencia por su cuenta
         // —es la unica del grupo que lo hacia— y se reutiliza tal cual.
         Route::get('pedidos', [ConsultaDePedidosController::class, 'ordersBusiness']);
+
+        /*
+         * EL ARCHIVO. El tablero trae lo abierto y lo cerrado de hoy; todo lo
+         * anterior se consulta aca, con su rango de fechas y paginado. Antes
+         * venia todo junto en la misma respuesta, que crecia sin tope.
+         */
+        Route::get('pedidos/historial', [HistorialDePedidosController::class, 'index']);
         Route::put('pedidos/estado', [OrderController::class, 'updateStatus']);
 
         /*
@@ -671,6 +700,33 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
          */
         Route::get('domiciliarios/rendimiento', [RendimientoDeDomiciliariosController::class, 'index']);
 
+        /* La tienda da de alta o vincula a sus domiciliarios. Antes que el
+           comodín {id}: `buscar` es una ruta fija. */
+        // Con límite: devuelven nombre y teléfono a partir de un dato exacto,
+        // y sin tope se podían probar cédulas en serie.
+        Route::get('domiciliarios/buscar', [AltaDeDomiciliarioController::class, 'buscar'])
+            ->middleware('throttle:30,1');
+        Route::post('domiciliarios', [AltaDeDomiciliarioController::class, 'guardar'])
+            ->middleware('throttle:30,1');
+
+        /*
+         * LA FICHA DE UNO. Solo lectura y recortada a esta tienda: entregas y
+         * pedidos encima son los SUYOS, de los otros negocios sale el nombre, y
+         * de los documentos la situacion y no el archivo.
+         *
+         * Detras de `rendimiento` por lo que avisa el comentario de arriba: el
+         * comodin se traga la ruta fija que venga despues.
+         */
+        Route::get('domiciliarios/{id}', [FichaDelDomiciliarioController::class, 'show'])
+            ->whereNumber('id');
+
+        // Los papeles de SUS domiciliarios: subirlos y verlos (a través del
+        // backend, sin URL pública). Exige el vínculo; ver el controlador.
+        Route::post('domiciliarios/{id}/documentos', [DocumentosDelDomiciliarioController::class, 'subir'])
+            ->whereNumber('id');
+        Route::get('domiciliarios/{id}/documentos/{tipo}/archivo', [DocumentosDelDomiciliarioController::class, 'ver'])
+            ->whereNumber('id')->whereAlpha('tipo');
+
         /*
          * LA TORRE DE CONTROL de su flota: quien reparte, que lleva encima
          * cada uno y cuanta plata carga, en UNA llamada.
@@ -712,6 +768,7 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::put('creditos/{userId}', [CreditosDelNegocioController::class, 'asignar'])->whereNumber('userId');
         Route::post('creditos/{userId}/abonos', [CreditosDelNegocioController::class, 'abonar'])->whereNumber('userId');
         Route::get('creditos/{userId}/movimientos', [CreditosDelNegocioController::class, 'movimientos'])->whereNumber('userId');
+        Route::get('creditos/{userId}/movimientos/{movimientoId}/comprobante', [CreditosDelNegocioController::class, 'comprobante'])->whereNumber(['userId', 'movimientoId']);
 
         Route::get('resenas', [ResenasDeNegocioController::class, 'listReviewsByBusiness']);
 

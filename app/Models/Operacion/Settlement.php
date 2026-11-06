@@ -33,6 +33,7 @@ class Settlement extends Model
         'platform_fee',
         'credit_sales',
         'carried_in',
+        'counter_cash',
         'carried_from_id',
         'net_payable',
         'state',
