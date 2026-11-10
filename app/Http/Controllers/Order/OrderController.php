@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Order;
 use App\Events\OrderStatusUpdated;
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Order\MoverPedidoRequest;
 use App\Jobs\TrazarLaRutaDelPedido;
 use App\Models\Business;
 use App\Models\Buyer\Buyer;
@@ -665,17 +666,12 @@ class OrderController extends Controller
 
     // Actualizar estado de la orden (números)
     public function updateStatus(
-        Request $request,
+        MoverPedidoRequest $request,
         CobroContraEntrega $cobros,
         ReglasDeDespacho $reglas,
         TarifaPorDistancia $distancias,
         PlazoPorDistancia $plazos,
     ) {
-        $request->validate([
-            'order_id' => 'required|integer',
-            'state' => 'required|integer|in:2,3,4',
-            'user_id' => 'nullable|integer|exists:user,user_id',
-        ]);
 
         /*
          * DOS PERSONAS TOCANDO EL MISMO PEDIDO A LA VEZ.

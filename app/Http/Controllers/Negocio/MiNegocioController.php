@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Negocio;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Negocio\ActualizarMiNegocioRequest;
 use App\Http\Requests\Negocio\RecibirPedidosRequest;
+use App\Http\Requests\Negocio\SubirLogoRequest;
 use App\Models\Order\OrdersSales;
 use App\Services\BusinessMediaService;
 use Carbon\Carbon;
@@ -268,18 +269,9 @@ class MiNegocioController extends Controller
      * se puede pintar en la app— y queda apuntado en `business.logo`, que es
      * lo que lee la app, igual que cuando lo sube el equipo.
      */
-    public function logo(Request $request, BusinessMediaService $medios)
+    public function logo(SubirLogoRequest $request, BusinessMediaService $medios)
     {
         $negocioId = (int) $request->attributes->get('busines_id');
-
-        $request->validate([
-            'logo' => 'required|image|mimes:jpg,jpeg,png,webp|max:4096',
-        ], [
-            'logo.required' => 'Elige la imagen del logo.',
-            'logo.image' => 'El logo tiene que ser una imagen (JPG, PNG o WEBP).',
-            'logo.mimes' => 'El logo tiene que ser una imagen (JPG, PNG o WEBP).',
-            'logo.max' => 'La imagen pesa más de 4 MB.',
-        ]);
 
         if (! $medios->configurado()) {
             return response()->json([

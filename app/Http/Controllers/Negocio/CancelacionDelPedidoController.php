@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Negocio;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Negocio\CancelarPedidoRequest;
 use App\Models\Order\OrdersSales;
 use App\Services\CancelacionDelPedido;
-use Illuminate\Http\Request;
 
 /**
  * LA TIENDA CANCELA UN PEDIDO QUE NO PUEDE PREPARAR.
@@ -35,11 +35,9 @@ class CancelacionDelPedidoController extends Controller
 
     public function __construct(private readonly CancelacionDelPedido $cancelaciones) {}
 
-    public function cancelar(Request $request, $id)
+    public function cancelar(CancelarPedidoRequest $request, $id)
     {
-        $datos = $request->validate([
-            'motivo' => 'required|string|min:3|max:500',
-        ]);
+        $datos = $request->validated();
 
         $businessId = (int) $request->attributes->get('busines_id');
 

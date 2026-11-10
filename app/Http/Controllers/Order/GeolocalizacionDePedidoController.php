@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Order;
 use App\Events\DomiciliaryLocationUpdated;
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Order\GuardarPosicionRequest;
 use App\Models\Order\OrderGeolocation;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -14,16 +14,10 @@ class GeolocalizacionDePedidoController extends Controller
 {
     use ComprobarPertenencia;
 
-    public function storeGeolocation(Request $request)
+    public function storeGeolocation(GuardarPosicionRequest $request)
     {
         // Validar los datos recibidos
-        $data = $request->validate([
-            'domiciliary_id' => 'required|exists:domiciliary,domiciliary_id',
-            'orderSales_id' => 'required|exists:orderssales,orderSales_id',
-            'latitude' => 'required|numeric',
-            'longitude' => 'required|numeric',
-            'state' => 'nullable|integer',
-        ]);
+        $data = $request->validated();
 
         // Crear registro en la base de datos
         $geo = OrderGeolocation::create($data);
