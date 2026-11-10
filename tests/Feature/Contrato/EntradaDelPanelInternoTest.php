@@ -44,7 +44,7 @@ function gestorDe(array $modulos): User
 }
 
 /* ------------------------------------------------------------------ */
-/* POST /v1/admin/domiciliaries/{id}/contrato                          */
+/* POST /v1/admin/domiciliaries/{id}/contrato */
 /* ------------------------------------------------------------------ */
 
 test('firmar el acuerdo exige la firma y la ciudad', function () {
@@ -69,7 +69,7 @@ test('una ciudad de mas de 120 caracteres se rechaza', function () {
 });
 
 /* ------------------------------------------------------------------ */
-/* POST /v1/admin/domiciliaries                                        */
+/* POST /v1/admin/domiciliaries */
 /* ------------------------------------------------------------------ */
 
 test('dar de alta un domiciliario: o una cuenta que existe, o sus datos', function () {
@@ -108,7 +108,7 @@ test('un correo que ya tiene cuenta no se puede reusar al crear uno nuevo', func
 });
 
 /* ------------------------------------------------------------------ */
-/* POST /v1/admin/owners                                               */
+/* POST /v1/admin/owners */
 /* ------------------------------------------------------------------ */
 
 test('crear un propietario exige nombre, correo y contrasena', function () {
@@ -134,7 +134,7 @@ test('el correo de un propietario tiene que ser unico y parecer un correo', func
 });
 
 /* ------------------------------------------------------------------ */
-/* DELETE /v1/admin/reviews  y  /lote                                  */
+/* DELETE /v1/admin/reviews  y  /lote */
 /* ------------------------------------------------------------------ */
 
 test('borrar una resena exige saber de cual de los tres catalogos', function () {
@@ -169,4 +169,33 @@ test('el borrado en lote exige al menos una resena', function () {
     $this->deleteJson('/v1/admin/reviews/lote', ['scope' => 'business', 'ids' => []])
         ->assertStatus(422)
         ->assertJsonValidationErrors(['ids']);
+});
+
+/* ------------------------------------------------------------------ */
+/* GET /v1/admin/domiciliaries/{id} */
+/* ------------------------------------------------------------------ */
+
+test('la ficha de un domiciliario se puede abrir, y no solo en MySQL', function () {
+    /*
+     * ESTA PANTALLA NO PODÍA CORRER SOBRE SQLite, y nadie lo sabía porque no
+     * tenía prueba: calculaba el promedio de minutos en ruta con
+     * `TIMESTAMPDIFF`, que es de MySQL. Funcionaba en producción y reventaba
+     * en la única parte donde se podía comprobar.
+     *
+     * La prueba vale por lo que cubre —que la ficha abre y trae el promedio—
+     * y por lo que impide: que vuelva a colarse una función de un solo motor
+     * en una consulta sin red.
+     */
+    gestorDe(['domiciliarios']);
+
+    $persona = User::factory()->create(['rol' => 3, 'name' => 'Carlos Mendoza']);
+    $id = DB::table('domiciliary')->insertGetId([
+        'user_id' => $persona->user_id, 'available' => 1, 'qualification' => 0, 'state' => 1,
+    ], 'domiciliary_id');
+
+    $r = $this->getJson("/v1/admin/domiciliaries/{$id}")->assertOk();
+
+    // Sin entregas medibles el promedio es nulo, no cero: «cero minutos en
+    // ruta» sería un dato, y lo que hay es la ausencia de uno.
+    expect($r->json('avg_minutes'))->toBeNull();
 });

@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\ContratoService;
 use App\Services\MediaService;
 use App\Support\Consultas\AyudasDeAdmin;
+use App\Support\SqlPortable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -123,7 +124,13 @@ class DomiciliariosApiController extends Controller
             ->where('state', self::ENTREGADO)
             ->whereNotNull('dispatched_at')
             ->whereNotNull('delivery_date')
-            ->avg(DB::raw('TIMESTAMPDIFF(MINUTE, dispatched_at, delivery_date)'));
+            /*
+             * Por el ayudante y no con `TIMESTAMPDIFF` crudo: esa funcion es
+             * de MySQL y la suite corre sobre SQLite, asi que esta pantalla
+             * funcionaba en produccion y reventaba en la unica parte donde se
+             * podia comprobar. Nadie lo noto porque no tenia prueba.
+             */
+            ->avg(DB::raw(SqlPortable::minutosEntre('dispatched_at', 'delivery_date')));
 
         $d->contract = $this->contratoDe($d);
 

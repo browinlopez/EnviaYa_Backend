@@ -26,7 +26,7 @@ function rolesBasicos(): void
 }
 
 /* ------------------------------------------------------------------ */
-/* RECUPERAR LA CONTRASEÑA                                             */
+/* RECUPERAR LA CONTRASEÑA */
 /* ------------------------------------------------------------------ */
 
 test('pedir el codigo de recuperacion exige un correo con forma de correo', function () {
@@ -73,7 +73,7 @@ test('una contrasena de menos de seis caracteres no pasa', function () {
 });
 
 /* ------------------------------------------------------------------ */
-/* VERIFICAR EL CORREO                                                 */
+/* VERIFICAR EL CORREO */
 /* ------------------------------------------------------------------ */
 
 test('reenviar la verificacion exige un correo', function () {
@@ -93,7 +93,7 @@ test('verificar el correo exige el token', function () {
 });
 
 /* ------------------------------------------------------------------ */
-/* RESEÑAS                                                             */
+/* RESEÑAS */
 /* ------------------------------------------------------------------ */
 
 test('las resenas de un negocio exigen un negocio que exista', function () {

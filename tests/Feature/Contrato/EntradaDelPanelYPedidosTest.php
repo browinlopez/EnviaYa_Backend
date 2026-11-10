@@ -67,7 +67,7 @@ function tiendaParaContrato(?int $estadoDelPedido = null): array
 }
 
 /* ------------------------------------------------------------------ */
-/* PUT /v1/negocio/pedidos/{id}/cancelar                               */
+/* PUT /v1/negocio/pedidos/{id}/cancelar */
 /* ------------------------------------------------------------------ */
 
 test('cancelar un pedido exige un motivo', function () {
@@ -96,7 +96,7 @@ test('un motivo de mas de 500 caracteres se rechaza', function () {
 });
 
 /* ------------------------------------------------------------------ */
-/* POST /v1/negocio/productos/cargas                                   */
+/* POST /v1/negocio/productos/cargas */
 /* ------------------------------------------------------------------ */
 
 test('subir un catalogo exige el archivo', function () {
@@ -132,7 +132,7 @@ test('un catalogo de mas de 10 MB se rechaza', function () {
 });
 
 /* ------------------------------------------------------------------ */
-/* POST /v1/negocio/me/logo                                            */
+/* POST /v1/negocio/me/logo */
 /* ------------------------------------------------------------------ */
 
 test('el logo es obligatorio y lo dice en castellano', function () {
@@ -153,7 +153,7 @@ test('un PDF no sirve de logo', function () {
 });
 
 /* ------------------------------------------------------------------ */
-/* POST /v1/orders/geolocation                                         */
+/* POST /v1/orders/geolocation */
 /* ------------------------------------------------------------------ */
 
 test('la posicion del domiciliario exige pedido, domiciliario y coordenadas', function () {
@@ -188,7 +188,7 @@ test('una latitud que no es un numero se rechaza', function () {
 });
 
 /* ------------------------------------------------------------------ */
-/* PUT /v1/negocio/pedidos/estado                                      */
+/* PUT /v1/negocio/pedidos/estado */
 /* ------------------------------------------------------------------ */
 
 test('mover un pedido exige su id y el estado', function () {

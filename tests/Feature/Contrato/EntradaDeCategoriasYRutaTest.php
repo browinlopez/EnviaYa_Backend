@@ -20,13 +20,13 @@ use Laravel\Sanctum\Sanctum;
 function rolesParaCategorias(): void
 {
     foreach ([1 => 'comprador', 2 => 'tendero', 3 => 'domiciliario', 4 => 'admin',
-              5 => 'dueno_conjunto', 6 => 'celador'] as $id => $n) {
+        5 => 'dueno_conjunto', 6 => 'celador'] as $id => $n) {
         Rol::firstOrCreate(['rol_id' => $id], ['name' => $n, 'guard_name' => 'web']);
     }
 }
 
 /* ------------------------------------------------------------------ */
-/* CATEGORÍAS                                                          */
+/* CATEGORÍAS */
 /* ------------------------------------------------------------------ */
 
 test('el listado libre de categorias exige el tipo de negocio', function () {
@@ -71,7 +71,7 @@ test('corregir una categoria que si existe no da error de validacion', function 
 });
 
 /* ------------------------------------------------------------------ */
-/* LA FOTO DEL CONJUNTO                                                */
+/* LA FOTO DEL CONJUNTO */
 /* ------------------------------------------------------------------ */
 
 test('la foto del conjunto tiene que ser una imagen', function () {
@@ -99,7 +99,7 @@ test('la foto del conjunto tiene que ser una imagen', function () {
 });
 
 /* ------------------------------------------------------------------ */
-/* EL CÁLCULO DE RUTA                                                  */
+/* EL CÁLCULO DE RUTA */
 /* ------------------------------------------------------------------ */
 
 test('la ruta se pide con un pedido o con dos coordenadas, no con nada', function () {

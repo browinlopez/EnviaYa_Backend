@@ -31,7 +31,7 @@ function alguienConSesion(int $rol = 1): User
 }
 
 /* ------------------------------------------------------------------ */
-/* CHAT                                                                */
+/* CHAT */
 /* ------------------------------------------------------------------ */
 
 test('pedir los mensajes tiene DOS entradas, no una', function () {
@@ -77,7 +77,7 @@ test('marcar un mensaje exige el mensaje y un contenido en arreglo', function ()
 });
 
 /* ------------------------------------------------------------------ */
-/* DOMICILIARIOS                                                       */
+/* DOMICILIARIOS */
 /* ------------------------------------------------------------------ */
 
 test('listar los domiciliarios de un negocio exige el negocio', function () {
@@ -132,7 +132,7 @@ test('pero el correo de OTRA cuenta si choca', function () {
 });
 
 /* ------------------------------------------------------------------ */
-/* AFILIACIÓN Y FAVORITOS                                              */
+/* AFILIACIÓN Y FAVORITOS */
 /* ------------------------------------------------------------------ */
 
 test('afiliar y marcar favorito exigen persona y negocio que existan', function () {
@@ -150,7 +150,7 @@ test('afiliar y marcar favorito exigen persona y negocio que existan', function 
 });
 
 /* ------------------------------------------------------------------ */
-/* CONTRASEÑA                                                          */
+/* CONTRASEÑA */
 /* ------------------------------------------------------------------ */
 
 test('cambiar la contrasena exige la actual y una nueva confirmada', function () {
@@ -183,7 +183,7 @@ test('una contrasena de menos de ocho caracteres no pasa', function () {
 });
 
 /* ------------------------------------------------------------------ */
-/* LISTADOS DE PRODUCTOS                                               */
+/* LISTADOS DE PRODUCTOS */
 /* ------------------------------------------------------------------ */
 
 test('los mas vendidos y el esquema exigen un negocio que exista', function () {
