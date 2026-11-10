@@ -74,7 +74,7 @@ No son iguales y no se pueden tratar igual:
 | **10** | en ayudantes privados parametrizados | decidir si `rules()` mira el verbo |
 
 **Las 25 sobre rutas muertas.** El propio repositorio las documentó en
-[`../Documentacion/SUPERFICIE-DE-API-SIN-USO.md`](../../Documentacion/SUPERFICIE-DE-API-SIN-USO.md):
+`Documentacion/SUPERFICIE-DE-API-SIN-USO.md`, al lado de este proyecto:
 el CRUD completo de reseñas, `categories-business` y varias más. Escribir
 pruebas para convertirlas es invertir en código pendiente de retirarse.
 **Retirarlas o conservarlas es una decisión de producto, no técnica.**
