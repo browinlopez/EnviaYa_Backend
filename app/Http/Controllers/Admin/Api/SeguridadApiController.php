@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\ConfirmarDosFactoresRequest;
+use App\Http\Requests\Admin\DesactivarDosFactoresRequest;
 use App\Services\Totp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -84,10 +86,9 @@ class SeguridadApiController extends Controller
      * teléfono se pierde, se rompe o se cambia; sin ellos, el segundo factor
      * convierte cada teléfono perdido en una cuenta perdida.
      */
-    public function confirmarDosFactores(Request $request)
+    public function confirmarDosFactores(ConfirmarDosFactoresRequest $request)
     {
-        $datos = $request->validate(['code' => 'required|string']);
-
+        $datos = $request->validated();
         $u = $request->user();
 
         if (! $u->two_factor_secret) {
@@ -126,10 +127,9 @@ class SeguridadApiController extends Controller
      * esta pantalla para quitarle el segundo factor a la cuenta, que es
      * exactamente el ataque del que protege.
      */
-    public function desactivarDosFactores(Request $request)
+    public function desactivarDosFactores(DesactivarDosFactoresRequest $request)
     {
-        $datos = $request->validate(['password' => 'required|string']);
-
+        $datos = $request->validated();
         $u = $request->user();
 
         if (! Hash::check($datos['password'], $u->password)) {

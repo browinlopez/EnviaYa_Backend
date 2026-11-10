@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\BorrarCategoriaRequest;
+use App\Http\Requests\Admin\CorregirCategoriaRequest;
+use App\Http\Requests\Admin\CrearCategoriaRequest;
 use App\Services\MediaService;
 use App\Support\Consultas\AyudasDeAdmin;
 use Illuminate\Http\Request;
@@ -109,17 +112,9 @@ class CategoriasApiController extends Controller
         });
     }
 
-    public function storeCategory(Request $request)
+    public function storeCategory(CrearCategoriaRequest $request)
     {
-        $datos = $request->validate([
-            'scope' => 'required|in:product,business',
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'image' => 'nullable|string',
-            'state' => 'sometimes|boolean',
-            'business_category_ids' => 'sometimes|array',
-            'business_category_ids.*' => 'integer|exists:category_business,id',
-        ]);
+        $datos = $request->validated();
 
         if ($datos['scope'] === 'business') {
             $id = DB::table('category_business')->insertGetId([
@@ -142,18 +137,9 @@ class CategoriasApiController extends Controller
         return response()->json(['message' => 'Categoría creada.', 'id' => $id], 201);
     }
 
-    public function updateCategory(Request $request)
+    public function updateCategory(CorregirCategoriaRequest $request)
     {
-        $datos = $request->validate([
-            'scope' => 'required|in:product,business',
-            'id' => 'required|integer',
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'image' => 'nullable|string',
-            'state' => 'sometimes|boolean',
-            'business_category_ids' => 'sometimes|array',
-            'business_category_ids.*' => 'integer|exists:category_business,id',
-        ]);
+        $datos = $request->validated();
 
         if ($datos['scope'] === 'business') {
             $existe = DB::table('category_business')->where('id', $datos['id'])->exists();
@@ -187,12 +173,9 @@ class CategoriasApiController extends Controller
         return response()->json(['message' => 'Categoría actualizada.']);
     }
 
-    public function deleteCategory(Request $request)
+    public function deleteCategory(BorrarCategoriaRequest $request)
     {
-        $datos = $request->validate([
-            'scope' => 'required|in:product,business',
-            'id' => 'required|integer',
-        ]);
+        $datos = $request->validated();
 
         // Borrar una categoría en uso dejaría productos apuntando a un id
         // inexistente; se rechaza con un mensaje que explica el porqué.

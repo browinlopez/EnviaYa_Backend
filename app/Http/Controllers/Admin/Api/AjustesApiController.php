@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\RestablecerAjusteRequest;
 use App\Services\Ajustes;
 use App\Support\CatalogoDeAjustes;
 use Illuminate\Http\Request;
@@ -131,11 +132,9 @@ class AjustesApiController extends Controller
     }
 
     /** Devuelve un ajuste a su valor de fábrica. */
-    public function restablecer(Request $request)
+    public function restablecer(RestablecerAjusteRequest $request)
     {
-        $datos = $request->validate([
-            'key' => 'required|string',
-        ]);
+        $datos = $request->validated();
 
         abort_if(! CatalogoDeAjustes::existe($datos['key']), 404, 'Ese ajuste no existe.');
 

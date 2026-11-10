@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\ActualizarSolicitudRequest;
 use App\Models\Operacion\LandingRequest;
 use App\Models\Operacion\Pqrs;
 use Illuminate\Http\Request;
@@ -89,15 +90,11 @@ class SolicitudesApiController extends Controller
         );
     }
 
-    public function updateSolicitud(Request $request, $id)
+    public function updateSolicitud(ActualizarSolicitudRequest $request, $id)
     {
         $s = LandingRequest::findOr($id, fn () => abort(404, 'La solicitud no existe.'));
 
-        $datos = $request->validate([
-            'state' => 'sometimes|integer|in:0,1,2,3',
-            'assigned_to' => 'sometimes|nullable|integer|exists:user,user_id',
-            'resolution' => 'sometimes|nullable|string',
-        ]);
+        $datos = $request->validated();
 
         $nuevoEstado = (int) ($datos['state'] ?? $s->state);
         $resolucion = $datos['resolution'] ?? $s->resolution;

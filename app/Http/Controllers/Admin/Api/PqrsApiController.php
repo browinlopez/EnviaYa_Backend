@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\ActualizarPqrsRequest;
+use App\Http\Requests\Admin\AnotarEnPqrsRequest;
+use App\Http\Requests\Admin\CrearPqrsRequest;
 use App\Models\Operacion\Pqrs;
 use App\Models\Operacion\PqrsNote;
 use Illuminate\Http\Request;
@@ -63,23 +66,9 @@ class PqrsApiController extends Controller
         return response()->json($p);
     }
 
-    public function storePqrs(Request $request)
+    public function storePqrs(CrearPqrsRequest $request)
     {
-        $datos = $request->validate([
-            'type' => 'required|in:peticion,queja,reclamo,sugerencia,felicitacion',
-            'channel' => 'sometimes|in:app,whatsapp,llamada,correo,panel',
-            'priority' => 'sometimes|in:baja,media,alta',
-            'user_id' => 'sometimes|nullable|integer|exists:user,user_id',
-            'order_id' => 'sometimes|nullable|integer|exists:orderssales,orderSales_id',
-            'business_id' => 'sometimes|nullable|integer|exists:business,busines_id',
-            'domiciliary_id' => 'sometimes|nullable|integer|exists:domiciliary,domiciliary_id',
-            'contact_name' => 'sometimes|nullable|string|max:150',
-            'contact_email' => 'sometimes|nullable|email|max:150',
-            'contact_phone' => 'sometimes|nullable|string|max:30',
-            'subject' => 'required|string|max:200',
-            'description' => 'required|string',
-            'assigned_to' => 'sometimes|nullable|integer|exists:user,user_id',
-        ]);
+        $datos = $request->validated();
 
         $prioridad = $datos['priority'] ?? 'media';
 
@@ -97,16 +86,11 @@ class PqrsApiController extends Controller
         ], 201);
     }
 
-    public function updatePqrs(Request $request, $id)
+    public function updatePqrs(ActualizarPqrsRequest $request, $id)
     {
         $p = Pqrs::findOr($id, fn () => abort(404, 'El PQRS no existe.'));
 
-        $datos = $request->validate([
-            'priority' => 'sometimes|in:baja,media,alta',
-            'state' => 'sometimes|integer|in:0,1,2,3',
-            'assigned_to' => 'sometimes|nullable|integer|exists:user,user_id',
-            'resolution' => 'sometimes|nullable|string',
-        ]);
+        $datos = $request->validated();
 
         $nuevoEstado = (int) ($datos['state'] ?? $p->state);
         $resolucion = $datos['resolution'] ?? $p->resolution;
@@ -128,14 +112,11 @@ class PqrsApiController extends Controller
         return response()->json(['message' => 'PQRS actualizado.']);
     }
 
-    public function addPqrsNote(Request $request, $id)
+    public function addPqrsNote(AnotarEnPqrsRequest $request, $id)
     {
         Pqrs::findOr($id, fn () => abort(404, 'El PQRS no existe.'));
 
-        $datos = $request->validate([
-            'note' => 'required|string',
-            'is_internal' => 'sometimes|boolean',
-        ]);
+        $datos = $request->validated();
 
         PqrsNote::create([
             'pqrs_id' => $id,

@@ -1,0 +1,31 @@
+<?php
+
+namespace App\Http\Requests\Admin;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+/**
+ * Generar la liquidacion de un negocio o de un domiciliario, en un periodo.
+ */
+class GenerarLiquidacionRequest extends FormRequest
+{
+    /*
+     * El permiso lo resolvio el middleware de la ruta: `admin` y, donde
+     * aplica, `modulo:<area>,gestionar`. Repetirlo aqui seria una segunda
+     * fuente de verdad sobre quien puede que.
+     */
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'type' => 'required|in:business,domiciliary',
+            'target_id' => 'required|integer',
+            'period_start' => 'required|date',
+            'period_end' => 'required|date|after_or_equal:period_start',
+        ];
+    }
+}

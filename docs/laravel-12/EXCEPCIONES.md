@@ -31,7 +31,7 @@ de cumplimiento hoy, es que **la cifra solo pueda bajar**.
 | | |
 |---|---|
 | **Regla** | `04-capas-http.md`: validar con `FormRequest`, trabajar con `validated()` |
-| **Realidad** | Eran **173 llamadas a `->validate(`** contra **2** `FormRequest`. Al 9 de noviembre de 2026: **163 y 11** — convertida el área de Negocio |
+| **Realidad** | Eran **173 llamadas a `->validate(`** contra **2** `FormRequest`. Al 9 de noviembre de 2026: **149 y 25** — convertidas Negocio y Admin/Api |
 | **Motivo** | Convertir 173 validaciones de una vez es exactamente el PR gigante que el estándar desaconseja, y cada una es una regla de negocio que hay que releer, no mover |
 | **Riesgo aceptado** | La regla vive pegada al flujo: no se reusa, no se prueba aparte y la misma entidad se valida distinto en dos endpoints |
 | **Alternativa adoptada** | **Trinquete**: todo endpoint nuevo o tocado estrena su `FormRequest`. El contador de `->validate(` es la métrica y solo baja |

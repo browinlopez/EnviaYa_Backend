@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\ActualizarLiquidacionRequest;
+use App\Http\Requests\Admin\GenerarLiquidacionRequest;
 use App\Models\Operacion\Settlement;
 use App\Services\LiquidacionService;
 use Illuminate\Http\Request;
@@ -57,14 +59,9 @@ class OperacionApiController extends Controller
         return response()->json($s);
     }
 
-    public function generarLiquidacion(Request $request, LiquidacionService $servicio)
+    public function generarLiquidacion(GenerarLiquidacionRequest $request, LiquidacionService $servicio)
     {
-        $datos = $request->validate([
-            'type' => 'required|in:business,domiciliary',
-            'target_id' => 'required|integer',
-            'period_start' => 'required|date',
-            'period_end' => 'required|date|after_or_equal:period_start',
-        ]);
+        $datos = $request->validated();
 
         try {
             $liq = $servicio->generar(
@@ -86,15 +83,11 @@ class OperacionApiController extends Controller
         ], 201);
     }
 
-    public function updateLiquidacion(Request $request, $id)
+    public function updateLiquidacion(ActualizarLiquidacionRequest $request, $id)
     {
         $s = Settlement::findOr($id, fn () => abort(404, 'La liquidación no existe.'));
 
-        $datos = $request->validate([
-            'state' => 'sometimes|integer|in:0,1,2,3',
-            'payment_reference' => 'sometimes|nullable|string|max:100',
-            'notes' => 'sometimes|nullable|string|max:500',
-        ]);
+        $datos = $request->validated();
 
         $nuevo = (int) ($datos['state'] ?? $s->state);
 
