@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Category;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Category\CrearCategoriaDeProductoRequest;
 use App\Models\Product\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -37,13 +38,9 @@ class CategoryController extends Controller
     }
 
     // Crear nueva categoría
-    public function store(Request $request)
+    public function store(CrearCategoriaDeProductoRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'state' => 'nullable|boolean',
-        ]);
+        $validated = $request->validated();
 
         $category = Category::create($validated);
 

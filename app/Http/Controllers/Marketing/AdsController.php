@@ -3,12 +3,15 @@
 namespace App\Http\Controllers\Marketing;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Marketing\AnotarVistaDeBannerRequest;
+use App\Http\Requests\Marketing\BannersParaLaAppRequest;
+use App\Http\Requests\Marketing\DestacadosRequest;
+use App\Http\Requests\Marketing\ValidarCuponRequest;
 use App\Models\Marketing\Banner;
 use App\Models\Marketing\BannerEvent;
 use App\Models\Marketing\Coupon;
 use App\Models\Marketing\FeaturedBusiness;
 use App\Services\MediaService;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -32,16 +35,9 @@ class AdsController extends Controller
      * Parámetros: placement, platform (app|web), municipality_id, complex_id,
      * business_category_id, limit.
      */
-    public function banners(Request $request)
+    public function banners(BannersParaLaAppRequest $request)
     {
-        $datos = $request->validate([
-            'placement' => 'required|in:home_hero,home_strip,listing_inline,splash,web_home',
-            'platform' => 'sometimes|in:app,web',
-            'municipality_id' => 'sometimes|nullable|integer',
-            'complex_id' => 'sometimes|nullable|integer',
-            'business_category_id' => 'sometimes|nullable|integer',
-            'limit' => 'sometimes|integer|min:1|max:20',
-        ]);
+        $datos = $request->validated();
 
         $plataforma = $datos['platform'] ?? 'app';
         $limite = (int) ($datos['limit'] ?? 10);
@@ -95,12 +91,9 @@ class AdsController extends Controller
      * sumando y guardando: dos impresiones simultáneas —lo normal en cuanto la
      * app tiene tráfico— se perderían una a la otra con el segundo método.
      */
-    public function track(Request $request, $id)
+    public function track(AnotarVistaDeBannerRequest $request, $id)
     {
-        $datos = $request->validate([
-            'type' => 'required|in:impression,click',
-            'platform' => 'sometimes|in:app,web',
-        ]);
+        $datos = $request->validated();
 
         $banner = Banner::find($id);
 
@@ -128,12 +121,9 @@ class AdsController extends Controller
     /**
      * Negocios destacados vigentes para una posición.
      */
-    public function featured(Request $request)
+    public function featured(DestacadosRequest $request)
     {
-        $datos = $request->validate([
-            'placement' => 'sometimes|in:home_top,category_top,search_top',
-            'limit' => 'sometimes|integer|min:1|max:50',
-        ]);
+        $datos = $request->validated();
 
         $filas = FeaturedBusiness::vigente()
             ->where('placement', $datos['placement'] ?? 'home_top')
@@ -158,13 +148,9 @@ class AdsController extends Controller
      * NO lo canjea: solo dice cuánto valdría. El canje ocurre al confirmar el
      * pedido, y separarlo evita que mirar el carrito consuma usos del cupón.
      */
-    public function validateCoupon(Request $request)
+    public function validateCoupon(ValidarCuponRequest $request)
     {
-        $datos = $request->validate([
-            'code' => 'required|string|max:40',
-            'subtotal' => 'required|numeric|min:0',
-            'business_id' => 'sometimes|nullable|integer',
-        ]);
+        $datos = $request->validated();
 
         $cupon = Coupon::vigente()
             ->where('code', strtoupper(trim($datos['code'])))

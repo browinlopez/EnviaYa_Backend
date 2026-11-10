@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Business;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Business\MisFavoritosRequest;
 use App\Models\Business\BusinessUserFavorite;
 use App\Services\NegocioParaLaApp;
 use App\Services\TarifaPorDistancia;
@@ -46,11 +47,8 @@ class FavoriteController extends Controller
     }
 
     // Listar favoritos del usuario
-    public function myFavorites(Request $request)
+    public function myFavorites(MisFavoritosRequest $request)
     {
-        $request->validate([
-            'user_id' => 'required|integer|exists:user,user_id',
-        ]);
 
         $userId = $request->user_id;
 

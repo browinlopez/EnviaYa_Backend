@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Conjunto;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Conjunto\ActualizarMiConjuntoRequest;
 use App\Models\Buyer\ResidentialComplex;
 use App\Models\Conjunto\ComplexStaff;
 use App\Models\Rol;
@@ -117,20 +118,11 @@ class MiConjuntoController extends Controller
      * cada direccion al registrarse, asi que moverlas mueve entregas de gente
      * que ya vive ahi.
      */
-    public function actualizar(Request $request)
+    public function actualizar(ActualizarMiConjuntoRequest $request)
     {
         $complexId = (int) $request->attributes->get('complex_id');
 
-        $datos = $request->validate([
-            'name' => 'required|string|max:255',
-            'address' => 'nullable|string|max:255',
-            'phone' => 'nullable|string|max:40',
-            'email' => 'nullable|email|max:120',
-            'admin_name' => 'nullable|string|max:120',
-            'nit' => 'nullable|string|max:40',
-            'gate_notes' => 'nullable|string|max:2000',
-            'require_authorization' => 'nullable|boolean',
-        ]);
+        $datos = $request->validated();
 
         DB::table('residential_complexes')
             ->where('complex_id', $complexId)

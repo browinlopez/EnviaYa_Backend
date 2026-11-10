@@ -3,13 +3,14 @@
 namespace App\Http\Controllers\Conjunto;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Conjunto\CambiarCeladorRequest;
+use App\Http\Requests\Conjunto\CrearCeladorRequest;
 use App\Models\Conjunto\ComplexStaff;
 use App\Models\Rol;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules\Password;
 
 class CeladoresController extends Controller
 {
@@ -57,14 +58,9 @@ class CeladoresController extends Controller
      * El conjunto sale de la sesión, nunca del cuerpo: si viniera en la
      * petición, un dueño podría crearle personal al edificio del vecino.
      */
-    public function crearCelador(Request $request)
+    public function crearCelador(CrearCeladorRequest $request)
     {
-        $datos = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:user,email',
-            'password' => ['required', Password::min(8)],
-            'phone' => 'nullable|string|max:20',
-        ]);
+        $datos = $request->validated();
 
         $complexId = (int) $request->attributes->get('complex_id');
 
@@ -106,18 +102,14 @@ class CeladoresController extends Controller
     }
 
     /** Activa o desactiva a un celador. Solo los del propio conjunto. */
-    public function cambiarCelador(Request $request, int $id)
+    public function cambiarCelador(CambiarCeladorRequest $request, int $id)
     {
         /*
          * Activar, desactivar, o corregir nombre y teléfono. El correo no:
          * es con lo que entra, y cambiarlo desde acá lo dejaría afuera sin
          * que él lo sepa.
          */
-        $datos = $request->validate([
-            'state' => 'sometimes|boolean',
-            'name' => 'sometimes|string|max:255',
-            'phone' => 'sometimes|nullable|string|max:20',
-        ]);
+        $datos = $request->validated();
 
         $complexId = (int) $request->attributes->get('complex_id');
 

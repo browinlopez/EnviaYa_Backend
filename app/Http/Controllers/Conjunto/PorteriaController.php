@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Conjunto;
 
 use App\Events\CodigoDeAccesoUsado;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Conjunto\VerificarEnPorteriaRequest;
 use App\Models\Domiciliary;
 use App\Services\AccesoAlConjunto;
 use App\Services\PulsoDelConjunto;
@@ -29,12 +30,9 @@ class PorteriaController extends Controller
         private PulsoDelConjunto $pulso,
     ) {}
 
-    public function verificar(Request $request)
+    public function verificar(VerificarEnPorteriaRequest $request)
     {
-        $datos = $request->validate([
-            'code' => 'required_without:document|nullable|string|max:20',
-            'document' => 'required_without:code|nullable|string|max:50',
-        ]);
+        $datos = $request->validated();
 
         $complexId = (int) $request->attributes->get('complex_id');
 

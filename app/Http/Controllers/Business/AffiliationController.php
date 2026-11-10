@@ -4,6 +4,10 @@ namespace App\Http\Controllers\Business;
 
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Business\AfiliarClienteRequest;
+use App\Http\Requests\Business\BuscarCompradorPorTelefonoRequest;
+use App\Http\Requests\Business\ClientesAfiliadosRequest;
+use App\Http\Requests\Business\DesafiliarClienteRequest;
 use App\Models\Business\BusinessUserAffiliation;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -141,11 +145,8 @@ class AffiliationController extends Controller
     }
 
     // Buscar comprador por número de teléfono y rol
-    public function searchBuyerByPhone(Request $request)
+    public function searchBuyerByPhone(BuscarCompradorPorTelefonoRequest $request)
     {
-        $request->validate([
-            'phone' => 'required|string|min:7',
-        ]);
 
         $phone = $request->phone;
 
@@ -189,12 +190,8 @@ class AffiliationController extends Controller
     }
 
     // Afiliacion movil usuarios
-    public function AfiliationUser(Request $request)
+    public function AfiliationUser(AfiliarClienteRequest $request)
     {
-        $request->validate([
-            'user_id' => 'required|integer|exists:user,user_id',
-            'busines_id' => 'required|integer|exists:business,busines_id',
-        ]);
 
         if ($no = $this->negarAfiliacionAjena($request)) {
             return $no;
@@ -236,12 +233,8 @@ class AffiliationController extends Controller
     }
 
     // desafiliar usuario movil
-    public function DesafiliationUser(Request $request)
+    public function DesafiliationUser(DesafiliarClienteRequest $request)
     {
-        $request->validate([
-            'user_id' => 'required|integer|exists:user,user_id',
-            'busines_id' => 'required|integer|exists:business,busines_id',
-        ]);
 
         if ($no = $this->negarAfiliacionAjena($request)) {
             return $no;
@@ -265,11 +258,8 @@ class AffiliationController extends Controller
     }
 
     // Listar todos los usuarios afiliados a un negocio
-    public function getAffiliatedUsers(Request $request)
+    public function getAffiliatedUsers(ClientesAfiliadosRequest $request)
     {
-        $request->validate([
-            'busines_id' => 'required|integer|exists:business,busines_id',
-        ]);
 
         /*
          * El negocio del cuerpo tiene que ser suyo. Sin esto se afiliaba y

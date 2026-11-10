@@ -4,8 +4,9 @@ namespace App\Http\Controllers\Business;
 
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Business\ActualizarNegocioRequest;
+use App\Http\Requests\Business\CrearNegocioRequest;
 use App\Models\Business;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class BusinessController extends Controller
@@ -13,20 +14,8 @@ class BusinessController extends Controller
     use ComprobarPertenencia;
 
     // Crear negocio con transacción
-    public function store(Request $request)
+    public function store(CrearNegocioRequest $request)
     {
-        $request->validate([
-            'name' => 'required|string',
-            'phone' => 'nullable|string',
-            'address' => 'nullable|string',
-            'latitude' => 'nullable|numeric',
-            'longitude' => 'nullable|numeric',
-            'municipality_id' => 'required|integer|exists:municipalities,id',
-            'NIT' => 'nullable|string',
-            'razonSocial_DCD' => 'nullable|string',
-            'logo' => 'nullable|string',
-            'type' => 'required|integer',
-        ]);
 
         DB::beginTransaction();
 
@@ -62,22 +51,8 @@ class BusinessController extends Controller
     }
 
     // Actualizar negocio
-    public function update(Request $request)
+    public function update(ActualizarNegocioRequest $request)
     {
-        $request->validate([
-            'busines_id' => 'required|integer|exists:business,busines_id',
-            'name' => 'nullable|string',
-            'phone' => 'nullable|string',
-            'address' => 'nullable|string',
-            'municipality_id' => 'nullable|integer|exists:municipalities,id',
-            'NIT' => 'nullable|string',
-            'razonSocial_DCD' => 'nullable|string',
-            'logo' => 'nullable|string',
-            'type' => 'nullable|integer|in:1,2',
-            'state' => 'nullable|boolean',
-            'owner_ids' => 'nullable|array',
-            'owner_ids.*' => 'integer|exists:owner,owner_id',
-        ]);
 
         /*
          * Cambiar el nombre, el NIT o la razon social de OTRA tienda.

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Domiciliary;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Domiciliary\FirmarContratoRequest;
 use App\Services\ContratoService;
 use App\Services\MediaService;
 use Illuminate\Http\Request;
@@ -108,22 +109,9 @@ class ContratoDelDomiciliarioController extends Controller
     }
 
     /** Firmarlo. */
-    public function firmar(Request $request)
+    public function firmar(FirmarContratoRequest $request)
     {
-        $datos = $request->validate([
-            'signature' => 'required|string',
-            'city' => 'required|string|max:120',
-            // Se puede escribir la cédula en el mismo paso, como en el panel.
-            'document' => 'sometimes|nullable|string|max:50',
-            /*
-             * La aceptación va aparte de la firma, y tiene que venir en true.
-             *
-             * Trazar una firma es un gesto; decir «leí y acepto» es la
-             * declaración. Son dos actos distintos y el acuerdo se apoya en
-             * los dos.
-             */
-            'acepta' => 'required|accepted',
-        ]);
+        $datos = $request->validated();
 
         $d = $this->suyo($request);
 

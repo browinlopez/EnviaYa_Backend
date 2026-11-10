@@ -4,6 +4,7 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\User\MarcarAvisoLeidoRequest;
 use App\Models\Notification;
 use Illuminate\Http\Request;
 
@@ -38,11 +39,9 @@ class NotificacionesController extends Controller
         ]);
     }
 
-    public function markNotificationAsRead(Request $request)
+    public function markNotificationAsRead(MarcarAvisoLeidoRequest $request)
     {
-        $datos = $request->validate([
-            'notification_id' => 'required|integer',
-        ]);
+        $datos = $request->validated();
 
         $aviso = Notification::where('notification_id', $datos['notification_id'])
             ->where('user_id', $request->user()->user_id)

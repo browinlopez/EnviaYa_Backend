@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Business;
 
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Business\VerNegocioRequest;
 use App\Models\Business;
 use App\Models\Promotion;
 use App\Models\User;
@@ -397,12 +398,8 @@ class ConsultaDeNegociosController extends Controller
     }
 
     // Mostrar negocio con relaciones
-    public function show(Request $request)
+    public function show(VerNegocioRequest $request)
     {
-        $request->validate([
-            'busines_id' => 'required|integer|exists:business,busines_id',
-            'user_id' => 'sometimes|nullable|integer|exists:user,user_id',
-        ]);
 
         /*
          * EL PRECIO SOLO LO VE QUIEN ESTÁ AFILIADO.
@@ -582,11 +579,11 @@ class ConsultaDeNegociosController extends Controller
             'promociones' => $promociones
                 ->filter(fn (Promotion $p) => $p->descuenta())
                 ->map(fn (Promotion $p) => [
-                        'promotion_id' => (int) $p->promotion_id,
-                        'texto' => (string) $p->description,
-                        'regla' => $p->reglaEnPalabras(),
-                        'hasta_texto' => $p->hastaEnPalabras(),
-                    ])->values(),
+                    'promotion_id' => (int) $p->promotion_id,
+                    'texto' => (string) $p->description,
+                    'regla' => $p->reglaEnPalabras(),
+                    'hasta_texto' => $p->hastaEnPalabras(),
+                ])->values(),
             'reviews' => $this->presentador->resenas($business),
         ]);
     }

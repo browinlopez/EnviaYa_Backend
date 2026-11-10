@@ -4,6 +4,7 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\User\DesactivarCuentaRequest;
 use App\Models\Buyer\Buyer;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -209,11 +210,8 @@ class UserController extends Controller
     }
 
     // Eliminar usuario
-    public function desactivate(Request $request)
+    public function desactivate(DesactivarCuentaRequest $request)
     {
-        $request->validate([
-            'email' => 'required|email|exists:user,email',
-        ]);
 
         $user = User::where('email', $request->email)->firstOrFail();
 

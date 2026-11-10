@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Domiciliary;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Domiciliary\IngresosDelDomiciliarioRequest;
 use App\Models\Domiciliary;
 use App\Services\AccesoAlConjunto;
 use Carbon\Carbon;
@@ -11,11 +12,8 @@ use Illuminate\Support\Facades\DB;
 
 class IngresosDelDomiciliarioController extends Controller
 {
-    public function incomeDomiciliary(Request $request)
+    public function incomeDomiciliary(IngresosDelDomiciliarioRequest $request)
     {
-        $request->validate([
-            'domiciliary_id' => 'required|integer|exists:domiciliary,domiciliary_id',
-        ]);
 
         $domiciliary_id = $request->domiciliary_id;
 
