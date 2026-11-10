@@ -33,15 +33,18 @@ código de portería. `client_options` estaba vacío. El `try/catch` que envuelv
 cada `broadcast()` atrapa excepciones, **no lentitud**: una conexión colgada
 no lanza nada, espera.
 
-### Veinte avisos de seguridad en las dependencias — PENDIENTE
+### Veinte avisos de seguridad en las dependencias — ARREGLADO
 
-`composer audit` —que §46 pide y el CI no corría— devuelve **20 avisos en 10
+`composer audit` —que §46 pide y el CI no corría— devolvía **20 avisos en 10
 paquetes**. `symfony/yaml` y `symfony/http-foundation` en alta, y
 `phpoffice/phpspreadsheet` con dos altas: es lo que procesa **los Excel que
 suben los tenderos**, o sea entrada de fuera.
 
-No se actualizan aquí a propósito: subir diez paquetes es un riesgo con su
-propio PR y su propia verificación. El CI ya los cuenta.
+**Cerrado: cero avisos**, en la rama `seguridad/dependencias-al-dia`. Diez
+paquetes al día, 60 filas del lock, **ningún salto de versión mayor** y
+`composer.json` sin tocar —las restricciones ya permitían estas versiones—,
+así que revertirlo es revertir un archivo. El detalle de versión a versión
+está en `EXCEPCIONES.md` §6.2.
 
 ---
 
@@ -49,7 +52,7 @@ propio PR y su propia verificación. El CI ya los cuenta.
 
 | Regla | Antes | Hoy | Estado |
 |---|---:|---:|---|
-| Validación en `FormRequest` | 2 | **75** | 99 en línea quedan |
+| Validación en `FormRequest` | 2 | **107** | 69 en línea quedan |
 | Formato (Pint) | sin correr | **limpio** | en el CI |
 | `env()` fuera de `config/` | 2 | **0** | hecho |
 | Clases que no cargan | sin comprobar | **0 de 389** | comprobador nuevo en el CI |
@@ -62,22 +65,35 @@ propio PR y su propia verificación. El CI ya los cuenta.
 
 ## 3 · Lo que falta, por qué y cuánto cuesta
 
-### 99 validaciones en línea
+### 69 validaciones en línea
 
-No son iguales y no se pueden tratar igual:
+Medidas el 10 de noviembre de 2026: **69** `$request->validate(`, más 3
+`Validator::make(` y 2 `validateWithBag(`, que son otra cosa.
 
-| Cuántas | Dónde | Qué hace falta |
-|---:|---|---|
-| **48** | endpoints vivos sin ninguna prueba | escribir primero la prueba que fija la respuesta de hoy, después extraer |
-| **25** | endpoints que **ningún cliente llama** | nada: ver abajo |
-| **16** | con prueba, pero no mecánicas | una por una; el detector dice por qué |
-| **10** | en ayudantes privados parametrizados | decidir si `rules()` mira el verbo |
+El desglose en cuatro grupos que estaba acá —48 sin prueba, 25 sobre rutas
+muertas, 16 no mecánicas, 10 en ayudantes— se midió **antes** de las
+conversiones de hoy y ya no suma. No se reescribe a ojo: lo que vale es el
+contador, y el detector dice caso por caso por qué cada uno sigue en línea.
 
-**Las 25 sobre rutas muertas.** El propio repositorio las documentó en
-`Documentacion/SUPERFICIE-DE-API-SIN-USO.md`, al lado de este proyecto:
-el CRUD completo de reseñas, `categories-business` y varias más. Escribir
-pruebas para convertirlas es invertir en código pendiente de retirarse.
-**Retirarlas o conservarlas es una decisión de producto, no técnica.**
+Dos de las 69 ya están **decididas** y no son pendientes:
+`DocumentosDelDomiciliarioController::subir()` y
+`EfectivoDeLaTiendaController::recibir()` buscan antes de validar porque esa
+búsqueda **es la autorización**. El motivo está escrito en `EXCEPCIONES.md`.
+
+**Las que están sobre rutas muertas: ya hay con qué decidir.** El
+repositorio las documentó en `Documentacion/SUPERFICIE-DE-API-SIN-USO.md`,
+al lado de este proyecto: el CRUD completo de reseñas, `categories-business`
+y varias más. Escribir pruebas para convertirlas es invertir en código
+pendiente de retirarse — pero hasta hoy «pendiente de retirarse» era una
+sospecha.
+
+Ahora se mide. `php scripts/rutas_sin_uso.php` en el servidor cruza las 31
+contra el registro de auditoría y dice, de cada una, cuántas llamadas hubo,
+con qué códigos y cuándo fue la última. Las nueve GET —sobre las que el
+registro antes no decía nada, porque filtraba por verbo— se registran desde
+hoy. **Las 31 están cubiertas: ninguna de la que el informe no pueda
+hablar.** Retirarlas o conservarlas sigue siendo decisión de producto, pero
+ya es una decisión con números delante.
 
 ### `JsonResource` — la carpeta no existe
 
