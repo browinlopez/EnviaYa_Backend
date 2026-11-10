@@ -1,0 +1,1549 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Relation ''products'' is not found in App\\Models\\Product\\ProductGroup model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Console/Commands/AgruparVariantes.php
+
+		-
+			message: '#^Relation ''user'' is not found in App\\Models\\Chat\\Message model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Events/MessageSent.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$buyer\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Events/OrderCreated.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$payments\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Exports/Comercials/OrdersSheet.php
+
+		-
+			message: '#^Relation ''business'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Exports/Comercials/OrdersSheet.php
+
+		-
+			message: '#^Relation ''buyer'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Exports/Comercials/OrdersSheet.php
+
+		-
+			message: '#^Relation ''payments'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Exports/Comercials/OrdersSheet.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>domicilio" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Exports/Comercials/OrdersSheet.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Exports/Comercials/OrdersSheet.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>subtotal" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Exports/Comercials/OrdersSheet.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>total" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Exports/Comercials/OrdersSheet.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>valor_promocion" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Exports/Comercials/OrdersSheet.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$total_amount\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Exports/Comercials/TopBusinessesSheet.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$total_orders\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Exports/Comercials/TopBusinessesSheet.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Order\\OrdersSales\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Exports/Comercials/TopBusinessesSheet.php
+
+		-
+			message: '#^Relation ''business'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Exports/Comercials/TopBusinessesSheet.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Exports/Comercials/TopBusinessesSheet.php
+
+		-
+			message: '#^Relation ''buyer'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Exports/Comercials/UsersSheet.php
+
+		-
+			message: '#^Relation ''payments'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Exports/Comercials/UsersSheet.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Exports/Comercials/UsersSheet.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>total" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Exports/Comercials/UsersSheet.php
+
+		-
+			message: '#^Relation ''business'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Exports/operational/CancelacionesSheet.php
+
+		-
+			message: '#^Relation ''buyer'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Exports/operational/CancelacionesSheet.php
+
+		-
+			message: '#^Relation ''domiciliary'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Exports/operational/CancelacionesSheet.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 3
+			path: app/Exports/operational/CancelacionesSheet.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$address\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Exports/operational/CoberturaSheet.php
+
+		-
+			message: '#^Relation ''address'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Exports/operational/CoberturaSheet.php
+
+		-
+			message: '#^Property App\\Models\\Marketing\\Advertiser\:\:\$campaigns_count is not writable\.$#'
+			identifier: assign.propertyReadOnly
+			count: 1
+			path: app/Http/Controllers/Admin/Api/AnunciantesApiController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$advertiser\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/Api/BannersApiController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/Api/BannersApiController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/Api/CampanasApiController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Operacion\\DomiciliaryDocument\:\:\$domiciliary_name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/Api/DocumentosApiController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Operacion\\DomiciliaryDocument\:\:\$domiciliary_phone\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/Api/DocumentosApiController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$advertiser\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/Api/MarketingApiController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Operacion\\Pqrs\:\:\$overdue\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/Api/PqrsApiController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Operacion\\LandingRequest\:\:\$overdue\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/Api/SolicitudesApiController.php
+
+		-
+			message: '#^Relation ''buyer'' is not found in App\\Models\\User model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Auth/AuthController.php
+
+		-
+			message: '#^Relation ''domiciliary'' is not found in App\\Models\\User model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Auth/AuthController.php
+
+		-
+			message: '#^Relation ''owner'' is not found in App\\Models\\User model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Auth/AuthController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Business\\BusinessUserAffiliation\:\:\$user\.$#'
+			identifier: property.notFound
+			count: 28
+			path: app/Http/Controllers/Business/AffiliationController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$buyer\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Business/AffiliationController.php
+
+		-
+			message: '#^Relation ''business'' is not found in App\\Models\\Business\\BusinessUserAffiliation model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Business/AffiliationController.php
+
+		-
+			message: '#^Relation ''buyer'' is not found in App\\Models\\User model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/Business/AffiliationController.php
+
+		-
+			message: '#^Relation ''user'' is not found in App\\Models\\Business\\BusinessUserAffiliation model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/Business/AffiliationController.php
+
+		-
+			message: '#^Relation ''municipality'' is not found in App\\Models\\Business model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Business/BusinessController.php
+
+		-
+			message: '#^Relation ''owners'' is not found in App\\Models\\Business model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Business/BusinessController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Business\:\:\$municipality\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Business/ConsultaDeNegociosController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Business\:\:\$owners\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Business/ConsultaDeNegociosController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Business\:\:\$products\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Business/ConsultaDeNegociosController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Business\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Business\>\:\:\$municipality\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Business/ConsultaDeNegociosController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Business\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Business\>\:\:\$owners\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Business/ConsultaDeNegociosController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Business\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Business\>\:\:\$products\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Business/ConsultaDeNegociosController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Promotion\:\:\$products\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Business/ConsultaDeNegociosController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\User\>\:\:\$affiliatedBusinesses\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Http/Controllers/Business/ConsultaDeNegociosController.php
+
+		-
+			message: '#^Relation ''affiliatedBusinesses'' is not found in App\\Models\\User model\.$#'
+			identifier: larastan.relationExistence
+			count: 3
+			path: app/Http/Controllers/Business/ConsultaDeNegociosController.php
+
+		-
+			message: '#^Relation ''municipality'' is not found in App\\Models\\Business model\.$#'
+			identifier: larastan.relationExistence
+			count: 3
+			path: app/Http/Controllers/Business/ConsultaDeNegociosController.php
+
+		-
+			message: '#^Relation ''owners'' is not found in App\\Models\\Business model\.$#'
+			identifier: larastan.relationExistence
+			count: 3
+			path: app/Http/Controllers/Business/ConsultaDeNegociosController.php
+
+		-
+			message: '#^Relation ''products'' is not found in App\\Models\\Business model\.$#'
+			identifier: larastan.relationExistence
+			count: 3
+			path: app/Http/Controllers/Business/ConsultaDeNegociosController.php
+
+		-
+			message: '#^Relation ''products'' is not found in App\\Models\\Promotion model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Business/ConsultaDeNegociosController.php
+
+		-
+			message: '#^Relation ''reviews'' is not found in App\\Models\\Business model\.$#'
+			identifier: larastan.relationExistence
+			count: 3
+			path: app/Http/Controllers/Business/ConsultaDeNegociosController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Business\\BusinessUserFavorite\:\:\$business\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Business/FavoriteController.php
+
+		-
+			message: '#^Expression on left side of \?\? is not nullable\.$#'
+			identifier: nullCoalesce.expr
+			count: 1
+			path: app/Http/Controllers/Business/FavoriteController.php
+
+		-
+			message: '#^Relation ''business'' is not found in App\\Models\\Business\\BusinessUserFavorite model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/Business/FavoriteController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Chat\\Chat\:\:\$messages\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Http/Controllers/Chat/ChatController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Chat\\Chat\:\:\$participants\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Http/Controllers/Chat/ChatController.php
+
+		-
+			message: '#^Relation ''messages'' is not found in App\\Models\\Chat\\Chat model\.$#'
+			identifier: larastan.relationExistence
+			count: 3
+			path: app/Http/Controllers/Chat/ChatController.php
+
+		-
+			message: '#^Relation ''participants'' is not found in App\\Models\\Chat\\Chat model\.$#'
+			identifier: larastan.relationExistence
+			count: 9
+			path: app/Http/Controllers/Chat/ChatController.php
+
+		-
+			message: '#^Relation ''user'' is not found in App\\Models\\Chat\\Message model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Chat/ChatController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Conjunto\\ComplexStaff\:\:\$entradas\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Conjunto/CeladoresController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Conjunto\\ComplexStaff\:\:\$ultima_entrada\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Conjunto/CeladoresController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Conjunto/PorteriaController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Business\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Business\>\:\:\$domiciliaries\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Domiciliary/DomiciliaryController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$domiciliary\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Domiciliary/DomiciliaryController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$owner\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Domiciliary/DomiciliaryController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\User\>\:\:\$domiciliary\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Domiciliary/DomiciliaryController.php
+
+		-
+			message: '#^Relation ''businesses'' is not found in App\\Models\\Domiciliary model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Domiciliary/DomiciliaryController.php
+
+		-
+			message: '#^Relation ''domiciliaries'' is not found in App\\Models\\Business model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Domiciliary/DomiciliaryController.php
+
+		-
+			message: '#^Relation ''reviews'' is not found in App\\Models\\Domiciliary model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/Domiciliary/DomiciliaryController.php
+
+		-
+			message: '#^Relation ''user'' is not found in App\\Models\\Domiciliary model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/Domiciliary/DomiciliaryController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Domiciliary\:\:\$businesses\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Domiciliary/PedidosDelDomiciliarioController.php
+
+		-
+			message: '#^Relation ''businesses'' is not found in App\\Models\\Domiciliary model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Domiciliary/PedidosDelDomiciliarioController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Domiciliary\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Domiciliary\>\:\:\$businesses\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Domiciliary/VinculosDelDomiciliarioController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Domiciliary\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Domiciliary\>\:\:\$user\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Domiciliary/VinculosDelDomiciliarioController.php
+
+		-
+			message: '#^Relation ''businesses'' is not found in App\\Models\\Domiciliary model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Domiciliary/VinculosDelDomiciliarioController.php
+
+		-
+			message: '#^Relation ''user'' is not found in App\\Models\\Domiciliary model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Domiciliary/VinculosDelDomiciliarioController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Domiciliary\:\:\$user\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Negocio/AltaDeDomiciliarioController.php
+
+		-
+			message: '#^Relation ''user'' is not found in App\\Models\\Domiciliary model\.$#'
+			identifier: larastan.relationExistence
+			count: 3
+			path: app/Http/Controllers/Negocio/AltaDeDomiciliarioController.php
+
+		-
+			message: '#^Relation ''buyer'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Negocio/CancelacionDelPedidoController.php
+
+		-
+			message: '#^Relation ''buyer'' is not found in App\\Models\\User model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/Negocio/ClientesDelNegocioController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Domiciliary\:\:\$user\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Negocio/DocumentosDelDomiciliarioController.php
+
+		-
+			message: '#^Relation ''businesses'' is not found in App\\Models\\Domiciliary model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/Negocio/DocumentosDelDomiciliarioController.php
+
+		-
+			message: '#^Relation ''user'' is not found in App\\Models\\Domiciliary model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Negocio/DocumentosDelDomiciliarioController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Domiciliary\:\:\$user\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Negocio/EfectivoDeLaTiendaController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Operacion\\CashDeposit\:\:\$domiciliario\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Negocio/EfectivoDeLaTiendaController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Operacion\\CashDeposit\:\:\$recibio\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Negocio/EfectivoDeLaTiendaController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Operacion\\CashDeposit\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 2
+			path: app/Http/Controllers/Negocio/EfectivoDeLaTiendaController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,array\<string, mixed\>\>\:\:filter\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Http/Controllers/Negocio/EfectivoDeLaTiendaController.php
+
+		-
+			message: '#^Relation ''businesses'' is not found in App\\Models\\Domiciliary model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/Negocio/EfectivoDeLaTiendaController.php
+
+		-
+			message: '#^Relation ''user'' is not found in App\\Models\\Domiciliary model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Negocio/EfectivoDeLaTiendaController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Domiciliary\:\:\$businesses\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Negocio/FichaDelDomiciliarioController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Domiciliary\:\:\$user\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Http/Controllers/Negocio/FichaDelDomiciliarioController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$buyer\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Negocio/FichaDelDomiciliarioController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$entregas\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Negocio/FichaDelDomiciliarioController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$ganado\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Negocio/FichaDelDomiciliarioController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,App\\Models\\Order\\OrdersSales\>\:\:filter\(\) expects \(callable\(App\\Models\\Order\\OrdersSales, int\)\: bool\)\|null, Closure\(mixed\)\: \(Carbon\\Carbon\|null\) given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Negocio/FichaDelDomiciliarioController.php
+
+		-
+			message: '#^Relation ''businesses'' is not found in App\\Models\\Domiciliary model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/Negocio/FichaDelDomiciliarioController.php
+
+		-
+			message: '#^Relation ''buyer'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/Negocio/FichaDelDomiciliarioController.php
+
+		-
+			message: '#^Relation ''user'' is not found in App\\Models\\Domiciliary model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Negocio/FichaDelDomiciliarioController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$buyer\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Negocio/HistorialDePedidosController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$domiciliary\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Negocio/HistorialDePedidosController.php
+
+		-
+			message: '#^Relation ''buyer'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Negocio/HistorialDePedidosController.php
+
+		-
+			message: '#^Relation ''domiciliary'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Negocio/HistorialDePedidosController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Product\\ProductBusiness\:\:\$product\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Negocio/ProductosDelNegocioController.php
+
+		-
+			message: '#^Relation ''product'' is not found in App\\Models\\Product\\ProductBusiness model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Negocio/ProductosDelNegocioController.php
+
+		-
+			message: '#^Relation ''products'' is not found in App\\Models\\Promotion model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/Negocio/PromocionesController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Business\:\:\$domiciliaries\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Negocio/TorreDeControlController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$address\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Negocio/TorreDeControlController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$buyer\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Negocio/TorreDeControlController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$details\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Negocio/TorreDeControlController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Negocio\\TorreDeControlController\:\:pedidosABordo\(\) should return Illuminate\\Support\\Collection\<int, Illuminate\\Support\\Collection\<int, array\>\> but returns Illuminate\\Support\\Collection\<\(int\|string\), Illuminate\\Support\\Collection\<int, array\{domiciliary_id\: int, orderSales_id\: int, cliente\: mixed, telefono\: mixed, direccion\: string\|null, recoge_en_tienda\: bool, total\: float, productos\: mixed, \.\.\.\}\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/Negocio/TorreDeControlController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Negocio\\TorreDeControlController\:\:ultimaPosicion\(\) should return Illuminate\\Support\\Collection\<int, array\> but returns Illuminate\\Support\\Collection\<int, array\{latitude\: float, longitude\: float, orderSales_id\: int, at\: mixed, hace_minutos\: int\|null\}\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Controllers/Negocio/TorreDeControlController.php
+
+		-
+			message: '#^Relation ''address'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Negocio/TorreDeControlController.php
+
+		-
+			message: '#^Relation ''buyer'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Negocio/TorreDeControlController.php
+
+		-
+			message: '#^Relation ''details'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Negocio/TorreDeControlController.php
+
+		-
+			message: '#^Relation ''domiciliaries'' is not found in App\\Models\\Business model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Negocio/TorreDeControlController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Negocio/TorreDeControlController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$address\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Order/ConsultaDePedidosController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$business\.$#'
+			identifier: property.notFound
+			count: 12
+			path: app/Http/Controllers/Order/ConsultaDePedidosController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$details\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Order/ConsultaDePedidosController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$domiciliary\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Order/ConsultaDePedidosController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$payments\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Order/ConsultaDePedidosController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$promotions\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Order/ConsultaDePedidosController.php
+
+		-
+			message: '#^Array has 2 duplicate keys with value ''address'' \(''address'', ''address''\)\.$#'
+			identifier: array.duplicateKey
+			count: 1
+			path: app/Http/Controllers/Order/ConsultaDePedidosController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Order\\OrdersSales\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Http/Controllers/Order/ConsultaDePedidosController.php
+
+		-
+			message: '#^Relation ''address'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 4
+			path: app/Http/Controllers/Order/ConsultaDePedidosController.php
+
+		-
+			message: '#^Relation ''business'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 3
+			path: app/Http/Controllers/Order/ConsultaDePedidosController.php
+
+		-
+			message: '#^Relation ''buyer'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Order/ConsultaDePedidosController.php
+
+		-
+			message: '#^Relation ''details'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 3
+			path: app/Http/Controllers/Order/ConsultaDePedidosController.php
+
+		-
+			message: '#^Relation ''domiciliary'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/Order/ConsultaDePedidosController.php
+
+		-
+			message: '#^Relation ''payments'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 3
+			path: app/Http/Controllers/Order/ConsultaDePedidosController.php
+
+		-
+			message: '#^Relation ''promotions'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 3
+			path: app/Http/Controllers/Order/ConsultaDePedidosController.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type mixed\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Http/Controllers/Order/CotizacionController.php
+
+		-
+			message: '#^Relation ''forms'' is not found in App\\Models\\Payment\\PaymentMethods model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Order/MediosDePagoController.php
+
+		-
+			message: '#^Relation ''methods'' is not found in App\\Models\\Payment\\PaymentForms model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Order/MediosDePagoController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$address\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Order/OrderController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$business\.$#'
+			identifier: property.notFound
+			count: 5
+			path: app/Http/Controllers/Order/OrderController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$buyer\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Http/Controllers/Order/OrderController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$domiciliary\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Order/OrderController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Order\\OrdersSales\>\:\:\$buyer\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Order/OrderController.php
+
+		-
+			message: '#^Relation ''address'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/Order/OrderController.php
+
+		-
+			message: '#^Relation ''business'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/Order/OrderController.php
+
+		-
+			message: '#^Relation ''buyer'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/Order/OrderController.php
+
+		-
+			message: '#^Relation ''details'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 3
+			path: app/Http/Controllers/Order/OrderController.php
+
+		-
+			message: '#^Relation ''domiciliary'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Order/OrderController.php
+
+		-
+			message: '#^Relation ''payments'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/Order/OrderController.php
+
+		-
+			message: '#^Relation ''promotions'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Order/OrderController.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type mixed\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Http/Controllers/Order/OrderController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$buyer\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Order/RutaDelPedidoController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$domiciliary\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Order/RutaDelPedidoController.php
+
+		-
+			message: '#^Relation ''address'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Order/RutaDelPedidoController.php
+
+		-
+			message: '#^Relation ''business'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Order/RutaDelPedidoController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$address\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Http/Controllers/Payment/PaymentController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSalesDetail\:\:\$product\.$#'
+			identifier: property.notFound
+			count: 6
+			path: app/Http/Controllers/Product/DestacadosDeProductoController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSalesDetail\:\:\$total_ordered\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Product/DestacadosDeProductoController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Product\\ProductBusiness\:\:\$product\.$#'
+			identifier: property.notFound
+			count: 6
+			path: app/Http/Controllers/Product/DestacadosDeProductoController.php
+
+		-
+			message: '#^Relation ''order'' is not found in App\\Models\\Order\\OrdersSalesDetail model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Product/DestacadosDeProductoController.php
+
+		-
+			message: '#^Relation ''product'' is not found in App\\Models\\Order\\OrdersSalesDetail model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Product/DestacadosDeProductoController.php
+
+		-
+			message: '#^Relation ''product'' is not found in App\\Models\\Product\\ProductBusiness model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Product/DestacadosDeProductoController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Business\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Business\>\:\:\$products\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Product/ProductController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Product\\ProductBusiness\:\:\$business\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Product/ProductController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Product\\Product\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Product\\Product\>\:\:\$businesses\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Product/ProductController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Product\\Product\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Product\\Product\>\:\:\$category\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Product/ProductController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$owner\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Product/ProductController.php
+
+		-
+			message: '#^Relation ''business'' is not found in App\\Models\\Product\\ProductBusiness model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Product/ProductController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>buyer_id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Review/AyudasDeResenas.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Reviews\\DomiciliaryReview\:\:\$buyer\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Http/Controllers/Review/ResenasDeDomiciliarioController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Reviews\\DomiciliaryReview\:\:\$domiciliary\.$#'
+			identifier: property.notFound
+			count: 16
+			path: app/Http/Controllers/Review/ResenasDeDomiciliarioController.php
+
+		-
+			message: '#^Relation ''buyer'' is not found in App\\Models\\Reviews\\DomiciliaryReview model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/Review/ResenasDeDomiciliarioController.php
+
+		-
+			message: '#^Relation ''domiciliary'' is not found in App\\Models\\Reviews\\DomiciliaryReview model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/Review/ResenasDeDomiciliarioController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Reviews\\BusinessReview\:\:\$business\.$#'
+			identifier: property.notFound
+			count: 11
+			path: app/Http/Controllers/Review/ResenasDeNegocioController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Reviews\\BusinessReview\:\:\$buyer\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Review/ResenasDeNegocioController.php
+
+		-
+			message: '#^Relation ''business'' is not found in App\\Models\\Reviews\\BusinessReview model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/Review/ResenasDeNegocioController.php
+
+		-
+			message: '#^Relation ''buyer'' is not found in App\\Models\\Reviews\\BusinessReview model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/Review/ResenasDeNegocioController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Reviews\\UserReview\:\:\$domiciliary\.$#'
+			identifier: property.notFound
+			count: 10
+			path: app/Http/Controllers/Review/ResenasDeUsuarioController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Reviews\\UserReview\:\:\$user\.$#'
+			identifier: property.notFound
+			count: 8
+			path: app/Http/Controllers/Review/ResenasDeUsuarioController.php
+
+		-
+			message: '#^Relation ''domiciliary'' is not found in App\\Models\\Reviews\\UserReview model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/Review/ResenasDeUsuarioController.php
+
+		-
+			message: '#^Relation ''user'' is not found in App\\Models\\Reviews\\UserReview model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/Review/ResenasDeUsuarioController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$buyer\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Review/ReviewController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$domiciliary\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Review/ReviewController.php
+
+		-
+			message: '#^Left side of && is always true\.$#'
+			identifier: booleanAnd.leftAlwaysTrue
+			count: 1
+			path: app/Http/Controllers/Review/ReviewController.php
+
+		-
+			message: '#^Relation ''buyer'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/Soporte/AyudaDesdeLaAppController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\\UserAddress\:\:\$alias\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/User/DireccionesController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\\UserAddress\:\:\$municipality\.$#'
+			identifier: property.notFound
+			count: 7
+			path: app/Http/Controllers/User/DireccionesController.php
+
+		-
+			message: '#^Relation ''alias'' is not found in App\\Models\\User\\UserAddress model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/User/DireccionesController.php
+
+		-
+			message: '#^Relation ''municipality'' is not found in App\\Models\\User\\UserAddress model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/User/DireccionesController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Buyer\\Buyer\:\:\$user\.$#'
+			identifier: property.notFound
+			count: 8
+			path: app/Http/Controllers/User/UserController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$addresses\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/User/UserController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$buyer\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/User/UserController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\User\>\:\:\$addresses\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/User/UserController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\User\>\:\:\$buyer\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/User/UserController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\User\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: app/Http/Controllers/User/UserController.php
+
+		-
+			message: '#^Relation ''addresses'' is not found in App\\Models\\User model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/User/UserController.php
+
+		-
+			message: '#^Relation ''buyer'' is not found in App\\Models\\User model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/User/UserController.php
+
+		-
+			message: '#^Relation ''user'' is not found in App\\Models\\Buyer\\Buyer model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/User/UserController.php
+
+		-
+			message: '#^Relation ''address'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Jobs/TrazarLaRutaDelPedido.php
+
+		-
+			message: '#^Relation ''business'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Jobs/TrazarLaRutaDelPedido.php
+
+		-
+			message: '#^Cannot call method isPast\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Models/Business.php
+
+		-
+			message: '#^Class App\\Models\\OrderGeolocation not found\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Models/Domiciliary.php
+
+		-
+			message: '#^Parameter \#1 \$related of method Illuminate\\Database\\Eloquent\\Model\:\:hasMany\(\) expects class\-string\<Illuminate\\Database\\Eloquent\\Model\>, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Models/Domiciliary.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:vigente\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Models/Marketing/Banner.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$address\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Order/OrdersSales.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$business\.$#'
+			identifier: property.notFound
+			count: 4
+			path: app/Models/Order/OrdersSales.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$details\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Order/OrdersSales.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$domiciliary\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Order/OrdersSales.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Models/Order/OrdersSales.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Product\\ProductGroup\:\:\$products\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Product/ProductGroup.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Promotion\:\:\$products\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/Promotion.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\:\:\$rolRelation\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$items\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/AccesoAlConjunto.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$items_count\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/AccesoAlConjunto.php
+
+		-
+			message: '#^Relation ''business'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Services/AvisoDePedidoNuevo.php
+
+		-
+			message: '#^Relation ''buyer'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Services/AvisoDePedidoNuevo.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>owners" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/AvisoDePedidoNuevo.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$buyer\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/CancelacionDelPedido.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Product\\Product\:\:\$category\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/CatalogoDeProductos.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Product\\Product\:\:\$group\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/CatalogoDeProductos.php
+
+		-
+			message: '#^Relation ''category'' is not found in App\\Models\\Product\\Product model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Services/CatalogoDeProductos.php
+
+		-
+			message: '#^Relation ''group'' is not found in App\\Models\\Product\\Product model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Services/CatalogoDeProductos.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Operacion\\CashMovement\:\:\$busines_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/CustodiaDeEfectivo.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Promotion\:\:\$products\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Services/DescuentoPorPromocion.php
+
+		-
+			message: '#^Relation ''products'' is not found in App\\Models\\Promotion model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Services/DescuentoPorPromocion.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/DescuentoPorPromocion.php
+
+		-
+			message: '#^Relation ''product'' is not found in App\\Models\\Product\\ProductBusiness model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Services/EconomiaDelPedido.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between non\-falsy\-string and '''' will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Services/ImportadorDeCatalogo.php
+
+		-
+			message: '#^Match expression does not handle remaining value\: string$#'
+			identifier: match.unhandled
+			count: 1
+			path: app/Services/MediaService.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$address\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/PagoEnLinea.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$buyer\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/PagoEnLinea.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>address" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/PagoEnLinea.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>email" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/PagoEnLinea.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 3
+			path: app/Services/PagoEnLinea.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>phone" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/PagoEnLinea.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$address\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/PedidoParaLaApp.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$business\.$#'
+			identifier: property.notFound
+			count: 11
+			path: app/Services/PedidoParaLaApp.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$buyer\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/PedidoParaLaApp.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$details\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/PedidoParaLaApp.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$domiciliary\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/PedidoParaLaApp.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$payments\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/PedidoParaLaApp.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$promotions\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/PedidoParaLaApp.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Product\\ProductBusiness\:\:\$product\.$#'
+			identifier: property.notFound
+			count: 5
+			path: app/Services/PlantillaDeCatalogo.php
+
+		-
+			message: '#^Relation ''product'' is not found in App\\Models\\Product\\ProductBusiness model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Services/PlantillaDeCatalogo.php
+
+		-
+			message: '#^Relation ''products'' is not found in App\\Models\\Promotion model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Services/PromocionesDeLaTienda.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$business\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/ReglasDeDespacho.php
+
+		-
+			message: '#^Called ''count'' on Laravel collection, but could have been retrieved as a query\.$#'
+			identifier: larastan.noUnnecessaryCollectionCall
+			count: 1
+			path: app/Services/ResumenDelPanel.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$address\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/TrazoDeLaRuta.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$business\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/TrazoDeLaRuta.php
+
+		-
+			message: '#^Relation ''address'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Services/TrazoDeLaRuta.php
+
+		-
+			message: '#^Relation ''business'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Services/TrazoDeLaRuta.php
+
+		-
+			message: '#^Unsafe call to private method App\\Support\\ImporteDeLinea\:\:campo\(\) through static\:\:\.$#'
+			identifier: staticClassAccess.privateMethod
+			count: 5
+			path: app/Support/ImporteDeLinea.php

@@ -1,0 +1,21 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - phpstan-baseline.neon
+
+parameters:
+    paths:
+        - app
+    level: 5
+    tmpDir: build/phpstan
+
+    # Larastan no resuelve los `casts()` en forma de metodo ni los scopes a
+    # traves de `whereHas`, asi que inventa errores: dice que `isPast()` se
+    # llama sobre un string cuando `accepting_until` SI esta casteado a
+    # datetime, y que `vigente()` no existe cuando es un scope de AdCampaign.
+    # Se comprobaron a mano los nueve hallazgos de mas senal del nivel 5 y los
+    # nueve eran artefactos de inferencia.
+    #
+    # Por eso la linea base: congela los 503 de hoy y exige que el codigo
+    # NUEVO salga limpio. El numero solo puede bajar. Anotar los modelos con
+    # `@property` quitaria la mayoria, y es trabajo de otro dia.
+    treatPhpDocTypesAsCertain: false

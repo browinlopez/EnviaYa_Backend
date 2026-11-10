@@ -68,6 +68,11 @@ jobs:
       - name: Formato (Pint)
         run: ./vendor/bin/pint --test
 
+      # PHPStan con linea base: los 493 hallazgos de hoy estan congelados y lo
+      # que se exige es que el codigo NUEVO salga limpio. El numero solo baja.
+      - name: Analisis estatico (PHPStan + Larastan)
+        run: ./vendor/bin/phpstan analyse --no-progress --memory-limit=1G
+
       - name: Pruebas
         run: php artisan test
 
