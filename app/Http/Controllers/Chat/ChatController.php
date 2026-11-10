@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Chat;
 use App\Events\MessageSent;
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Chat\ChatsDeUnaPersonaRequest;
 use App\Http\Requests\Chat\MandarMensajeRequest;
+use App\Http\Requests\Chat\MarcarMensajeRequest;
 use App\Models\Chat\Chat;
 use App\Models\Chat\ChatParticipant;
 use App\Models\Chat\Message;
@@ -250,12 +252,8 @@ class ChatController extends Controller
         return $this->formatChatResponse($chat);
     }
 
-    public function updateMessage(Request $request)
+    public function updateMessage(MarcarMensajeRequest $request)
     {
-        $request->validate([
-            'message_id' => 'required|exists:messages,message_id',
-            'content' => 'required|array',
-        ]);
 
         $message = Message::findOrFail($request->message_id);
 
@@ -303,11 +301,8 @@ class ChatController extends Controller
         ]);
     }
 
-    public function getUserChats(Request $request)
+    public function getUserChats(ChatsDeUnaPersonaRequest $request)
     {
-        $request->validate([
-            'user_id' => 'required|exists:user,user_id',
-        ]);
 
         // Se precarga el último mensaje de cada chat: sin él la lista solo
         // podía mostrar el nombre del contacto, sin vista previa ni fecha.

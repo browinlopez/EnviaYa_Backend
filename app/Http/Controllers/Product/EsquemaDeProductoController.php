@@ -4,10 +4,10 @@ namespace App\Http\Controllers\Product;
 
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Product\EsquemaDeProductoRequest;
 use App\Models\Business;
 use App\Models\Product\Category;
 use App\Support\ProductTypeSchema;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class EsquemaDeProductoController extends Controller
@@ -19,11 +19,8 @@ class EsquemaDeProductoController extends Controller
      * campos extra (etiqueta, tipo de input, obligatoriedad) y categorías
      * válidas. La app arma el formulario con esto en vez de hardcodearlo.
      */
-    public function schema(Request $request)
+    public function schema(EsquemaDeProductoRequest $request)
     {
-        $request->validate([
-            'business_id' => 'required|integer|exists:business,busines_id',
-        ]);
 
         $business = Business::findOrFail($request->business_id);
         $type = (int) $business->type;

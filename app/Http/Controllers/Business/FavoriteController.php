@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Business;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Business\AlternarFavoritoRequest;
 use App\Http\Requests\Business\MisFavoritosRequest;
 use App\Models\Business\BusinessUserFavorite;
 use App\Services\NegocioParaLaApp;
 use App\Services\TarifaPorDistancia;
-use Illuminate\Http\Request;
 
 class FavoriteController extends Controller
 {
@@ -16,12 +16,8 @@ class FavoriteController extends Controller
         private readonly TarifaPorDistancia $distancias,
     ) {}
 
-    public function toggleFavorite(Request $request)
+    public function toggleFavorite(AlternarFavoritoRequest $request)
     {
-        $request->validate([
-            'user_id' => 'required|integer|exists:user,user_id',
-            'busines_id' => 'required|integer|exists:business,busines_id',
-        ]);
 
         $userId = $request->user_id;
         $businessId = $request->busines_id;

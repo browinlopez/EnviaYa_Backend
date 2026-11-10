@@ -5,12 +5,12 @@ namespace App\Http\Controllers\User;
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\User\ActualizarPerfilRequest;
+use App\Http\Requests\User\CambiarContrasenaRequest;
 use App\Http\Requests\User\DesactivarCuentaRequest;
 use App\Models\Buyer\Buyer;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
 {
@@ -160,12 +160,8 @@ class UserController extends Controller
      * Se exige la contraseña actual: sin eso, quien tuviera el teléfono
      * desbloqueado un momento podría dejar al dueño fuera de su cuenta.
      */
-    public function updatePassword(Request $request)
+    public function updatePassword(CambiarContrasenaRequest $request)
     {
-        $request->validate([
-            'current_password' => 'required|string',
-            'password' => ['required', 'confirmed', Password::min(8)],
-        ]);
 
         $user = $request->user();
 

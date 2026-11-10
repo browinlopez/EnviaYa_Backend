@@ -3,7 +3,10 @@
 namespace App\Http\Controllers\Domiciliary;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Domiciliary\ActualizarDomiciliarioRequest;
 use App\Http\Requests\Domiciliary\CrearDomiciliarioRequest;
+use App\Http\Requests\Domiciliary\DomiciliariosDeUnNegocioRequest;
+use App\Http\Requests\Domiciliary\VerDomiciliarioRequest;
 use App\Models\Business;
 use App\Models\Domiciliary;
 use App\Models\User;
@@ -25,11 +28,8 @@ class DomiciliaryController extends Controller
     }
 
     // Listar todos los domiciliarios de un negocio
-    public function listDomiciliariesByBusiness(Request $request)
+    public function listDomiciliariesByBusiness(DomiciliariosDeUnNegocioRequest $request)
     {
-        $request->validate([
-            'busines_id' => 'required|integer|exists:business,busines_id',
-        ]);
 
         $business = Business::with(['domiciliaries.user'])
             ->findOrFail($request->busines_id);
@@ -158,20 +158,8 @@ class DomiciliaryController extends Controller
     }
 
     // Actualizar un domiciliario
-    public function updateDomiciliary(Request $request)
+    public function updateDomiciliary(ActualizarDomiciliarioRequest $request)
     {
-        $request->validate([
-            'user_id' => 'required|integer|exists:user,user_id',
-            // Campos del domiciliario
-            'available' => 'boolean',
-            'state' => 'boolean',
-            // Campos del usuario
-            'name' => 'string|max:255',
-            // El correo es la credencial de acceso: no puede chocar con otro.
-            'email' => 'email|max:255|unique:user,email,'.$request->user_id.',user_id',
-            'phone' => 'string|max:20',
-            'address' => 'string|max:255',
-        ]);
 
         // Buscar usuario
         $user = User::findOrFail($request->user_id);
@@ -275,11 +263,8 @@ class DomiciliaryController extends Controller
     }
 
     // Obtener un domiciliario específico
-    public function showDomiciliary(Request $request)
+    public function showDomiciliary(VerDomiciliarioRequest $request)
     {
-        $request->validate([
-            'domiciliary_id' => 'required|integer|exists:domiciliary,domiciliary_id',
-        ]);
 
         $domiciliary = Domiciliary::with('user', 'reviews')->find($request->domiciliary_id);
 

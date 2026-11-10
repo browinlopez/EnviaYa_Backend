@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Business;
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Business\AfiliarClienteRequest;
+use App\Http\Requests\Business\AlternarAfiliacionRequest;
 use App\Http\Requests\Business\BuscarCompradorPorTelefonoRequest;
 use App\Http\Requests\Business\ClientesAfiliadosRequest;
 use App\Http\Requests\Business\DesafiliarClienteRequest;
@@ -37,12 +38,8 @@ class AffiliationController extends Controller
     }
 
     // Afiliar o desafiliar
-    public function toggle(Request $request)
+    public function toggle(AlternarAfiliacionRequest $request)
     {
-        $request->validate([
-            'user_id' => 'required|integer|exists:user,user_id',
-            'busines_id' => 'required|integer|exists:business,busines_id',
-        ]);
 
         /*
          * El negocio del cuerpo tiene que ser suyo. Sin esto se afiliaba y

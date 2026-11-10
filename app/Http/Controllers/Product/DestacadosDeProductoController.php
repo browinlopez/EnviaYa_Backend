@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Product;
 
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Product\MasVendidosDelNegocioRequest;
 use App\Models\Order\OrdersSalesDetail;
 use App\Models\Product\ProductBusiness;
-use Illuminate\Http\Request;
 
 class DestacadosDeProductoController extends Controller
 {
@@ -38,12 +38,8 @@ class DestacadosDeProductoController extends Controller
         return response()->json($formatted);
     }
 
-    public function mostPopularProducts(Request $request)
+    public function mostPopularProducts(MasVendidosDelNegocioRequest $request)
     {
-        $request->validate([
-            'business_id' => 'required|integer|exists:business,busines_id',
-            'limit' => 'nullable|integer|min:1|max:50', // opcional para top N
-        ]);
 
         $limit = $request->get('limit', 10); // por defecto top 10
 
