@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Order;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Order\CalcularRutaRequest;
 use App\Models\Order\OrdersSales;
 use App\Services\TrazoDeLaRuta;
 use Illuminate\Http\Request;
@@ -36,13 +37,9 @@ class RutaDelPedidoController extends Controller
 {
     public function __construct(private readonly TrazoDeLaRuta $rutas) {}
 
-    public function __invoke(Request $request)
+    public function __invoke(CalcularRutaRequest $request)
     {
-        $datos = $request->validate([
-            'order_id' => 'sometimes|nullable|integer',
-            'origen' => ['required_without:order_id', 'string', 'regex:/^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/'],
-            'destino' => ['required_without:order_id', 'string', 'regex:/^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/'],
-        ]);
+        $datos = $request->validated();
 
         if (! empty($datos['order_id'])) {
             return $this->delPedido($request, (int) $datos['order_id']);

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Conjunto;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Conjunto\ActualizarMiConjuntoRequest;
+use App\Http\Requests\Conjunto\SubirFotoDelConjuntoRequest;
 use App\Models\Buyer\ResidentialComplex;
 use App\Models\Conjunto\ComplexStaff;
 use App\Models\Rol;
@@ -142,13 +143,8 @@ class MiConjuntoController extends Controller
      * URL en `residential_complexes.photo`. Una segunda forma de subir
      * imagenes solo para esto seria otra cosa que mantener sin ganar nada.
      */
-    public function subirFoto(Request $request, MediaService $medios)
+    public function subirFoto(SubirFotoDelConjuntoRequest $request, MediaService $medios)
     {
-        $request->validate([
-            // Solo imagenes: es una fachada, no un plano. El servicio corta a
-            // 8 MB de todas formas.
-            'file' => 'required|file|image|max:8192',
-        ]);
 
         $complexId = (int) $request->attributes->get('complex_id');
         $conjunto = ResidentialComplex::find($complexId);

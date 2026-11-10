@@ -13,9 +13,9 @@ use Illuminate\Foundation\Http\FormRequest;
 class BorrarResenaRequest extends FormRequest
 {
     /*
-     * El permiso lo resolvio el middleware de la ruta: `admin` y, donde
-     * aplica, `modulo:<area>,gestionar`. Repetirlo aqui seria una segunda
-     * fuente de verdad sobre quien puede que.
+     * El permiso lo resuelve el middleware de la ruta, que es donde vive en
+     * este backend. Repetirlo aqui seria una segunda fuente de verdad sobre
+     * quien puede que, y la que se olvide de actualizar sera la que mande.
      */
     public function authorize(): bool
     {
