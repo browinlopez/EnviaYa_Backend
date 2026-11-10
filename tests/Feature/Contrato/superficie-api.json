@@ -1,0 +1,3581 @@
+[
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/areas",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:areas,gestionar"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/admin/areas",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:areas,gestionar"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/areas-members",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:areas,gestionar"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/admin/areas-members/{userId}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:areas,gestionar"
+        ]
+    },
+    {
+        "verbo": "DELETE",
+        "uri": "v1/admin/areas/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:areas,gestionar"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/admin/areas/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:areas,gestionar"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/audits",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:auditoria"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/businesses",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:negocios"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/admin/businesses",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:negocios,gestionar"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/businesses/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:negocios"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/admin/businesses/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:negocios,gestionar"
+        ]
+    },
+    {
+        "verbo": "DELETE",
+        "uri": "v1/admin/businesses/{id}/media",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:negocios,gestionar"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/businesses/{id}/media",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:negocios"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/admin/businesses/{id}/media",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:negocios,gestionar"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/cash-balances",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:efectivo"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/cash-deposits",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:efectivo"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/admin/cash-deposits/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:efectivo,gestionar"
+        ]
+    },
+    {
+        "verbo": "DELETE",
+        "uri": "v1/admin/categories",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "categorias"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/categories",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "categorias"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/admin/categories",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "categorias"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/admin/categories",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "categorias"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/chats",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:chats"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/chats/{chatId}/messages",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:chats"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/complexes",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:conjuntos"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/admin/complexes",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:conjuntos,gestionar"
+        ]
+    },
+    {
+        "verbo": "DELETE",
+        "uri": "v1/admin/complexes/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:conjuntos,gestionar"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/admin/complexes/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:conjuntos,gestionar"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/admin/complexes/{id}/owner",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:conjuntos,gestionar"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/complexes/{id}/staff",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:conjuntos"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/domiciliaries",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:domiciliarios"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/admin/domiciliaries",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:domiciliarios,gestionar"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/domiciliaries/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:domiciliarios"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/admin/domiciliaries/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:domiciliarios,gestionar"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/admin/domiciliaries/{id}/contrato",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:domiciliarios,gestionar"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/fallos",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:fallos"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/fallos/resumen",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:fallos"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/invoices",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:facturas"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/admin/invoices/anular-lote",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:facturas,gestionar"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/admin/invoices/emitir-pendientes",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:facturas,gestionar"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/invoices/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:facturas"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/admin/invoices/{id}/anular",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:facturas,gestionar"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/invoices/{id}/pdf",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:facturas"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/locations",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/marketing/advertisers",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:marketing.anunciantes"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/admin/marketing/advertisers",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:marketing.anunciantes,gestionar"
+        ]
+    },
+    {
+        "verbo": "DELETE",
+        "uri": "v1/admin/marketing/advertisers/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:marketing.anunciantes,gestionar"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/admin/marketing/advertisers/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:marketing.anunciantes,gestionar"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/marketing/banners",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:marketing.banners"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/admin/marketing/banners",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:marketing.banners,gestionar"
+        ]
+    },
+    {
+        "verbo": "DELETE",
+        "uri": "v1/admin/marketing/banners/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:marketing.banners,gestionar"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/marketing/banners/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:marketing.banners"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/admin/marketing/banners/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:marketing.banners,gestionar"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/marketing/banners/{id}/metrics",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:marketing.banners"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/marketing/campaigns",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:marketing.campanas"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/admin/marketing/campaigns",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:marketing.campanas,gestionar"
+        ]
+    },
+    {
+        "verbo": "DELETE",
+        "uri": "v1/admin/marketing/campaigns/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:marketing.campanas,gestionar"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/admin/marketing/campaigns/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:marketing.campanas,gestionar"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/marketing/coupons",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:marketing.cupones"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/admin/marketing/coupons",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:marketing.cupones,gestionar"
+        ]
+    },
+    {
+        "verbo": "DELETE",
+        "uri": "v1/admin/marketing/coupons/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:marketing.cupones,gestionar"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/admin/marketing/coupons/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:marketing.cupones,gestionar"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/marketing/coupons/{id}/redemptions",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:marketing.cupones"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/marketing/featured",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:marketing.destacados"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/admin/marketing/featured",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:marketing.destacados,gestionar"
+        ]
+    },
+    {
+        "verbo": "DELETE",
+        "uri": "v1/admin/marketing/featured/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:marketing.destacados,gestionar"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/admin/marketing/featured/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:marketing.destacados,gestionar"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/marketing/overview",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:marketing"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/marketing/push",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:marketing.notificaciones"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/admin/marketing/push",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:marketing.notificaciones,gestionar"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/admin/marketing/push/preview",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:marketing.notificaciones"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/admin/marketing/push/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:marketing.notificaciones,gestionar"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/admin/marketing/push/{id}/cancel",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:marketing.notificaciones,gestionar"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/admin/marketing/push/{id}/send",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:marketing.notificaciones,gestionar"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/me/permissions",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "DELETE",
+        "uri": "v1/admin/media/{entidad}/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "medios"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/media/{entidad}/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "medios"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/admin/media/{entidad}/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "medios"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/admin/media/{entidad}/{id}/principal",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "medios"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/orders",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:ordenes"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/orders/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:ordenes"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/overview",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:panel"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/owners",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:propietarios"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/admin/owners",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:propietarios,gestionar"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/owners/options",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:propietarios"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/admin/owners/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:propietarios,gestionar"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/payments",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:pagos"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/pqrs",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:pqrs"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/admin/pqrs",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:pqrs,gestionar"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/pqrs/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:pqrs"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/admin/pqrs/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:pqrs,gestionar"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/admin/pqrs/{id}/notes",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:pqrs,gestionar"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/products",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:productos"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/admin/products",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:productos,gestionar"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/products/categorias",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:productos"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/products/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:productos"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/admin/products/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:productos,gestionar"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/reports-desglose",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:reportes"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/reports/{kind}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:reportes"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/reports/{kind}/excel",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:reportes"
+        ]
+    },
+    {
+        "verbo": "DELETE",
+        "uri": "v1/admin/reviews",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:resenas,gestionar"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/reviews",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:resenas"
+        ]
+    },
+    {
+        "verbo": "DELETE",
+        "uri": "v1/admin/reviews/lote",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:resenas,gestionar"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/security",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "throttle:20,1"
+        ]
+    },
+    {
+        "verbo": "DELETE",
+        "uri": "v1/admin/security/sessions/others",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "throttle:20,1"
+        ]
+    },
+    {
+        "verbo": "DELETE",
+        "uri": "v1/admin/security/sessions/{id}",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "throttle:20,1"
+        ]
+    },
+    {
+        "verbo": "DELETE",
+        "uri": "v1/admin/security/two-factor",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "throttle:20,1"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/admin/security/two-factor",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "throttle:20,1"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/admin/security/two-factor/confirm",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "throttle:20,1"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/admin/security/two-factor/recovery-codes",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "throttle:20,1"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/settings",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:ajustes"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/admin/settings",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:ajustes,gestionar"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/admin/settings/restablecer",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:ajustes,gestionar"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/settlements",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:liquidaciones"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/admin/settlements",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:liquidaciones,gestionar"
+        ]
+    },
+    {
+        "verbo": "DELETE",
+        "uri": "v1/admin/settlements/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:liquidaciones,gestionar"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/settlements/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:liquidaciones"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/admin/settlements/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:liquidaciones,gestionar"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/solicitudes",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:solicitudes"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/solicitudes/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:solicitudes"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/admin/solicitudes/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:solicitudes,gestionar"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/solicitudes/{id}/adjunto",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:solicitudes"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/sst/documentos",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:sst.documentos"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/admin/sst/documentos",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:sst.documentos,gestionar"
+        ]
+    },
+    {
+        "verbo": "DELETE",
+        "uri": "v1/admin/sst/documentos/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:sst.documentos,gestionar"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/admin/sst/documentos/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:sst.documentos,gestionar"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/sst/incidentes",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:sst.incidentes"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/admin/sst/incidentes",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:sst.incidentes,gestionar"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/admin/sst/incidentes/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:sst.incidentes,gestionar"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/storage",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:ajustes"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/users",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:usuarios"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/admin/users",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:usuarios,gestionar"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/admin/users/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:usuarios"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/admin/users/{id}",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:usuarios,gestionar"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/admin/users/{id}/verify-email",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:usuarios,gestionar"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/ads/banners",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "throttle:300,1"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/ads/banners/{id}/track",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "throttle:600,1"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/ads/coupons/validate",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "throttle:300,1"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/ads/featured",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "throttle:300,1"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/app/config",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "throttle:600,1"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/app/errores",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "throttle:20,1"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/ayuda",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/ayuda",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "throttle:5,10"
+        ]
+    },
+    {
+        "verbo": "DELETE",
+        "uri": "v1/biometrico",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/biometrico",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/biometrico/entrar",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/bold/status/{ref}",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/businesses/affiliations/AfiliationUser",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/businesses/affiliations/DesafiliationUser",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/businesses/affiliations/getAffiliatedUsers",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/businesses/affiliations/searchBusinesses",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/businesses/affiliations/toggleBusinesses",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/businesses/affiliations/usersBusinesses",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/businesses/index",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/businesses/show",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/businesses/store",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/businesses/top-businesses",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/businesses/update",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/categories-business/destroy",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/categories-business/index",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/categories-business/indexFree",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "throttle:300,1"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/categories-business/show",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/categories-business/store",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/categories-business/update",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/categories-free",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "throttle:300,1"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/categories/create",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "DELETE",
+        "uri": "v1/categories/delete",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/categories/show",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/categories/update",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/chats/create",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/chats/messages",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/chats/send-message",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/chats/updateMessage",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/chats/user-chats",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/cobertura-free",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "throttle:300,1"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/complexes-free",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "throttle:300,1"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/comprobantes/{id}/pdf",
+        "nombre": "comprobantes.pdf",
+        "middleware": [
+            "api",
+            "signed:relative",
+            "throttle:30,1"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/conjunto/celadores",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "conjunto",
+            "conjunto:dueno"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/conjunto/celadores",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "conjunto",
+            "conjunto:dueno"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/conjunto/celadores/{id}",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "conjunto",
+            "conjunto:dueno"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/conjunto/me",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "conjunto"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/conjunto/perfil",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "conjunto",
+            "conjunto:dueno"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/conjunto/perfil/foto",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "conjunto",
+            "conjunto:dueno"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/conjunto/porteria/adentro",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "conjunto"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/conjunto/porteria/entradas",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "conjunto"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/conjunto/porteria/entradas/{id}/salida",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "conjunto"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/conjunto/porteria/verificar",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "conjunto",
+            "throttle:40,1"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/conjunto/porteria/visitantes",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "conjunto"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/conjunto/reportes",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "conjunto",
+            "conjunto:dueno"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/conjunto/reportes/excel",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "conjunto",
+            "conjunto:dueno"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/conjunto/residentes",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "conjunto",
+            "conjunto:dueno"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/conjunto/residentes/detalle",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "conjunto",
+            "conjunto:dueno"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/conjunto/resumen",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "conjunto"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/creditos",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/creditos/tienda/{negocioId}",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "DELETE",
+        "uri": "v1/devices",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/devices",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/domiciliaries/access-code",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/domiciliaries/assignToBusiness",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/domiciliaries/cash-balance",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/domiciliaries/contrato",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/domiciliaries/contrato",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/domiciliaries/createDomiciliary",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/domiciliaries/deleteDomiciliary",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/domiciliaries/deposits",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/domiciliaries/incomeDomiciliary",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/domiciliaries/listDomiciliariesByBusiness",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/domiciliaries/listDomiciliary",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/domiciliaries/listbussiness",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/domiciliaries/pedidos",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/domiciliaries/showDomiciliary",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/domiciliaries/updateDomiciliary",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/email/resend-verification",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "throttle:10,1"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/favorites/index",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/favorites/toggle",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/forgot-password",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "throttle:5,10"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/login",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "throttle:10,1"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/logout",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/negocio/catalogo",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/negocio/catalogo/codigo/{barcode}",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/negocio/catalogo/proponer",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/negocio/clientes/buscar",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "DELETE",
+        "uri": "v1/negocio/clientes/{userId}",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/negocio/clientes/{userId}",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/negocio/creditos",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/negocio/creditos/{userId}",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/negocio/creditos/{userId}/abonos",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/negocio/creditos/{userId}/movimientos",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/negocio/creditos/{userId}/movimientos/{movimientoId}/comprobante",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/negocio/domiciliarios",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/negocio/domiciliarios",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio",
+            "throttle:30,1"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/negocio/domiciliarios/buscar",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio",
+            "throttle:30,1"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/negocio/domiciliarios/rendimiento",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/negocio/domiciliarios/{id}",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/negocio/domiciliarios/{id}/documentos",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/negocio/domiciliarios/{id}/documentos/{tipo}/archivo",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/negocio/efectivo",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/negocio/efectivo/{id}/entregas",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/negocio/ingresos",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/negocio/mas-vendidos",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/negocio/me",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/negocio/me",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/negocio/me/logo",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/negocio/me/recibiendo",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/negocio/pedidos",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/negocio/pedidos/estado",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/negocio/pedidos/historial",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/negocio/pedidos/pesaje",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/negocio/pedidos/{id}/cancelar",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/negocio/pedidos/{id}/comprobante",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/negocio/productos",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/negocio/productos",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/negocio/productos/cargas",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/negocio/productos/cargas",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/negocio/productos/cargas/plantilla",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/negocio/productos/cargas/{id}",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/negocio/productos/copiar",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/negocio/productos/esquema",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/negocio/productos/precios",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/negocio/productos/tiendas-para-copiar",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "DELETE",
+        "uri": "v1/negocio/productos/{id}",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/negocio/productos/{id}",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/negocio/promociones",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/negocio/promociones",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "DELETE",
+        "uri": "v1/negocio/promociones/{id}",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/negocio/promociones/{id}",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/negocio/resenas",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/negocio/torre",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/orders/IncomeBusiness",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/orders/business",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/orders/cotizar",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/orders/geolocation",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/orders/geolocation/latest",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/orders/orders",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/orders/pending-review",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/orders/update",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/orders/user",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/orders/{id}/cancel",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/orders/{id}/comprobante",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/payment/status",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/paymentForms",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/paymentMethods",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/product/create",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/product/index",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/product/schema",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/product/show",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/product/top-products",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/product/topProductsBusiness",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/product/update",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/profile",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/pse/bancos",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/register",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "throttle:10,1"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/resend-verification-email",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "throttle:10,1"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/reset-password",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "throttle:5,10"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/reviews/business/all",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/reviews/business/by",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "throttle:300,1"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/reviews/business/create",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "DELETE",
+        "uri": "v1/reviews/business/delete",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/reviews/business/update",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/reviews/domiciliaries/all",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/reviews/domiciliary/by",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/reviews/domiciliary/create",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "DELETE",
+        "uri": "v1/reviews/domiciliary/delete",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/reviews/domiciliary/update",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/reviews/store",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/reviews/user/by",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/reviews/user/create",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "DELETE",
+        "uri": "v1/reviews/user/delete",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/reviews/user/update",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/reviews/users/all",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/rutas",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "throttle:60,1"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/solicitudes-free",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "throttle:6,1"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/top-businesses-free",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "throttle:300,1"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/users",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/users/addresses",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/users/addresses/add",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "DELETE",
+        "uri": "v1/users/addresses/{id}",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/users/buyer",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "DELETE",
+        "uri": "v1/users/delete",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/users/notifications",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/users/notifications/read",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/users/notifications/read-all",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/users/password",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "throttle:5,1"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/users/show",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/users/update",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/webhooks/bold",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "throttle:120,1"
+        ]
+    }
+]
