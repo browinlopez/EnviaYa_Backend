@@ -7,6 +7,7 @@ use App\Services\Push\PushEnRegistro;
 use App\Services\Push\PushFirebase;
 use App\Services\Push\PushSegunPlataforma;
 use App\Services\Push\TransportePush;
+use App\Support\PresupuestoDeConsultas;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -54,6 +55,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Avisa en el canal `rendimiento` cuando una peticion pasa del
+        // presupuesto de tiempo en base de datos. El porque, en la clase.
+        PresupuestoDeConsultas::vigilar((float) config('database.presupuesto_ms'));
+
         if (app()->environment('production')) {
             URL::forceScheme('https');
             URL::forceRootUrl(config('app.url'));
