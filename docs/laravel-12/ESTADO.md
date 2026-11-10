@@ -162,6 +162,30 @@ tiene esa columna: el país de una dirección es **siempre null**. Arreglarlo
 cambiaría un valor que la app publicada recibe como nulo desde siempre, así
 que queda dicho y no hecho.
 
+#### Y se buscó si quedaban más, en vez de darlo por hecho
+
+Barrido de todos los controladores que recorren una colección —la forma que
+tiene un N+1—, cruzado con si precargan algo. **No queda ninguno que recorra
+modelos de Eloquent sin precargar:** los demás usan consultas crudas
+(`DB::table`), donde no hay relación que cargar.
+
+La vitrina —`GET /businesses/index`, la lectura de más tráfico de la
+plataforma, la que hace cada comprador al abrir la app— salió señalada por el
+barrido y **era un falso positivo mío**: el patrón buscaba `->with(` y ahí
+está escrito `Business::with([...])`, con la sintaxis estática. Precargaba
+bien desde siempre.
+
+Se midió igual, y se le dejó prueba: **5 consultas con una tienda y 5 con
+veinte**, en sus dos formas. Una prueba que hoy no encuentra nada no es una
+prueba de más — añadir un campo que venga de una relación sin añadirla al
+`with` es un cambio de una línea, y es exactamente lo que había pasado en el
+tablero. Probada rota: quitando `municipality` del `with`, se pone roja.
+
+De paso: el parámetro `ligero` cuesta **las mismas 5 consultas** que la
+respuesta completa. No ahorra base de datos, ahorra serialización y tamaño de
+respuesta. Si alguna vez hace falta que ahorre consultas, hay que hacer
+condicional el `with` y no solo la salida.
+
 ---
 
 ## 4 · Sobre PHPStan, para que nadie persiga 503 avisos
