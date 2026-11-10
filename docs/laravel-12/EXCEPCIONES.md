@@ -15,15 +15,16 @@ de cumplimiento hoy, es que **la cifra solo pueda bajar**.
 
 ## 1 · Excepciones a reglas obligatorias
 
-### La estructura no es `app/Modules/`
+### La estructura no es `app/Modules/`, y se decidió que no lo sea
 
 | | |
 |---|---|
 | **Regla** | `AGENTS.md` §3 y `02-estructura-de-carpetas.md`: las clases de negocio nuevas van en `app/Modules/<Modulo>/…` |
-| **Realidad** | Estructura por capas con subcarpeta de dominio: `app/Http/Controllers/Negocio/`, `app/Services/`, `app/Models/Order/`. 115 controladores repartidos en ~20 carpetas de dominio |
-| **Motivo** | El propio estándar lo resuelve: §02 dice «si una estructura existente ya es consistente, adapta estas convenciones progresivamente» y §20.1 prohíbe el big-bang. Crear `app/Modules/` al lado dejaría **dos estructuras compitiendo**, que es peor que cualquiera de las dos |
-| **Riesgo aceptado** | La carpeta por tipo técnico es el anti-patrón que nombra §00. Se mitiga porque el segundo nivel **sí** es de dominio: `Controllers/Negocio/`, `Controllers/Order/`, `Models/Reviews/` |
-| **Revisión** | Cuando nazca un área **entera** —no un endpoint suelto—, nace como `app/Modules/`. El primer candidato con forma de módulo propio es el pesaje por peso |
+| **Realidad** | Estructura por capas con subcarpeta de dominio: `app/Http/Controllers/Negocio/`, `app/Services/`, `app/Models/Order/`. 115 controladores en ~20 carpetas de dominio |
+| **Motivo** | **Se midió antes de decidir: 70 de los 115 controladores (60 %) usan modelos de otro dominio.** `User`, `Business`, `Domiciliary` y `OrdersSales` los usa casi todo. Con ese acoplamiento, `app/Modules/` no produce módulos: produce un `app/Shared/Models/` con la mayoría de los modelos dentro y unos envoltorios delgados encima — el cajón que §00 llama anti-patrón, pagando antes un diff de ~240 archivos |
+| **Decisión** | **9 de noviembre de 2026: no se crea `app/Modules/`.** Se cumplen dentro de la estructura actual las reglas que sí muerden —`FormRequest`, una responsabilidad por archivo, límites de línea—, que es lo que §02 («si una estructura existente ya es consistente, adapta progresivamente») y §20.1 («no big-bang») permiten expresamente |
+| **Riesgo aceptado** | La carpeta por tipo técnico sigue siendo el anti-patrón de §00. Se mitiga porque el segundo nivel **sí** es de dominio |
+| **Revisión** | Si algún día un área deja de cruzar —hoy las más limpias son Conjunto, Chat y Marketing— puede nacer como módulo. No antes: dos estructuras conviviendo es peor que cualquiera de las dos |
 
 ### Validación en línea, no en `FormRequest`
 
@@ -34,6 +35,7 @@ de cumplimiento hoy, es que **la cifra solo pueda bajar**.
 | **Motivo** | Convertir 173 validaciones de una vez es exactamente el PR gigante que el estándar desaconseja, y cada una es una regla de negocio que hay que releer, no mover |
 | **Riesgo aceptado** | La regla vive pegada al flujo: no se reusa, no se prueba aparte y la misma entidad se valida distinto en dos endpoints |
 | **Alternativa adoptada** | **Trinquete**: todo endpoint nuevo o tocado estrena su `FormRequest`. El contador de `->validate(` es la métrica y solo baja |
+| **Cómo se convierte lo viejo** | **Prueba primero.** 102 de las 325 rutas (31 %) no las llama ninguna prueba. En esas, extraer un `FormRequest` sin red significa que una regla que pase de `required` a `nullable` por descuido la descubre un tendero, no la suite. Así que por cada ruta sin cobertura que se toque: primero una prueba que fija su respuesta de hoy, después la extracción |
 | **Revisión** | Cada PR. Si sube, el PR no entra |
 
 ### La salida se arma a mano, no con `JsonResource`
@@ -101,8 +103,8 @@ cumplir hoy** y todavía no cumple.
 
 | Regla | Estado medido | Coste |
 |---|---|---|
-| `12` — Pint es la primera autoridad de formato | Instalado, pero **CI no lo corre** y cambiaría **506 archivos** | Un `pint` + un commit de formato, y luego `pint --test` en CI. Entre los arreglos hay **106 imports sin usar** |
-| `AGENTS.md` — `env()` solo en `config/` | **3 archivos** lo llaman fuera: `ZonaHorariaDeLaBase`, `ReverbClient`, `ClaveDeSemilla` | Mover cada uno a su clave de `config/`. Con config cacheada en producción, `env()` devuelve `null` — esto no es estilo, es un fallo esperando |
+| ~~`12` — Pint~~ | **Hecho** (9 nov. 2026): 506 archivos formateados, 106 imports sin usar fuera | Falta `pint --test` en el CI |
+| ~~`AGENTS.md` — `env()` solo en `config/`~~ | **Hecho**. Eran dos, no tres: `ClaveDeSemilla` ya usaba `config()` y solo lo nombraba en un comentario. `ZonaHorariaDeLaBase` leía `DB_TIMEZONE` directo —con la config en caché habría dicho «sin poner» justo donde sí estaba puesta— y `ReverbClient` resultó **código muerto**: nadie lo nombraba desde 2025. Borrado, y con él `app/Helper/` | — |
 | `12` — análisis estático | No hay PHPStan/Larastan | El estándar dice «no asumir que existen ni agregarlos a espaldas del equipo». Decisión pendiente |
 
 ---

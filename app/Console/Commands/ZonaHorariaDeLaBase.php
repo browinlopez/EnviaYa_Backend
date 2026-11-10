@@ -37,7 +37,7 @@ class ZonaHorariaDeLaBase extends Command
     public function handle(): int
     {
         if (DB::getDriverName() !== 'mysql') {
-            $this->warn('Esto solo tiene sentido en MySQL. La conexión es ' . DB::getDriverName() . '.');
+            $this->warn('Esto solo tiene sentido en MySQL. La conexión es '.DB::getDriverName().'.');
 
             return self::SUCCESS;
         }
@@ -46,17 +46,30 @@ class ZonaHorariaDeLaBase extends Command
             'SELECT NOW() ahora, @@system_time_zone sistema, @@session.time_zone sesion, @@global.time_zone global'
         );
 
-        $php   = Carbon::now();
-        $base  = Carbon::parse($sql->ahora);
+        $php = Carbon::now();
+        /*
+         * POR CONFIGURACIÓN Y NO POR `env()`.
+         *
+         * Con la configuración en caché —lo normal en producción— `env()`
+         * fuera de `config/` devuelve null, así que este comando habría
+         * dicho «sin poner» justo donde sí está puesta. La clave ya existe:
+         * `config/database.php` la lee como `timezone` de la conexión.
+         */
+        $zonaDeLaConexion = (string) config(
+            'database.connections.'.config('database.default').'.timezone',
+            '',
+        );
+
+        $base = Carbon::parse($sql->ahora);
         // En segundos y sin signo: lo que importa es si coinciden, no cuál va
         // por delante.
         $desfase = abs($php->getTimestamp() - $base->getTimestamp());
 
         $this->newLine();
-        $this->line('  <fg=gray>Hora de PHP</>          ' . $php->format('Y-m-d H:i:s') . '  (' . config('app.timezone') . ')');
-        $this->line('  <fg=gray>Hora de MySQL</>        ' . $base->format('Y-m-d H:i:s'));
-        $this->line('  <fg=gray>Zona del sistema</>     ' . $sql->sistema);
-        $this->line('  <fg=gray>Zona de la sesión</>    ' . $sql->sesion . '   (DB_TIMEZONE=' . (env('DB_TIMEZONE') ?: 'sin poner') . ')');
+        $this->line('  <fg=gray>Hora de PHP</>          '.$php->format('Y-m-d H:i:s').'  ('.config('app.timezone').')');
+        $this->line('  <fg=gray>Hora de MySQL</>        '.$base->format('Y-m-d H:i:s'));
+        $this->line('  <fg=gray>Zona del sistema</>     '.$sql->sistema);
+        $this->line('  <fg=gray>Zona de la sesión</>    '.$sql->sesion.'   (DB_TIMEZONE='.($zonaDeLaConexion !== '' ? $zonaDeLaConexion : 'sin poner').')');
         $this->newLine();
 
         // Un minuto de margen: los relojes de dos procesos nunca son idénticos
@@ -65,7 +78,7 @@ class ZonaHorariaDeLaBase extends Command
             $this->info('  Las dos horas coinciden. No hay dos relojes.');
             $this->newLine();
 
-            if (!env('DB_TIMEZONE')) {
+            if ($zonaDeLaConexion === '') {
                 $this->line('  <fg=gray>Puedes fijar `DB_TIMEZONE=-05:00` sin mover nada de lo ya guardado:</>');
                 $this->line('  <fg=gray>coinciden hoy por cómo está el servidor, y con la variable puesta</>');
                 $this->line('  <fg=gray>seguirán coincidiendo aunque alguien cambie la hora del servidor.</>');
