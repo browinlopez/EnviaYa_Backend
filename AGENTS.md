@@ -4,6 +4,10 @@
 
 Repositorio de **API Laravel 12**. Prioridad: cambios pequeños, módulos claros, tests y contratos estables. Sin Blade, frontend ni MVC tradicional de vistas. **Estas son convenciones del proyecto, no requisitos intrínsecos del framework.**
 
+> **El marcador de hoy esta en
+> [`docs/laravel-12/ESTADO.md`](docs/laravel-12/ESTADO.md): que falta, por que
+> y cuanto cuesta.**
+>
 > **Antes de aplicar nada de esto, lee
 > [`docs/laravel-12/EXCEPCIONES.md`](docs/laravel-12/EXCEPCIONES.md).**
 >
