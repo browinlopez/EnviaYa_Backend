@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\BorrarResenaRequest;
+use App\Http\Requests\Admin\BorrarResenasEnLoteRequest;
 use App\Models\Reviews\BusinessReview;
 use App\Models\Reviews\DomiciliaryReview;
 use App\Models\User;
@@ -177,12 +179,9 @@ class ResenasApiController extends Controller
         }
     }
 
-    public function deleteReview(Request $request)
+    public function deleteReview(BorrarResenaRequest $request)
     {
-        $datos = $request->validate([
-            'scope' => 'required|in:business,domiciliary,user',
-            'reviews_id' => 'required|integer',
-        ]);
+        $datos = $request->validated();
 
         $m = $this->mapaResenas($datos['scope']);
 
@@ -211,13 +210,9 @@ class ResenasApiController extends Controller
      * destructiva sin techo, con un identificador de más por descuido, borra sin
      * límite. Cien es más de lo que nadie selecciona a mano en una pantalla.
      */
-    public function deleteReviews(Request $request)
+    public function deleteReviews(BorrarResenasEnLoteRequest $request)
     {
-        $datos = $request->validate([
-            'scope' => 'required|in:business,domiciliary,user',
-            'ids' => 'required|array|min:1|max:100',
-            'ids.*' => 'integer',
-        ]);
+        $datos = $request->validated();
 
         $m = $this->mapaResenas($datos['scope']);
 

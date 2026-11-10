@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\CrearDomiciliarioInternoRequest;
+use App\Http\Requests\Admin\FirmarAcuerdoDelDomiciliarioRequest;
 use App\Models\User;
 use App\Services\ContratoService;
 use App\Services\MediaService;
@@ -29,17 +31,9 @@ class DomiciliariosApiController extends Controller
      * `domiciliary`. Se admite crear la cuenta desde cero o vincular una que
      * ya exista, porque a veces la persona ya está registrada como comprador.
      */
-    public function storeDomiciliary(Request $request)
+    public function storeDomiciliary(CrearDomiciliarioInternoRequest $request)
     {
-        $datos = $request->validate([
-            'user_id' => 'nullable|integer|exists:user,user_id',
-            'name' => 'required_without:user_id|string|max:255',
-            'email' => 'required_without:user_id|email|max:255|unique:user,email',
-            'password' => 'required_without:user_id|string|min:6',
-            'phone' => 'nullable|string|max:20',
-            'document' => 'nullable|string|max:50',
-            'available' => 'sometimes|boolean',
-        ]);
+        $datos = $request->validated();
 
         $id = DB::transaction(function () use ($datos) {
             $userId = $datos['user_id'] ?? null;
@@ -172,15 +166,9 @@ class DomiciliariosApiController extends Controller
      * nuevo con su fecha, y el anterior se conserva en la carpeta de la
      * persona porque un acuerdo firmado no se sobrescribe.
      */
-    public function signContract(Request $request, $id, ContratoService $contratos)
+    public function signContract(FirmarAcuerdoDelDomiciliarioRequest $request, $id, ContratoService $contratos)
     {
-        $datos = $request->validate([
-            'signature' => 'required|string',
-            'city' => 'required|string|max:120',
-            // Se puede corregir la cédula en el mismo paso: el acuerdo la
-            // lleva impresa y firmarlo sin ella no tiene sentido.
-            'document' => 'sometimes|nullable|string|max:50',
-        ]);
+        $datos = $request->validated();
 
         $d = DB::table('domiciliary as d')
             ->leftJoin('user as u', 'u.user_id', '=', 'd.user_id')

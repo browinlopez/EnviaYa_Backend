@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\CrearPropietarioRequest;
 use App\Support\Consultas\AyudasDeAdmin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -83,25 +84,9 @@ class PropietariosApiController extends Controller
      * Se hace en una transacción porque un usuario sin fila en `owner` puede
      * entrar a la app pero no administrar nada, y eso es peor que no existir.
      */
-    public function storeOwner(Request $request)
+    public function storeOwner(CrearPropietarioRequest $request)
     {
-        $datos = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:user,email',
-            'password' => 'required|string|min:6',
-            'phone' => 'nullable|string|max:20',
-            'address' => 'nullable|string|max:255',
-            'document_type_id' => 'nullable|integer|exists:document_types,id',
-            'document_number' => 'nullable|string|max:50',
-            'birthdate' => 'nullable|date',
-            // La columna es varchar(45): validar con un tope mayor solo
-            // cambiaría el 422 por un error de truncado en la base.
-            'contact_secondary' => 'nullable|string|max:45',
-            'notes' => 'nullable|string',
-            'state' => 'sometimes|boolean',
-            'business_ids' => 'sometimes|array',
-            'business_ids.*' => 'integer|exists:business,busines_id',
-        ]);
+        $datos = $request->validated();
 
         $ownerId = DB::transaction(function () use ($datos) {
             $userId = DB::table('user')->insertGetId([
