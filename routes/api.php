@@ -859,7 +859,8 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
      * que no puede actualizar hasta que la tienda apruebe la versión nueva.
      *
      * La lista completa, y cómo decidir con el registro de auditoría en la
-     * mano, está en `Documentacion/03-Operacion/SUPERFICIE-DE-API-SIN-USO.md`.
+     * mano, está en `Documentacion/SUPERFICIE-DE-API-SIN-USO.md`, al lado de este
+     * proyecto.
      */
     Route::prefix('reviews')->group(function () {
         Route::post('store', [ReviewController::class, 'store']);
