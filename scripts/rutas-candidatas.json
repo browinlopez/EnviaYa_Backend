@@ -1,0 +1,103 @@
+{
+  "_": [
+    "LAS RUTAS QUE NINGUN CLIENTE PARECE LLAMAR, en un solo sitio.",
+    "",
+    "La lista nacio en Documentacion/SUPERFICIE-DE-API-SIN-USO.md el 27 de",
+    "agosto de 2026, de cruzar las rutas de /v1 contra lo que escriben los",
+    "cuatro clientes. Vive aca porque la leen DOS herramientas y tenerla dos",
+    "veces es tenerla mal una de las dos:",
+    "",
+    "  scripts/rutas_sin_llamante.py  busca cada ruta en el codigo de cada",
+    "                                 cliente, en cada version publicada y en",
+    "                                 toda la historia de git",
+    "  scripts/rutas_sin_uso.php      las cruza contra el registro de",
+    "                                 auditoria del servidor",
+    "",
+    "Las rutas van SIN el prefijo v1/ en la busqueda: los clientes lo llevan",
+    "en la URL base. El verbo esta para poder comprobar que la ruta sigue",
+    "existiendo en el router tal cual."
+  ],
+  "grupos": {
+    "Reseñas": [
+      ["GET", "v1/reviews/business/all"],
+      ["POST", "v1/reviews/business/create"],
+      ["PUT", "v1/reviews/business/update"],
+      ["DELETE", "v1/reviews/business/delete"],
+      ["GET", "v1/reviews/domiciliaries/all"],
+      ["POST", "v1/reviews/domiciliary/create"],
+      ["PUT", "v1/reviews/domiciliary/update"],
+      ["DELETE", "v1/reviews/domiciliary/delete"],
+      ["GET", "v1/reviews/users/all"],
+      ["GET", "v1/reviews/user/by"],
+      ["POST", "v1/reviews/user/create"],
+      ["PUT", "v1/reviews/user/update"],
+      ["DELETE", "v1/reviews/user/delete"]
+    ],
+    "Categorías de negocio": [
+      ["POST", "v1/categories-business/store"],
+      ["POST", "v1/categories-business/update"],
+      ["POST", "v1/categories-business/destroy"],
+      ["POST", "v1/categories-business/show"],
+      ["GET", "v1/categories/show"]
+    ],
+    "Domiciliarios": [
+      ["GET", "v1/domiciliaries/listDomiciliary"],
+      ["POST", "v1/domiciliaries/listbussiness"],
+      ["POST", "v1/domiciliaries/assignToBusiness"],
+      ["POST", "v1/domiciliaries/deleteDomiciliary"]
+    ],
+    "Productos": [
+      ["POST", "v1/product/show"],
+      ["POST", "v1/product/top-products"],
+      ["PUT", "v1/product/update"]
+    ],
+    "Sueltas": [
+      ["GET", "v1/businesses/affiliations/usersBusinesses"],
+      ["GET", "v1/orders/pending-review"],
+      ["GET", "v1/paymentForms"],
+      ["POST", "v1/chats/create"],
+      ["POST", "v1/users/buyer"],
+      ["POST", "v1/users/show"]
+    ]
+  },
+  "control": {
+    "_": [
+      "RUTAS QUE SI SE LLAMAN, para comprobar que el buscador funciona.",
+      "",
+      "Sin esto, un buscador roto devuelve «nadie la llama» 31 veces y parece",
+      "una respuesta. Son del mismo vecindario que las candidatas a proposito:",
+      "si encuentra reviews/business/by y no encuentra reviews/business/all,",
+      "la ausencia significa algo."
+    ],
+    "rutas": [
+      "reviews/store",
+      "reviews/business/by",
+      "reviews/domiciliary/by"
+    ]
+  },
+  "clientes": [
+    { "rotulo": "app 1.0.0", "repo": "EnviaYa_App/EnviaYa_App", "ref": "bda4c9fb", "dir": "src" },
+    { "rotulo": "app 1.0.4", "repo": "EnviaYa_App/EnviaYa_App", "ref": "02217cdf", "dir": "src" },
+    { "rotulo": "app 1.0.6", "repo": "EnviaYa_App/EnviaYa_App", "ref": "d3d5921d", "dir": "src" },
+    { "rotulo": "app 1.0.7", "repo": "EnviaYa_App/EnviaYa_App", "ref": "0f2addad", "dir": "src" },
+    { "rotulo": "app 1.0.8", "repo": "EnviaYa_App/EnviaYa_App", "ref": "8e2f00b3", "dir": "src" },
+    { "rotulo": "app 1.0.9", "repo": "EnviaYa_App/EnviaYa_App", "ref": "84cc5e84", "dir": "src" },
+    { "rotulo": "app 1.0.11", "repo": "EnviaYa_App/EnviaYa_App", "ref": "def517c9", "dir": "src" },
+    { "rotulo": "app 1.0.12", "repo": "EnviaYa_App/EnviaYa_App", "ref": "97426f5e", "dir": "src" },
+    { "rotulo": "app hoy", "repo": "EnviaYa_App/EnviaYa_App", "ref": "HEAD", "dir": "src" },
+    { "rotulo": "aliados", "repo": "EnviaYa_Aliados/EnviaYa_Aliados", "ref": "HEAD", "dir": "src" },
+    { "rotulo": "admin", "repo": "EnviaYa_Admin/EnviaYa_Admin", "ref": "HEAD", "dir": "src" },
+    { "rotulo": "landing", "repo": "EnviaYa_Landing/EnviaYa_Landing", "ref": "HEAD", "dir": "." }
+  ],
+  "historia": {
+    "_": [
+      "En que repo se recorre TODA la historia de git con el pickaxe, no solo",
+      "los puntos de arriba. Es la pregunta fuerte: «¿existio alguna vez esta",
+      "cadena?». La app es la que importa, porque es la que queda instalada en",
+      "telefonos que no se actualizan; los paneles web sirven siempre la",
+      "ultima."
+    ],
+    "repo": "EnviaYa_App/EnviaYa_App",
+    "dir": "src"
+  }
+}

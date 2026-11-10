@@ -54,53 +54,17 @@ $app->make(Kernel::class)->bootstrap();
 $detalle = in_array('--detalle', $argv, true);
 
 /**
- * LAS 31 CANDIDATAS, como las documentó el repositorio el 27 de agosto de
- * 2026. Se repiten aquí a propósito en vez de leer el markdown: la lista es
- * la entrada del informe y tiene que poder revisarse de un vistazo.
+ * LAS CANDIDATAS SALEN DE `scripts/rutas-candidatas.json`, que es el único
+ * sitio donde están.
+ *
+ * Estaban escritas aquí dentro, y `rutas_sin_llamante.py` tenía su propia
+ * copia. Dos listas de las mismas 31 rutas es tener la lista mal en una de
+ * las dos en cuanto alguien retire una: un informe seguiría contando una
+ * ruta que ya no existe y el otro se la saltaría, y nadie lo notaría porque
+ * los dos imprimen números con buena cara.
  */
-const CANDIDATAS = [
-    'Reseñas' => [
-        ['GET', 'v1/reviews/business/all'],
-        ['POST', 'v1/reviews/business/create'],
-        ['PUT', 'v1/reviews/business/update'],
-        ['DELETE', 'v1/reviews/business/delete'],
-        ['GET', 'v1/reviews/domiciliaries/all'],
-        ['POST', 'v1/reviews/domiciliary/create'],
-        ['PUT', 'v1/reviews/domiciliary/update'],
-        ['DELETE', 'v1/reviews/domiciliary/delete'],
-        ['GET', 'v1/reviews/users/all'],
-        ['GET', 'v1/reviews/user/by'],
-        ['POST', 'v1/reviews/user/create'],
-        ['PUT', 'v1/reviews/user/update'],
-        ['DELETE', 'v1/reviews/user/delete'],
-    ],
-    'Categorías de negocio' => [
-        ['POST', 'v1/categories-business/store'],
-        ['POST', 'v1/categories-business/update'],
-        ['POST', 'v1/categories-business/destroy'],
-        ['POST', 'v1/categories-business/show'],
-        ['GET', 'v1/categories/show'],
-    ],
-    'Domiciliarios' => [
-        ['GET', 'v1/domiciliaries/listDomiciliary'],
-        ['POST', 'v1/domiciliaries/listbussiness'],
-        ['POST', 'v1/domiciliaries/assignToBusiness'],
-        ['POST', 'v1/domiciliaries/deleteDomiciliary'],
-    ],
-    'Productos' => [
-        ['POST', 'v1/product/show'],
-        ['POST', 'v1/product/top-products'],
-        ['PUT', 'v1/product/update'],
-    ],
-    'Sueltas' => [
-        ['GET', 'v1/businesses/affiliations/usersBusinesses'],
-        ['GET', 'v1/orders/pending-review'],
-        ['GET', 'v1/paymentForms'],
-        ['POST', 'v1/chats/create'],
-        ['POST', 'v1/users/buyer'],
-        ['POST', 'v1/users/show'],
-    ],
-];
+$CANDIDATAS = json_decode(file_get_contents(__DIR__.'/rutas-candidatas.json'), true)['grupos']
+    ?? throw new RuntimeException('No se pudo leer scripts/rutas-candidatas.json');
 
 /* ------------------------------------------------------------------ */
 /* 1 · EL REGISTRO: una pasada, no 31 greps */
@@ -161,8 +125,25 @@ foreach ($ficheros as $f) {
         preg_match('~"status":(\d+)~', $l, $s);
         $estado = $s[1] ?? '?';
 
+        /*
+         * SE GUARDA DE DÓNDE VINO, y esto no es un adorno del informe.
+         *
+         * Este script contó seis llamadas sobre tres candidatas y las dio por
+         * vivas. Las seis eran de `127.0.0.1`, en dos días, con tres roles
+         * distintos y una mezcla de 422, 404 y 200: alguien probando el
+         * endpoint a mano, no un cliente. Sin la IP a la vista, un informe
+         * dice «se queda» sobre una ruta que lo único que tuvo fue curiosidad.
+         *
+         * No se descartan solas: detrás de un proxy mal configurado
+         * (`TrustProxies`) TODO el tráfico de verdad llega como 127.0.0.1, y
+         * un filtro silencioso esconderia justo lo que se busca. Se enseñan y
+         * decide quien lee.
+         */
+        preg_match('~"ip":"([^"]*)"~', $l, $i);
+
         $porRuta[$clave]['total'] = ($porRuta[$clave]['total'] ?? 0) + 1;
         $porRuta[$clave]['estados'][$estado] = ($porRuta[$clave]['estados'][$estado] ?? 0) + 1;
+        $porRuta[$clave]['ips'][$i[1] ?? '?'] = true;
         $porRuta[$clave]['ultima'] = $fecha[1];
     }
 
@@ -223,7 +204,7 @@ function cegueraDe(string $verbo, string $ruta, array $enElRouter, array $vigila
 /* ------------------------------------------------------------------ */
 
 $entorno = app()->environment();
-$total = array_sum(array_map('count', CANDIDATAS));
+$total = array_sum(array_map('count', $CANDIDATAS));
 
 echo PHP_EOL;
 echo "LAS {$total} RUTAS SIN CONSUMIDOR, CONTRA EL REGISTRO DE AUDITORÍA".PHP_EOL;
@@ -253,7 +234,7 @@ $ciegas = [];
 $silenciosas = [];
 $vivas = [];
 
-foreach (CANDIDATAS as $grupo => $rutas) {
+foreach ($CANDIDATAS as $grupo => $rutas) {
     echo str_repeat('-', 74).PHP_EOL;
     echo mb_strtoupper($grupo).PHP_EOL;
     echo str_repeat('-', 74).PHP_EOL;
@@ -287,7 +268,11 @@ foreach (CANDIDATAS as $grupo => $rutas) {
             $estados[] = $codigo.'x'.$veces;
         }
 
-        echo $n.($n === 1 ? ' llamada ' : ' llamadas').'  ['.implode(' ', $estados).']  última '.$d['ultima'].PHP_EOL;
+        $ips = array_keys($d['ips'] ?? []);
+        $deDonde = count($ips) === 1 ? $ips[0] : count($ips).' IPs';
+
+        echo $n.($n === 1 ? ' llamada ' : ' llamadas').'  ['.implode(' ', $estados).']'
+            .'  desde '.$deDonde.'  última '.$d['ultima'].PHP_EOL;
     }
 
     echo PHP_EOL;
