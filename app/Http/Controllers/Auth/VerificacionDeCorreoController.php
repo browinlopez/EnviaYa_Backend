@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\ReenviarVerificacionDesdeLaWebRequest;
+use App\Http\Requests\Auth\ReenviarVerificacionRequest;
+use App\Http\Requests\Auth\VerificarCorreoRequest;
 use App\Models\User;
 use Carbon\Carbon;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -13,11 +15,8 @@ class VerificacionDeCorreoController extends Controller
 {
     use AyudasDeAcceso;
 
-    public function verify(Request $request)
+    public function verify(VerificarCorreoRequest $request)
     {
-        $request->validate([
-            'token' => 'required|string',
-        ]);
 
         $user = User::where('email_verification_token', $request->token)->first();
 
@@ -76,11 +75,8 @@ class VerificacionDeCorreoController extends Controller
         return view('auth.verify-success');
     }
 
-    public function resendVerificationEmail(Request $request)
+    public function resendVerificationEmail(ReenviarVerificacionRequest $request)
     {
-        $request->validate([
-            'email' => 'required|email',
-        ]);
 
         $user = User::where('email', $request->email)->first();
 
@@ -148,10 +144,9 @@ class VerificacionDeCorreoController extends Controller
      * una página que dijera «ese correo no está registrado» serviría para
      * averiguar quién tiene cuenta probando direcciones.
      */
-    public function reenviarDesdeLaWeb(Request $request)
+    public function reenviarDesdeLaWeb(ReenviarVerificacionDesdeLaWebRequest $request)
     {
-        $datos = $request->validate(['email' => 'required|email|max:255']);
-
+        $datos = $request->validated();
         $user = User::where('email', mb_strtolower(trim($datos['email'])))->first();
 
         if ($user && ! $user->email_verified_at) {

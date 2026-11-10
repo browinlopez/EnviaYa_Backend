@@ -3,18 +3,17 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\ConfirmarNuevaContrasenaRequest;
+use App\Http\Requests\Auth\PedirCodigoDeRecuperacionRequest;
 use App\Models\User;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 
 class ClaveController extends Controller
 {
     // Restablecer contraseña (envía link al correo)
-    public function resetPassword(Request $request)
+    public function resetPassword(PedirCodigoDeRecuperacionRequest $request)
     {
-        $request->validate(['email' => 'required|email']);
-
         $status = Password::sendResetLink(
             $request->only('email')
         );
@@ -25,13 +24,8 @@ class ClaveController extends Controller
     }
 
     // Confirmar restablecimiento de contraseña (token + nueva contraseña)
-    public function resetPasswordConfirm(Request $request)
+    public function resetPasswordConfirm(ConfirmarNuevaContrasenaRequest $request)
     {
-        $request->validate([
-            'token' => 'required|string',
-            'email' => 'required|email',
-            'password' => 'required|string|min:6|confirmed',
-        ]);
 
         $status = Password::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),

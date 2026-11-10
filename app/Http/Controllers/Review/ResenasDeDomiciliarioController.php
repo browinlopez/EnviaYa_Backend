@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Review;
 
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Review\ResenasDeUnDomiciliarioRequest;
 use App\Models\Buyer\Buyer;
 use App\Models\Domiciliary;
 use App\Models\Reviews\DomiciliaryReview;
@@ -195,11 +196,8 @@ class ResenasDeDomiciliarioController extends Controller
         }
     }
 
-    public function listReviewsByDomiciliary(Request $request)
+    public function listReviewsByDomiciliary(ResenasDeUnDomiciliarioRequest $request)
     {
-        $request->validate([
-            'domiciliary_id' => 'required|integer|exists:domiciliary,domiciliary_id',
-        ]);
 
         // Misma forma y mismo orden que listReviewsByBusiness, para que la
         // pantalla de calificaciones sea idéntica en los dos roles.

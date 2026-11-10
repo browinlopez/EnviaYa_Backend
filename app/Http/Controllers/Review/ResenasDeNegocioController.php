@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Review;
 
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Review\ResenasDeUnNegocioRequest;
 use App\Models\Buyer\Buyer;
 use App\Models\Domiciliary;
 use App\Models\Reviews\BusinessReview;
@@ -67,11 +68,8 @@ class ResenasDeNegocioController extends Controller
         return response()->json($formatted);
     }
 
-    public function listReviewsByBusiness(Request $request)
+    public function listReviewsByBusiness(ResenasDeUnNegocioRequest $request)
     {
-        $request->validate([
-            'business_id' => 'required|integer|exists:business,busines_id',
-        ]);
 
         // Las más recientes primero; las que no tienen fecha (reseñas viejas,
         // creadas cuando el modelo no guardaba timestamps) quedan al final.
