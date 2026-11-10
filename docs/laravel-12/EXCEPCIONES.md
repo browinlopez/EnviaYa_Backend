@@ -31,7 +31,7 @@ de cumplimiento hoy, es que **la cifra solo pueda bajar**.
 | | |
 |---|---|
 | **Regla** | `04-capas-http.md`: validar con `FormRequest`, trabajar con `validated()` |
-| **Realidad** | Eran **173 llamadas a `->validate(`** contra **2** `FormRequest`. Al 9 de noviembre de 2026: **149 y 25** — convertidas Negocio y Admin/Api |
+| **Realidad** | Eran **173 llamadas a `->validate(`** contra **2** `FormRequest`. Al 9 de noviembre de 2026: **125 y 49** — convertidas Negocio, Admin/Api, Conjunto, Business, User, Marketing, Domiciliary y Category |
 | **Motivo** | Convertir 173 validaciones de una vez es exactamente el PR gigante que el estándar desaconseja, y cada una es una regla de negocio que hay que releer, no mover |
 | **Riesgo aceptado** | La regla vive pegada al flujo: no se reusa, no se prueba aparte y la misma entidad se valida distinto en dos endpoints |
 | **Alternativa adoptada** | **Trinquete**: todo endpoint nuevo o tocado estrena su `FormRequest`. El contador de `->validate(` es la métrica y solo baja |
@@ -135,3 +135,60 @@ Conviene decirlo, porque el registro no es solo una lista de culpas:
 - **Pruebas por funcionalidad** (§11): 1022 en Pest, con casos de error,
   permisos y límites — incluidas pruebas de que un campo **no** viaja.
 - **Nada de `catch (\Throwable)` para devolver 200** con `success: false`.
+
+
+---
+
+## 5 · Las reglas nuevas (21–31): consultas, índices, caché y Reverb
+
+El paquete creció el 9 de noviembre de 2026 con once documentos sobre
+rendimiento y tiempo real. Medido contra este backend, **salimos mejor aquí que
+en las reglas viejas**, y conviene decir por qué: estas no piden reescribir
+nada, piden no hacer cosas concretas, y este código en general no las hace.
+
+### Lo que ya se cumple, medido
+
+| Regla | Qué se buscó | Resultado |
+|---|---|---|
+| §22 — nada de `->get()->count()` | todo `app/` | **0** |
+| §22 — `paginate()` con `per_page` del cliente | todo `app/` | **0** |
+| §22 — `orderBy($input)` sin lista blanca | todo `app/` | **0** |
+| §27 — canales privados | los 7 eventos que difunden | **7 de 7** en `PrivateChannel` |
+| §26 — caché sin mezclar inquilinos | las 15 llamadas a `Cache::` | **ninguna** guarda datos de un negocio; son el código de acceso de una persona y los tokens de APNs/FCM, que son de la plataforma |
+| §11 nuevo — prueba de autorización de canal con los cuatro casos | `tests/Feature/Pedidos/CanalesEnVivoTest` | **ya estaban los cuatro**: la tienda dueña, su domiciliario, un domiciliario de otra tienda y un desconocido |
+
+### `ShouldDispatchAfterCommit`: cero, y aun así no es deuda
+
+§27 pide esa interfaz y **ninguno de los siete eventos la usa**. Pero lo que la
+interfaz consigue —que no se avise de algo que luego se deshace— este código ya
+lo consigue por colocación: los cuatro `broadcast()` van **fuera** de su
+transacción, en un `try` aparte, y con el porqué escrito al lado:
+
+> *«El aviso va FUERA de la transacción: si el push falla, el pesaje ya está
+> guardado y lo peor que pasa es que el cliente se entere al abrir la app. Al
+> revés, un fallo del aviso desharía un pesaje que ya movió el inventario.»*
+
+**Aun así conviene añadirla**, y no por cumplir: la colocación la sostiene una
+persona que se acuerde, y la interfaz la sostiene el framework. El día que
+alguien mueva ese `broadcast()` dos llaves más arriba, hoy no se entera nadie.
+Es una línea por evento.
+
+### Lo que falta de verdad
+
+| Regla | Estado | Qué costaría |
+|---|---|---|
+| §22 — listados acotados | **1 caso**: `CategoryBusinessController` devuelve `CategoryBusiness::all()` | Acotar o paginar. Hoy son pocas filas; crece con el catálogo |
+| §24 — índices diseñados desde filtro + orden y comprobados con `EXPLAIN` | **sin registro**. Hay índices, pero nadie anotó contra qué consulta ni con qué plan | Empezar por las dos consultas que más duelen: el tablero de pedidos y `GeneradorDeReportes` |
+| §25 — medir antes de optimizar (p50/p95, nº de consultas, memoria) | **no se hace** | Una prueba de benchmark aparte. Ojo con lo que el propio §25 avisa: **SQLite no reemplaza el plan de MySQL**, y la suite corre en SQLite |
+
+### Una advertencia del propio estándar que aquí pesa
+
+§25 dice que SQLite no sirve para juzgar un plan de ejecución. Esta suite corre
+en SQLite en memoria, así que **ninguna prueba de rendimiento que se escriba
+aquí dirá la verdad sobre producción**. Ya mordió una vez por otro motivo:
+`incomeBusiness` usaba `DAYOFWEEK()`, que no existe en SQLite, y esa pantalla
+no se pudo probar hasta que se portó la expresión.
+
+Medir rendimiento de verdad exige un entorno con MySQL. Hasta que lo haya, las
+reglas §24 y §25 quedan **reconocidas y sin adoptar**, que es distinto de
+incumplidas: no se puede cumplir una regla cuyo instrumento no existe todavía.

@@ -10,3 +10,6 @@ Lee `AGENTS.md` antes de escribir o refactorizar. Es la fuente principal de conv
 - Antes de cambiar: ubicar ruta, módulo, contrato, prueba y permisos.
 - Después: tests focalizados, `./vendor/bin/pint --test` y diff revisado; reportar solo ejecuciones reales.
 - Nunca introducir cambios de contrato, exposición cross-tenant, secretos o refactors masivos sin razón explícita.
+
+- Optimiza consultas con `docs/laravel-12/21`–`29`: **Eloquent/Builder primero; Eloquent scopes en modelo, filtros complejos en Query Object, índices/EXPLAIN y medición**. No sustituir Eloquent por SQL nativo sin pruebas.
+- Para Reverb, leer `23`, `27`, `30`, `31`: canal privado y Policy, `ShouldDispatchAfterCommit`, payload mínimo, sin secretos, reconexión HTTP.

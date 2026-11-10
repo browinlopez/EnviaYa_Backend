@@ -27,7 +27,10 @@ Repositorio de **API Laravel 12**. Prioridad: cambios pequeños, módulos claros
 9. **API compatible:** rutas versionadas cuando se acuerde, respuestas previsibles, códigos HTTP reales, sin convertir todos los errores en 200, paginación en listados.
 10. **Datos seguros:** migraciones aditivas, índice apropiado, transacciones cuando haya operaciones dependientes, idempotencia en operaciones con reintentos.
 11. **Pruebas:** agrega o modifica pruebas enfocadas en la funcionalidad, incluyendo error, permisos y límites de datos. No afirmes pruebas ejecutadas si no se ejecutaron.
-12. **Calidad:** mantén las convenciones de Pint y el analizador estático, cuando esté configurado. No edites archivos generados ni lockfiles sin razón.
+12. **Consultas rápidas (obligatorio):** Eloquent/Builder por defecto; relaciones y scopes breves en `Models/`, consultas complejas en `Queries/`. Queries del módulo filtran en SQL por tenant/usuario, evitan N+1, limitan filas y columnas, validan sort, paginan y utilizan índices comprobados con `EXPLAIN`. Revisar `21`–`26`, `28` y `29`.
+13. **Medir antes de optimizar:** en lecturas críticas medir latencias p50/p95, SQL count, duración total, memoria y plan de ejecución; no asegurar ganancia sin prueba comparable. Revisar `24`, `25` y `29`.
+14. **WebSocket Reverb:** eventos de negocio mínimos por módulo, canales privados autorizados por registro/tenant, `ShouldDispatchAfterCommit`, workers supervisados, reconexión por HTTP, tests de permisos. Revisar `23`, `27`, `30` y `31`.
+15. **Calidad:** mantén las convenciones de Pint y el analizador estático, cuando esté configurado. No edites archivos generados ni lockfiles sin razón.
 
 ## Orden de trabajo para una modificación
 
@@ -37,6 +40,12 @@ Repositorio de **API Laravel 12**. Prioridad: cambios pequeños, módulos claros
 4. Implementa cambios cohesivos, de preferencia por una sola funcionalidad.
 5. Ejecuta tests focalizados; luego Pint y suite relevante. Documenta comandos y resultados reales.
 6. Entrega: resumen, rutas de archivos tocados, riesgo, pruebas y posibles pasos de despliegue.
+
+## Rendimiento como criterio de revisión
+
+- **Lecturas:** primero `Models/` (relaciones/scopes), después `Queries/` (filtros/listados/reportes), `24` (índices/EXPLAIN), `25` (benchmark), `28` (recetas).
+- **Realtime:** `23` (Reverb), `27` (canales, seguridad, eventos), `30` (operación), `31` (caso integrado).
+- Para toda mejora de consultas, completar `29-checklist-pr-rendimiento.md`. Preferir cambios aislados con rollback.
 
 ## Prioridad de documentos
 
@@ -49,6 +58,9 @@ Repositorio de **API Laravel 12**. Prioridad: cambios pequeños, módulos claros
 
 - Controllers de cientos de líneas; `BaseService`/`BaseRepository` gigantes; `Helpers.php` multifunción.
 - Consultas con alcance global que expongan registros de otros usuarios/tenants.
+- `Model::all()` en listados no acotados, `->get()->count()` cuando basta `count()`, queries dentro de `Resource`, relaciones lazy-loading en bucles, filtros enormes en Collection después de cargar DB.
+- Crear índices por intuición, `LIKE '%texto%'` masivo sin estrategia, paginación ilimitada, `orderBy($input)` sin whitelist o mezclar datos de tenants en caché.
+- Usar WebSockets como DB o publicar cambios antes del commit; canales públicos con datos privados; dependencias pesadas en autorizaciones de canales.
 - `env()` fuera de archivos de configuración; `dd()`, `dump()` o secretos en producción.
 - `catch (\Throwable)` para silenciar errores o devolver 200 con `success: false`.
 - Reestructuración masiva como efecto secundario de un cambio puntual.

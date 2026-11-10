@@ -32,6 +32,16 @@ tests/
 - `Http::fake()` para servicios externos; `Queue::fake()` donde se quiera probar el despacho.
 - No mockear Eloquent por reflejo: una prueba de feature puede usar DB real de test.
 
+## Tests de performance y tiempo real
+
+- Evitar N+1: crear registros relacionados de distintos tamaños y observar que la cantidad de consultas **no crezca linealmente** con el número de filas devueltas.
+- Verificar `simplePaginate` / `cursorPaginate` / `paginate` según contrato; `per_page` máximo y orden estable.
+- Comprobar consulta cross-tenant vacía **antes** de serializar datos; probar sort e inputs maliciosos.
+- Test de autorización de canal Reverb: propietario, usuario mismo tenant sin permiso, usuario otro tenant y anónimo.
+- Test de `Event::fake()` / `Broadcast::fake()` según intención: que la Action despache después del cambio y que no lo haga si hay rollback; **un fake no comprueba entrega real ni latencia**.
+- Test de benchmark separado: registrar SQL `count`, tiempo, percentiles y memoria; SQLite no reemplaza el plan MySQL/PostgreSQL.
+- Ver `25-observabilidad-benchmark-consultas.md` y `29-checklist-pr-rendimiento.md`.
+
 ## Comandos
 
 ```bash

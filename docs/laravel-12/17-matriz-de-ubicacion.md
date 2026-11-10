@@ -7,7 +7,13 @@
 | Validación de entrada | `Modules/X/Http/Requests/*Request.php` | Rule, test |
 | Campos JSON de salida | `Modules/X/Http/Resources/*Resource.php` | Contrato, test |
 | Regla de negocio | `Modules/X/Actions/*Action.php` | Excepción, test |
-| Query, filtro, orden | `Modules/X/Queries/*.php` | índices, Request, test |
+| Query, filtro, orden | `Modules/X/Queries/*.php` | Scopes modelo, índices, Request, test |
+| Relación/filtrado reutilizable pequeño | `Modules/X/Models/*.php` (`#[Scope]`) | Query que lo usa, test |
+| Consulta lenta / N+1 | `Modules/X/Queries/*.php` + `Models/*.php` | `24`, `25`, índice y benchmark |
+| Índice / esquema | `database/migrations/*.php` | `Queries`, `EXPLAIN`, operación |
+| Cache de reporte costoso | Application Action / Query wrapper focalizado | TTL, Redis, invalidación y seguridad |
+| Canal privado Reverb | `Modules/X/Broadcasting/*Channel.php` | `routes/channels.php`, test de auth |
+| Evento realtime de negocio | `Modules/X/Events/*Changed.php` | `Actions`, queue, contrato y tests |
 | Relaciones y casts | `Modules/X/Models/*.php` | migración, factory, test |
 | Nuevo dato en DB | `database/migrations/*.php` | model, factory, Request, Resource |
 | Envío de correo asíncrono | `Modules/X/Jobs/*.php` | Action / evento / test |

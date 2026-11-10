@@ -30,3 +30,12 @@ Una optimización de columnas no debe omitir llaves primarias/foráneas necesari
 - Preferir `whereBelongsTo` y relaciones cuando son expresivas.
 - Si un `tenant_id` viene del cliente, ignorarlo para filtros de autorización: derivar el scope del contexto autenticado.
 - No usar repositorios genéricos como espejo de `find`, `create`, `update` de Eloquent.
+
+## Política detallada (lectura obligatoria)
+
+- `21`: cuándo poner `#[Scope]` en modelo y cuándo separar `Queries/`.
+- `22` y `28`: evitar N+1, scans, paginación deficiente y carga completa de datos.
+- `24`: diseñar índices a partir de filtros + orden; ejecutar `EXPLAIN` con motor real.
+- `25`: medir antes/después, sin asumir que usar SQL nativo siempre acelera.
+- `26`: Redis/TTL/invalidation con aislamiento.
+- `29`: checklist de aprobación de cambios de rendimiento.

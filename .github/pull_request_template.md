@@ -22,3 +22,9 @@
 ## Riesgos y despliegue
 
 <!-- Variables, jobs, índices, migración y rollback si aplican -->
+
+### Consultas / tiempo real (cuando aplique)
+- [ ] Revisé `docs/laravel-12/29-checklist-pr-rendimiento.md`
+- [ ] Consultas DB: scopes/filtros, índice y `EXPLAIN` cuando corresponde
+- [ ] Benchmark antes/después con dataset y escenarios comparables
+- [ ] Reverb: canal privado, autenticación, after-commit, payload mínimo y tests

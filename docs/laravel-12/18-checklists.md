@@ -33,3 +33,7 @@
 - [ ] No hay regresión de permisos, validación, paginación o respuesta.
 - [ ] El tamaño por archivo es razonable para su cohesión.
 - [ ] La solución sigue la documentación Laravel 12 y convenciones del repo.
+
+## Si el cambio toca SQL, Redis o Reverb
+
+Completar `29-checklist-pr-rendimiento.md` y consultar `21`–`28` antes del review. Comprobar que el cambio preserve aislamiento de tenant, autorización, resultados, p95 y mecanismo de rollback.
