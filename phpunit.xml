@@ -27,6 +27,13 @@
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="CACHE_STORE" value="array"/>
+        <!-- Sin esto las pruebas tomaban `BROADCAST_CONNECTION` del `.env`,
+             que apunta a Reverb: cada evento intentaba una llamada HTTP a
+             localhost:8080. Fallaba rapido cuando no habia nada escuchando y
+             se tragaba el `try/catch`, asi que no se notaba; pero el
+             resultado dependia de si quien corre las pruebas tiene Reverb
+             levantado. -->
+        <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="DB_CONNECTION" value="sqlite"/>
         <env name="DB_DATABASE" value=":memory:"/>
         <env name="MAIL_MAILER" value="array"/>

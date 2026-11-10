@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Chat;
 use App\Events\MessageSent;
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Chat\MandarMensajeRequest;
 use App\Models\Chat\Chat;
 use App\Models\Chat\ChatParticipant;
 use App\Models\Chat\Message;
@@ -49,26 +50,8 @@ class ChatController extends Controller
         });
     }
 
-    public function sendMessage(Request $request)
+    public function sendMessage(MandarMensajeRequest $request)
     {
-        /*
-         * EL TOPE DEPENDE DE QUÉ SE MANDA. Un mensaje escrito se queda en mil
-         * letras; una TARJETA (el pedido armado, que viaja como JSON con
-         * nombres, precios y fotos de cada producto) pasaba de mil con cuatro
-         * productos y el envío se rechazaba. La columna es TEXT: le caben 64 KB.
-         */
-        $esTarjeta = is_string($request->input('content'))
-            && is_array($t = json_decode($request->input('content'), true))
-            // Sólo las tarjetas que existen: con cualquier `type` bastaba
-            // envolver un texto en JSON para saltarse el tope de mil.
-            && in_array($t['type'] ?? null, ['preorder', 'preorder_status', 'cupon_regalo'], true);
-
-        $request->validate([
-            'user_id' => 'required|exists:user,user_id',
-            'recipient_id' => 'required|exists:user,user_id',
-            'content' => 'required|string|max:'.($esTarjeta ? 30000 : 1000),
-        ]);
-
         // Escribir EN NOMBRE DE OTRO: `user_id` venia del cuerpo, asi que
         // se podian mandar mensajes haciendose pasar por cualquiera.
         if ($no = $this->negarCuentaAjena($request, $request->user_id)) {

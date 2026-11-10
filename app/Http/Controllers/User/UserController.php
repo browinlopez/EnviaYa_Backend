@@ -4,6 +4,7 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\User\ActualizarPerfilRequest;
 use App\Http\Requests\User\DesactivarCuentaRequest;
 use App\Models\Buyer\Buyer;
 use App\Models\User;
@@ -107,19 +108,9 @@ class UserController extends Controller
      * Ahora solo se edita el propio perfil y solo los campos de contacto; el
      * rol, la calificación y el estado se gestionan por sus propios flujos.
      */
-    public function update(Request $request)
+    public function update(ActualizarPerfilRequest $request)
     {
         $user = $request->user();
-
-        $request->validate([
-            'name' => 'nullable|string|max:255',
-            'email' => 'nullable|email|unique:user,email,'.$user->user_id.',user_id',
-            'phone' => 'nullable|string|max:20',
-            'address' => 'nullable|string|max:225',
-            'current_password' => 'nullable|string',
-        ], [
-            'email.unique' => 'Ese correo ya lo usa otra cuenta.',
-        ]);
 
         /*
          * CAMBIAR EL CORREO PIDE LA CONTRASEÑA.

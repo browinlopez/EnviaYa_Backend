@@ -57,6 +57,12 @@ jobs:
       - name: Comprobar la sintaxis de todo el código
         run: find app config database routes tests -name "*.php" -print0 | xargs -0 -n1 php -l > /dev/null
 
+      # `php -l` solo mira la sintaxis: un `implements` a una interfaz sin
+      # importar pasa el lint y revienta al cargar la clase. Pasó con los
+      # siete eventos que difunden.
+      - name: Comprobar que todas las clases cargan
+        run: php scripts/check_classes_load.php
+
       # Pint estaba instalado y nadie lo corría: 506 archivos se habían ido
       # separando del preset sin que se viera. Con esto no vuelve a pasar.
       - name: Formato (Pint)

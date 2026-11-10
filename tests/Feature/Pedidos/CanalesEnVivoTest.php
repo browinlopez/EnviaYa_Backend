@@ -6,6 +6,7 @@ use App\Models\Notification;
 use App\Models\Rol;
 use App\Models\User;
 use App\Services\Avisos;
+use Illuminate\Contracts\Broadcasting\Factory;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
@@ -52,6 +53,35 @@ function negocioConEquipo(): array
 
     return compact('businessId', 'tendero', 'domiUser', 'ajeno');
 }
+
+/*
+ * ESTA PRUEBA NECESITA EL DIFUSOR DE VERDAD, y es la única.
+ *
+ * `phpunit.xml` pone `BROADCAST_CONNECTION=null` para que ninguna prueba
+ * llame por HTTP a un Reverb real —eso costaba diez minutos de suite—. Pero
+ * el difusor nulo **autoriza cualquier canal**: su `auth()` no comprueba
+ * nada, así que «un desconocido no escucha el canal de una tienda» pasaba a
+ * ser verdad por el motivo equivocado.
+ *
+ * `reverb` sí ejecuta la comprobación del canal, y la hace EN LOCAL: la red
+ * solo entra al difundir, cosa que esta prueba no hace. Así se mide lo que se
+ * quiere medir sin volver a pagar la espera.
+ */
+beforeEach(function () {
+    config(['broadcasting.default' => 'reverb']);
+
+    /*
+     * Y LOS CANALES SE VUELVEN A REGISTRAR, que es el detalle que cuesta ver.
+     *
+     * `routes/channels.php` registra cada canal SOBRE EL DIFUSOR que hubiera
+     * al arrancar —aquí, el nulo—. Cambiar la configuración y olvidar los
+     * difusores crea uno nuevo y vacío: sin un solo canal registrado, la
+     * autorización niega todo y hasta la tienda dueña recibía 403.
+     */
+    app(Factory::class)->forgetDrivers();
+
+    require base_path('routes/channels.php');
+});
 
 /** Pide autorización para un canal privado, como haría la app. */
 function autorizar($canal): TestResponse

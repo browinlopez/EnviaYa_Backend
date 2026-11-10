@@ -41,7 +41,24 @@ return [
                 'useTLS' => env('REVERB_SCHEME', 'https') === 'https', // esto fuerza TLS si el esquema es https
             ],
             'client_options' => [
-                // Guzzle client options: https://docs.guzzlephp.org/en/stable/request-options.html
+                /*
+                 * CUANTO SE ESPERA A REVERB ANTES DE RENDIRSE.
+                 *
+                 * Seis de los siete eventos usan `ShouldBroadcastNow`, o sea
+                 * que la llamada HTTP a `ws.vecipaya.com` ocurre DENTRO de la
+                 * peticion: al aceptar un pedido, al escribir en el chat, al
+                 * usar un codigo de porteria. Guzzle no pone limite por
+                 * defecto y el `try/catch` que envuelve cada `broadcast()`
+                 * atrapa excepciones, NO lentitud: una conexion colgada no
+                 * lanza nada, espera.
+                 *
+                 * Con Octane los trabajadores son un grupo fijo, asi que un
+                 * Reverb lento los agota igual que lo haria una pasarela
+                 * lenta. Tres segundos de sobra para un aviso que es una
+                 * cortesia: si no llega, el cliente lo ve al abrir la app.
+                 */
+                'timeout' => (int) env('REVERB_TIMEOUT', 3),
+                'connect_timeout' => (int) env('REVERB_CONNECT_TIMEOUT', 2),
             ],
         ],
 
