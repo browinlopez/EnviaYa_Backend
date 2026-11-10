@@ -26,6 +26,64 @@ use App\Models\Order\OrdersSales;
  */
 class PedidoParaLaApp
 {
+    /**
+     * LAS RELACIONES QUE HAY QUE PRECARGAR PARA LLAMAR A `formatear()`.
+     *
+     * Vive aquí y no en cada controlador porque es esta clase la que las LEE:
+     * quien decide qué relaciones hacen falta es el que las toca, no el que
+     * hace la consulta.
+     *
+     * Y porque ya se separaron. `PedidosDelDomiciliarioController` tenía la
+     * lista completa en un método privado; `ConsultaDePedidosController`
+     * tenía su propia copia y **le faltaba `domiciliary.user`**. Resultado:
+     * `GET /orders/business` cargaba el domiciliario y su usuario de UNO EN
+     * UNO —dos consultas por pedido con repartidor—, y a cincuenta pedidos
+     * en pantalla eso son cien consultas que nadie veía, porque la respuesta
+     * era correcta.
+     *
+     * Lo encontró `Model::preventLazyLoading()`, no una revisión: de las
+     * 1127 pruebas de la suite, exactamente dos fallaron al encenderlo, y
+     * las dos señalaban aquí.
+     *
+     * AL AÑADIR UN CAMPO A `formatear()` que venga de una relación, se añade
+     * la relación aquí. La prueba de N+1 no deja que se olvide.
+     */
+    public static function relaciones(): array
+    {
+        return [
+            'business',
+            /*
+             * `.category` Y NO SOLO `.product`: `formatear()` lee
+             * `$detail->product->category?->name`, y sin esto la categoría se
+             * cargaba por LÍNEA de pedido, no por pedido. Un pedido de diez
+             * productos costaba diez consultas de más.
+             */
+            'details.product.category',
+            'buyer.user',
+            'promotions',
+            'payments',
+            'domiciliary.user',
+            /*
+             * LAS CUATRO DE LA DIRECCIÓN SON HERMANAS, NO UNA CADENA.
+             *
+             * Estaba escrito `address.municipality.department.country`, que
+             * carga el municipio, el departamento DEL MUNICIPIO y el país DEL
+             * DEPARTAMENTO. Pero `formatear()` lee las cuatro directamente de
+             * la dirección —`$order->address->department?->name`—, y
+             * `department` y `country` son `hasOneThrough` propias de
+             * `UserAddress`. O sea que la cadena cargaba dos niveles que
+             * nadie lee y dejaba sin cargar los dos que sí.
+             *
+             * Resultado: dos consultas más por pedido con dirección. Lo
+             * encontró la prueba de N+1 de abajo, no una revisión.
+             */
+            'address.municipality',
+            'address.department',
+            'address.country',
+            'address.alias',
+        ];
+    }
+
     public function formatear(
         OrdersSales $order,
         bool $conDatosDelComprador = true,

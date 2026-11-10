@@ -8,6 +8,7 @@ use App\Services\Push\PushFirebase;
 use App\Services\Push\PushSegunPlataforma;
 use App\Services\Push\TransportePush;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
@@ -54,6 +55,28 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        /*
+         * LAS CARGAS PEREZOSAS REVIENTAN FUERA DE PRODUCCIÓN.
+         *
+         * Un N+1 no da error: da la respuesta correcta y cien consultas. Es
+         * la clase de fallo que no se ve hasta que la tabla crece, y entonces
+         * ya está en producción y no se sabe desde cuándo.
+         *
+         * SE MIDIÓ ANTES DE ENCENDERLO, porque §25 avisa de revisar la
+         * compatibilidad con el código heredado y en un proyecto con años
+         * encima esto puede romper media suite. Resultado: de 1127 pruebas,
+         * **dos** fallaron, y las dos señalaban el mismo N+1 real —el
+         * `domiciliary.user` que le faltaba a `GET /orders/business`—. Una
+         * vez arreglado, cero. Así que el coste de adoptarlo es cero y lo que
+         * atrapa es real.
+         *
+         * **APAGADO EN PRODUCCIÓN**, que es lo que dice §25 y lo que importa:
+         * una carga perezosa que se cuele no le va a tirar la pantalla a un
+         * tendero, solo va a costar consultas. El sitio donde tiene que
+         * doler es el CI y la máquina de quien lo escribe.
+         */
+        Model::preventLazyLoading(! app()->isProduction());
+
         if (app()->environment('production')) {
             URL::forceScheme('https');
             URL::forceRootUrl(config('app.url'));

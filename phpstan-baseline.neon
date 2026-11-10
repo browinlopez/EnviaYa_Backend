@@ -807,25 +807,19 @@ parameters:
 		-
 			message: '#^Relation ''address'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
 			identifier: larastan.relationExistence
-			count: 4
+			count: 3
 			path: app/Http/Controllers/Order/ConsultaDePedidosController.php
 
 		-
 			message: '#^Relation ''business'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
 			identifier: larastan.relationExistence
-			count: 3
-			path: app/Http/Controllers/Order/ConsultaDePedidosController.php
-
-		-
-			message: '#^Relation ''buyer'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
+			count: 2
 			path: app/Http/Controllers/Order/ConsultaDePedidosController.php
 
 		-
 			message: '#^Relation ''details'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
 			identifier: larastan.relationExistence
-			count: 3
+			count: 2
 			path: app/Http/Controllers/Order/ConsultaDePedidosController.php
 
 		-
@@ -837,13 +831,13 @@ parameters:
 		-
 			message: '#^Relation ''payments'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
 			identifier: larastan.relationExistence
-			count: 3
+			count: 2
 			path: app/Http/Controllers/Order/ConsultaDePedidosController.php
 
 		-
 			message: '#^Relation ''promotions'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
 			identifier: larastan.relationExistence
-			count: 3
+			count: 2
 			path: app/Http/Controllers/Order/ConsultaDePedidosController.php
 
 		-

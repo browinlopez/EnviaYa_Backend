@@ -94,10 +94,73 @@ tocarla — el mismo método que con las validaciones, multiplicado por 325.
 
 | Regla | Por qué |
 |---|---|
-| §24 índices con `EXPLAIN` · §25 presupuestos de rendimiento | **El propio §25 avisa de que SQLite no sirve para juzgar un plan de ejecución**, y la suite corre en SQLite en memoria. Cualquier medida mentiría. Hace falta un entorno con MySQL. Ya mordió una vez: `incomeBusiness` usaba `DAYOFWEEK()`, inexistente en SQLite, y esa pantalla no se pudo probar hasta portarla |
+| §24 índices con `EXPLAIN` · §25 presupuestos de rendimiento | **El propio §25 avisa de que SQLite no sirve para juzgar un plan de ejecución**, y la suite corre en SQLite en memoria. Cualquier medida mentiría. Hace falta un entorno con MySQL. Ya mordió una vez: `incomeBusiness` usaba `DAYOFWEEK()`, inexistente en SQLite, y esa pantalla no se pudo probar hasta portarla. **Lo de las consultas por petición, que es la otra mitad de §25, sí se podía: ver abajo** |
 | §34 OpenAPI | Es construir y mantener un contrato nuevo: un proyecto, no un ajuste |
 | §41 `declare(strict_types=1)` | 0 de 363 archivos. §12 dice que se adopta gradualmente y que **no** se reescriben todos para ponerlo |
 | §51 límites de archivo | 113 por encima del objetivo. §03 los llama «umbrales orientativos, no bloqueos», y §00 pone el tamaño en el ÚLTIMO lugar de las prioridades |
+
+### Las consultas por petición — la mitad de §25 que no necesitaba MySQL
+
+§25 pide, con esas palabras, «mantener tests que detecten un incremento
+anormal del número de consultas cuando se aumenta el número de registros
+retornados». Eso **no depende del motor**: el conteo de consultas es idéntico
+en SQLite y en MySQL. Estaba en la lista de bloqueados por confundirlo con los
+presupuestos de latencia, que sí lo están.
+
+**Lo que había debajo: tres N+1 en el mismo endpoint.**
+`GET /orders/business` —el tablero del tendero— precargaba su propia lista de
+relaciones, copiada del otro controlador que usa el mismo presentador. Las dos
+listas se habían separado:
+
+| Lo que faltaba | Qué costaba |
+|---|---|
+| `domiciliary.user` | 2 consultas por pedido con repartidor |
+| `details.product.category` | 1 consulta **por línea de pedido** |
+| `address.department`, `address.country` | 2 por pedido con dirección |
+
+Ninguna daba error: la respuesta era correcta. A cincuenta pedidos en el
+tablero, con tres líneas cada uno, son más de trescientas consultas que nadie
+veía.
+
+La lista se movió a `PedidoParaLaApp::relaciones()`, que es quien las lee, y
+los dos controladores la usan. Dos copias de la misma lista es tenerla mal en
+una de las dos.
+
+**Cómo salieron.** `Model::preventLazyLoading(! app()->isProduction())`, que
+§25 propone y que estaba sin poner. Se midió antes de encenderlo, porque §25
+avisa de revisar la compatibilidad con el código heredado y en un proyecto con
+años encima esto puede romper media suite: de 1127 pruebas fallaron **dos**, y
+las dos señalaban el primer N+1. Los otros dos los encontró la prueba nueva.
+Apagado en producción, que es lo que dice la regla: una carga perezosa que se
+cuele no le tira la pantalla a nadie, solo cuesta consultas. Donde tiene que
+doler es en el CI.
+
+**La prueba mide la pendiente, no el número.** No fija un tope de consultas:
+ese número cambia legítimamente en cuanto alguien añade un campo, y una prueba
+que se rompe cada vez que el código cambia bien se acaba borrando. Lo que no
+puede cambiar es que sea **el mismo** con un pedido y con ocho. Hoy: 15 y 15.
+
+Tres detalles del método, que es donde estaba la dificultad:
+
+- **Cada pedido lleva su propio comprador, repartidor, producto y dirección.**
+  Compartiéndolos, Eloquent resolvería la relación una vez y el N+1 no
+  aparecería ni estando el defecto: la prueba se vería verde sobre el código
+  roto.
+- **Se mide la segunda petición, no la primera.** La primera del proceso paga
+  además el catálogo de ajustes (`platform_settings`), que luego se cachea.
+  Medido: 16 la primera y 15 la segunda, con los mismos datos. Sin el
+  calentamiento la prueba falla por algo que no tiene que ver con los pedidos.
+- **Hay una prueba de contraparte**, porque un endpoint que devolviera una
+  lista vacía también costaría lo mismo con uno y con ocho, y pasaría en
+  verde.
+
+Probada rota: quitando cualquiera de las tres precargas, se pone roja.
+
+**Un defecto latente que apareció de paso y NO se toca.** `UserAddress::country()`
+es un `hasOneThrough` cuya clave local es `department_id`, y `user_address` no
+tiene esa columna: el país de una dirección es **siempre null**. Arreglarlo
+cambiaría un valor que la app publicada recibe como nulo desde siempre, así
+que queda dicho y no hecho.
 
 ---
 

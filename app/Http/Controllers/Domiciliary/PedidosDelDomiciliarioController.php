@@ -103,17 +103,15 @@ class PedidosDelDomiciliarioController extends Controller
     }
 
     /** Lo que el presentador necesita cargado para no disparar N+1. */
+    /**
+     * Las declara `PedidoParaLaApp`, que es quien las lee.
+     *
+     * Esta lista estaba completa y la del otro controlador que usa el mismo
+     * presentador no: le faltaba `domiciliary.user`. Dos copias de la misma
+     * lista es tenerla mal en una de las dos.
+     */
     private function relaciones(): array
     {
-        return [
-            'business',
-            'details.product',
-            'buyer.user',
-            'promotions',
-            'payments',
-            'domiciliary.user',
-            'address.municipality.department.country',
-            'address.alias',
-        ];
+        return PedidoParaLaApp::relaciones();
     }
 }
