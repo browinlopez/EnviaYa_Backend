@@ -31,12 +31,20 @@ de cumplimiento hoy, es que **la cifra solo pueda bajar**.
 | | |
 |---|---|
 | **Regla** | `04-capas-http.md`: validar con `FormRequest`, trabajar con `validated()` |
-| **Realidad** | **173 llamadas a `->validate(`** en los controladores, contra **2** `FormRequest` |
+| **Realidad** | Eran **173 llamadas a `->validate(`** contra **2** `FormRequest`. Al 9 de noviembre de 2026: **163 y 11** — convertida el área de Negocio |
 | **Motivo** | Convertir 173 validaciones de una vez es exactamente el PR gigante que el estándar desaconseja, y cada una es una regla de negocio que hay que releer, no mover |
 | **Riesgo aceptado** | La regla vive pegada al flujo: no se reusa, no se prueba aparte y la misma entidad se valida distinto en dos endpoints |
 | **Alternativa adoptada** | **Trinquete**: todo endpoint nuevo o tocado estrena su `FormRequest`. El contador de `->validate(` es la métrica y solo baja |
 | **Cómo se convierte lo viejo** | **Prueba primero.** 102 de las 325 rutas (31 %) no las llama ninguna prueba. En esas, extraer un `FormRequest` sin red significa que una regla que pase de `required` a `nullable` por descuido la descubre un tendero, no la suite. Así que por cada ruta sin cobertura que se toque: primero una prueba que fija su respuesta de hoy, después la extracción |
 | **Revisión** | Cada PR. Si sube, el PR no entra |
+
+**Una validación que NO se convierte, y por qué.**
+`AltaDeDomiciliarioController::guardar()` valida **dos veces en el mismo
+método**, según la rama: vincular a un domiciliario que ya existe, o crear uno
+nuevo. Un `FormRequest` valida una sola vez, antes de entrar al controlador, y
+forzarlo con reglas condicionales cambia **cuál** 422 recibe el tendero. §20 lo
+permite expresamente —«excepción permitida cuando separar empeora lectura,
+coste o testabilidad»—. Se queda en línea.
 
 ### La salida se arma a mano, no con `JsonResource`
 

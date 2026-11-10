@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Negocio;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Negocio\BuscarClienteRequest;
 use App\Models\Business\BusinessUserAffiliation;
 use App\Models\User;
 use App\Services\CreditoDeTienda;
@@ -38,11 +39,9 @@ class ClientesDelNegocioController extends Controller
      * lo justo para reconocerla y nada más. Su dirección, su rol o cuándo
      * aceptó la política no hacen falta para decidir si es la que se busca.
      */
-    public function buscar(Request $request)
+    public function buscar(BuscarClienteRequest $request)
     {
-        $datos = $request->validate([
-            'telefono' => 'required|string|min:7|max:40',
-        ]);
+        $datos = $request->validated();
 
         $negocioId = (int) $request->attributes->get('busines_id');
 

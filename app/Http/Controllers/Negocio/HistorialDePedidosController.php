@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Negocio;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Negocio\HistorialDePedidosRequest;
 use App\Models\Order\OrdersSales;
 use App\Services\CreditoDeTienda;
-use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -40,17 +40,11 @@ class HistorialDePedidosController extends Controller
 
     private const DIAS_MAXIMOS = 92;
 
-    public function index(Request $request)
+    public function index(HistorialDePedidosRequest $request)
     {
         $businessId = (int) $request->attributes->get('busines_id');
 
-        $datos = $request->validate([
-            'desde' => 'nullable|date',
-            'hasta' => 'nullable|date',
-            'estado' => 'nullable|in:todos,entregados,cancelados',
-            'pago' => 'nullable|in:todos,efectivo,app,fiado',
-            'pagina' => 'nullable|integer|min:1',
-        ]);
+        $datos = $request->validated();
 
         [$desde, $hasta] = $this->ventana($datos);
 

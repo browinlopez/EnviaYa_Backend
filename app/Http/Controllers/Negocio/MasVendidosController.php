@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Negocio;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Http\Requests\Negocio\MasVendidosRequest;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -21,14 +21,11 @@ class MasVendidosController extends Controller
 {
     private const ENTREGADO = 4;
 
-    public function index(Request $request)
+    public function index(MasVendidosRequest $request)
     {
         $negocioId = (int) $request->attributes->get('busines_id');
 
-        $datos = $request->validate([
-            'dias' => 'sometimes|integer|in:7,30,90,365',
-            'limite' => 'sometimes|integer|min:1|max:50',
-        ]);
+        $datos = $request->validated();
         $dias = (int) ($datos['dias'] ?? 30);
         $limite = (int) ($datos['limite'] ?? 10);
 

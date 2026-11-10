@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Negocio;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Negocio\AbonarAlFiadoRequest;
+use App\Http\Requests\Negocio\AsignarCupoDeFiadoRequest;
 use App\Models\Business\BusinessUserAffiliation;
 use App\Models\Operacion\StoreCredit;
 use App\Models\Operacion\StoreCreditMovement;
@@ -66,13 +68,11 @@ class CreditosDelNegocioController extends Controller
     }
 
     /** Fijar (o cambiar) el cupo de un cliente. Cero lo deja sin crédito. */
-    public function asignar(Request $request, int $userId)
+    public function asignar(AsignarCupoDeFiadoRequest $request, int $userId)
     {
         $negocioId = (int) $request->attributes->get('busines_id');
 
-        $datos = $request->validate([
-            'credit_limit' => 'required|numeric|min:0|max:999999999',
-        ]);
+        $datos = $request->validated();
 
         try {
             $this->creditos->asignar($negocioId, $userId, (float) $datos['credit_limit'], $request->user()?->user_id);
@@ -88,19 +88,11 @@ class CreditosDelNegocioController extends Controller
     }
 
     /** El cliente le pagó a la tienda: se libera ese valor de su cupo. */
-    public function abonar(Request $request, int $userId)
+    public function abonar(AbonarAlFiadoRequest $request, int $userId)
     {
         $negocioId = (int) $request->attributes->get('busines_id');
 
-        $datos = $request->validate([
-            'amount' => 'required|numeric|min:1|max:999999999',
-            'notes' => 'nullable|string|max:255',
-            // La foto de la transferencia o del recibo. Opcional.
-            'comprobante' => 'nullable|file|mimes:jpg,jpeg,png,webp,pdf|max:8192',
-        ], [
-            'comprobante.mimes' => 'El comprobante tiene que ser una foto (JPG, PNG o WEBP) o un PDF.',
-            'comprobante.max' => 'El comprobante pesa más de 8 MB.',
-        ]);
+        $datos = $request->validated();
 
         /*
          * El archivo se sube ANTES de registrar el abono: si falla la subida,

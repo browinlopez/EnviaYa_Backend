@@ -4,13 +4,13 @@ namespace App\Http\Controllers\Negocio;
 
 use App\Events\OrderStatusUpdated;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Negocio\RegistrarPesajeRequest;
 use App\Models\Order\OrdersSales;
 use App\Models\Order\OrdersSalesDetail;
 use App\Services\Ajustes;
 use App\Services\ExistenciasDelPedido;
 use App\Support\UnidadDeVenta;
 use Illuminate\Http\Exceptions\HttpResponseException;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -38,18 +38,8 @@ class PesajeDelPedidoController extends Controller
 {
     public function __construct(private readonly ExistenciasDelPedido $existencias) {}
 
-    public function registrar(Request $request)
+    public function registrar(RegistrarPesajeRequest $request)
     {
-        $request->validate([
-            'order_id' => 'required|integer',
-            'lineas' => 'required|array|min:1',
-            'lineas.*.orderDet_id' => 'required|integer',
-            /*
-             * Hasta tres decimales: la báscula de mostrador pesa en gramos y
-             * un kilo tiene mil. Más precisión sería inventarla.
-             */
-            'lineas.*.qty_final' => 'required|numeric|min:0.001|max:1000',
-        ]);
 
         $businessId = (int) $request->attributes->get('busines_id');
         $usuarioId = (int) ($request->user()?->user_id);
