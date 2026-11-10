@@ -93,6 +93,10 @@ class MediosApiController extends Controller
     {
         $nombre = $this->nombreDeEntidad($entidad, $id, $medios);
 
+        /* EN LINEA Y NO EN UN FormRequest: `nombreDeEntidad()` aborta con 404
+           cuando la entidad no maneja archivos o no existe, y eso tiene que
+           contestarse ANTES que un error de validacion. Un FormRequest valida
+           antes de entrar al metodo e invertiria las dos respuestas. */
         $request->validate([
             'file' => 'required|file|max:8192|mimes:jpg,jpeg,png,webp,gif,pdf',
             'tipo' => 'sometimes|string|in:logo,galeria,documentos',
@@ -129,6 +133,8 @@ class MediosApiController extends Controller
     {
         $nombre = $this->nombreDeEntidad($entidad, $id, $medios);
 
+        /* En linea por lo mismo que en `uploadMedia`: `nombreDeEntidad()`
+           aborta con 404 y esa respuesta va antes que un 422 de validacion. */
         $datos = $request->validate(['id' => 'required|integer']);
 
         try {

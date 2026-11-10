@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Landing\SolicitudDesdeLaWebRequest;
 use App\Models\Operacion\LandingRequest;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -45,7 +46,7 @@ class LandingRequestController extends Controller
         'empresa', 'trampa', 'adjunto',
     ];
 
-    public function store(Request $request)
+    public function store(SolicitudDesdeLaWebRequest $request)
     {
         /*
          * La validación es deliberadamente laxa con los campos de cada
@@ -54,27 +55,7 @@ class LandingRequestController extends Controller
          * servidor no conoce sería perder exactamente lo que este endpoint
          * existe para no perder.
          */
-        $datos = $request->validate([
-            'nombre' => 'nullable|string|max:150',
-            'contacto' => 'required|string|max:150',
-            'barrio' => 'nullable|string|max:150',
-            'mensaje' => 'nullable|string|max:5000',
-            'tipo' => 'nullable|string|max:30',
-            'motivo' => 'nullable|string|max:60',
-            'origen' => 'nullable|string|max:40',
-            'pagina' => 'nullable|string|max:120',
-            'consentimiento' => 'accepted',
-            'politica_version' => 'nullable|string|max:20',
-            'aceptado_en' => 'nullable|date',
-            // La foto o el comprobante de una PQRS. Llega en multipart; el
-            // resto de formularios sigue mandando JSON.
-            'adjunto' => 'nullable|file|max:'.LandingRequest::ADJUNTO_MAX_KB
-                .'|mimes:'.LandingRequest::ADJUNTO_TIPOS,
-        ], [
-            'consentimiento.accepted' => 'Falta la autorización de tratamiento de datos.',
-            'adjunto.max' => 'El archivo pesa más de 8 MB.',
-            'adjunto.mimes' => 'Sube una foto (JPG, PNG, WEBP, HEIC) o un PDF.',
-        ]);
+        $datos = $request->validated();
 
         // La trampa. Se responde igual que en el caso bueno, a propósito.
         if (filled($request->input('empresa')) || filled($request->input('trampa'))) {

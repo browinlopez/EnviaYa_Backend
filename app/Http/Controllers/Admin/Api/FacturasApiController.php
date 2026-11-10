@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\AnularFacturaRequest;
+use App\Http\Requests\Admin\AnularFacturasEnLoteRequest;
 use App\Models\Invoice\Invoice;
 use App\Services\FacturaService;
 use App\Support\ListadoPaginado;
@@ -298,13 +300,9 @@ class FacturasApiController extends Controller
      * repetirlo quitando ese, con el riesgo de anular de más al rehacer la
      * selección.
      */
-    public function anularLote(Request $request, FacturaService $facturas)
+    public function anularLote(AnularFacturasEnLoteRequest $request, FacturaService $facturas)
     {
-        $datos = $request->validate([
-            'ids' => 'required|array|min:1|max:50',
-            'ids.*' => 'integer',
-            'motivo' => 'required|string|min:5|max:255',
-        ]);
+        $datos = $request->validated();
 
         $usuario = $request->user()->user_id ?? null;
 
@@ -337,13 +335,9 @@ class FacturasApiController extends Controller
         ]);
     }
 
-    public function anular(Request $request, $id, FacturaService $facturas)
+    public function anular(AnularFacturaRequest $request, $id, FacturaService $facturas)
     {
-        $datos = $request->validate([
-            // El motivo es OBLIGATORIO. Una anulación sin explicación es un
-            // agujero en la contabilidad que nadie puede reconstruir después.
-            'motivo' => 'required|string|min:5|max:255',
-        ]);
+        $datos = $request->validated();
 
         $f = Invoice::find($id);
         abort_if(! $f, 404, 'El comprobante no existe.');

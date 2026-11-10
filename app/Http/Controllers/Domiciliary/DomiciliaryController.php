@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Domiciliary;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Domiciliary\CrearDomiciliarioRequest;
 use App\Models\Business;
 use App\Models\Domiciliary;
 use App\Models\User;
@@ -99,18 +100,8 @@ class DomiciliaryController extends Controller
     }
 
     // Crear un domiciliario
-    public function createDomiciliary(Request $request)
+    public function createDomiciliary(CrearDomiciliarioRequest $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|unique:user,email',
-            'password' => 'required|string|min:6',
-            'phone' => 'nullable|string|max:20',
-            'address' => 'nullable|string|max:225',
-            'available' => 'boolean',
-            'qualification' => 'numeric|min:0|max:5',
-            'state' => 'boolean',
-        ]);
 
         try {
 

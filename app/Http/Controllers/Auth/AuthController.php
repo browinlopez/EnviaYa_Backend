@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\EntrarRequest;
 use App\Models\User;
 use App\Services\Totp;
 use Illuminate\Http\Request;
@@ -11,12 +12,9 @@ use Illuminate\Support\Facades\Hash;
 class AuthController extends Controller
 {
     // Login
-    public function login(Request $request)
+    public function login(EntrarRequest $request)
     {
-        $credentials = $request->validate([
-            'email' => 'required|email',
-            'password' => 'required|string',
-        ]);
+        $credentials = $request->validated();
 
         $user = User::where('email', $credentials['email'])->first();
 

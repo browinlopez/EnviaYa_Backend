@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Negocio;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Negocio\ActualizarProductoRequest;
+use App\Http\Requests\Negocio\AgregarProductoRequest;
+use App\Http\Requests\Negocio\CopiarSurtidoRequest;
+use App\Http\Requests\Negocio\PreciosEnLoteRequest;
 use App\Models\Product\Product;
 use App\Models\Product\ProductBusiness;
 use App\Services\CatalogoDeProductos;
-use App\Support\UnidadDeVenta;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -132,34 +135,11 @@ class ProductosDelNegocioController extends Controller
         return response()->json(['data' => $productos]);
     }
 
-    public function update(Request $request, int $id)
+    public function update(ActualizarProductoRequest $request, int $id)
     {
         $businessId = (int) $request->attributes->get('busines_id');
 
-        $datos = $request->validate([
-            'price' => 'nullable|numeric|min:0',
-            'amount' => 'nullable|integer|min:0',
-            /*
-             * COMO LO VENDE ESTA TIENDA. Por unidad o al peso --kilo, libra o
-             * gramo-- y es del par tienda-producto: la misma referencia va
-             * empacada aca y al peso en la de enfrente.
-             *
-             * Con una unidad de peso, `price` pasa a significar «precio por
-             * esa unidad» y las existencias viven en `stock_weight`, que
-             * admite decimales. `amount` se queda para lo que se vende por
-             * unidad: migrarlo a decimal habria cambiado en silencio el
-             * significado de veintidos sitios.
-             */
-            'sale_unit' => 'nullable|string|in:'.implode(',', UnidadDeVenta::TODAS),
-            'stock_weight' => 'nullable|numeric|min:0|max:100000',
-            'min_qty' => 'nullable|numeric|min:0.001|max:100',
-            'step_qty' => 'nullable|numeric|min:0.001|max:100',
-            'expiration_date' => 'nullable|date',
-            'name' => 'nullable|string|max:255',
-            'description' => 'nullable|string',
-            'category_id' => 'nullable|integer|exists:category,category_id',
-            'state' => 'nullable|boolean',
-        ]);
+        $datos = $request->validated();
 
         $pb = ProductBusiness::where('products_id', $id)
             ->where('busines_id', $businessId)
@@ -264,30 +244,11 @@ class ProductosDelNegocioController extends Controller
      * cuánto lo vende y cuántos tiene. Si llega `name` o `category_id`, se
      * ignoran.
      */
-    public function agregar(Request $request)
+    public function agregar(AgregarProductoRequest $request)
     {
         $businessId = (int) $request->attributes->get('busines_id');
 
-        $datos = $request->validate([
-            'products_id' => 'required|integer|exists:products,products_id',
-            'price' => 'required|numeric|min:0',
-            'amount' => 'required|integer|min:0',
-            /*
-             * COMO LO VENDE ESTA TIENDA. Por unidad o al peso --kilo, libra o
-             * gramo-- y es del par tienda-producto: la misma referencia va
-             * empacada aca y al peso en la de enfrente.
-             *
-             * Con una unidad de peso, `price` pasa a significar «precio por
-             * esa unidad» y las existencias viven en `stock_weight`, que
-             * admite decimales. `amount` se queda para lo que se vende por
-             * unidad: migrarlo a decimal habria cambiado en silencio el
-             * significado de veintidos sitios.
-             */
-            'sale_unit' => 'nullable|string|in:'.implode(',', UnidadDeVenta::TODAS),
-            'stock_weight' => 'nullable|numeric|min:0|max:100000',
-            'min_qty' => 'nullable|numeric|min:0.001|max:100',
-            'step_qty' => 'nullable|numeric|min:0.001|max:100',
-        ]);
+        $datos = $request->validated();
 
         $yaLoTenia = ProductBusiness::where('busines_id', $businessId)
             ->where('products_id', $datos['products_id'])
@@ -353,16 +314,11 @@ class ProductosDelNegocioController extends Controller
      * peticiones y cuarenta oportunidades de que una falle a la mitad. Entran
      * todas juntas y en una transacción.
      */
-    public function precios(Request $request)
+    public function precios(PreciosEnLoteRequest $request)
     {
         $businessId = (int) $request->attributes->get('busines_id');
 
-        $datos = $request->validate([
-            'cambios' => 'required|array|min:1|max:500',
-            'cambios.*.products_id' => 'required|integer',
-            'cambios.*.price' => 'nullable|numeric|min:0',
-            'cambios.*.amount' => 'nullable|integer|min:0',
-        ]);
+        $datos = $request->validated();
 
         $mios = ProductBusiness::where('busines_id', $businessId)
             ->pluck('products_id')
@@ -432,13 +388,11 @@ class ProductosDelNegocioController extends Controller
      * comprador hasta que el tendero los ponga. Eso convierte la copia en una
      * lista de trabajo en vez de en un catálogo que anuncia precios ajenos.
      */
-    public function copiar(Request $request)
+    public function copiar(CopiarSurtidoRequest $request)
     {
         $businessId = (int) $request->attributes->get('busines_id');
 
-        $datos = $request->validate([
-            'desde' => 'required|integer|exists:business,busines_id',
-        ]);
+        $datos = $request->validated();
 
         if ((int) $datos['desde'] === $businessId) {
             return response()->json(['message' => 'Esa ya es tu tienda.'], 422);

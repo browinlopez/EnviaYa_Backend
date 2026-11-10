@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Negocio;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Negocio\ActualizarMiNegocioRequest;
+use App\Http\Requests\Negocio\RecibirPedidosRequest;
 use App\Models\Order\OrdersSales;
 use App\Services\BusinessMediaService;
 use Carbon\Carbon;
@@ -88,28 +90,11 @@ class MiNegocioController extends Controller
      * `NIT` y `razonSocial_DCD` sí se dejan: son los datos con los que sale su
      * nombre en el comprobante de venta, y quien los conoce es él.
      */
-    public function actualizar(Request $request)
+    public function actualizar(ActualizarMiNegocioRequest $request)
     {
         $negocio = $request->attributes->get('negocio');
 
-        $datos = $request->validate([
-            'name' => 'required|string|max:255',
-            'phone' => 'nullable|string|max:40',
-            'address' => 'nullable|string|max:255',
-            'description' => 'nullable|string|max:1000',
-            'NIT' => 'nullable|string|max:40',
-            'razonSocial_DCD' => 'nullable|string|max:255',
-            'municipality_id' => 'nullable|integer|exists:municipalities,id',
-            /*
-             * Cuánto efectivo deja que su domiciliario lleve encima. Vacío =
-             * sin tope, que es como funciona si nadie lo toca.
-             *
-             * `nullable` de verdad: un cero significaría «no le despaches ni un
-             * pedido contra entrega», que es una decisión legítima pero muy
-             * distinta de no haber puesto tope. Se distinguen.
-             */
-            'max_courier_cash' => 'nullable|numeric|min:0|max:99999999',
-        ]);
+        $datos = $request->validated();
 
         // Cadena vacía desde un formulario es «sin tope», no cero.
         if (array_key_exists('max_courier_cash', $datos) && $datos['max_courier_cash'] === '') {
@@ -140,26 +125,13 @@ class MiNegocioController extends Controller
      * la plataforma. Esto es del tendero y se espera que cambie varias veces
      * al día.
      */
-    public function recibiendo(Request $request)
+    public function recibiendo(RecibirPedidosRequest $request)
     {
         $negocio = $request->attributes->get('negocio');
 
         // `boolean` acepta 1/0, "1"/"0" y true/false, que es lo que mandan un
         // interruptor del panel y un `fetch` a mano sin ponerse de acuerdo.
-        $datos = $request->validate([
-            'accepting_orders' => 'required|boolean',
-            /*
-             * HASTA CUÁNDO DURA LA PAUSA. Opcional: «se fue la luz» no tiene
-             * hora de vuelta y entonces la enciende él.
-             *
-             * El tope de un día no es capricho. Una pausa de tres semanas no
-             * es una pausa: es una tienda que cerró, y eso lo decide el equipo
-             * con `state`, no un interruptor del mostrador. Sin tope, la
-             * manera de desaparecer del catálogo sin que nadie se entere sería
-             * pausar hasta el año que viene.
-             */
-            'accepting_until' => 'nullable|date|after:now|before:'.now()->addDay()->addMinute()->toIso8601String(),
-        ]);
+        $datos = $request->validated();
 
         $recibe = (bool) $datos['accepting_orders'];
 

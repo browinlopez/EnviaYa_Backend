@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Operacion;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Operacion\ResolverDepositoRequest;
 use App\Models\Domiciliary;
 use App\Models\Operacion\CashDeposit;
 use App\Models\Operacion\CashMovement;
@@ -151,12 +152,9 @@ class EfectivoController extends Controller
     }
 
     /** Confirma o rechaza un depósito. Confirmar es lo que baja el saldo. */
-    public function resolver(Request $request, int $id)
+    public function resolver(ResolverDepositoRequest $request, int $id)
     {
-        $datos = $request->validate([
-            'state' => 'required|in:confirmada,rechazada',
-            'notes' => 'nullable|string|max:500',
-        ]);
+        $datos = $request->validated();
 
         $deposito = CashDeposit::find($id);
 

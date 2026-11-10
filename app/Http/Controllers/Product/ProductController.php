@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Product;
 
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Product\ListarProductosRequest;
 use App\Models\Business;
 use App\Models\Product\Product;
 use App\Models\Product\ProductBusiness;
@@ -18,11 +19,8 @@ class ProductController extends Controller
     use ComprobarPertenencia;
 
     // Listar todos los productos de un negocio
-    public function index(Request $request)
+    public function index(ListarProductosRequest $request)
     {
-        $request->validate([
-            'business_id' => 'required|integer|exists:business,busines_id',
-        ]);
 
         /*
          * Un identificador en el cuerpo es una sugerencia, no una

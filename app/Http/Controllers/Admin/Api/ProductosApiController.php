@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\CrearProductoDelCatalogoRequest;
 use App\Services\MediaService;
 use App\Support\Consultas\AyudasDeAdmin;
 use App\Support\ListadoPaginado;
@@ -127,17 +128,9 @@ class ProductosApiController extends Controller
      * misma transacción, porque un producto sin oferta no aparece en ninguna
      * tienda.
      */
-    public function storeProduct(Request $request)
+    public function storeProduct(CrearProductoDelCatalogoRequest $request)
     {
-        $datos = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'image' => 'nullable|string',
-            'category_id' => 'nullable|integer|exists:category,category_id',
-            'busines_id' => 'nullable|integer|exists:business,busines_id',
-            'price' => 'nullable|numeric|min:0',
-            'amount' => 'nullable|integer|min:0',
-        ]);
+        $datos = $request->validated();
 
         $id = DB::transaction(function () use ($datos) {
             $productoId = DB::table('products')->insertGetId([

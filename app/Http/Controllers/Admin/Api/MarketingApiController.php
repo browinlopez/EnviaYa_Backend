@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\VistaPreviaDePushRequest;
 use App\Models\DeviceToken;
 use App\Models\Marketing\AdCampaign;
 use App\Models\Marketing\Advertiser;
@@ -157,15 +158,11 @@ class MarketingApiController extends Controller
      * destinatarios" antes de pulsar es la única oportunidad de notar que el
      * filtro estaba mal puesto.
      */
-    public function pushPreview(Request $request)
+    public function pushPreview(VistaPreviaDePushRequest $request)
     {
-        $segmento = $request->validate([
-            'segment' => 'sometimes|nullable|array',
-            'segment.roles' => 'sometimes|nullable|array',
-            'segment.municipalities' => 'sometimes|nullable|array',
-            'segment.complexes' => 'sometimes|nullable|array',
-            'segment.only_with_orders' => 'sometimes|boolean',
-        ])['segment'] ?? [];
+        /* `['segment'] ?? []` y no `validated()` a secas: la consulta de abajo
+           espera el CONTENIDO del segmento, no el sobre que lo envuelve. */
+        $segmento = $request->validated()['segment'] ?? [];
 
         $usuarios = $this->consultaSegmento($segmento)->pluck('u.user_id');
 

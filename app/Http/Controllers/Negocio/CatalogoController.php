@@ -28,7 +28,6 @@ class CatalogoController extends Controller
     /** Buscar para el select filtrado del panel. */
     public function buscar(BuscarEnElCatalogoRequest $request)
     {
-
         $businessId = (int) $request->attributes->get('busines_id');
 
         return response()->json([

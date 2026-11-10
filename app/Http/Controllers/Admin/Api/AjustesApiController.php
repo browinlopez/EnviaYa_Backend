@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\GuardarAjustesRequest;
 use App\Http\Requests\Admin\RestablecerAjusteRequest;
 use App\Services\Ajustes;
 use App\Support\CatalogoDeAjustes;
-use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 
@@ -104,10 +104,9 @@ class AjustesApiController extends Controller
      * `grupo.clave`, así que anidar es la forma natural y no hay que escapar
      * nada.
      */
-    public function update(Request $request)
+    public function update(GuardarAjustesRequest $request)
     {
-        $datos = $request->validate(CatalogoDeAjustes::reglas());
-
+        $datos = $request->validated();
         // De vuelta a claves punteadas, que es como las conoce el catálogo.
         // Todo lo que no esté en él ya quedó fuera: `validate()` solo devuelve
         // lo que tiene regla.

@@ -4,6 +4,10 @@ namespace App\Http\Controllers\Order;
 
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Order\IngresosDelNegocioRequest;
+use App\Http\Requests\Order\PedidosDelNegocioRequest;
+use App\Http\Requests\Order\PedidosDelUsuarioRequest;
+use App\Http\Requests\Order\UltimosPedidosRequest;
 use App\Models\Business;
 use App\Models\Buyer\Buyer;
 use App\Models\Order\OrderGeolocation;
@@ -21,11 +25,8 @@ class ConsultaDePedidosController extends Controller
     use ComprobarPertenencia;
 
     // Función para obtener todas las órdenes de un usuario
-    public function ordersUser(Request $request)
+    public function ordersUser(PedidosDelUsuarioRequest $request)
     {
-        $request->validate([
-            'user_id' => 'required|integer',
-        ]);
 
         $buyer = Buyer::where('user_id', $request->user_id)->first();
 
@@ -170,11 +171,8 @@ class ConsultaDePedidosController extends Controller
     }
 
     // Función para obtener todas las órdenes de un negocio (tendero)
-    public function ordersBusiness(Request $request)
+    public function ordersBusiness(PedidosDelNegocioRequest $request)
     {
-        $request->validate([
-            'business_id' => 'required|integer',
-        ]);
 
         /*
          * Un identificador en el cuerpo es una sugerencia, no una
@@ -261,11 +259,8 @@ class ConsultaDePedidosController extends Controller
         ]);
     }
 
-    public function incomeBusiness(Request $request)
+    public function incomeBusiness(IngresosDelNegocioRequest $request)
     {
-        $request->validate([
-            'business_id' => 'required|integer|exists:business,busines_id',
-        ]);
 
         /*
          * Un identificador en el cuerpo es una sugerencia, no una
@@ -468,11 +463,9 @@ class ConsultaDePedidosController extends Controller
      * posicion» a quien no deberia estar preguntando es confirmarle que el
      * numero existe.
      */
-    public function latest(Request $request)
+    public function latest(UltimosPedidosRequest $request)
     {
-        $data = $request->validate([
-            'domiciliary_id' => 'required|exists:domiciliary,domiciliary_id',
-        ]);
+        $data = $request->validated();
 
         abort_unless(
             $this->puedeVerAlDomiciliario($request, (int) $data['domiciliary_id']),

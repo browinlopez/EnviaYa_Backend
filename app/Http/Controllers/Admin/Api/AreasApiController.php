@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\AsignarAreaRequest;
+use App\Http\Requests\Admin\CrearAreaRequest;
 use App\Models\Area;
 use App\Services\Ajustes;
 use App\Support\PanelModules;
@@ -108,13 +110,9 @@ class AreasApiController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(CrearAreaRequest $request)
     {
-        $datos = $request->validate([
-            'name' => 'required|string|max:80',
-            'description' => 'nullable|string|max:255',
-            'permissions' => 'sometimes|array',
-        ]);
+        $datos = $request->validated();
 
         $codigo = $this->codigoUnico($datos['name']);
 
@@ -217,12 +215,9 @@ class AreasApiController extends Controller
         );
     }
 
-    public function asignarArea(Request $request, $userId)
+    public function asignarArea(AsignarAreaRequest $request, $userId)
     {
-        $datos = $request->validate([
-            'area_id' => 'sometimes|nullable|integer|exists:areas,id',
-            'access_level' => 'sometimes|in:gestor,consulta',
-        ]);
+        $datos = $request->validated();
 
         $usuario = DB::table('user')->where('user_id', $userId)->first();
         abort_if(! $usuario, 404, 'El usuario no existe.');
