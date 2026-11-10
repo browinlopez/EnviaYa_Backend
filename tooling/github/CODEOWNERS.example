@@ -1,0 +1,6 @@
+# Reemplaza @your-team por usuarios/equipos reales antes de activarlo.
+# En GitHub, solo funcionan propietarios con permisos adecuados.
+# /app/Modules/Auth/ @your-team
+# /app/Modules/Billing/ @your-team
+# /database/migrations/ @your-team
+# /.github/workflows/ @your-team

@@ -79,3 +79,11 @@ Repositorio de **API Laravel 12**. Prioridad: cambios pequeños, módulos claros
 - Código o tests inventados como si ya existieran en el repositorio.
 
 **Si una regla no encaja en el código actual, explica la excepción y aplica el cambio menos invasivo.**
+
+## Estándar final y verificación automatizada
+
+24. Consultar `48`–`56` antes de activar cambios globales de pipeline, análisis estático, tests de carga o despliegue.
+25. Las plantillas de `tooling/` son **optativas** y deben adaptarse al proyecto, versión de PHP y motor de base de datos. No sobrescribir configuraciones existentes automáticamente.
+26. Todos los PR deben mostrar evidencia ejecutada de calidad, tests y alcance. No declarar que un check pasó si no se corrió.
+27. Los verificadores en `scripts/` son heurísticas no bloqueantes inicialmente; la cohesión y la seguridad prevalecen sobre un límite arbitrario.
+28. Aplicar `56-definicion-de-terminado-auditable.md` de forma proporcional a la funcionalidad, sin generar capas ni tests que no aporten valor.

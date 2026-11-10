@@ -31,7 +31,7 @@ de cumplimiento hoy, es que **la cifra solo pueda bajar**.
 | | |
 |---|---|
 | **Regla** | `04-capas-http.md`: validar con `FormRequest`, trabajar con `validated()` |
-| **Realidad** | Eran **173 llamadas a `->validate(`** contra **2** `FormRequest`. Al 9 de noviembre de 2026: **125 y 49** — convertidas Negocio, Admin/Api, Conjunto, Business, User, Marketing, Domiciliary y Category |
+| **Realidad** | Eran **173 llamadas a `->validate(`** contra **2** `FormRequest`. Al 10 de noviembre de 2026: **101 y 73** |
 | **Motivo** | Convertir 173 validaciones de una vez es exactamente el PR gigante que el estándar desaconseja, y cada una es una regla de negocio que hay que releer, no mover |
 | **Riesgo aceptado** | La regla vive pegada al flujo: no se reusa, no se prueba aparte y la misma entidad se valida distinto en dos endpoints |
 | **Alternativa adoptada** | **Trinquete**: todo endpoint nuevo o tocado estrena su `FormRequest`. El contador de `->validate(` es la métrica y solo baja |
@@ -273,3 +273,49 @@ vuelva a crecer en silencio.
 De todo eso, **lo que conviene hacer ya es el CI**: `pint --test` y
 `composer audit` son dos líneas y convierten en automático lo que hoy depende
 de que alguien se acuerde. El resto son decisiones de producto, no deuda.
+
+
+---
+
+## 7 · El estándar final (48–56) y sus herramientas
+
+Cuarta y última entrega: automatización de gates, PHPStan/Larastan con
+baseline, CI y protección de ramas, límites de archivo como alertas, fronteras
+entre módulos, presupuestos de rendimiento, operación y respaldos, plan de
+actualizaciones y una definición de «terminado» auditable. **58 documentos.**
+
+Lo nuevo de verdad no son los documentos: es que trae **herramientas**.
+
+| Qué | Dónde | Resultado al correrlo aquí |
+|---|---|---|
+| `check_module_boundaries.py` | `scripts/` | *«Sin `app/Modules/`: no aplica»*. Degrada bien, que es lo correcto para la decisión de §1 de este registro |
+| `check_file_sizes.py` | `scripts/` | **113 archivos** por encima del objetivo. Coincide con lo medido en §1 |
+| `phpstan.neon.dist`, `pint.json`, CI, CODEOWNERS | `tooling/` | **Plantillas, no configuración.** Su propio README dice «NO se instalan automáticamente» |
+
+### Cuatro cosas que aprendimos convirtiendo, y que valen más que el contador
+
+Esto no está en ningún documento del estándar y es lo que de verdad hay que
+saber para seguir:
+
+1. **Un extractor que copia texto copia también sus dependencias.** Las reglas
+   nombraban `UnidadDeVenta::` y `LandingRequest::`; el `use` se quedó en el
+   controlador. Hay un comprobador para esto.
+2. **Un `validate()` puede tener sufijo.** `…validate([...])['segment'] ?? []`
+   devuelve el contenido, no el sobre. Sustituir la sentencia entera se lo
+   come.
+3. **Lo que corre ANTES del validate deja de correr antes.** Es el criterio
+   que más conversiones ha vetado: un `merge()` que traduce los nombres que
+   manda la app publicada, un `return` temprano para compilaciones viejas, un
+   `abort_if` que contesta 404. Un `FormRequest` valida antes de entrar al
+   método, así que invierte esas respuestas.
+4. **Deshacer también se hace mal.** Un script que sustituye «el primer
+   `validated()` del archivo» acierta solo si el archivo tiene un método
+   convertido. Con dos, intercambia las reglas y puede dejar un endpoint
+   **sin ninguna validación**. Lo cazó la suite, no la revisión.
+
+### Lo que queda
+
+**101 validaciones en línea.** De ellas, unas 75 viven en endpoints que
+ninguna prueba llama: ahí toca escribir primero la prueba que fija la
+respuesta de hoy. El resto son las que el detector veta por los motivos de
+arriba, y van una por una.
