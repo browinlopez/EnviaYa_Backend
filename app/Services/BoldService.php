@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 
 class BoldService
@@ -25,9 +26,30 @@ class BoldService
         ];
     }
 
+    /**
+     * La peticion a Bold, con tiempo de espera.
+     *
+     * SIN TOPE, UNA PASARELA LENTA TUMBA EL API. Las siete llamadas de esta
+     * clase se hacen dentro de la peticion del comprador —`OrderController` y
+     * `PaymentController` reciben este servicio inyectado— y el cliente HTTP
+     * de Laravel no pone limite por defecto. Con Octane los trabajadores son
+     * un grupo fijo: basta que Bold deje de contestar para que se agoten
+     * esperando y caiga todo el backend, no solo los pagos.
+     *
+     * Quince segundos para la respuesta y cinco para conectar. Fallar con un
+     * error que el comprador ve es peor que no fallar, pero infinitamente
+     * mejor que colgar al resto de la tienda.
+     */
+    protected function peticion(): PendingRequest
+    {
+        return $this->peticion()
+            ->connectTimeout((int) config('services.bold.connect_timeout', 5))
+            ->timeout((int) config('services.bold.timeout', 15));
+    }
+
     public function createIntent(array $body): array
     {
-        $response = Http::withHeaders($this->headers())
+        $response = $this->peticion()
             ->post("{$this->apiUrl}/v1/payment-intent", $body);
 
         if ($response->failed()) {
@@ -39,7 +61,7 @@ class BoldService
 
     public function makePayment(array $body): array
     {
-        $response = Http::withHeaders($this->headers())
+        $response = $this->peticion()
             ->post("{$this->apiUrl}/v1/payment", $body);
 
         if ($response->failed()) {
@@ -61,7 +83,7 @@ class BoldService
      */
     public function anular(string $transactionId): array
     {
-        $response = Http::withHeaders($this->headers())
+        $response = $this->peticion()
             ->post("{$this->apiUrl}/v1/payment/void", [
                 'transaction_id' => $transactionId,
             ]);
@@ -84,7 +106,7 @@ class BoldService
      */
     public function devolver(string $referenceId, string $transactionId, string $motivo): array
     {
-        $response = Http::withHeaders($this->headers())
+        $response = $this->peticion()
             ->post("{$this->apiUrl}/v1/payment/refund", [
                 'reference_id' => $referenceId,
                 'transaction_id' => $transactionId,
@@ -101,7 +123,7 @@ class BoldService
     /** En qué va el reembolso: PROCESSING, APPROVED o REJECTED. */
     public function estadoDeDevolucion(string $transactionId): array
     {
-        $response = Http::withHeaders($this->headers())
+        $response = $this->peticion()
             ->get("{$this->apiUrl}/v1/payment/refund/{$transactionId}");
 
         if ($response->failed()) {
@@ -121,7 +143,7 @@ class BoldService
      */
     public function bancosPse(): array
     {
-        $response = Http::withHeaders($this->headers())
+        $response = $this->peticion()
             ->get("{$this->apiUrl}/v1/payment/pse/banks");
 
         if ($response->failed()) {
@@ -133,7 +155,7 @@ class BoldService
 
     public function checkPayment(string $reference): array
     {
-        $response = Http::withHeaders($this->headers())
+        $response = $this->peticion()
             ->get("{$this->apiUrl}/v1/payment/{$reference}");
 
         if ($response->failed()) {

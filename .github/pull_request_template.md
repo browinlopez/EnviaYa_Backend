@@ -28,3 +28,12 @@
 - [ ] Consultas DB: scopes/filtros, índice y `EXPLAIN` cuando corresponde
 - [ ] Benchmark antes/después con dataset y escenarios comparables
 - [ ] Reverb: canal privado, autenticación, after-commit, payload mínimo y tests
+
+### Calidad, integraciones y compatibilidad (cuando aplique)
+- [ ] Revisé contrato OpenAPI, clientes actuales y formato de errores (`34`).
+- [ ] Revisé seguridad por registro/tenant, mass assignment y OWASP (`32`–`35`).
+- [ ] Webhook/API externa: firma, timeout, reintentos, deduplicación (`36`–`37`).
+- [ ] Cola: after-commit, reintento seguro, fallos/monitorización (`38`).
+- [ ] Migración: compatibilidad, backfill y rollback (`39`).
+- [ ] CI: Pint, análisis estático si existe, test y dependencias (`41`–`43`).
+- [ ] Métricas y plan operativo/rollback si hay riesgo de producción (`44`).

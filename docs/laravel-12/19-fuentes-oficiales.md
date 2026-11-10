@@ -41,3 +41,19 @@ La propuesta aplica la **documentación de Laravel 12**, no pretende imponer una
 ## Criterio de fuentes de performance
 
 El soporte de Eloquent, relaciones, cursores, broadcast y API se referencia en Laravel 12. El **plan SQL, índices especializados, locking y ejecución de migraciones** se deben validar también contra la versión exacta instalada de PostgreSQL o MySQL. Las guías del paquete incluyen recomendaciones de equipo, no promesas universales de latencia.
+
+## Normas complementarias verificadas (noviembre de 2026)
+
+| Tema | Fuente |
+|---|---|
+| OWASP API Security Top 10 (edición 2023) | https://api-security.owasp.org/editions/2023/en/0x11-t10/ |
+| OpenAPI (especificación publicada; adoptar versión compatible con tooling) | https://spec.openapis.org/oas/latest.html |
+| Errores HTTP interoperables, RFC 9457 | https://www.rfc-editor.org/rfc/rfc9457 |
+| Estilo PHP PSR-12 | https://www.php-fig.org/psr/psr-12/ |
+| Composer audit | https://getcomposer.org/doc/03-cli.md#audit |
+| Laravel Horizon | https://laravel.com/docs/12.x/horizon |
+| Laravel Pulse | https://laravel.com/docs/12.x/pulse |
+| Programación de tareas | https://laravel.com/docs/12.x/scheduling |
+| Storage | https://laravel.com/docs/12.x/filesystem |
+
+Estas normas son complementarias: por ejemplo, **OpenAPI/RFC no obligan a usar un formato concreto** si hay compatibilidad heredada. Los objetivos SLO, thresholds de SQL y límites de código deben ajustarse al proyecto, no copiarse como universales.

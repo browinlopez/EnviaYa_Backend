@@ -32,6 +32,17 @@ Repositorio de **API Laravel 12**. Prioridad: cambios pequeños, módulos claros
 14. **WebSocket Reverb:** eventos de negocio mínimos por módulo, canales privados autorizados por registro/tenant, `ShouldDispatchAfterCommit`, workers supervisados, reconexión por HTTP, tests de permisos. Revisar `23`, `27`, `30` y `31`.
 15. **Calidad:** mantén las convenciones de Pint y el analizador estático, cuando esté configurado. No edites archivos generados ni lockfiles sin razón.
 
+## Contratos, confiabilidad y seguridad ampliados
+
+16. **Autenticación y tenant:** distinguir SPA con cookies de tokens de móvil e integraciones; ninguna autorización se resuelve solo con autenticar. Documentos `32`, `33`, `35`.
+17. **Contrato como código:** mantener OpenAPI/esquemas y compatibilidad de consumidores en cambios de rutas, requests, resources, errores o paginación. Documento `34`.
+18. **HTTP/webhooks externos:** timeout, reintentos seguros, firma, deduplicación y validación de respuestas. No reintentar un POST con efectos sin idempotencia. Documento `36`.
+19. **Cambios con consecuencias persistentes:** evaluar constraints, transacciones, claves idempotentes y outbox únicamente si existe riesgo verificable de efectos perdidos o duplicados. Documento `37`.
+20. **Trabajo asíncrono:** jobs idempotentes, `afterCommit` según contrato, límites de reintento, colas supervisadas, scheduler sin solapamiento. Documento `38`.
+21. **Esquema y archivos:** migraciones compatibles, backfill por lotes; storage privado y parsing protegido. Documentos `39`, `40`.
+22. **Calidad y operaciones:** Pint, análisis estático configurado, Composer audit, tests de contrato/concurrencia, observabilidad y deploy seguro. Documentos `41`–`47`.
+23. **Progresividad:** no instalar Horizon, Telescope, Outbox, broker adicional, interfaces ni paquetes por cumplir un documento; justificar necesidad real y costo operativo.
+
 ## Orden de trabajo para una modificación
 
 1. Indica **qué archivo controla la conducta actual** y **qué debe cambiar**.
@@ -44,7 +55,7 @@ Repositorio de **API Laravel 12**. Prioridad: cambios pequeños, módulos claros
 ## Rendimiento como criterio de revisión
 
 - **Lecturas:** primero `Models/` (relaciones/scopes), después `Queries/` (filtros/listados/reportes), `24` (índices/EXPLAIN), `25` (benchmark), `28` (recetas).
-- **Realtime:** `23` (Reverb), `27` (canales, seguridad, eventos), `30` (operación), `31` (caso integrado).
+- **Realtime:** `23` (Reverb), `27` (canales, seguridad, eventos), `30` (operación), `31` (caso integrado), `45` (presencia, escala, reconexión).
 - Para toda mejora de consultas, completar `29-checklist-pr-rendimiento.md`. Preferir cambios aislados con rollback.
 
 ## Prioridad de documentos
@@ -52,6 +63,7 @@ Repositorio de **API Laravel 12**. Prioridad: cambios pequeños, módulos claros
 - `docs/laravel-12/00-principios.md` — criterios de decisión.
 - `docs/laravel-12/17-matriz-de-ubicacion.md` — dónde tocar cada cosa.
 - `docs/laravel-12/14-cambios-quirurgicos.md` — cómo modificar sin romper otros módulos.
+- `docs/laravel-12/47-ruta-de-madurez-y-auditoria.md` — implementación escalonada y revisión por funcionalidad.
 - Demás documentos por responsabilidad. Ante conflicto, **comportamiento existente + seguridad + test** prevalecen sobre estética o conteo de líneas.
 
 ## Prohibiciones explícitas

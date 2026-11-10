@@ -57,5 +57,18 @@ jobs:
       - name: Comprobar la sintaxis de todo el código
         run: find app config database routes tests -name "*.php" -print0 | xargs -0 -n1 php -l > /dev/null
 
+      # Pint estaba instalado y nadie lo corría: 506 archivos se habían ido
+      # separando del preset sin que se viera. Con esto no vuelve a pasar.
+      - name: Formato (Pint)
+        run: ./vendor/bin/pint --test
+
       - name: Pruebas
         run: php artisan test
+
+      # `composer audit` avisa de dependencias con vulnerabilidad conocida.
+      # NO tumba la compilación todavía: hoy hay 20 avisos en 10 paquetes y un
+      # CI en rojo desde el primer día deja de mirarse. Queda a la vista en el
+      # registro para poder subirlo a bloqueante cuando el número sea cero.
+      - name: Dependencias con vulnerabilidades conocidas
+        continue-on-error: true
+        run: composer audit

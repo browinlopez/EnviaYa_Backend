@@ -107,6 +107,22 @@ return [
          * mas dano que no tener ninguno.
          */
         'base_url' => env('BOLD_BASE_URL', 'https://api.online.payments.bold.co'),
+
+        /*
+         * CUANTO SE ESPERA A BOLD ANTES DE RENDIRSE.
+         *
+         * El cliente HTTP de Laravel no pone limite por defecto, y estas
+         * llamadas se hacen DENTRO de la peticion del comprador. Con Octane
+         * los trabajadores son un grupo fijo: sin tope, una pasarela que deja
+         * de contestar los agota esperando y tumba todo el backend, no solo
+         * los pagos.
+         *
+         * Quince segundos es holgado para un cobro -Bold suele responder en
+         * menos de dos- y cinco para abrir la conexion. Configurables porque
+         * el dia de un incidente conviene poder apretarlos sin desplegar.
+         */
+        'timeout' => (int) env('BOLD_TIMEOUT', 15),
+        'connect_timeout' => (int) env('BOLD_CONNECT_TIMEOUT', 5),
         /*
          * DOS POR ENTORNO, Y LOS NOMBRES VIEJOS MENTIAN.
          *

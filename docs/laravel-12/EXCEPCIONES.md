@@ -192,3 +192,84 @@ no se pudo probar hasta que se portó la expresión.
 Medir rendimiento de verdad exige un entorno con MySQL. Hasta que lo haya, las
 reglas §24 y §25 quedan **reconocidas y sin adoptar**, que es distinto de
 incumplidas: no se puede cumplir una regla cuyo instrumento no existe todavía.
+
+
+---
+
+## 6 · Las reglas 32–47: contratos, seguridad, colas y operación
+
+Tercera entrega del paquete (10 de noviembre de 2026): autenticación y tenant,
+OpenAPI, OWASP, integraciones HTTP, idempotencia, colas, migraciones sin corte,
+archivos, análisis estático, CI/CD, pruebas avanzadas, observabilidad,
+topología de Reverb, dependencias y una ruta de madurez.
+
+De todo el estándar, **esta entrega es la que encontró los dos problemas de
+verdad**. No son de estilo ni de carpetas.
+
+### 1 · Bold se llamaba sin tiempo de espera — ARREGLADO
+
+`BoldService` hacía **sus siete llamadas HTTP sin `timeout` ni
+`connectTimeout`**, y el cliente de Laravel no pone límite por defecto.
+
+Eso no es una mala práctica abstracta: `OrderController` y `PaymentController`
+reciben ese servicio **inyectado**, o sea que las llamadas ocurren dentro de la
+petición del comprador. Con Octane los trabajadores son un grupo fijo. Basta
+que Bold deje de contestar —no que falle: que *tarde*— para que los
+trabajadores se agoten esperando y **caiga todo el backend, no solo los
+pagos**.
+
+Arreglado: una sola `peticion()` que aplica cabeceras y topes, 15 s de
+respuesta y 5 s de conexión, configurables por `BOLD_TIMEOUT` y
+`BOLD_CONNECT_TIMEOUT` para poder apretarlos el día de un incidente sin
+desplegar. Fallar con un error que el comprador ve es peor que no fallar, y
+muchísimo mejor que colgar la tienda entera.
+
+### 2 · Veinte avisos de seguridad en las dependencias — PENDIENTE
+
+`composer audit` —que §46 pide y el CI no corre— devuelve **20 avisos que
+afectan a 10 paquetes**, entre ellos:
+
+| Paquete | Gravedad |
+|---|---|
+| `symfony/yaml` | **alta** (y otro más) |
+| `symfony/http-foundation` | **alta**, y cuatro avisos más |
+| `phpoffice/phpspreadsheet` | **alta** ×2, media ×1 |
+| `symfony/mime`, `league/commonmark` | media |
+| `symfony/routing`, `symfony/http-kernel`, `symfony/filesystem`, `league/flysystem` | sin clasificar / baja |
+
+`phpoffice/phpspreadsheet` pesa aquí más que en otro proyecto: es lo que
+procesa **los Excel que suben los tenderos**, o sea entrada de fuera.
+
+**No se actualiza en este cambio a propósito.** Subir diez paquetes es un
+cambio con su propio riesgo y merece su propio PR, con la suite delante y
+sabiendo qué rompe cada salto de versión. Lo que sí entra ya es la medida: el
+número está escrito y `composer audit` tiene que correr en el CI para que no
+vuelva a crecer en silencio.
+
+### Lo que ya se cumple
+
+- **§33 aislamiento por inquilino**: el ámbito sale de la sesión, nunca del
+  cuerpo. Es la decisión de la §2 de este registro y aquí se confirma como
+  acierto, no como atajo.
+- **§36 webhooks entrantes**: el de Bold verifica firma HMAC y **rechaza todo
+  en producción si falta la llave**.
+- **§37 idempotencia**: el reintento de pago reutiliza el pedido a medias sin
+  gastar dos veces el mismo uso de promoción; cupones y promociones se canjean
+  con `whereRaw` en el `increment`.
+- **§38 colas**: `QUEUE_CONNECTION=database`, cuatro jobs acotados. Nada de
+  Horizon, que es justo lo que pide la regla 23 del `AGENTS.md`: no instalar
+  herramienta por cumplir un documento.
+
+### Lo que falta, medido
+
+| Regla | Estado |
+|---|---|
+| §34 — OpenAPI como contrato | **no hay**. El contrato lo sostienen hoy las 1069 pruebas y el congelado de rutas de `tests/Feature/Contrato` |
+| §41 — `declare(strict_types=1)` | **0 de 363 archivos**. §12 dice que se adopta gradualmente y que no se reescriben todos para ponerlo |
+| §41 — análisis estático | **no hay** PHPStan/Larastan |
+| §42 — el CI corre Pint, análisis y `composer audit` | **corre `php -l` y las pruebas**. Faltan los tres |
+| §44 — SLO, tracing, runbooks | **no hay** |
+
+De todo eso, **lo que conviene hacer ya es el CI**: `pint --test` y
+`composer audit` son dos líneas y convierten en automático lo que hoy depende
+de que alguien se acuerde. El resto son decisiones de producto, no deuda.
