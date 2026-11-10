@@ -18,8 +18,7 @@ class ResultadoPush
         public readonly bool $ok,
         public readonly bool $permanente,
         public readonly ?string $motivo,
-    ) {
-    }
+    ) {}
 
     public static function entregado(): self
     {

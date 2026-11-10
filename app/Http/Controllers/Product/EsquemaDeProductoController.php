@@ -5,14 +5,10 @@ namespace App\Http\Controllers\Product;
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
 use App\Models\Business;
-use App\Models\Order\OrdersSalesDetail;
 use App\Models\Product\Category;
-use App\Models\Product\Product;
-use App\Models\Product\ProductBusiness;
 use App\Support\ProductTypeSchema;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 class EsquemaDeProductoController extends Controller
 {
@@ -32,7 +28,7 @@ class EsquemaDeProductoController extends Controller
         $business = Business::findOrFail($request->business_id);
         $type = (int) $business->type;
 
-        if (!ProductTypeSchema::has($type)) {
+        if (! ProductTypeSchema::has($type)) {
             return response()->json([
                 'message' => 'El negocio no tiene un tipo de producto configurado',
             ], 422);

@@ -2,20 +2,23 @@
 
 namespace App\Models\User;
 
-use App\Models\User;
-use App\Models\Maps\Alias;
-use App\Models\Maps\Municipality;
-use App\Models\Maps\Department;
-use App\Models\Maps\Country;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\Audit\Audit;
+use App\Models\Buyer\ResidentialComplex;
+use App\Models\Maps\Alias;
+use App\Models\Maps\Country;
+use App\Models\Maps\Department;
+use App\Models\Maps\Municipality;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class UserAddress extends Audit
 {
     use HasFactory;
 
     protected $table = 'user_address';
+
     protected $primaryKey = 'address_id';
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -33,13 +36,13 @@ class UserAddress extends Audit
         'alias_id',
         'latitude',
         'longitude',
-        'state'
+        'state',
     ];
 
     public function complex()
     {
         return $this->belongsTo(
-            \App\Models\Buyer\ResidentialComplex::class,
+            ResidentialComplex::class,
             'complex_id',
             'complex_id',
         );

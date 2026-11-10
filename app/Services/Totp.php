@@ -105,8 +105,8 @@ class Totp
     public static function uri(string $secreto, string $correo, string $emisor): string
     {
         return 'otpauth://totp/'
-            . rawurlencode($emisor) . ':' . rawurlencode($correo)
-            . '?' . http_build_query([
+            .rawurlencode($emisor).':'.rawurlencode($correo)
+            .'?'.http_build_query([
                 'secret' => $secreto,
                 'issuer' => $emisor,
                 'algorithm' => 'SHA1',

@@ -23,8 +23,8 @@ class DeviceTokenController extends Controller
     public function store(Request $request)
     {
         $datos = $request->validate([
-            'token'       => 'required|string|max:255',
-            'platform'    => 'required|in:android,ios,web',
+            'token' => 'required|string|max:255',
+            'platform' => 'required|in:android,ios,web',
             'app_version' => 'nullable|string|max:20',
             'device_name' => 'nullable|string|max:80',
         ]);
@@ -32,18 +32,18 @@ class DeviceTokenController extends Controller
         DeviceToken::updateOrCreate(
             ['token' => $datos['token']],
             [
-                'user_id'      => $request->user()->user_id,
-                'platform'     => $datos['platform'],
-                'app_version'  => $datos['app_version'] ?? null,
-                'device_name'  => $datos['device_name'] ?? null,
+                'user_id' => $request->user()->user_id,
+                'platform' => $datos['platform'],
+                'app_version' => $datos['app_version'] ?? null,
+                'device_name' => $datos['device_name'] ?? null,
                 'last_seen_at' => now(),
                 /*
                  * Se revive un token que se había marcado como muerto. Pasa
                  * cuando alguien reinstala la app: el proveedor puede devolver el
                  * mismo token y sin esto quedaría descartado para siempre.
                  */
-                'failed_at'    => null,
-                'fail_reason'  => null,
+                'failed_at' => null,
+                'fail_reason' => null,
             ],
         );
 

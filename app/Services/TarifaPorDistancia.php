@@ -88,7 +88,7 @@ class TarifaPorDistancia
         }
 
         $radioBase = (float) Ajustes::valor('operacion.radio_base_km');
-        $paso      = (float) Ajustes::valor('operacion.paso_km');
+        $paso = (float) Ajustes::valor('operacion.paso_km');
         $precioPaso = (float) Ajustes::valor('operacion.paso_precio');
 
         if ($km <= $radioBase || $paso <= 0) {
@@ -108,8 +108,8 @@ class TarifaPorDistancia
     /**
      * La tarifa entre una tienda y una dirección, de una vez.
      *
-     * @return array{tarifa: float, km: ?float}  La cifra y la distancia con la
-     *         que se calculó, para poder explicarla en pantalla y guardarla.
+     * @return array{tarifa: float, km: ?float} La cifra y la distancia con la
+     *                                          que se calculó, para poder explicarla en pantalla y guardarla.
      */
     public function entre(
         ?float $latNegocio,
@@ -121,7 +121,7 @@ class TarifaPorDistancia
 
         return [
             'tarifa' => $this->paraDistancia($km),
-            'km'     => $km === null ? null : round($km, 3),
+            'km' => $km === null ? null : round($km, 3),
         ];
     }
 

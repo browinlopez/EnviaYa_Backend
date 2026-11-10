@@ -5,19 +5,20 @@ namespace App\Exports\Comercials;
 use App\Models\Order\OrdersSales;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\WithTitle;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class UsersSheet implements FromCollection, WithHeadings, WithTitle, WithStyles
+class UsersSheet implements FromCollection, WithHeadings, WithStyles, WithTitle
 {
     protected $start;
+
     protected $end;
 
     public function __construct($start, $end)
     {
         $this->start = $start;
-        $this->end   = $end;
+        $this->end = $end;
     }
 
     public function collection()
@@ -30,15 +31,15 @@ class UsersSheet implements FromCollection, WithHeadings, WithTitle, WithStyles
             $firstOrder = $userOrders->sortBy('sale_date')->first();
             $isNew = $firstOrder->sale_date >= $this->start && $firstOrder->sale_date <= $this->end;
 
-            $totalSpent = $userOrders->sum(function($order){
+            $totalSpent = $userOrders->sum(function ($order) {
                 return $order->payments?->total ?? 0;
             });
 
             return [
-                'Usuario'          => $userOrders->first()->buyer?->user?->name ?? 'N/A',
-                'Tipo de Usuario'  => $isNew ? 'Nuevo' : 'Recurrente',
-                'Pedidos Realizados'=> $userOrders->count(),
-                'Total Gastado'    => $totalSpent,
+                'Usuario' => $userOrders->first()->buyer?->user?->name ?? 'N/A',
+                'Tipo de Usuario' => $isNew ? 'Nuevo' : 'Recurrente',
+                'Pedidos Realizados' => $userOrders->count(),
+                'Total Gastado' => $totalSpent,
             ];
         });
 
@@ -58,6 +59,7 @@ class UsersSheet implements FromCollection, WithHeadings, WithTitle, WithStyles
     public function styles(Worksheet $sheet)
     {
         $sheet->getStyle('A1:D1')->getFont()->setBold(true);
+
         return [];
     }
 }

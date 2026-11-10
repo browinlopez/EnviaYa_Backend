@@ -4,19 +4,11 @@ namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Operacion\DomiciliaryDocument;
-use App\Models\Operacion\LandingRequest;
-use App\Models\Operacion\Pqrs;
-use App\Models\Operacion\PqrsNote;
-use App\Models\Operacion\SafetyIncident;
-use App\Models\Operacion\Settlement;
-use App\Services\LiquidacionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use RuntimeException;
 
 class DocumentosApiController extends Controller
 {
-
     /**
      * Documentos con su situación calculada, y el resumen del tablero.
      *
@@ -48,10 +40,10 @@ class DocumentosApiController extends Controller
 
         return response()->json([
             'data' => $filas->map(fn (DomiciliaryDocument $d) => array_merge($d->toArray(), [
-                'domiciliary_name'  => $d->domiciliary_name,
+                'domiciliary_name' => $d->domiciliary_name,
                 'domiciliary_phone' => $d->domiciliary_phone,
-                'situation'         => $d->situacion(),
-                'days_left'         => $d->diasRestantes(),
+                'situation' => $d->situacion(),
+                'days_left' => $d->diasRestantes(),
             ])),
             'summary' => $this->resumenDocumentos(),
         ]);
@@ -84,14 +76,14 @@ class DocumentosApiController extends Controller
         }
 
         return [
-            'vencidos'          => (int) ($porSituacion['vencido'] ?? 0),
-            'por_vencer'        => (int) ($porSituacion['por_vencer'] ?? 0),
-            'vigentes'          => (int) ($porSituacion['vigente'] ?? 0),
-            'sin_vencimiento'   => (int) ($porSituacion['sin_vencimiento'] ?? 0),
+            'vencidos' => (int) ($porSituacion['vencido'] ?? 0),
+            'por_vencer' => (int) ($porSituacion['por_vencer'] ?? 0),
+            'vigentes' => (int) ($porSituacion['vigente'] ?? 0),
+            'sin_vencimiento' => (int) ($porSituacion['sin_vencimiento'] ?? 0),
             'domiciliarios_incompletos' => $sinCompletar,
-            'domiciliarios_activos'     => $activos->count(),
-            'aviso_dias'        => DomiciliaryDocument::AVISO_DIAS,
-            'obligatorios'      => DomiciliaryDocument::OBLIGATORIOS,
+            'domiciliarios_activos' => $activos->count(),
+            'aviso_dias' => DomiciliaryDocument::AVISO_DIAS,
+            'obligatorios' => DomiciliaryDocument::OBLIGATORIOS,
         ];
     }
 
@@ -126,15 +118,15 @@ class DocumentosApiController extends Controller
 
         return $request->validate([
             'domiciliary_id' => "{$regla}|integer|exists:domiciliary,domiciliary_id",
-            'type'           => "{$regla}|in:licencia,soat,tecnomecanica,arl,eps,examen_medico,cedula,otro",
-            'number'         => 'sometimes|nullable|string|max:60',
-            'issued_at'      => 'sometimes|nullable|date',
+            'type' => "{$regla}|in:licencia,soat,tecnomecanica,arl,eps,examen_medico,cedula,otro",
+            'number' => 'sometimes|nullable|string|max:60',
+            'issued_at' => 'sometimes|nullable|date',
             // Puede ir nula: la cédula no caduca. Un documento sin fecha
             // simplemente no entra en las alertas.
-            'expires_at'     => 'sometimes|nullable|date',
-            'media_id'       => 'sometimes|nullable|integer|exists:media_files,id',
-            'notes'          => 'sometimes|nullable|string|max:255',
-            'state'          => 'sometimes|boolean',
+            'expires_at' => 'sometimes|nullable|date',
+            'media_id' => 'sometimes|nullable|integer|exists:media_files,id',
+            'notes' => 'sometimes|nullable|string|max:255',
+            'state' => 'sometimes|boolean',
         ]);
     }
 

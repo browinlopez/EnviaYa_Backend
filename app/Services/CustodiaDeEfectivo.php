@@ -29,7 +29,7 @@ class CustodiaDeEfectivo
      */
     public function registrarRecaudo(OrdersSales $order, ?int $usuarioId = null): ?CashMovement
     {
-        if ((int) $order->methods_id !== 1 || !$order->domiciliary_id) {
+        if ((int) $order->methods_id !== 1 || ! $order->domiciliary_id) {
             return null;
         }
 
@@ -43,10 +43,10 @@ class CustodiaDeEfectivo
 
         $movimiento = CashMovement::create([
             'domiciliary_id' => $order->domiciliary_id,
-            'type'           => CashMovement::RECAUDO,
-            'amount'         => (float) $order->total,
-            'order_id'       => $order->orderSales_id,
-            'created_by'     => $usuarioId,
+            'type' => CashMovement::RECAUDO,
+            'amount' => (float) $order->total,
+            'order_id' => $order->orderSales_id,
+            'created_by' => $usuarioId,
         ]);
 
         // También en el pedido, para que la liquidación no tenga que cruzar
@@ -73,12 +73,12 @@ class CustodiaDeEfectivo
     {
         return CashDeposit::create([
             'domiciliary_id' => $domiciliaryId,
-            'amount'         => $datos['amount'],
-            'reference'      => $datos['reference'] ?? null,
-            'deposited_at'   => $datos['deposited_at'] ?? now(),
-            'receipt_path'   => $datos['receipt_path'] ?? null,
-            'state'          => CashDeposit::PENDIENTE,
-            'notes'          => $datos['notes'] ?? null,
+            'amount' => $datos['amount'],
+            'reference' => $datos['reference'] ?? null,
+            'deposited_at' => $datos['deposited_at'] ?? now(),
+            'receipt_path' => $datos['receipt_path'] ?? null,
+            'state' => CashDeposit::PENDIENTE,
+            'notes' => $datos['notes'] ?? null,
         ]);
     }
 
@@ -90,11 +90,11 @@ class CustodiaDeEfectivo
      * respaldo—.
      */
     /**
-     * @param string|null $nota Lo que anotó quien confirmó, tal cual.
-     *                          Se guardaba solo al rechazar: al confirmar el
-     *                          controlador la validaba y la tiraba, así que
-     *                          «verificado contra el extracto del 5» se perdía
-     *                          y quedaba una confirmación sin sustento.
+     * @param  string|null  $nota  Lo que anotó quien confirmó, tal cual.
+     *                             Se guardaba solo al rechazar: al confirmar el
+     *                             controlador la validaba y la tiraba, así que
+     *                             «verificado contra el extracto del 5» se perdía
+     *                             y quedaba una confirmación sin sustento.
      */
     public function confirmarDeposito(CashDeposit $deposito, int $usuarioId, ?string $nota = null): CashDeposit
     {
@@ -109,17 +109,17 @@ class CustodiaDeEfectivo
         return DB::transaction(function () use ($deposito, $usuarioId, $nota) {
             CashMovement::create([
                 'domiciliary_id' => $deposito->domiciliary_id,
-                'type'           => CashMovement::CONSIGNACION,
+                'type' => CashMovement::CONSIGNACION,
                 // Negativo: baja lo que debe.
-                'amount'         => -1 * (float) $deposito->amount,
-                'deposit_id'     => $deposito->id,
-                'created_by'     => $usuarioId,
+                'amount' => -1 * (float) $deposito->amount,
+                'deposit_id' => $deposito->id,
+                'created_by' => $usuarioId,
             ]);
 
-            $deposito->state        = CashDeposit::CONFIRMADA;
+            $deposito->state = CashDeposit::CONFIRMADA;
             $deposito->confirmed_by = $usuarioId;
             $deposito->confirmed_at = now();
-            $deposito->notes        = $nota ?: $deposito->notes;
+            $deposito->notes = $nota ?: $deposito->notes;
             $deposito->save();
 
             return $deposito;
@@ -160,7 +160,7 @@ class CustodiaDeEfectivo
             ->get(['id', 'amount', 'canal', 'busines_id', 'confirmed_at', 'created_at'])
             ->each(fn ($d) => $eventos->push([
                 'cuando' => (string) ($d->confirmed_at ?? $d->created_at), 'orden' => 1, 'id' => $d->id,
-                'tipo'   => $d->canal === CashDeposit::MOSTRADOR ? 'mostrador' : 'plataforma',
+                'tipo' => $d->canal === CashDeposit::MOSTRADOR ? 'mostrador' : 'plataforma',
                 'tienda' => (int) $d->busines_id, 'monto' => (float) $d->amount,
             ]));
 
@@ -227,14 +227,14 @@ class CustodiaDeEfectivo
 
             if ($monto > $tope + 0.004) {
                 throw new RuntimeException(
-                    'De tus pedidos solo tiene pendientes $' . number_format($tope, 0, ',', '.') . '.'
+                    'De tus pedidos solo tiene pendientes $'.number_format($tope, 0, ',', '.').'.'
                 );
             }
 
             $deposito = $this->declararDeposito($domiciliaryId, [
-                'amount'    => round($monto, 2),
+                'amount' => round($monto, 2),
                 'reference' => 'Entregado en el mostrador',
-                'notes'     => $nota,
+                'notes' => $nota,
             ]);
             $deposito->update(['canal' => CashDeposit::MOSTRADOR, 'busines_id' => $negocioId]);
 
@@ -250,10 +250,10 @@ class CustodiaDeEfectivo
             );
         }
 
-        $deposito->state        = CashDeposit::RECHAZADA;
+        $deposito->state = CashDeposit::RECHAZADA;
         $deposito->confirmed_by = $usuarioId;
         $deposito->confirmed_at = now();
-        $deposito->notes        = $motivo ?: $deposito->notes;
+        $deposito->notes = $motivo ?: $deposito->notes;
         $deposito->save();
 
         return $deposito;

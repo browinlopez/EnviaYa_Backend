@@ -10,12 +10,13 @@ use App\Models\Owner\Owner;
 use App\Models\Product\Product;
 use App\Models\Product\ProductBusiness;
 use App\Models\Reviews\BusinessReview;
-use Illuminate\Database\Eloquent\Model;
 
 class Business extends Audit
 {
     protected $table = 'business';
+
     protected $primaryKey = 'busines_id';
+
     /*
      * Ahora sí lleva `created_at` / `updated_at`.
      *
@@ -38,7 +39,7 @@ class Business extends Audit
         'longitude',
         'qualification',
         'razonSocial_DCD',
-        "municipality_id",
+        'municipality_id',
         'NIT',
         'logo',
         'city',
@@ -73,9 +74,9 @@ class Business extends Audit
         return [
             // Sin esto llega como "1"/"0" y el panel pinta un interruptor
             // encendido con la cadena "0", que es verdadera en JavaScript.
-            'accepting_orders'     => 'boolean',
+            'accepting_orders' => 'boolean',
             'accepting_changed_at' => 'datetime',
-            'accepting_until'      => 'datetime',
+            'accepting_until' => 'datetime',
         ];
     }
 
@@ -131,7 +132,7 @@ class Business extends Audit
         return $this->belongsTo(Municipality::class, 'municipality_id', 'id'); // ajusta según tu pk de municipalities
     }
 
-    //relaciones
+    // relaciones
     public function products()
     {
         return $this->belongsToMany(
@@ -155,7 +156,6 @@ class Business extends Audit
             'busines_id'
         );
     }
-
 
     public function productBusinesses()
     {

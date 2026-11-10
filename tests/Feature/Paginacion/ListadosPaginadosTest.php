@@ -18,14 +18,13 @@ use Laravel\Sanctum\Sanctum;
  * periodo" mostrando el total de 25 pedidos. En una pantalla de dinero eso no
  * es un dato incompleto, es uno falso.
  */
-
 function adminPaginado(): User
 {
     Rol::firstOrCreate(['rol_id' => 4], ['name' => 'admin', 'guard_name' => 'web']);
 
     $user = User::factory()->create([
-        'rol'          => 4,
-        'area_id'      => Area::where('code', 'sistema')->firstOrFail()->id,
+        'rol' => 4,
+        'area_id' => Area::where('code', 'sistema')->firstOrFail()->id,
         'access_level' => Area::NIVEL_GESTOR,
     ]);
 
@@ -44,17 +43,17 @@ function negocioPaginado(string $nombre = 'Tienda'): int
 function pedidoPaginado(int $negocio, int $estado, int $total, int $diasAtras = 1): int
 {
     return (int) DB::table('orderssales')->insertGetId([
-        'busines_id'      => $negocio,
-        'subtotal'        => $total - 5000,
-        'domicilio'       => 5000,
+        'busines_id' => $negocio,
+        'subtotal' => $total - 5000,
+        'domicilio' => 5000,
         'domiciliary_fee' => 1250,
-        'total'           => $total,
-        'currency'        => 'COP',
-        'sale_date'       => now()->subDays($diasAtras),
-        'state'           => $estado,
-        'payment_state'   => 'approved',
-        'created_at'      => now()->subDays($diasAtras),
-        'updated_at'      => now()->subDays($diasAtras),
+        'total' => $total,
+        'currency' => 'COP',
+        'sale_date' => now()->subDays($diasAtras),
+        'state' => $estado,
+        'payment_state' => 'approved',
+        'created_at' => now()->subDays($diasAtras),
+        'updated_at' => now()->subDays($diasAtras),
     ], 'orderSales_id');
 }
 
@@ -109,7 +108,7 @@ it('los indicadores son del conjunto, no de la página', function () {
 it('el total respeta la búsqueda, no el tamaño de la tabla', function () {
     adminPaginado();
 
-    $uno  = negocioPaginado('Panadería Central');
+    $uno = negocioPaginado('Panadería Central');
     $otro = negocioPaginado('Ferretería Norte');
 
     foreach (range(1, 12) as $i) {
@@ -130,7 +129,7 @@ it('el total respeta la búsqueda, no el tamaño de la tabla', function () {
 it('el filtro por negocio alcanza a los indicadores', function () {
     adminPaginado();
 
-    $uno  = negocioPaginado('El Filtrado');
+    $uno = negocioPaginado('El Filtrado');
     $otro = negocioPaginado('El Excluido');
 
     pedidoPaginado($uno, 4, 80000);

@@ -23,8 +23,8 @@ return new class extends Migration
 
             // Foreign Key
             $table->foreign('products_id', 'grocery_products_ibfk_1')
-                  ->references('products_id')->on('products')
-                  ->onDelete('cascade'); // opcional
+                ->references('products_id')->on('products')
+                ->onDelete('cascade'); // opcional
         });
     }
 

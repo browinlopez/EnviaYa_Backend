@@ -6,6 +6,7 @@ use App\Models\Order\OrdersSales;
 use App\Models\Payment\Payment;
 use App\Models\Payment\PaymentIntent;
 use Illuminate\Console\Command;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -39,7 +40,7 @@ class ComprobarBold extends Command
         $this->line('  <options=bold>CONFIGURACIÓN DE BOLD</>');
         $this->newLine();
 
-        $apiKey  = (string) config('services.bold.identity_key');
+        $apiKey = (string) config('services.bold.identity_key');
         $secreto = (string) config('services.bold.secret_key');
         $baseUrl = (string) config('services.bold.base_url');
         $entorno = (string) config('services.bold.entorno');
@@ -48,12 +49,12 @@ class ComprobarBold extends Command
         $this->fila(
             'BOLD_IDENTITY_KEY',
             $apiKey !== '',
-            $apiKey !== '' ? 'puesta (' . strlen($apiKey) . ' caracteres)' : 'VACÍA',
+            $apiKey !== '' ? 'puesta ('.strlen($apiKey).' caracteres)' : 'VACÍA',
         );
         $this->fila(
             'BOLD_SECRET_KEY',
             $secreto !== '',
-            $secreto !== '' ? 'puesta (' . strlen($secreto) . ' caracteres)' : 'VACÍA',
+            $secreto !== '' ? 'puesta ('.strlen($secreto).' caracteres)' : 'VACÍA',
         );
 
         /*
@@ -103,7 +104,7 @@ class ComprobarBold extends Command
         $this->info('  La configuración está completa.');
         $this->newLine();
 
-        if (!$this->option('simular')) {
+        if (! $this->option('simular')) {
             $this->line('  Para el ensayo completo:  <options=bold>php artisan bold:comprobar --simular</>');
             $this->newLine();
 
@@ -132,53 +133,53 @@ class ComprobarBold extends Command
         try {
             $pedido = OrdersSales::query()->latest('orderSales_id')->first();
 
-            if (!$pedido) {
+            if (! $pedido) {
                 $this->error('  No hay ningún pedido en la base con el que ensayar.');
                 DB::rollBack();
 
                 return self::FAILURE;
             }
 
-            $referencia = 'ensayo-' . uniqid();
+            $referencia = 'ensayo-'.uniqid();
 
             PaymentIntent::create([
-                'orderSales_id'     => $pedido->orderSales_id,
-                'provider'          => 'bold',
+                'orderSales_id' => $pedido->orderSales_id,
+                'provider' => 'bold',
                 'bold_reference_id' => $referencia,
-                'amount'            => 1000,
-                'currency'          => 'COP',
-                'status'            => 'pending',
+                'amount' => 1000,
+                'currency' => 'COP',
+                'status' => 'pending',
             ]);
 
             Payment::create([
-                'orderSales_id'  => $pedido->orderSales_id,
-                'provider'       => 'bold',
-                'amount'         => 1000,
-                'total'          => 1000,
+                'orderSales_id' => $pedido->orderSales_id,
+                'provider' => 'bold',
+                'amount' => 1000,
+                'total' => 1000,
                 'payment_status' => 0,
-                'status'         => 'pending',
+                'status' => 'pending',
             ]);
 
             $cuerpo = json_encode([
-                'id'      => 'ensayo-' . uniqid(),
-                'type'    => 'SALE_APPROVED',
+                'id' => 'ensayo-'.uniqid(),
+                'type' => 'SALE_APPROVED',
                 'subject' => 'ensayo-tx',
-                'data'    => ['metadata' => ['reference' => $referencia]],
+                'data' => ['metadata' => ['reference' => $referencia]],
             ]);
 
             // Se firma igual que Bold: base64 del cuerpo, HMAC-SHA256.
             $firma = hash_hmac('sha256', base64_encode($cuerpo), $secreto);
 
             $respuesta = app()->handle(
-                \Illuminate\Http\Request::create(
+                Request::create(
                     '/v1/webhooks/bold',
                     'POST',
                     [],
                     [],
                     [],
                     [
-                        'CONTENT_TYPE'          => 'application/json',
-                        'HTTP_ACCEPT'           => 'application/json',
+                        'CONTENT_TYPE' => 'application/json',
+                        'HTTP_ACCEPT' => 'application/json',
                         'HTTP_X_BOLD_SIGNATURE' => $firma,
                     ],
                     $cuerpo,
@@ -193,7 +194,7 @@ class ComprobarBold extends Command
 
             $ok = $estado === 200 && $marcado;
         } catch (\Throwable $e) {
-            $this->error('  El ensayo reventó: ' . $e->getMessage());
+            $this->error('  El ensayo reventó: '.$e->getMessage());
         } finally {
             // Siempre. El ensayo no deja rastro.
             DB::rollBack();
@@ -218,6 +219,6 @@ class ComprobarBold extends Command
     {
         $marca = $bien ? '<fg=green>OK   </>' : '<fg=red>FALTA</>';
 
-        $this->line("  {$marca} " . str_pad($que, 30) . " {$detalle}");
+        $this->line("  {$marca} ".str_pad($que, 30)." {$detalle}");
     }
 }

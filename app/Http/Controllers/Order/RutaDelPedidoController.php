@@ -34,19 +34,17 @@ use RuntimeException;
  */
 class RutaDelPedidoController extends Controller
 {
-    public function __construct(private readonly TrazoDeLaRuta $rutas)
-    {
-    }
+    public function __construct(private readonly TrazoDeLaRuta $rutas) {}
 
     public function __invoke(Request $request)
     {
         $datos = $request->validate([
             'order_id' => 'sometimes|nullable|integer',
-            'origen'   => ['required_without:order_id', 'string', 'regex:/^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/'],
-            'destino'  => ['required_without:order_id', 'string', 'regex:/^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/'],
+            'origen' => ['required_without:order_id', 'string', 'regex:/^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/'],
+            'destino' => ['required_without:order_id', 'string', 'regex:/^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/'],
         ]);
 
-        if (!empty($datos['order_id'])) {
+        if (! empty($datos['order_id'])) {
             return $this->delPedido($request, (int) $datos['order_id']);
         }
 
@@ -73,7 +71,7 @@ class RutaDelPedidoController extends Controller
     {
         $pedido = OrdersSales::with(['business', 'address'])->find($orderId);
 
-        if (!$pedido || !$this->puedeVerlo($request, $pedido)) {
+        if (! $pedido || ! $this->puedeVerlo($request, $pedido)) {
             // 404 y no 403: decir «prohibido» sobre el número de otro
             // confirmaría que ese pedido existe.
             return response()->json(['message' => 'Ese pedido no es tuyo.'], 404);
@@ -91,7 +89,7 @@ class RutaDelPedidoController extends Controller
     {
         $usuario = $request->user();
 
-        if (!$usuario) {
+        if (! $usuario) {
             return false;
         }
 

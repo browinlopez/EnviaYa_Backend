@@ -33,10 +33,10 @@ class UsersSeeder extends Seeder
 {
     public function run(): void
     {
-        if (app()->isProduction() && !config('semillas.permitir_en_produccion')) {
+        if (app()->isProduction() && ! config('semillas.permitir_en_produccion')) {
             $this->command?->warn(
                 'UsersSeeder no corre en producción: crea usuarios de prueba. '
-                . 'Si de verdad hacen falta, SEED_ALLOW_PRODUCTION=true.',
+                .'Si de verdad hacen falta, SEED_ALLOW_PRODUCTION=true.',
             );
 
             return;
@@ -130,7 +130,7 @@ class UsersSeeder extends Seeder
     private function ensureBuyerProfile(): void
     {
         $comprador = User::where('email', 'browin@gmail.com')->first();
-        if (!$comprador) {
+        if (! $comprador) {
             return;
         }
 
@@ -148,7 +148,7 @@ class UsersSeeder extends Seeder
     private function ensureTenderoStore(): void
     {
         $tendero = User::where('email', 'tendero@gmail.com')->first();
-        if (!$tendero) {
+        if (! $tendero) {
             return;
         }
 
@@ -208,7 +208,7 @@ class UsersSeeder extends Seeder
         $domiciliaryUser = User::where('email', 'domicilio@gmail.com')->first();
         $tendero = User::where('email', 'tendero@gmail.com')->first();
 
-        if (!$domiciliaryUser || !$tendero) {
+        if (! $domiciliaryUser || ! $tendero) {
             return;
         }
 
@@ -221,10 +221,11 @@ class UsersSeeder extends Seeder
         // 2. Tienda del tendero: user → owner → primera tienda
         $business = $tendero->owner?->businesses()->first();
 
-        if (!$business) {
+        if (! $business) {
             $this->command?->warn(
                 'UsersSeeder: el tendero de prueba no tiene tienda; el domiciliario quedó sin vincular.',
             );
+
             return;
         }
 

@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Rol;
 use App\Models\User;
 
 /**
@@ -18,7 +19,6 @@ use App\Models\User;
  * vuelve sola: `php artisan breeze:install` la reinstala, y sin una prueba que
  * lo diga, nadie se daria cuenta por segunda vez.
  */
-
 test('el registro web de Breeze no existe: repartia rol de administrador', function () {
     $this->get('/register')->assertNotFound();
 
@@ -40,15 +40,15 @@ test('el registro de la app sigue funcionando y NO da rol de administrador', fun
      * quitado el alta de verdad, que es la que usa la aplicacion.
      */
     foreach ([1 => 'comprador', 4 => 'admin'] as $id => $nombre) {
-        \App\Models\Rol::firstOrCreate(['rol_id' => $id], ['name' => $nombre, 'guard_name' => 'web']);
+        Rol::firstOrCreate(['rol_id' => $id], ['name' => $nombre, 'guard_name' => 'web']);
     }
 
     $r = $this->postJson('/v1/register', [
-        'name'     => 'Ana',
-        'email'    => 'ana@example.com',
+        'name' => 'Ana',
+        'email' => 'ana@example.com',
         'password' => 'ClaveDePrueba1',
-        'phone'    => '3001234567',
-        'rol'      => 1,
+        'phone' => '3001234567',
+        'rol' => 1,
     ]);
 
     expect($r->status())->toBeLessThan(500);

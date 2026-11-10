@@ -15,9 +15,12 @@ class AdCampaign extends Model
     protected $table = 'ad_campaigns';
 
     /** Estados. Se nombran para que las consultas no queden con números sueltos. */
-    public const BORRADOR   = 0;
-    public const ACTIVA     = 1;
-    public const PAUSADA    = 2;
+    public const BORRADOR = 0;
+
+    public const ACTIVA = 1;
+
+    public const PAUSADA = 2;
+
     public const FINALIZADA = 3;
 
     protected $fillable = [
@@ -33,10 +36,10 @@ class AdCampaign extends Model
 
     protected $casts = [
         'advertiser_id' => 'integer',
-        'starts_at'     => 'date',
-        'ends_at'       => 'date',
-        'budget'        => 'decimal:2',
-        'state'         => 'integer',
+        'starts_at' => 'date',
+        'ends_at' => 'date',
+        'budget' => 'decimal:2',
+        'state' => 'integer',
     ];
 
     public function advertiser(): BelongsTo

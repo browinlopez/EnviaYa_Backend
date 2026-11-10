@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Domiciliary;
 
 use App\Http\Controllers\Controller;
 use App\Services\ContratoService;
+use App\Services\MediaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -39,9 +40,8 @@ class ContratoDelDomiciliarioController extends Controller
 {
     public function __construct(
         private readonly ContratoService $contratos,
-        private readonly \App\Services\MediaService $medios,
-    ) {
-    }
+        private readonly MediaService $medios,
+    ) {}
 
     /**
      * El enlace a SU acuerdo firmado.
@@ -54,7 +54,7 @@ class ContratoDelDomiciliarioController extends Controller
      */
     private function enlace(?int $mediaId): ?string
     {
-        if (!$mediaId) {
+        if (! $mediaId) {
             return null;
         }
 
@@ -86,24 +86,24 @@ class ContratoDelDomiciliarioController extends Controller
     {
         $d = $this->suyo($request);
 
-        if (!$d) {
+        if (! $d) {
             return response()->json(['message' => 'Tu cuenta no es la de un domiciliario.'], 403);
         }
 
         return response()->json([
-            'firmado'    => $d->contract_signed_at !== null,
+            'firmado' => $d->contract_signed_at !== null,
             'firmado_el' => $d->contract_signed_at,
-            'ciudad'     => $d->contract_city,
-            'documento'  => $d->document,
-            'nombre'     => $d->name,
+            'ciudad' => $d->contract_city,
+            'documento' => $d->document,
+            'nombre' => $d->name,
             /*
              * Hace falta ANTES de firmar: el acuerdo lleva la cédula impresa y
              * firmarlo sin ella no tiene sentido. La pantalla la pide cuando
              * falta en vez de dejar que el envío reviente.
              */
             'falta_documento' => empty($d->document),
-            'url'        => $this->enlace($d->contract_media_id ? (int) $d->contract_media_id : null),
-            'texto'      => $this->contratos->comoTexto($d),
+            'url' => $this->enlace($d->contract_media_id ? (int) $d->contract_media_id : null),
+            'texto' => $this->contratos->comoTexto($d),
         ]);
     }
 
@@ -112,9 +112,9 @@ class ContratoDelDomiciliarioController extends Controller
     {
         $datos = $request->validate([
             'signature' => 'required|string',
-            'city'      => 'required|string|max:120',
+            'city' => 'required|string|max:120',
             // Se puede escribir la cédula en el mismo paso, como en el panel.
-            'document'  => 'sometimes|nullable|string|max:50',
+            'document' => 'sometimes|nullable|string|max:50',
             /*
              * La aceptación va aparte de la firma, y tiene que venir en true.
              *
@@ -122,29 +122,29 @@ class ContratoDelDomiciliarioController extends Controller
              * declaración. Son dos actos distintos y el acuerdo se apoya en
              * los dos.
              */
-            'acepta'    => 'required|accepted',
+            'acepta' => 'required|accepted',
         ]);
 
         $d = $this->suyo($request);
 
-        if (!$d) {
+        if (! $d) {
             return response()->json(['message' => 'Tu cuenta no es la de un domiciliario.'], 403);
         }
 
         if ($d->contract_signed_at !== null) {
             return response()->json([
                 'message' => 'Tu acuerdo ya está firmado. Si hay que cambiarlo, escríbenos.',
-                'reason'  => 'ya_firmado',
+                'reason' => 'ya_firmado',
             ], 409);
         }
 
         $documentoNuevo = $datos['document'] ?? null;
         $d->document = $documentoNuevo ?: $d->document;
 
-        if (!$d->document) {
+        if (! $d->document) {
             return response()->json([
                 'message' => 'Escribe tu número de documento: el acuerdo lo lleva impreso.',
-                'reason'  => 'falta_documento',
+                'reason' => 'falta_documento',
             ], 422);
         }
 
@@ -157,7 +157,7 @@ class ContratoDelDomiciliarioController extends Controller
                 null,
                 null,
                 'en la aplicación por el propio trabajador, desde la dirección '
-                    . ($request->ip() ?: 'desconocida'),
+                    .($request->ip() ?: 'desconocida'),
             );
         } catch (\Throwable $e) {
             return response()->json(['message' => $e->getMessage()], 422);
@@ -170,9 +170,9 @@ class ContratoDelDomiciliarioController extends Controller
         }
 
         return response()->json([
-            'message'   => 'Listo. Tu acuerdo quedó firmado y guardado.',
+            'message' => 'Listo. Tu acuerdo quedó firmado y guardado.',
             'firmado_el' => $resultado['signed_at'],
-            'url'       => $resultado['url'],
+            'url' => $resultado['url'],
         ], 201);
     }
 }

@@ -27,7 +27,7 @@ class Advertiser extends Model
 
     protected $casts = [
         'business_id' => 'integer',
-        'state'       => 'integer',
+        'state' => 'integer',
     ];
 
     public function business(): BelongsTo

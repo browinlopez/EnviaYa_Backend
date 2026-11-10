@@ -15,7 +15,7 @@ class ProductBusinessImport implements ToCollection
         foreach ($rows as $row) {
 
             // saltar header
-            if (!isset($row[0]) || $row[0] === 'ID Producto') {
+            if (! isset($row[0]) || $row[0] === 'ID Producto') {
                 continue;
             }
 
@@ -25,16 +25,18 @@ class ProductBusinessImport implements ToCollection
             // validar existencia producto
             $product = Product::find($productId);
 
-            if (!$product) {
-                dump("❌ Producto no existe: " . $productId);
+            if (! $product) {
+                dump('❌ Producto no existe: '.$productId);
+
                 continue;
             }
 
             // validar existencia negocio
             $business = Business::find($businessId);
 
-            if (!$business) {
-                dump("❌ Business no existe: " . $businessId);
+            if (! $business) {
+                dump('❌ Business no existe: '.$businessId);
+
                 continue;
             }
 
@@ -45,14 +47,15 @@ class ProductBusinessImport implements ToCollection
 
             if ($exists) {
                 dump("⚠️ Ya existe relación: P={$productId} B={$businessId}");
+
                 continue;
             }
 
             ProductBusiness::create([
                 'products_id' => $productId,
-                'busines_id'  => $businessId,
-                'price'       => $row[2] ?? 0,
-                'amount'      => $row[3] ?? 0,
+                'busines_id' => $businessId,
+                'price' => $row[2] ?? 0,
+                'amount' => $row[3] ?? 0,
                 'qualification' => 0,
             ]);
 

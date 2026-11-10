@@ -7,6 +7,7 @@ use App\Models\Rol;
 use App\Models\User;
 use App\Services\Avisos;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
 
 /**
@@ -53,11 +54,11 @@ function negocioConEquipo(): array
 }
 
 /** Pide autorización para un canal privado, como haría la app. */
-function autorizar($canal): \Illuminate\Testing\TestResponse
+function autorizar($canal): TestResponse
 {
     return test()->postJson('/broadcasting/auth', [
-        'socket_id'    => '1234.5678',
-        'channel_name' => 'private-' . $canal,
+        'socket_id' => '1234.5678',
+        'channel_name' => 'private-'.$canal,
     ]);
 }
 
@@ -67,7 +68,7 @@ test('la tienda escucha su propio canal', function () {
     $e = negocioConEquipo();
     Sanctum::actingAs($e['tendero']);
 
-    autorizar('business.' . $e['businessId'])->assertOk();
+    autorizar('business.'.$e['businessId'])->assertOk();
 });
 
 test('el domiciliario de esa tienda también lo escucha', function () {
@@ -76,7 +77,7 @@ test('el domiciliario de esa tienda también lo escucha', function () {
     $e = negocioConEquipo();
     Sanctum::actingAs($e['domiUser']);
 
-    autorizar('business.' . $e['businessId'])->assertOk();
+    autorizar('business.'.$e['businessId'])->assertOk();
 });
 
 test('un desconocido no escucha el canal de una tienda', function () {
@@ -84,7 +85,7 @@ test('un desconocido no escucha el canal de una tienda', function () {
     $e = negocioConEquipo();
     Sanctum::actingAs($e['ajeno']);
 
-    autorizar('business.' . $e['businessId'])->assertForbidden();
+    autorizar('business.'.$e['businessId'])->assertForbidden();
 });
 
 test('un domiciliario de OTRA tienda tampoco', function () {
@@ -103,7 +104,7 @@ test('un domiciliario de OTRA tienda tampoco', function () {
     ]);
 
     Sanctum::actingAs($otroUser);
-    autorizar('business.' . $e['businessId'])->assertForbidden();
+    autorizar('business.'.$e['businessId'])->assertForbidden();
 });
 
 /* ---------------------------- LA CAMPANA ------------------------------ */
@@ -190,9 +191,9 @@ test('el mensaje viaja al chat y al canal personal de quien lo recibe', function
         ->map(fn ($c) => (string) $c->name)
         ->all();
 
-    expect($canales)->toContain('private-chat.' . $chatId)
-        ->and($canales)->toContain('private-App.Models.User.' . $e['tendero']->user_id)
+    expect($canales)->toContain('private-chat.'.$chatId)
+        ->and($canales)->toContain('private-App.Models.User.'.$e['tendero']->user_id)
         // El autor no: ya tiene el mensaje en pantalla, y recibirlo de vuelta
         // le subiría el contador de no leídos de su propio mensaje.
-        ->and($canales)->not->toContain('private-App.Models.User.' . $e['ajeno']->user_id);
+        ->and($canales)->not->toContain('private-App.Models.User.'.$e['ajeno']->user_id);
 });

@@ -16,7 +16,6 @@ use App\Services\TarifaPorDistancia;
  *     1,5 – 2,5   ->  $3.000
  *     2,5 – 3,5   ->  $4.000   … y así
  */
-
 function tarifas(): TarifaPorDistancia
 {
     return app(TarifaPorDistancia::class);
@@ -56,7 +55,7 @@ test('sin coordenadas se cobra la base, no un recargo inventado', function () {
 test('la escala se mueve desde el panel, sin tocar codigo', function () {
     Ajustes::guardar([
         'operacion.radio_base_km' => 2.0,
-        'operacion.paso_precio'   => 500,
+        'operacion.paso_precio' => 500,
     ], null);
 
     // Ahora el radio base llega a 2 km y cada escalón cuesta la mitad.

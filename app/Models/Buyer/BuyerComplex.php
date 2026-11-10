@@ -7,7 +7,9 @@ use App\Models\Audit\Audit;
 class BuyerComplex extends Audit
 {
     protected $table = 'buyer_complex';
+
     protected $primaryKey = 'id';
+
     public $timestamps = true;
 
     protected $fillable = ['buyer_id', 'complex_id'];

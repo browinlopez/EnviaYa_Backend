@@ -29,8 +29,8 @@ class BannerEvent extends Model
 
     protected $casts = [
         'banner_id' => 'integer',
-        'user_id'   => 'integer',
-        'day'       => 'date',
+        'user_id' => 'integer',
+        'day' => 'date',
     ];
 
     public function banner(): BelongsTo

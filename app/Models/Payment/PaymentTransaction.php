@@ -2,9 +2,8 @@
 
 namespace App\Models\Payment;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use App\Models\Audit\Audit;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class PaymentTransaction extends Audit
 {

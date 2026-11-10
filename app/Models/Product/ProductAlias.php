@@ -19,7 +19,9 @@ use Illuminate\Database\Eloquent\Model;
 class ProductAlias extends Model
 {
     protected $table = 'product_aliases';
+
     protected $primaryKey = 'alias_id';
+
     public $timestamps = true;
 
     protected $fillable = ['products_id', 'alias', 'busines_id', 'origen'];

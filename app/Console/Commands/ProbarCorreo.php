@@ -34,7 +34,7 @@ class ProbarCorreo extends Command
     {
         $destino = $this->argument('destino');
 
-        if (!filter_var($destino, FILTER_VALIDATE_EMAIL)) {
+        if (! filter_var($destino, FILTER_VALIDATE_EMAIL)) {
             $this->error("«{$destino}» no es un correo.");
 
             return self::FAILURE;
@@ -45,7 +45,7 @@ class ProbarCorreo extends Command
          * desarrollo el comando diria «enviado» habiendolo escrito en un
          * archivo, que es justo la confusion que viene a resolver.
          */
-        if (!$this->option('log')) {
+        if (! $this->option('log')) {
             config(['mail.default' => 'smtp']);
         }
 
@@ -53,16 +53,16 @@ class ProbarCorreo extends Command
         $smtp = config('mail.mailers.smtp');
 
         $this->newLine();
-        $this->line('  Vía         ' . ($mailer === 'smtp'
+        $this->line('  Vía         '.($mailer === 'smtp'
             /* En Laravel 11+ la clave es `scheme`; en las anteriores,
                `encryption`. Se prueba con las dos para que la linea no salga
                con un parentesis vacio segun la version. */
             ? sprintf('%s:%s (%s)', $smtp['host'], $smtp['port'],
                 $smtp['scheme'] ?? $smtp['encryption'] ?? 'sin cifrado')
             : $mailer));
-        $this->line('  Cuenta      ' . ($smtp['username'] ?: '(sin usuario)'));
-        $this->line('  Remitente   ' . config('mail.from.address'));
-        $this->line('  Destino     ' . $destino);
+        $this->line('  Cuenta      '.($smtp['username'] ?: '(sin usuario)'));
+        $this->line('  Remitente   '.config('mail.from.address'));
+        $this->line('  Destino     '.$destino);
         $this->newLine();
 
         $inicio = microtime(true);
@@ -88,13 +88,13 @@ class ProbarCorreo extends Command
             $msg = $e->getMessage();
 
             // Algunos servidores devuelven la contraseña dentro del error.
-            if (!empty($smtp['password'])) {
+            if (! empty($smtp['password'])) {
                 $msg = str_replace($smtp['password'], '********', $msg);
             }
 
-            $this->line('  ' . mb_substr($msg, 0, 400));
+            $this->line('  '.mb_substr($msg, 0, 400));
             $this->newLine();
-            $this->line('  ' . $this->pista($msg));
+            $this->line('  '.$this->pista($msg));
 
             return self::FAILURE;
         }
@@ -105,22 +105,22 @@ class ProbarCorreo extends Command
     {
         if (str_contains($msg, '535') || stripos($msg, 'authenticat') !== false) {
             return 'La cuenta o la contraseña no sirven para ese servidor. '
-                . 'Si es Gmail, hace falta una CLAVE DE APLICACIÓN, no la contraseña normal.';
+                .'Si es Gmail, hace falta una CLAVE DE APLICACIÓN, no la contraseña normal.';
         }
 
         if (stripos($msg, 'timed out') !== false || stripos($msg, 'connection refused') !== false) {
             return 'No se pudo abrir la conexión: el puerto está bloqueado o el servidor no responde. '
-                . 'Con Hostinger, el 587 suele estar abierto cuando el 465 no.';
+                .'Con Hostinger, el 587 suele estar abierto cuando el 465 no.';
         }
 
         if (stripos($msg, 'certificate') !== false) {
             return 'El certificado no se pudo verificar: revisa que el cifrado (tls/ssl) '
-                . 'corresponda al puerto.';
+                .'corresponda al puerto.';
         }
 
         if (stripos($msg, 'sender') !== false || str_contains($msg, '553')) {
             return 'El servidor no acepta ese remitente. MAIL_FROM_ADDRESS tiene que ser '
-                . 'una dirección que esa cuenta pueda usar.';
+                .'una dirección que esa cuenta pueda usar.';
         }
 
         return 'Sin pista conocida para este error.';
@@ -129,8 +129,8 @@ class ProbarCorreo extends Command
     private function cuerpo(): string
     {
         return "Prueba de envío de VeciPa’Ya.\n\n"
-            . "Si estás leyendo esto, el correo del servidor funciona y el registro\n"
-            . "de usuarios puede enviar su verificación.\n\n"
-            . 'Enviado ' . now()->format('d/m/Y H:i:s') . ".\n";
+            ."Si estás leyendo esto, el correo del servidor funciona y el registro\n"
+            ."de usuarios puede enviar su verificación.\n\n"
+            .'Enviado '.now()->format('d/m/Y H:i:s').".\n";
     }
 }

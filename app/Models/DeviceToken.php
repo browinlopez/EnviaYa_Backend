@@ -27,7 +27,7 @@ class DeviceToken extends Model
 
     protected $casts = [
         'last_seen_at' => 'datetime',
-        'failed_at'    => 'datetime',
+        'failed_at' => 'datetime',
     ];
 
     /** Los que todavía sirven. Un token marcado como fallido no se reintenta. */

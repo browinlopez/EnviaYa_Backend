@@ -5,14 +5,15 @@ namespace App\Models\Payment;
 use App\Models\Audit\Audit;
 use App\Models\Order\OrdersSales;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
 class Payment extends Audit
 {
     use HasFactory;
 
     protected $table = 'payments';
+
     protected $primaryKey = 'payments_id';
+
     public $timestamps = true;
 
     protected $fillable = [
@@ -41,7 +42,7 @@ class Payment extends Audit
         'refund_reason',
         'refunded_at',
         'refund_snapshot',
-        'state'
+        'state',
     ];
 
     protected $casts = [
@@ -57,7 +58,7 @@ class Payment extends Audit
 
     public function order()
     {
-        return $this->belongsTo(\App\Models\Order\OrdersSales::class, 'orderSales_id');
+        return $this->belongsTo(OrdersSales::class, 'orderSales_id');
     }
 
     public function intent()

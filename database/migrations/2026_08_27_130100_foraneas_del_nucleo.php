@@ -153,11 +153,11 @@ return new class extends Migration
              */
             DB::table('invoices')->where('invoice_id', $r->invoice_id)->update([
                 'orderSales_id' => null,
-                'state'         => 0,
-                'void_reason'   => 'Anulado al añadir la foránea: apuntaba al pedido '
-                    . "#{$r->orderSales_id}, que no existe.",
-                'voided_at'     => now(),
-                'updated_at'    => now(),
+                'state' => 0,
+                'void_reason' => 'Anulado al añadir la foránea: apuntaba al pedido '
+                    ."#{$r->orderSales_id}, que no existe.",
+                'voided_at' => now(),
+                'updated_at' => now(),
             ]);
         }
 

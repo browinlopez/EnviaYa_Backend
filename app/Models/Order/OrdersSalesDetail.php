@@ -4,12 +4,13 @@ namespace App\Models\Order;
 
 use App\Models\Audit\Audit;
 use App\Models\Product\Product;
-use Illuminate\Database\Eloquent\Model;
 
 class OrdersSalesDetail extends Audit
 {
     protected $table = 'orderssales_detail';
+
     protected $primaryKey = 'orderDet_id';
+
     public $timestamps = false;
 
     /*
@@ -33,11 +34,11 @@ class OrdersSalesDetail extends Audit
     ];
 
     protected $casts = [
-        'unit_price'    => 'decimal:2',
+        'unit_price' => 'decimal:2',
         'qty_requested' => 'decimal:3',
-        'qty_final'     => 'decimal:3',
-        'line_total'    => 'decimal:2',
-        'weighed_at'    => 'datetime',
+        'qty_final' => 'decimal:3',
+        'line_total' => 'decimal:2',
+        'weighed_at' => 'datetime',
     ];
 
     public function order()

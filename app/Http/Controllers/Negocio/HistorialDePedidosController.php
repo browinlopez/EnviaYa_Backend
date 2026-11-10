@@ -35,6 +35,7 @@ class HistorialDePedidosController extends Controller
 {
     /** Estados que cuentan como cerrados. */
     private const ENTREGADO = 4;
+
     private const CANCELADO = 5;
 
     private const DIAS_MAXIMOS = 92;
@@ -44,10 +45,10 @@ class HistorialDePedidosController extends Controller
         $businessId = (int) $request->attributes->get('busines_id');
 
         $datos = $request->validate([
-            'desde'  => 'nullable|date',
-            'hasta'  => 'nullable|date',
+            'desde' => 'nullable|date',
+            'hasta' => 'nullable|date',
             'estado' => 'nullable|in:todos,entregados,cancelados',
-            'pago'   => 'nullable|in:todos,efectivo,app,fiado',
+            'pago' => 'nullable|in:todos,efectivo,app,fiado',
             'pagina' => 'nullable|integer|min:1',
         ]);
 
@@ -95,13 +96,13 @@ class HistorialDePedidosController extends Controller
              */
             ->through(fn ($p) => [
                 'orderSales_id' => $p->orderSales_id,
-                'sale_date'     => $p->sale_date,
+                'sale_date' => $p->sale_date,
                 'delivery_date' => $p->delivery_date,
-                'total'         => (float) $p->total,
-                'methods_id'    => (int) $p->methods_id,
-                'state'         => (int) $p->state,
-                'buyer'         => ['user' => ['name' => $p->buyer?->user?->name]],
-                'domiciliary'   => ['user' => ['name' => $p->domiciliary?->user?->name]],
+                'total' => (float) $p->total,
+                'methods_id' => (int) $p->methods_id,
+                'state' => (int) $p->state,
+                'buyer' => ['user' => ['name' => $p->buyer?->user?->name]],
+                'domiciliary' => ['user' => ['name' => $p->domiciliary?->user?->name]],
             ]);
 
         /*
@@ -125,12 +126,12 @@ class HistorialDePedidosController extends Controller
                 'hasta' => $hasta->toDateString(),
             ],
             'totales' => [
-                'pedidos'    => (int) (clone $base())->count(),
+                'pedidos' => (int) (clone $base())->count(),
                 'entregados' => (int) (clone $entregados)->count(),
                 'cancelados' => (int) (clone $base())->where('state', self::CANCELADO)->count(),
                 // Sin el domicilio: ese dinero es del domiciliario, no de la
                 // tienda. Es la misma regla que la cifra «Ventas hoy».
-                'vendido'    => (float) (clone $entregados)->sum(DB::raw('subtotal - discount')),
+                'vendido' => (float) (clone $entregados)->sum(DB::raw('subtotal - discount')),
                 /*
                  * CUÁNTOS LLEGARON A TIEMPO, y sobre cuántos se puede decir.
                  *
@@ -141,7 +142,7 @@ class HistorialDePedidosController extends Controller
                  * viaja también `medidos`: la pantalla solo enseña el
                  * porcentaje cuando hay sobre qué.
                  */
-                'a_tiempo'   => $this->aTiempo((clone $entregados)),
+                'a_tiempo' => $this->aTiempo((clone $entregados)),
             ],
             'pedidos' => $pedidos,
         ]);
@@ -173,8 +174,8 @@ class HistorialDePedidosController extends Controller
         })->count();
 
         return [
-            'medidos'    => $medibles->count(),
-            'a_tiempo'   => $aTiempo,
+            'medidos' => $medibles->count(),
+            'a_tiempo' => $aTiempo,
             'porcentaje' => (int) round(($aTiempo / $medibles->count()) * 100),
         ];
     }

@@ -37,7 +37,7 @@ function conModulos(array $modulos, string $nivel = Area::NIVEL_GESTOR): User
     Rol::firstOrCreate(['rol_id' => 4], ['name' => 'admin', 'guard_name' => 'web']);
 
     $area = Area::create([
-        'code' => 'prueba_' . substr(md5(implode(',', $modulos) . $nivel), 0, 8),
+        'code' => 'prueba_'.substr(md5(implode(',', $modulos).$nivel), 0, 8),
         'name' => 'Área de prueba',
         'state' => 1,
     ]);

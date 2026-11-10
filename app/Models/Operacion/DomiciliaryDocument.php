@@ -33,10 +33,10 @@ class DomiciliaryDocument extends Model
 
     protected $casts = [
         'domiciliary_id' => 'integer',
-        'issued_at'      => 'date',
-        'expires_at'     => 'date',
-        'media_id'       => 'integer',
-        'state'          => 'integer',
+        'issued_at' => 'date',
+        'expires_at' => 'date',
+        'media_id' => 'integer',
+        'state' => 'integer',
     ];
 
     /**
@@ -68,7 +68,7 @@ class DomiciliaryDocument extends Model
             return 'archivado';
         }
 
-        if (!$this->expires_at) {
+        if (! $this->expires_at) {
             return 'sin_vencimiento';
         }
 
@@ -84,7 +84,7 @@ class DomiciliaryDocument extends Model
     /** Días que faltan (negativo si ya venció). */
     public function diasRestantes(): ?int
     {
-        if (!$this->expires_at) {
+        if (! $this->expires_at) {
             return null;
         }
 

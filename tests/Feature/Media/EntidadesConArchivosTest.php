@@ -27,8 +27,8 @@ function personaDeMedios(string $codigoArea, string $nivel = Area::NIVEL_GESTOR)
     Rol::firstOrCreate(['rol_id' => 4], ['name' => 'admin', 'guard_name' => 'web']);
 
     $user = User::factory()->create([
-        'rol'          => 4,
-        'area_id'      => Area::where('code', $codigoArea)->firstOrFail()->id,
+        'rol' => 4,
+        'area_id' => Area::where('code', $codigoArea)->firstOrFail()->id,
         'access_level' => $nivel,
     ]);
 
@@ -45,8 +45,8 @@ function adminDeMedios(): User
     Rol::firstOrCreate(['rol_id' => 4], ['name' => 'admin', 'guard_name' => 'web']);
 
     $user = User::factory()->create([
-        'rol'          => 4,
-        'area_id'      => Area::where('code', 'sistema')->firstOrFail()->id,
+        'rol' => 4,
+        'area_id' => Area::where('code', 'sistema')->firstOrFail()->id,
         'access_level' => Area::NIVEL_GESTOR,
     ]);
 
@@ -74,32 +74,32 @@ it('rechaza una entidad que no maneja archivos', function () {
 
 it('el banner devuelve su título como nombre de carpeta', function () {
     $anunciante = DB::table('advertisers')->insertGetId([
-        'name'       => 'Anunciante de prueba',
-        'state'      => 1,
+        'name' => 'Anunciante de prueba',
+        'state' => 1,
         'created_at' => now(),
         'updated_at' => now(),
     ]);
 
     $campana = DB::table('ad_campaigns')->insertGetId([
         'advertiser_id' => $anunciante,
-        'name'          => 'Campaña de prueba',
-        'objective'     => 'traffic',
-        'starts_at'     => now()->toDateString(),
-        'ends_at'       => now()->addDays(30)->toDateString(),
-        'state'         => 1,
-        'created_at'    => now(),
-        'updated_at'    => now(),
+        'name' => 'Campaña de prueba',
+        'objective' => 'traffic',
+        'starts_at' => now()->toDateString(),
+        'ends_at' => now()->addDays(30)->toDateString(),
+        'state' => 1,
+        'created_at' => now(),
+        'updated_at' => now(),
     ]);
 
     $banner = DB::table('banners')->insertGetId([
         'campaign_id' => $campana,
-        'title'       => 'Refresca tu verano',
-        'placement'   => 'home_hero',
-        'platform'    => 'both',
-        'link_type'   => 'none',
-        'state'       => 1,
-        'created_at'  => now(),
-        'updated_at'  => now(),
+        'title' => 'Refresca tu verano',
+        'placement' => 'home_hero',
+        'platform' => 'both',
+        'link_type' => 'none',
+        'state' => 1,
+        'created_at' => now(),
+        'updated_at' => now(),
     ]);
 
     expect(app(MediaService::class)->nombreDe('banners', $banner))

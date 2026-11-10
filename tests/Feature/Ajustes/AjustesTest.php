@@ -4,6 +4,7 @@ use App\Models\Area;
 use App\Models\Rol;
 use App\Models\User;
 use App\Services\Ajustes;
+use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 
 /**
@@ -19,14 +20,13 @@ use Laravel\Sanctum\Sanctum;
  * que un valor imposible se rechace, que quede quién lo cambió y que el
  * mantenimiento no pueda dejar al panel sin forma de apagarlo.
  */
-
 function comoAreaAjustes(string $codigo, string $nivel = Area::NIVEL_GESTOR): User
 {
     Rol::firstOrCreate(['rol_id' => 4], ['name' => 'admin', 'guard_name' => 'web']);
 
     $user = User::factory()->create([
-        'rol'          => 4,
-        'area_id'      => Area::where('code', $codigo)->firstOrFail()->id,
+        'rol' => 4,
+        'area_id' => Area::where('code', $codigo)->firstOrFail()->id,
         'access_level' => $nivel,
     ]);
 
@@ -104,7 +104,7 @@ it('una clave inventada no se guarda', function () {
         ->assertOk()
         ->assertJsonPath('message', 'No había nada que cambiar.');
 
-    expect(\Illuminate\Support\Facades\DB::table('platform_settings')->count())->toBe(0);
+    expect(DB::table('platform_settings')->count())->toBe(0);
 });
 
 it('queda quién lo cambió', function () {
@@ -114,7 +114,7 @@ it('queda quién lo cambió', function () {
 
     // Cambiar el reparto mueve plata en cada pedido que venga; sin autor, seis
     // meses después nadie puede explicar por qué marzo no cuadra con abril.
-    $fila = \Illuminate\Support\Facades\DB::table('platform_settings')
+    $fila = DB::table('platform_settings')
         ->where('key', 'operacion.horas_estancado')
         ->first();
 
@@ -133,7 +133,7 @@ it('solo guarda lo que de verdad cambió', function () {
         'operacion' => ['entregas_simultaneas' => (int) config('services.max_active_deliveries', 3)],
     ])->assertOk()->assertJsonPath('changes', []);
 
-    expect(\Illuminate\Support\Facades\DB::table('platform_settings')->count())->toBe(0);
+    expect(DB::table('platform_settings')->count())->toBe(0);
 });
 
 it('se puede volver al valor de fábrica', function () {

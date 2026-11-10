@@ -13,13 +13,11 @@ class PaymentStatusUpdated implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public function __construct(public Payment $payment)
-    {
-    }
+    public function __construct(public Payment $payment) {}
 
     public function broadcastOn(): PrivateChannel
     {
-        return new PrivateChannel('order.' . $this->payment->orderSales_id);
+        return new PrivateChannel('order.'.$this->payment->orderSales_id);
     }
 
     public function broadcastAs(): string

@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Mail\ResumenDiario;
+use App\Models\Area;
 use App\Models\User;
 use App\Services\ResumenDeArea;
 use Illuminate\Console\Command;
@@ -54,7 +55,7 @@ class EnviarResumenDiario extends Command
         $sinGente = [];
 
         foreach ($porArea as $codigo => $datos) {
-            /** @var \App\Models\Area $area */
+            /** @var Area $area */
             $area = $datos['area'];
             $asuntos = $datos['asuntos'];
 
@@ -93,6 +94,7 @@ class EnviarResumenDiario extends Command
                 // Se avisa: un área con pendientes y sin nadie asignado es un
                 // problema de configuración que si no se dice, no se ve.
                 $sinGente[] = $codigo;
+
                 continue;
             }
 
@@ -117,13 +119,13 @@ class EnviarResumenDiario extends Command
         if ($seco) {
             $this->info('Prueba en seco: no se envió nada.');
         } else {
-            $this->info("Enviados: {$enviados} de " . count($porArea) . ' área(s) con pendientes.');
+            $this->info("Enviados: {$enviados} de ".count($porArea).' área(s) con pendientes.');
         }
 
         if ($sinGente !== []) {
             $this->warn(
-                'Con pendientes y sin nadie asignado: ' . implode(', ', $sinGente)
-                . '. Nadie se va a enterar de esos asuntos.'
+                'Con pendientes y sin nadie asignado: '.implode(', ', $sinGente)
+                .'. Nadie se va a enterar de esos asuntos.'
             );
         }
 

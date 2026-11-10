@@ -11,17 +11,17 @@ use App\Models\Payment\PaymentForms;
 use App\Models\Payment\PaymentIntent;
 use App\Models\Payment\PaymentMethods;
 use App\Models\Payment\PaymentTransaction;
-use App\Models\User;
 use App\Models\User\UserAddress;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
 class OrdersSales extends Audit
 {
     use HasFactory;
 
     protected $table = 'orderssales';
+
     protected $primaryKey = 'orderSales_id';
+
     public $timestamps = true;
 
     protected $fillable = [
@@ -206,7 +206,7 @@ class OrdersSales extends Audit
             return null;
         }
 
-        if (!$this->dispatched_at || !$this->delivery_date) {
+        if (! $this->dispatched_at || ! $this->delivery_date) {
             return null;
         }
 
@@ -227,7 +227,7 @@ class OrdersSales extends Audit
     {
         $minutos = $this->delivery_minutes;
 
-        if ($minutos === null || !$this->promised_minutes) {
+        if ($minutos === null || ! $this->promised_minutes) {
             return null;
         }
 
@@ -239,7 +239,7 @@ class OrdersSales extends Audit
     {
         $minutos = $this->delivery_minutes;
 
-        if ($minutos === null || !$this->promised_minutes) {
+        if ($minutos === null || ! $this->promised_minutes) {
             return null;
         }
 
@@ -278,7 +278,7 @@ class OrdersSales extends Audit
 
     public function paymentIntents()
     {
-        return $this->hasMany(\App\Models\Payment\PaymentIntent::class, 'orderSales_id');
+        return $this->hasMany(PaymentIntent::class, 'orderSales_id');
     }
 
     public function paymentTransactions()
@@ -290,7 +290,6 @@ class OrdersSales extends Audit
             'payment_intent_id'
         );
     }
-
 
     public function buyer()
     {
@@ -395,7 +394,7 @@ class OrdersSales extends Audit
                 'latitude' => $this->address->latitude ? (float) $this->address->latitude : null,
                 'longitude' => $this->address->longitude ? (float) $this->address->longitude : null,
             ] : null,
-            'details' => $this->details->map(fn($d) => [
+            'details' => $this->details->map(fn ($d) => [
                 // Por donde se pesa una linea; ver `PesajeDelPedidoController`.
                 'orderDet_id' => $d->orderDet_id,
                 'product_id' => $d->product->products_id ?? null,

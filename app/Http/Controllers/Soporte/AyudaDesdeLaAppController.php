@@ -3,9 +3,10 @@
 namespace App\Http\Controllers\Soporte;
 
 use App\Http\Controllers\Controller;
-use App\Models\Order\OrdersSales;
 use App\Models\Operacion\Pqrs;
+use App\Models\Order\OrdersSales;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * PEDIR AYUDA DESDE LA APP.
@@ -31,10 +32,10 @@ class AyudaDesdeLaAppController extends Controller
     public function store(Request $request)
     {
         $datos = $request->validate([
-            'type'        => 'required|in:' . self::TIPOS,
-            'subject'     => 'required|string|max:200',
+            'type' => 'required|in:'.self::TIPOS,
+            'subject' => 'required|string|max:200',
             'description' => 'required|string|max:4000',
-            'order_id'    => 'sometimes|nullable|integer|exists:orderssales,orderSales_id',
+            'order_id' => 'sometimes|nullable|integer|exists:orderssales,orderSales_id',
         ]);
 
         $usuario = $request->user();
@@ -53,7 +54,7 @@ class AyudaDesdeLaAppController extends Controller
             /* Es suyo si lo compró él, o si es de una tienda de la que es
                dueño: el tendero también reporta problemas con sus pedidos
                —un cobro, un domiciliario— desde su panel. */
-            $esDeSuTienda = $pedido && \Illuminate\Support\Facades\DB::table('owner_busines as ob')
+            $esDeSuTienda = $pedido && DB::table('owner_busines as ob')
                 ->join('owner as o', 'o.owner_id', '=', 'ob.owner_id')
                 ->where('o.user_id', (int) $usuario->user_id)
                 ->where('ob.busines_id', (int) $pedido->busines_id)
@@ -69,28 +70,28 @@ class AyudaDesdeLaAppController extends Controller
         $prioridad = $datos['type'] === 'reclamo' ? 'alta' : 'media';
 
         $pqrs = Pqrs::create([
-            'code'           => Pqrs::siguienteRadicado(),
-            'type'           => $datos['type'],
-            'channel'        => 'app',
-            'priority'       => $prioridad,
-            'user_id'        => $usuario->user_id,
-            'order_id'       => $pedido?->orderSales_id,
+            'code' => Pqrs::siguienteRadicado(),
+            'type' => $datos['type'],
+            'channel' => 'app',
+            'priority' => $prioridad,
+            'user_id' => $usuario->user_id,
+            'order_id' => $pedido?->orderSales_id,
             // Con el pedido delante, el caso ya sabe a qué tienda y a qué
             // domiciliario mirar: es la mitad del trabajo de quien lo atienda.
-            'business_id'    => $pedido?->busines_id,
+            'business_id' => $pedido?->busines_id,
             'domiciliary_id' => $pedido?->domiciliary_id,
-            'contact_name'   => $usuario->name,
-            'contact_email'  => $usuario->email,
-            'contact_phone'  => $usuario->phone,
-            'subject'        => $datos['subject'],
-            'description'    => $datos['description'],
-            'state'          => 0,
-            'due_at'         => now()->addDays(Pqrs::PLAZOS[$prioridad]),
+            'contact_name' => $usuario->name,
+            'contact_email' => $usuario->email,
+            'contact_phone' => $usuario->phone,
+            'subject' => $datos['subject'],
+            'description' => $datos['description'],
+            'state' => 0,
+            'due_at' => now()->addDays(Pqrs::PLAZOS[$prioridad]),
         ]);
 
         return response()->json([
             'message' => 'Recibimos tu mensaje. Te respondemos al correo de tu cuenta.',
-            'code'    => $pqrs->code,
+            'code' => $pqrs->code,
         ], 201);
     }
 

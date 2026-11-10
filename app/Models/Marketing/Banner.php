@@ -37,17 +37,17 @@ class Banner extends Model
     ];
 
     protected $casts = [
-        'campaign_id'                => 'integer',
-        'priority'                   => 'integer',
-        'starts_at'                  => 'date',
-        'ends_at'                    => 'date',
-        'target_municipalities'      => 'array',
-        'target_complexes'           => 'array',
+        'campaign_id' => 'integer',
+        'priority' => 'integer',
+        'starts_at' => 'date',
+        'ends_at' => 'date',
+        'target_municipalities' => 'array',
+        'target_complexes' => 'array',
         'target_business_categories' => 'array',
-        'target_roles'               => 'array',
-        'impressions_count'          => 'integer',
-        'clicks_count'               => 'integer',
-        'state'                      => 'integer',
+        'target_roles' => 'array',
+        'impressions_count' => 'integer',
+        'clicks_count' => 'integer',
+        'state' => 'integer',
     ];
 
     public function campaign(): BelongsTo

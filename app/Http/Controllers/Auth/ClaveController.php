@@ -2,23 +2,11 @@
 
 namespace App\Http\Controllers\Auth;
 
-use App\Services\Totp;
 use App\Http\Controllers\Controller;
-use App\Models\Buyer\Buyer;
-use App\Models\Buyer\BuyerComplex;
-use App\Models\Buyer\ResidentialComplex;
-use App\Models\User\UserAddress;
 use App\Models\User;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
-use Illuminate\Auth\Events\Registered;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\URL;
-use Illuminate\Support\Str;
-use App\Mail\VerifyEmailCustomMail;
 
 class ClaveController extends Controller
 {

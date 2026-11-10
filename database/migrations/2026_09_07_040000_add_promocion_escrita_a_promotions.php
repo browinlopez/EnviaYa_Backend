@@ -38,19 +38,19 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('promotions', function (Blueprint $table) {
-            if (!Schema::hasColumn('promotions', 'sent_at')) {
+            if (! Schema::hasColumn('promotions', 'sent_at')) {
                 $table->timestamp('sent_at')->nullable()->after('end_date');
             }
 
-            if (!Schema::hasColumn('promotions', 'recipients_count')) {
+            if (! Schema::hasColumn('promotions', 'recipients_count')) {
                 $table->unsignedInteger('recipients_count')->default(0)->after('sent_at');
             }
 
-            if (!Schema::hasColumn('promotions', 'created_by')) {
+            if (! Schema::hasColumn('promotions', 'created_by')) {
                 $table->unsignedBigInteger('created_by')->nullable()->after('recipients_count');
             }
 
-            if (!Schema::hasColumn('promotions', 'created_at')) {
+            if (! Schema::hasColumn('promotions', 'created_at')) {
                 $table->timestamps();
             }
         });
@@ -66,7 +66,7 @@ return new class extends Migration
          * Puede quedar vacía: «20% en toda la tienda hoy» no es de ningún
          * producto en particular, y obligar a elegir uno sería obligar a mentir.
          */
-        if (!Schema::hasTable('promotion_products')) {
+        if (! Schema::hasTable('promotion_products')) {
             Schema::create('promotion_products', function (Blueprint $table) {
                 $table->id();
                 $table->unsignedBigInteger('promotion_id');

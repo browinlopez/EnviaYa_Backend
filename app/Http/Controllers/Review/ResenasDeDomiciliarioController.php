@@ -6,10 +6,7 @@ use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
 use App\Models\Buyer\Buyer;
 use App\Models\Domiciliary;
-use App\Models\Order\OrdersSales;
-use App\Models\Reviews\BusinessReview;
 use App\Models\Reviews\DomiciliaryReview;
-use App\Models\Reviews\UserReview;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -38,13 +35,13 @@ class ResenasDeDomiciliarioController extends Controller
                         'name' => $review->domiciliary->user->name,
                         'qualification' => $review->domiciliary->user->qualification,
                         'state' => $review->domiciliary->user->state,
-                    ]
+                    ],
                 ],
                 'buyer' => [
-                    'user_id'       => $review->buyer->buyer_id,
+                    'user_id' => $review->buyer->buyer_id,
                     'qualification' => $review->buyer->qualification,
-                    'state'         => $review->buyer->state,
-                ]
+                    'state' => $review->buyer->state,
+                ],
             ];
         });
 
@@ -58,7 +55,7 @@ class ResenasDeDomiciliarioController extends Controller
             'buyer_id' => 'required|integer|exists:buyer,buyer_id',
             'qualification' => 'required|numeric|min:0|max:5',
             'comment' => 'nullable|string',
-            'state' => 'boolean'
+            'state' => 'boolean',
         ]);
 
         DB::beginTransaction();
@@ -84,13 +81,14 @@ class ResenasDeDomiciliarioController extends Controller
             return response()->json([
                 'message' => 'Review creada y calificación actualizada',
                 'review' => $review,
-                'new_qualification' => $average
+                'new_qualification' => $average,
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'message' => 'Error al crear la reseña',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -103,14 +101,14 @@ class ResenasDeDomiciliarioController extends Controller
             'buyer_id' => 'nullable|integer|exists:user,user_id',
             'qualification' => 'nullable|numeric|min:0|max:5',
             'comment' => 'nullable|string',
-            'state' => 'nullable|boolean'
+            'state' => 'nullable|boolean',
         ]);
 
         DB::beginTransaction();
 
         try {
             $review = DomiciliaryReview::find($request->review_id);
-            if (!$review) {
+            if (! $review) {
                 throw new \Exception('Review no encontrada');
             }
 
@@ -119,7 +117,7 @@ class ResenasDeDomiciliarioController extends Controller
                 'buyer_id',
                 'qualification',
                 'comment',
-                'state'
+                'state',
             ]));
 
             // Recalcular promedio de calificaciones activas
@@ -139,13 +137,14 @@ class ResenasDeDomiciliarioController extends Controller
             return response()->json([
                 'message' => 'Review actualizada correctamente',
                 'review' => $review,
-                'new_qualification' => $average
+                'new_qualification' => $average,
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'message' => 'Error al actualizar la reseña',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -153,14 +152,14 @@ class ResenasDeDomiciliarioController extends Controller
     public function deleteDomiciliaryReview(Request $request)
     {
         $request->validate([
-            'review_id' => 'required|integer|exists:domiciliary_reviews,reviews_id'
+            'review_id' => 'required|integer|exists:domiciliary_reviews,reviews_id',
         ]);
 
         DB::beginTransaction();
 
         try {
             $review = DomiciliaryReview::find($request->review_id);
-            if (!$review) {
+            if (! $review) {
                 throw new \Exception('Review no encontrada');
             }
 
@@ -184,13 +183,14 @@ class ResenasDeDomiciliarioController extends Controller
 
             return response()->json([
                 'message' => 'Review eliminada correctamente',
-                'new_qualification' => $average
+                'new_qualification' => $average,
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'message' => 'Error al eliminar la reseña',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -198,7 +198,7 @@ class ResenasDeDomiciliarioController extends Controller
     public function listReviewsByDomiciliary(Request $request)
     {
         $request->validate([
-            'domiciliary_id' => 'required|integer|exists:domiciliary,domiciliary_id'
+            'domiciliary_id' => 'required|integer|exists:domiciliary,domiciliary_id',
         ]);
 
         // Misma forma y mismo orden que listReviewsByBusiness, para que la
@@ -238,14 +238,14 @@ class ResenasDeDomiciliarioController extends Controller
                         'name' => $review->domiciliary->user->name,
                         'qualification' => $review->domiciliary->user->qualification,
                         'state' => $review->domiciliary->user->state,
-                    ]
-                ]
+                    ],
+                ],
             ];
         });
 
         return response()->json([
             'message' => 'Reviews del domiciliario',
-            'reviews' => $formatted
+            'reviews' => $formatted,
         ]);
     }
 

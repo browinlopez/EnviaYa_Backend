@@ -9,8 +9,8 @@ use App\Models\Operacion\StoreCreditMovement;
 use App\Models\User;
 use App\Services\CreditoDeTienda;
 use App\Services\MediaService;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 /**
@@ -24,9 +24,7 @@ class CreditosDelNegocioController extends Controller
     public function __construct(
         private readonly CreditoDeTienda $creditos,
         private readonly MediaService $medios,
-    )
-    {
-    }
+    ) {}
 
     /**
      * El panorama y los clientes.
@@ -40,7 +38,7 @@ class CreditosDelNegocioController extends Controller
         $negocioId = (int) $request->attributes->get('busines_id');
 
         $afiliados = BusinessUserAffiliation::where('busines_id', $negocioId)->pluck('user_id');
-        $conCupo   = StoreCredit::where('busines_id', $negocioId)->pluck('user_id');
+        $conCupo = StoreCredit::where('busines_id', $negocioId)->pluck('user_id');
 
         $usuarios = User::whereIn('user_id', $afiliados->merge($conCupo)->unique()->values())
             ->orderBy('name')
@@ -50,19 +48,19 @@ class CreditosDelNegocioController extends Controller
             $cupo = $this->creditos->cupo($negocioId, (int) $u->user_id);
 
             return [
-                'user_id'    => (int) $u->user_id,
-                'name'       => $u->name,
-                'email'      => $u->email,
-                'phone'      => $u->phone,
-                'afiliado'   => $afiliados->contains($u->user_id),
-                'limite'     => $cupo['limite'],
-                'usado'      => $cupo['usado'],
+                'user_id' => (int) $u->user_id,
+                'name' => $u->name,
+                'email' => $u->email,
+                'phone' => $u->phone,
+                'afiliado' => $afiliados->contains($u->user_id),
+                'limite' => $cupo['limite'],
+                'usado' => $cupo['usado'],
                 'disponible' => $cupo['disponible'],
             ];
         })->values();
 
         return response()->json([
-            'resumen'  => $this->creditos->resumenDeLaTienda($negocioId),
+            'resumen' => $this->creditos->resumenDeLaTienda($negocioId),
             'clientes' => $clientes,
         ]);
     }
@@ -84,7 +82,7 @@ class CreditosDelNegocioController extends Controller
 
         return response()->json([
             'message' => 'Cupo guardado.',
-            'cupo'    => $this->creditos->cupo($negocioId, $userId),
+            'cupo' => $this->creditos->cupo($negocioId, $userId),
             'resumen' => $this->creditos->resumenDeLaTienda($negocioId),
         ]);
     }
@@ -95,13 +93,13 @@ class CreditosDelNegocioController extends Controller
         $negocioId = (int) $request->attributes->get('busines_id');
 
         $datos = $request->validate([
-            'amount'      => 'required|numeric|min:1|max:999999999',
-            'notes'       => 'nullable|string|max:255',
+            'amount' => 'required|numeric|min:1|max:999999999',
+            'notes' => 'nullable|string|max:255',
             // La foto de la transferencia o del recibo. Opcional.
             'comprobante' => 'nullable|file|mimes:jpg,jpeg,png,webp,pdf|max:8192',
         ], [
             'comprobante.mimes' => 'El comprobante tiene que ser una foto (JPG, PNG o WEBP) o un PDF.',
-            'comprobante.max'   => 'El comprobante pesa más de 8 MB.',
+            'comprobante.max' => 'El comprobante pesa más de 8 MB.',
         ]);
 
         /*
@@ -114,13 +112,13 @@ class CreditosDelNegocioController extends Controller
          * archivo se subía a la carpeta de cualquier usuario del sistema y
          * quedaba suelto cuando el abono fallaba después.
          */
-        if (!StoreCredit::where('busines_id', $negocioId)->where('user_id', $userId)->exists()) {
+        if (! StoreCredit::where('busines_id', $negocioId)->where('user_id', $userId)->exists()) {
             return response()->json(['message' => 'Ese cliente no tiene crédito en tu tienda.'], 422);
         }
 
         $mediaId = null;
         if ($request->hasFile('comprobante')) {
-            if (!$this->medios->configurado()) {
+            if (! $this->medios->configurado()) {
                 return response()->json([
                     'message' => 'No se pudo guardar el comprobante: el almacenamiento de archivos no está configurado.',
                 ], 503);
@@ -139,7 +137,7 @@ class CreditosDelNegocioController extends Controller
             } catch (RuntimeException $e) {
                 // MediaService explica sus fallos en español; cualquier otra
                 // excepción la atiende el manejador general sin detalles.
-                return response()->json(['message' => 'No se pudo guardar el comprobante. ' . $e->getMessage()], 422);
+                return response()->json(['message' => 'No se pudo guardar el comprobante. '.$e->getMessage()], 422);
             }
         }
 
@@ -161,7 +159,7 @@ class CreditosDelNegocioController extends Controller
 
         return response()->json([
             'message' => 'Abono registrado.',
-            'cupo'    => $this->creditos->cupo($negocioId, $userId),
+            'cupo' => $this->creditos->cupo($negocioId, $userId),
             'resumen' => $this->creditos->resumenDeLaTienda($negocioId),
         ], 201);
     }
@@ -173,9 +171,9 @@ class CreditosDelNegocioController extends Controller
 
         $credito = StoreCredit::where('busines_id', $negocioId)->where('user_id', $userId)->first();
 
-        if (!$credito) {
+        if (! $credito) {
             return response()->json([
-                'cupo'        => $this->creditos->cupo($negocioId, $userId),
+                'cupo' => $this->creditos->cupo($negocioId, $userId),
                 'movimientos' => [],
             ]);
         }
@@ -192,14 +190,14 @@ class CreditosDelNegocioController extends Controller
             ->keyBy('id');
 
         return response()->json([
-            'cupo'        => $this->creditos->cupo($negocioId, $userId),
+            'cupo' => $this->creditos->cupo($negocioId, $userId),
             'movimientos' => $movimientos->map(fn ($m) => [
-                'id'         => $m->id,
-                'tipo'       => $m->type,
-                'valor'      => (float) $m->amount,
-                'order_id'   => $m->order_id,
-                'nota'       => $m->notes,
-                'fecha'      => $m->created_at?->toIso8601String(),
+                'id' => $m->id,
+                'tipo' => $m->type,
+                'valor' => (float) $m->amount,
+                'order_id' => $m->order_id,
+                'nota' => $m->notes,
+                'fecha' => $m->created_at?->toIso8601String(),
                 /* Sin enlace del bucket: el archivo se pide a
                    `movimientos/{id}/comprobante`, con la sesión del tendero. */
                 'comprobante' => ($f = $archivos->get($m->comprobante_media_id)) ? [

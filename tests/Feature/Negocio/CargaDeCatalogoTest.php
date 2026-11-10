@@ -1,13 +1,17 @@
 <?php
 
+use App\Imports\LectorDeArchivoDeCatalogo;
+use App\Jobs\ProcesarCargaDeCatalogo;
 use App\Models\Product\CatalogUpload;
 use App\Models\Product\Product;
-use App\Services\ImportadorDeCatalogo;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 /**
  * LA CARGA MASIVA.
@@ -24,14 +28,14 @@ use Laravel\Sanctum\Sanctum;
  */
 
 /** Un CSV con encabezados, que es lo que `WithHeadingRow` sabe leer. */
-function archivoDeCatalogo(array $filas, array $encabezados = null): UploadedFile
+function archivoDeCatalogo(array $filas, ?array $encabezados = null): UploadedFile
 {
     $encabezados ??= ['codigo_barras', 'nombre', 'marca', 'categoria', 'precio', 'cantidad'];
 
     $lineas = [implode(',', $encabezados)];
 
     foreach ($filas as $f) {
-        $lineas[] = implode(',', array_map(fn ($v) => '"' . str_replace('"', '""', (string) $v) . '"', $f));
+        $lineas[] = implode(',', array_map(fn ($v) => '"'.str_replace('"', '""', (string) $v).'"', $f));
     }
 
     return UploadedFile::fake()->createWithContent(
@@ -82,7 +86,7 @@ test('el archivo se guarda y se encola en vez de procesarse en la peticion', fun
 
     expect($r->json('data.estado'))->toBe('pendiente');
 
-    Queue::assertPushed(\App\Jobs\ProcesarCargaDeCatalogo::class);
+    Queue::assertPushed(ProcesarCargaDeCatalogo::class);
 });
 
 test('una fila con codigo conocido entra a la tienda sin tocar el catalogo', function () {
@@ -291,17 +295,17 @@ test('la plantilla se descarga con las columnas que el importador entiende', fun
 
     /* Ida y vuelta: se llena una fila en la plantilla tal como se descarga y
        el lector del importador la tiene que entender con sus llaves. */
-    $ruta = tempnam(sys_get_temp_dir(), 'plantilla') . '.xlsx';
+    $ruta = tempnam(sys_get_temp_dir(), 'plantilla').'.xlsx';
     file_put_contents($ruta, $r->streamedContent());
 
-    $libro = \PhpOffice\PhpSpreadsheet\IOFactory::load($ruta);
-    $libro->getSheet(0)->setCellValueExplicit('A2', '7702511000014', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+    $libro = IOFactory::load($ruta);
+    $libro->getSheet(0)->setCellValueExplicit('A2', '7702511000014', DataType::TYPE_STRING);
     $libro->getSheet(0)->setCellValue('B2', 3400);
     $libro->getSheet(0)->setCellValue('C2', 12);
-    (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($libro))->save($ruta);
+    (new Xlsx($libro))->save($ruta);
 
     $filas = array_values(array_filter(
-        app(\App\Imports\LectorDeArchivoDeCatalogo::class)->leer($ruta),
+        app(LectorDeArchivoDeCatalogo::class)->leer($ruta),
         fn ($f) => ($f['codigo_de_barras'] ?? null) !== null,
     ));
 

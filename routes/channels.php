@@ -10,7 +10,6 @@ Broadcast::routes([
     'middleware' => ['auth:sanctum'],
 ]);
 
-
 /*
  * El canal personal de cada quien.
  *
@@ -55,7 +54,7 @@ Broadcast::channel('order.{orderSalesId}', function ($user, $orderSalesId) {
     $order = OrdersSales::with(['buyer', 'domiciliary', 'business.owners'])
         ->find($orderSalesId);
 
-    if (!$order) {
+    if (! $order) {
         return false;
     }
 
@@ -81,7 +80,6 @@ Broadcast::channel('order.{orderSalesId}', function ($user, $orderSalesId) {
 
     return false;
 });
-
 
 /*
  * EL CANAL DEL NEGOCIO
@@ -122,7 +120,6 @@ Broadcast::channel('business.{businessId}', function ($user, $businessId) {
         ->where('bd.busines_id', $businessId)
         ->exists();
 });
-
 
 /*
  * EL CANAL DE LA TORRE DE CONTROL

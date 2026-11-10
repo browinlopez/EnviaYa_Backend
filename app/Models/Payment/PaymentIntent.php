@@ -2,13 +2,13 @@
 
 namespace App\Models\Payment;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use App\Models\Audit\Audit;
+use App\Models\Order\OrdersSales;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class PaymentIntent extends Audit
 {
-     use HasFactory;
+    use HasFactory;
 
     protected $table = 'payment_intents';
 
@@ -30,7 +30,7 @@ class PaymentIntent extends Audit
 
     public function order()
     {
-        return $this->belongsTo(\App\Models\Order\OrdersSales::class, 'orderSales_id');
+        return $this->belongsTo(OrdersSales::class, 'orderSales_id');
     }
 
     public function transactions()

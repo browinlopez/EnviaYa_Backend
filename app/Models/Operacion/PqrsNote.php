@@ -22,8 +22,8 @@ class PqrsNote extends Model
     protected $fillable = ['pqrs_id', 'user_id', 'note', 'is_internal'];
 
     protected $casts = [
-        'pqrs_id'     => 'integer',
-        'user_id'     => 'integer',
+        'pqrs_id' => 'integer',
+        'user_id' => 'integer',
         'is_internal' => 'boolean',
     ];
 

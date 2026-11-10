@@ -11,8 +11,8 @@ return new class extends Migration
         Schema::create('payment_transactions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('payment_intent_id')
-                  ->constrained('payment_intents')
-                  ->cascadeOnDelete();
+                ->constrained('payment_intents')
+                ->cascadeOnDelete();
             $table->string('provider_transaction_id')->nullable();
             $table->string('method', 50);
             $table->string('status', 30);

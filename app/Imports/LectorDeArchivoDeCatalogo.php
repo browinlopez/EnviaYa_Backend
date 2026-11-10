@@ -34,7 +34,9 @@ class LectorDeArchivoDeCatalogo
     private const BIFF2_BOF = "\x09\x00\x04\x00";
 
     private const REGISTRO_ENTERO = 0x02;
+
     private const REGISTRO_DECIMAL = 0x03;
+
     private const REGISTRO_TEXTO = 0x04;
 
     /**
@@ -48,7 +50,7 @@ class LectorDeArchivoDeCatalogo
             return $this->leerBiff2($ruta);
         }
 
-        $lector = new FilasDeCatalogo();
+        $lector = new FilasDeCatalogo;
         Excel::import($lector, $ruta);
 
         return $lector->filas->map(fn ($f) => is_array($f) ? $f : $f->toArray())->all();
@@ -58,7 +60,7 @@ class LectorDeArchivoDeCatalogo
     {
         $f = @fopen($ruta, 'rb');
 
-        if (!$f) {
+        if (! $f) {
             return false;
         }
 

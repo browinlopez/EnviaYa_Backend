@@ -18,7 +18,6 @@ use Laravel\Sanctum\Sanctum;
  * no se resuelva sin respuesta, que una liquidación no cuente el mismo pedido
  * dos veces, y que cada área alcance lo suyo y nada más.
  */
-
 function comoArea2(string $codigo): User
 {
     Rol::firstOrCreate(['rol_id' => 4], ['name' => 'admin', 'guard_name' => 'web']);
@@ -105,10 +104,10 @@ test('no deja cerrar un incidente sin registrar acciones', function () {
 
     $id = $this->postJson('/v1/admin/sst/incidentes', [
         'domiciliary_id' => $d,
-        'occurred_at'    => now()->subDay()->toDateTimeString(),
-        'type'           => 'accidente_transito',
-        'severity'       => 'moderado',
-        'description'    => 'Choque leve en la 45',
+        'occurred_at' => now()->subDay()->toDateTimeString(),
+        'type' => 'accidente_transito',
+        'severity' => 'moderado',
+        'description' => 'Choque leve en la 45',
     ])->assertCreated()->json('id');
 
     // Cerrar sin acciones deja un registro que solo sirve para contar cuántos
@@ -118,7 +117,7 @@ test('no deja cerrar un incidente sin registrar acciones', function () {
         ->assertJsonPath('message', 'Para cerrar un incidente hay que registrar qué acciones se tomaron.');
 
     $this->putJson("/v1/admin/sst/incidentes/{$id}", [
-        'state'   => SafetyIncident::CERRADO,
+        'state' => SafetyIncident::CERRADO,
         'actions' => 'Se reforzó la capacitación en manejo defensivo.',
     ])->assertOk();
 
@@ -132,12 +131,12 @@ test('el resumen acumula días de incapacidad del año', function () {
     foreach ([3, 7] as $dias) {
         SafetyIncident::create([
             'domiciliary_id' => $d,
-            'occurred_at'    => now()->subDays(10),
-            'type'           => 'accidente_transito',
-            'severity'       => 'grave',
-            'had_injuries'   => true,
-            'days_off'       => $dias,
-            'description'    => 'x',
+            'occurred_at' => now()->subDays(10),
+            'type' => 'accidente_transito',
+            'severity' => 'grave',
+            'had_injuries' => true,
+            'days_off' => $dias,
+            'description' => 'x',
         ]);
     }
 
@@ -240,15 +239,15 @@ test('la bitácora guarda quién dijo qué', function () {
 function pedidoEntregado(int $negocio, int $domiciliario, float $subtotal, float $domicilio, float $comision, float $descuento = 0): int
 {
     return DB::table('orderssales')->insertGetId([
-        'busines_id'      => $negocio,
-        'domiciliary_id'  => $domiciliario,
-        'state'           => 4, // entregado
-        'subtotal'        => $subtotal,
-        'domicilio'       => $domicilio,
+        'busines_id' => $negocio,
+        'domiciliary_id' => $domiciliario,
+        'state' => 4, // entregado
+        'subtotal' => $subtotal,
+        'domicilio' => $domicilio,
         'domiciliary_fee' => $comision,
-        'discount'        => $descuento,
-        'total'           => $subtotal + $domicilio - $descuento,
-        'sale_date'       => now()->subDays(3),
+        'discount' => $descuento,
+        'total' => $subtotal + $domicilio - $descuento,
+        'sale_date' => now()->subDays(3),
     ], 'orderSales_id');
 }
 
@@ -264,7 +263,7 @@ test('liquida a un negocio el subtotal menos el descuento, sin el domicilio', fu
     $id = $this->postJson('/v1/admin/settlements', [
         'type' => 'business', 'target_id' => $negocio,
         'period_start' => now()->subDays(10)->toDateString(),
-        'period_end'   => now()->toDateString(),
+        'period_end' => now()->toDateString(),
     ])->assertCreated()->json('id');
 
     $s = Settlement::find($id);
@@ -289,7 +288,7 @@ test('liquida al domiciliario solo su comisión congelada', function () {
     $id = $this->postJson('/v1/admin/settlements', [
         'type' => 'domiciliary', 'target_id' => $dom,
         'period_start' => now()->subDays(10)->toDateString(),
-        'period_end'   => now()->toDateString(),
+        'period_end' => now()->toDateString(),
     ])->assertCreated()->json('id');
 
     // Se paga `domiciliary_fee`, que quedó fijado al crear cada pedido con el
@@ -307,7 +306,7 @@ test('un pedido no se liquida dos veces', function () {
     $rango = [
         'type' => 'business', 'target_id' => $negocio,
         'period_start' => now()->subDays(10)->toDateString(),
-        'period_end'   => now()->toDateString(),
+        'period_end' => now()->toDateString(),
     ];
 
     $this->postJson('/v1/admin/settlements', $rango)->assertCreated();
@@ -335,7 +334,7 @@ test('los pedidos no entregados no entran al corte', function () {
     $this->postJson('/v1/admin/settlements', [
         'type' => 'business', 'target_id' => $negocio,
         'period_start' => now()->subDays(10)->toDateString(),
-        'period_end'   => now()->toDateString(),
+        'period_end' => now()->toDateString(),
     ])->assertStatus(422);
 });
 
@@ -349,7 +348,7 @@ test('una liquidación aprobada no vuelve a borrador', function () {
     $id = $this->postJson('/v1/admin/settlements', [
         'type' => 'business', 'target_id' => $negocio,
         'period_start' => now()->subDays(10)->toDateString(),
-        'period_end'   => now()->toDateString(),
+        'period_end' => now()->toDateString(),
     ])->assertCreated()->json('id');
 
     $this->putJson("/v1/admin/settlements/{$id}", ['state' => Settlement::APROBADA])->assertOk();

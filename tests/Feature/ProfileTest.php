@@ -86,7 +86,7 @@ test('correct password must be provided to delete account', function () {
 });
 
 /* ===================================================================== */
-/*  BORRAR LA CUENTA NO DEJA FICHAS SUELTAS                              */
+/*  BORRAR LA CUENTA NO DEJA FICHAS SUELTAS */
 /* ===================================================================== */
 
 test('borrar la cuenta se lleva su ficha de comprador si no tiene historial', function () {

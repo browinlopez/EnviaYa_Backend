@@ -30,7 +30,7 @@ function tiendaConAfiliados(int $afiliados = 2): array
 
     $ownerId = DB::table('owner')->insertGetId([
         'user_id' => $tendero->user_id,
-        'state'   => 1,
+        'state' => 1,
     ], 'owner_id');
 
     $tipo = DB::table('category_business')->insertGetId(['name' => 'Tienda'], 'id');
@@ -119,7 +119,7 @@ it('no se puede anunciar un producto que no vende esta tienda', function () {
     Sanctum::actingAs($tendero);
 
     $this->postJson('/v1/negocio/promociones', [
-        'texto'     => 'Promocion sobre algo que no vendo',
+        'texto' => 'Promocion sobre algo que no vendo',
         'productos' => [$ajeno],
     ])->assertStatus(422)->assertJsonPath('reason', 'producto_ajeno');
 
@@ -133,7 +133,7 @@ it('los productos elegidos quedan atados a la promocion', function () {
     Sanctum::actingAs($tendero);
 
     $r = $this->postJson('/v1/negocio/promociones', [
-        'texto'     => 'Compra 2 atunes y el tercero va gratis.',
+        'texto' => 'Compra 2 atunes y el tercero va gratis.',
         'productos' => [$productoId, $productoId],
     ]);
 
@@ -169,7 +169,7 @@ it('una tienda no puede mandar promociones en nombre de otra', function () {
     // Manda el identificador de la tienda vecina en el cuerpo. El middleware
     // `negocio` lo pisa con el suyo, así que la promoción sale de SU tienda.
     $this->postJson('/v1/negocio/promociones', [
-        'texto'      => 'Promocion en nombre del vecino',
+        'texto' => 'Promocion en nombre del vecino',
         'business_id' => $vecina['businessId'],
     ])->assertStatus(201)->assertJsonPath('promocion.destinatarios', 1);
 

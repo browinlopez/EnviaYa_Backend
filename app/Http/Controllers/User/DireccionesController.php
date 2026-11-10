@@ -4,14 +4,9 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
-use App\Models\Buyer\Buyer;
-use App\Models\User;
 use App\Models\User\UserAddress;
-use App\Models\Notification;
 use App\Services\MunicipioPorNombre;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules\Password;
 
 class DireccionesController extends Controller
 {
@@ -41,7 +36,7 @@ class DireccionesController extends Controller
                 'alias:alias_id,name',
                 'municipality:id,name,department_id',
                 'municipality.department:id,name,country_id',
-                'municipality.department.country:id,name,iso_code'
+                'municipality.department.country:id,name,iso_code',
             ])
             ->get()
             ->map(function ($address) {
@@ -105,7 +100,7 @@ class DireccionesController extends Controller
             'municipality_id' => 'nullable|integer|exists:municipalities,id',
             'alias_id' => 'nullable|integer|exists:alias,alias_id',
             'latitude' => 'nullable|numeric',
-            'longitude' => 'nullable|numeric'
+            'longitude' => 'nullable|numeric',
         ]);
 
         /*
@@ -129,7 +124,7 @@ class DireccionesController extends Controller
             'alias_id' => $request->alias_id,
             'latitude' => $request->latitude,
             'longitude' => $request->longitude,
-            'state' => true
+            'state' => true,
         ]);
 
         return response()->json($address, 201);
@@ -165,7 +160,7 @@ class DireccionesController extends Controller
             ->where('user_id', $request->user_id)
             ->first();
 
-        if (!$address) {
+        if (! $address) {
             return response()->json([
                 'message' => 'La dirección no existe o no es tuya.',
             ], 404);

@@ -7,9 +7,9 @@ use App\Models\Rol;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
-use Illuminate\Support\Facades\Validator;
 
 /**
  * Crea —o repone— una cuenta de administración del panel.
@@ -48,7 +48,7 @@ class CrearAdministrador extends Command
 
     public function handle(): int
     {
-        $email  = $this->option('email')  ?: $this->ask('Correo');
+        $email = $this->option('email') ?: $this->ask('Correo');
         $nombre = $this->option('nombre') ?: $this->ask('Nombre visible');
 
         /*
@@ -57,18 +57,18 @@ class CrearAdministrador extends Command
          * registros de quien orquesta el contenedor.
          */
         $generada = false;
-        $clave    = $this->option('clave');
+        $clave = $this->option('clave');
 
-        if (!$clave) {
-            $clave    = Str::password(16);
+        if (! $clave) {
+            $clave = Str::password(16);
             $generada = true;
         }
 
         $validacion = Validator::make(
             ['email' => $email, 'name' => $nombre, 'password' => $clave],
             [
-                'email'    => ['required', 'email'],
-                'name'     => ['required', 'string', 'min:2'],
+                'email' => ['required', 'email'],
+                'name' => ['required', 'string', 'min:2'],
                 'password' => ['required', Password::min(8)],
             ],
         );
@@ -83,17 +83,17 @@ class CrearAdministrador extends Command
 
         $area = Area::where('code', $this->option('area'))->first();
 
-        if (!$area) {
+        if (! $area) {
             $this->error("No existe un área con el código «{$this->option('area')}».");
-            $this->line('Disponibles: ' . Area::pluck('code')->implode(', '));
+            $this->line('Disponibles: '.Area::pluck('code')->implode(', '));
 
             return self::FAILURE;
         }
 
         $nivel = $this->option('nivel');
 
-        if (!in_array($nivel, Area::NIVELES, true)) {
-            $this->error('El nivel debe ser: ' . implode(' o ', Area::NIVELES));
+        if (! in_array($nivel, Area::NIVELES, true)) {
+            $this->error('El nivel debe ser: '.implode(' o ', Area::NIVELES));
 
             return self::FAILURE;
         }
@@ -103,7 +103,7 @@ class CrearAdministrador extends Command
          * "FOREIGN KEY constraint failed" que no le dice nada a quien está
          * intentando entrar por primera vez a un servidor recién montado.
          */
-        if (!Rol::find(4)) {
+        if (! Rol::find(4)) {
             $this->error('No existe el rol 4 (administración) en la tabla `rol`.');
             $this->line('Siémbralo antes: php artisan db:seed --class=RolesAndPermissionsSeeder');
 
@@ -121,17 +121,17 @@ class CrearAdministrador extends Command
         $usuario = User::updateOrCreate(
             ['email' => $email],
             [
-                'name'              => $nombre,
-                'password'          => Hash::make($clave),
-                'rol'               => 4,
-                'state'             => 1,
+                'name' => $nombre,
+                'password' => Hash::make($clave),
+                'rol' => 4,
+                'state' => 1,
                 'email_verified_at' => now(),
             ],
         );
 
         // Fuera del fillable: se asignan aparte a propósito, porque son los
         // que deciden qué ve la cuenta y no deben poder llegar por un formulario.
-        $usuario->area_id      = $area->id;
+        $usuario->area_id = $area->id;
         $usuario->access_level = $nivel;
         $usuario->save();
 
@@ -143,13 +143,13 @@ class CrearAdministrador extends Command
             ['Rol', '4 (administración)'],
             ['Área', "{$area->name} ({$area->code})"],
             ['Nivel', $nivel],
-            ['Módulos', $area->code === 'sistema' ? 'todos' : count($area->permisos($nivel)) . ' con permiso'],
+            ['Módulos', $area->code === 'sistema' ? 'todos' : count($area->permisos($nivel)).' con permiso'],
         ]);
 
         if ($generada) {
             $this->newLine();
             $this->warn('Contraseña generada (no se vuelve a mostrar):');
-            $this->line('    ' . $clave);
+            $this->line('    '.$clave);
             $this->newLine();
             $this->line('Cámbiala al entrar. Mientras esté en el historial de');
             $this->line('esta terminal, la sabe cualquiera que lo lea.');

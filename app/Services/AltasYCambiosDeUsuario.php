@@ -2,24 +2,13 @@
 
 namespace App\Services;
 
-use App\Services\Ajustes;
-use App\Http\Controllers\Controller;
 use App\Models\Area;
 use App\Models\Conjunto\ComplexStaff;
-use App\Models\Operacion\DomiciliaryDocument;
-use App\Models\Reviews\BusinessReview;
-use App\Models\Reviews\DomiciliaryReview;
 use App\Models\User;
-use App\Services\BusinessMediaService;
-use App\Services\ContratoService;
-use App\Services\MediaService;
-use App\Services\VinculosDelRol;
 use App\Support\ListadoPaginado;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 /**
@@ -42,15 +31,15 @@ class AltasYCambiosDeUsuario
     public function storeUser(Request $request)
     {
         $datos = $request->validate([
-            'name'     => 'required|string|max:255',
-            'email'    => 'required|email|max:255|unique:user,email',
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:user,email',
             'password' => 'required|string|min:6',
-            'phone'    => 'nullable|string|max:20',
-            'address'  => 'nullable|string|max:255',
-            'rol'      => 'required|integer|exists:rol,rol_id',
+            'phone' => 'nullable|string|max:20',
+            'address' => 'nullable|string|max:255',
+            'rol' => 'required|integer|exists:rol,rol_id',
             'document' => 'nullable|string|max:50',
-            'complex_id'   => $this->reglaConjunto('rol'),
-            'area_id'      => $this->reglaArea('rol'),
+            'complex_id' => $this->reglaConjunto('rol'),
+            'area_id' => $this->reglaArea('rol'),
             'access_level' => ['nullable', Rule::in(Area::NIVELES)],
         ]);
 
@@ -58,25 +47,25 @@ class AltasYCambiosDeUsuario
 
         $id = DB::transaction(function () use ($datos, $rol, $request) {
             $userId = DB::table('user')->insertGetId([
-                'name'              => $datos['name'],
-                'email'             => $datos['email'],
-                'password'          => Hash::make($datos['password']),
-                'phone'             => $datos['phone'] ?? null,
-                'address'           => $datos['address'] ?? null,
-                'rol'               => $rol,
-                'state'             => 1,
-                'qualification'     => 0,
+                'name' => $datos['name'],
+                'email' => $datos['email'],
+                'password' => Hash::make($datos['password']),
+                'phone' => $datos['phone'] ?? null,
+                'address' => $datos['address'] ?? null,
+                'rol' => $rol,
+                'state' => 1,
+                'qualification' => 0,
                 'email_verified_at' => now(),
                 // Solo el personal interno tiene área; para los demás la
                 // columna se queda nula y el panel les está cerrado igual.
-                'area_id'      => $rol === VinculosDelRol::ROL_PERSONAL ? ($datos['area_id'] ?? null) : null,
+                'area_id' => $rol === VinculosDelRol::ROL_PERSONAL ? ($datos['area_id'] ?? null) : null,
                 'access_level' => $rol === VinculosDelRol::ROL_PERSONAL
                     ? ($datos['access_level'] ?? Area::NIVEL_GESTOR)
                     : Area::NIVEL_GESTOR,
                 // La fecha la pone la aplicación y no la base: `CURRENT_TIMESTAMP`
                 // es el reloj del servidor, que en el VPS no es el de Bogotá.
-                'created_at'        => now(),
-                'updated_at'        => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
 
             $vinculos = app(VinculosDelRol::class);
@@ -119,15 +108,15 @@ class AltasYCambiosDeUsuario
     public function updateUser(Request $request, $id)
     {
         $actual = DB::table('user')->where('user_id', $id)->first();
-        abort_if(!$actual, 404, 'El usuario no existe.');
+        abort_if(! $actual, 404, 'El usuario no existe.');
 
         $datos = $request->validate([
-            'name'     => 'sometimes|string|max:255',
-            'email'    => ['sometimes', 'email', 'max:255', Rule::unique('user', 'email')->ignore($id, 'user_id')],
-            'phone'    => 'sometimes|nullable|string|max:20',
-            'address'  => 'sometimes|nullable|string|max:255',
-            'rol'      => 'sometimes|integer|exists:rol,rol_id',
-            'state'    => 'sometimes|boolean',
+            'name' => 'sometimes|string|max:255',
+            'email' => ['sometimes', 'email', 'max:255', Rule::unique('user', 'email')->ignore($id, 'user_id')],
+            'phone' => 'sometimes|nullable|string|max:20',
+            'address' => 'sometimes|nullable|string|max:255',
+            'rol' => 'sometimes|integer|exists:rol,rol_id',
+            'state' => 'sometimes|boolean',
             'password' => 'sometimes|string|min:6',
             'document' => 'sometimes|nullable|string|max:50',
             /*
@@ -138,13 +127,13 @@ class AltasYCambiosDeUsuario
              * más abajo, y solo cuando el rol CAMBIA y no hay ficha de la que
              * heredarlo.
              */
-            'complex_id'   => 'nullable|integer|exists:residential_complexes,complex_id',
-            'area_id'      => 'nullable|integer|exists:areas,id',
+            'complex_id' => 'nullable|integer|exists:residential_complexes,complex_id',
+            'area_id' => 'nullable|integer|exists:areas,id',
             'access_level' => ['nullable', Rule::in(Area::NIVELES)],
         ]);
 
-        $rolNuevo   = array_key_exists('rol', $datos) ? (int) $datos['rol'] : null;
-        $cambiaRol  = $rolNuevo !== null && $rolNuevo !== (int) $actual->rol;
+        $rolNuevo = array_key_exists('rol', $datos) ? (int) $datos['rol'] : null;
+        $cambiaRol = $rolNuevo !== null && $rolNuevo !== (int) $actual->rol;
         $sePropioId = (int) $id === (int) $request->user()->user_id;
 
         /*
@@ -155,18 +144,18 @@ class AltasYCambiosDeUsuario
         $fichaPrevia = ComplexStaff::where('user_id', $id)->first();
         $conjuntoNuevo = $datos['complex_id'] ?? $fichaPrevia?->complex_id;
 
-        if ($cambiaRol && in_array($rolNuevo, VinculosDelRol::ROLES_DE_CONJUNTO, true) && !$conjuntoNuevo) {
+        if ($cambiaRol && in_array($rolNuevo, VinculosDelRol::ROLES_DE_CONJUNTO, true) && ! $conjuntoNuevo) {
             return response()->json([
                 'message' => 'Elige a qué conjunto pertenece. Sin él la cuenta entra al panel '
-                    . 'de aliados y no ve nada, porque todo se acota por ese vínculo.',
+                    .'de aliados y no ve nada, porque todo se acota por ese vínculo.',
             ], 422);
         }
 
         if ($cambiaRol && $rolNuevo === VinculosDelRol::ROL_PERSONAL
-            && !($datos['area_id'] ?? $actual->area_id)) {
+            && ! ($datos['area_id'] ?? $actual->area_id)) {
             return response()->json([
                 'message' => 'Elige un área. Una cuenta de personal interno sin área no puede '
-                    . 'entrar al panel: el login la rechaza.',
+                    .'entrar al panel: el login la rechaza.',
             ], 422);
         }
 
@@ -192,7 +181,7 @@ class AltasYCambiosDeUsuario
         // El documento y el conjunto no son columnas de `user`: viajan en la
         // misma petición y se aplican en otra tabla.
         $documento = $datos['document'] ?? null;
-        $conjunto  = $conjuntoNuevo;
+        $conjunto = $conjuntoNuevo;
         $areaPedida = $datos['area_id'] ?? null;
         $nivelPedido = $datos['access_level'] ?? null;
         unset($datos['document'], $datos['complex_id'], $datos['area_id'], $datos['access_level']);
@@ -221,7 +210,7 @@ class AltasYCambiosDeUsuario
             }
         }
 
-        $apagando = array_key_exists('state', $datos) && !$datos['state'] && (int) $actual->state === 1;
+        $apagando = array_key_exists('state', $datos) && ! $datos['state'] && (int) $actual->state === 1;
 
         DB::transaction(function () use ($datos, $id, $rolNuevo, $cambiaRol, $conjunto, $documento, $apagando, $vinculos, $request) {
             if ($datos) {
@@ -273,7 +262,7 @@ class AltasYCambiosDeUsuario
                 'u.email_verified_by', 'vb.name as email_verified_by_name',
             ]);
 
-        abort_if(!$user, 404, 'El usuario no existe.');
+        abort_if(! $user, 404, 'El usuario no existe.');
 
         return response()->json($user);
     }
@@ -331,13 +320,13 @@ class AltasYCambiosDeUsuario
         ');
 
         return [
-            'total'         => (int) ($r->total ?? 0),
-            'compradores'   => (int) ($r->compradores ?? 0),
-            'tenderos'      => (int) ($r->tenderos ?? 0),
+            'total' => (int) ($r->total ?? 0),
+            'compradores' => (int) ($r->compradores ?? 0),
+            'tenderos' => (int) ($r->tenderos ?? 0),
             'domiciliarios' => (int) ($r->domiciliarios ?? 0),
-            'personal'      => (int) ($r->personal ?? 0),
-            'sinVerificar'  => (int) ($r->sin_verificar ?? 0),
-            'aMano'         => (int) ($r->verificados_a_mano ?? 0),
+            'personal' => (int) ($r->personal ?? 0),
+            'sinVerificar' => (int) ($r->sin_verificar ?? 0),
+            'aMano' => (int) ($r->verificados_a_mano ?? 0),
         ];
     }
 }

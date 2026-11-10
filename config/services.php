@@ -132,11 +132,11 @@ return [
          * que esto suba. Con los nuevos en el panel, los viejos sobran.
          */
         'identity_key' => $boldIdentidad,
-        'secret_key'   => $boldSecreta,
+        'secret_key' => $boldSecreta,
 
         /* Los de siempre, para no tocar BoldService ni el webhook: mismo
            valor, nombre heredado. */
-        'api_key'        => $boldIdentidad,
+        'api_key' => $boldIdentidad,
         'webhook_secret' => $boldSecreta,
 
         /* 'prueba' o 'produccion'. Ya no es solo una etiqueta: de aqui sale
@@ -202,9 +202,9 @@ return [
      *    servidor, fuera de `public/`.
      */
     'fcm' => [
-        'credentials'      => env('FCM_CREDENTIALS', ''),
+        'credentials' => env('FCM_CREDENTIALS', ''),
         'credentials_json' => env('FCM_CREDENTIALS_JSON', ''),
-        'project_id'       => env('FCM_PROJECT_ID', ''),
+        'project_id' => env('FCM_PROJECT_ID', ''),
     ],
 
     /*
@@ -220,22 +220,22 @@ return [
      */
     'apns' => [
         // La clave .p8, en base64 y en una linea (o su ruta en el servidor).
-        'key'        => env('APNS_KEY', ''),
-        'key_path'   => env('APNS_KEY_PATH', ''),
-        'key_id'     => env('APNS_KEY_ID', ''),
-        'team_id'    => env('APNS_TEAM_ID', ''),
+        'key' => env('APNS_KEY', ''),
+        'key_path' => env('APNS_KEY_PATH', ''),
+        'key_id' => env('APNS_KEY_ID', ''),
+        'team_id' => env('APNS_TEAM_ID', ''),
         // El bundle de la app: es el `apns-topic` de cada envio.
-        'bundle_id'  => env('APNS_BUNDLE_ID', ''),
+        'bundle_id' => env('APNS_BUNDLE_ID', ''),
         'production' => env('APNS_PRODUCTION', false),
     ],
 
     'contrato' => [
-        'empresa'        => env('CONTRATO_EMPRESA', 'MARCAVA GROUP S.A.S.'),
-        'nit'            => env('CONTRATO_NIT', ''),
-        'plataforma'     => env('CONTRATO_PLATAFORMA', "VECIPA'YA"),
-        'representante'  => env('CONTRATO_REPRESENTANTE', ''),
+        'empresa' => env('CONTRATO_EMPRESA', 'MARCAVA GROUP S.A.S.'),
+        'nit' => env('CONTRATO_NIT', ''),
+        'plataforma' => env('CONTRATO_PLATAFORMA', "VECIPA'YA"),
+        'representante' => env('CONTRATO_REPRESENTANTE', ''),
         'representante_cc' => env('CONTRATO_REPRESENTANTE_CC', ''),
-        'ciudad'         => env('CONTRATO_CIUDAD', 'Barranquilla'),
+        'ciudad' => env('CONTRATO_CIUDAD', 'Barranquilla'),
     ],
 
     /*
@@ -263,7 +263,7 @@ return [
          * existe—. Una dirección en un dominio sin MX rebota, y un correo que
          * rebota es peor que uno viejo: quien escribe cree que llegó.
          */
-        'correo'         => env('SITIO_CORREO', 'gerencia@vecipaya.com'),
+        'correo' => env('SITIO_CORREO', 'gerencia@vecipaya.com'),
         'correo_soporte' => env('SITIO_CORREO_SOPORTE', 'gerencia@vecipaya.com'),
     ],
 

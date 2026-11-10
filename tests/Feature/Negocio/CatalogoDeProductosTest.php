@@ -1,8 +1,6 @@
 <?php
 
 use App\Models\Product\Product;
-use App\Models\Rol;
-use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
@@ -32,11 +30,11 @@ test('el tendero ya no puede crear productos escribiendo el nombre', function ()
      * es el 422 sino que NO NACIÓ NADA en el catálogo maestro.
      */
     $this->postJson('/v1/negocio/productos', [
-        'name'        => 'INVENTADO POR EL TENDERO',
+        'name' => 'INVENTADO POR EL TENDERO',
         'description' => 'lo que se me ocurra',
         'category_id' => $t['categoria'],
-        'price'       => 1000,
-        'amount'      => 5,
+        'price' => 1000,
+        'amount' => 5,
     ])->assertStatus(422);
 
     expect(Product::count())->toBe($antes)
@@ -51,10 +49,10 @@ test('agregar del catalogo solo toca la fila de la tienda', function () {
 
     $this->postJson('/v1/negocio/productos', [
         'products_id' => $p->products_id,
-        'price'       => 4800,
-        'amount'      => 12,
+        'price' => 4800,
+        'amount' => 12,
         // Se manda a propósito: el servidor tiene que ignorarlo.
-        'name'        => 'ARROZ DEL VECINO',
+        'name' => 'ARROZ DEL VECINO',
     ])->assertStatus(201);
 
     $fila = DB::table('products_business')
@@ -149,11 +147,11 @@ test('un codigo desconocido llega como borrador de la fuente externa', function 
 
     Http::fake([
         'world.openfoodfacts.org/*' => Http::response([
-            'status'  => 1,
+            'status' => 1,
             'product' => [
                 'product_name_es' => 'Gaseosa Manzana',
-                'brands'          => 'Postobón, Postobon',
-                'quantity'        => '400 ml',
+                'brands' => 'Postobón, Postobon',
+                'quantity' => '400 ml',
                 'image_front_url' => 'https://ejemplo/img.jpg',
             ],
         ], 200),
@@ -185,8 +183,8 @@ test('proponer un codigo que ya existe devuelve el que hay', function () {
     Sanctum::actingAs($t['user']);
 
     $r = $this->postJson('/v1/negocio/catalogo/proponer', [
-        'name'        => 'SAL DE COCINA',
-        'barcode'     => '7702011000073',
+        'name' => 'SAL DE COCINA',
+        'barcode' => '7702011000073',
         'category_id' => $t['categoria'],
     ])->assertStatus(201);
 
@@ -204,8 +202,8 @@ test('lo que propone un tendero queda marcado', function () {
     Sanctum::actingAs($t['user']);
 
     $this->postJson('/v1/negocio/catalogo/proponer', [
-        'name'        => 'AREPA DE HUEVO',
-        'barcode'     => '7702011000080',
+        'name' => 'AREPA DE HUEVO',
+        'barcode' => '7702011000080',
         'category_id' => $t['categoria'],
     ])->assertStatus(201);
 
@@ -314,7 +312,7 @@ test('un producto sin precio no se le ofrece al comprador', function () {
 
     Sanctum::actingAs($t['user']);
 
-    $r = $this->postJson("/v1/businesses/show", ["busines_id" => $t["mio"]])->assertOk();
+    $r = $this->postJson('/v1/businesses/show', ['busines_id' => $t['mio']])->assertOk();
 
     $nombres = collect($r->json('products'))->pluck('name')->all();
 

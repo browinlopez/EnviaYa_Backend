@@ -12,6 +12,7 @@ class Invoice extends Audit
     use HasFactory;
 
     protected $table = 'invoices';
+
     protected $primaryKey = 'invoice_id';
 
     protected $fillable = [

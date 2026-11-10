@@ -55,19 +55,21 @@ class PorteriaDemoSeeder extends Seeder
             ->where('complex_id', self::CONJUNTO)
             ->first();
 
-        if (!$conjunto) {
-            $this->command?->error('No existe el conjunto ' . self::CONJUNTO . '.');
+        if (! $conjunto) {
+            $this->command?->error('No existe el conjunto '.self::CONJUNTO.'.');
+
             return;
         }
 
         $domiciliario = Domiciliary::find(self::DOMICILIARIO);
 
-        if (!$domiciliario) {
-            $this->command?->error('No existe el domiciliario ' . self::DOMICILIARIO . '.');
+        if (! $domiciliario) {
+            $this->command?->error('No existe el domiciliario '.self::DOMICILIARIO.'.');
+
             return;
         }
 
-        $buyerId   = $this->comprador($conjunto);
+        $buyerId = $this->comprador($conjunto);
         $direccion = $this->direccion($buyerId, $conjunto);
 
         $negocios = DB::table('business_domiciliary')
@@ -76,6 +78,7 @@ class PorteriaDemoSeeder extends Seeder
 
         if ($negocios->isEmpty()) {
             $this->command?->error('Ese domiciliario no está asignado a ningún negocio.');
+
             return;
         }
 
@@ -103,23 +106,23 @@ class PorteriaDemoSeeder extends Seeder
         $user = User::firstOrCreate(
             ['email' => self::CORREO],
             [
-                'name'              => 'Vecina de Villa Carolina',
-                'password'          => Hash::make('Local2026*'),
-                'phone'             => '300 555 0143',
-                'rol'               => 1,
-                'state'             => 1,
+                'name' => 'Vecina de Villa Carolina',
+                'password' => Hash::make('Local2026*'),
+                'phone' => '300 555 0143',
+                'rol' => 1,
+                'state' => 1,
                 'email_verified_at' => now(),
             ],
         );
 
         $buyerId = DB::table('buyer')->where('user_id', $user->user_id)->value('buyer_id');
 
-        if (!$buyerId) {
+        if (! $buyerId) {
             $buyerId = DB::table('buyer')->insertGetId([
-                'user_id'            => $user->user_id,
-                'qualification'      => 0,
+                'user_id' => $user->user_id,
+                'qualification' => 0,
                 'belongs_to_complex' => 1,
-                'state'              => 1,
+                'state' => 1,
             ]);
         }
 
@@ -129,9 +132,9 @@ class PorteriaDemoSeeder extends Seeder
             ->where('complex_id', $conjunto->complex_id)
             ->exists();
 
-        if (!$yaVinculado) {
+        if (! $yaVinculado) {
             DB::table('buyer_complex')->insert([
-                'buyer_id'   => $buyerId,
+                'buyer_id' => $buyerId,
                 'complex_id' => $conjunto->complex_id,
             ]);
         }
@@ -159,22 +162,22 @@ class PorteriaDemoSeeder extends Seeder
         }
 
         return DB::table('user_address')->insertGetId([
-            'user_id'    => $userId,
-            'address'    => $conjunto->address ?: 'Conjunto Villa Carolina',
+            'user_id' => $userId,
+            'address' => $conjunto->address ?: 'Conjunto Villa Carolina',
             'complex_id' => $conjunto->complex_id,
-            'tower'      => '4',
-            'apartment'  => '1203',
+            'tower' => '4',
+            'apartment' => '1203',
             // Hereda las coordenadas del conjunto, igual que hace el registro.
-            'latitude'   => $conjunto->latitude ?? null,
-            'longitude'  => $conjunto->longitude ?? null,
-            'state'      => 1,
+            'latitude' => $conjunto->latitude ?? null,
+            'longitude' => $conjunto->longitude ?? null,
+            'state' => 1,
         ]);
     }
 
     private function pedidoEnCamino(int $businessId, int $buyerId, int $addressId, bool $efectivo): int
     {
-        $tarifa   = (float) (Ajustes::valor('operacion.tarifa_domicilio') ?? 5000);
-        $reparto  = (float) (Ajustes::valor('operacion.reparto_domiciliario') ?? 0.75);
+        $tarifa = (float) (Ajustes::valor('operacion.tarifa_domicilio') ?? 5000);
+        $reparto = (float) (Ajustes::valor('operacion.reparto_domiciliario') ?? 0.75);
         $comision = (float) (Ajustes::valor('operacion.comision_plataforma') ?? 0.03);
 
         $productos = DB::table('products_business as pb')
@@ -184,14 +187,14 @@ class PorteriaDemoSeeder extends Seeder
             ->get(['p.products_id', 'pb.price']);
 
         $subtotal = 0;
-        $detalle  = [];
+        $detalle = [];
 
         foreach ($productos as $p) {
             $cant = random_int(1, 2);
             $subtotal += (float) $p->price * $cant;
             $detalle[] = [
                 'product_id' => $p->products_id,
-                'amount'     => $cant,
+                'amount' => $cant,
                 'unit_price' => $p->price,
             ];
         }
@@ -204,31 +207,31 @@ class PorteriaDemoSeeder extends Seeder
         $cuando = now()->subMinutes(random_int(12, 30));
 
         $id = DB::table('orderssales')->insertGetId([
-            'buyer_id'       => $buyerId,
-            'busines_id'     => $businessId,
+            'buyer_id' => $buyerId,
+            'busines_id' => $businessId,
             'domiciliary_id' => self::DOMICILIARIO,
-            'address_id'     => $addressId,
-            'methods_id'     => $efectivo ? 1 : 2,
-            'forms_id'       => $efectivo ? 1 : 2,
-            'subtotal'       => $subtotal,
-            'discount'       => 0,
-            'domicilio'      => $tarifa,
-            'total'          => $subtotal + $tarifa,
-            'domiciliary_fee'  => round($tarifa * $reparto),
-            'platform_fee'     => round($subtotal * $comision, 2),
+            'address_id' => $addressId,
+            'methods_id' => $efectivo ? 1 : 2,
+            'forms_id' => $efectivo ? 1 : 2,
+            'subtotal' => $subtotal,
+            'discount' => 0,
+            'domicilio' => $tarifa,
+            'total' => $subtotal + $tarifa,
+            'domiciliary_fee' => round($tarifa * $reparto),
+            'platform_fee' => round($subtotal * $comision, 2),
             'delivery_subsidy' => 0,
-            'cash_due'         => 0,
-            'sale_date'        => $cuando,
+            'cash_due' => 0,
+            'sale_date' => $cuando,
             // 3 = en camino. Es el único estado que la portería mira: ya lo
             // recogió y todavía no lo entregó.
-            'state'            => 3,
-            'payment_state'    => $efectivo ? 'pending' : 'paid',
-            'pickup'           => 0,
-            'is_scheduled'     => 0,
-            'dispatched_at'    => $cuando->copy()->addMinutes(8),
+            'state' => 3,
+            'payment_state' => $efectivo ? 'pending' : 'paid',
+            'pickup' => 0,
+            'is_scheduled' => 0,
+            'dispatched_at' => $cuando->copy()->addMinutes(8),
             'promised_minutes' => 45,
-            'created_at'       => $cuando,
-            'updated_at'       => $cuando,
+            'created_at' => $cuando,
+            'updated_at' => $cuando,
         ], 'orderSales_id');
 
         foreach ($detalle as $d) {

@@ -3,16 +3,17 @@
 namespace App\Models\Chat;
 
 use App\Models\Audit\Audit;
-use Illuminate\Database\Eloquent\Model;
 
 class Chat extends Audit
 {
     protected $table = 'chats';
+
     protected $primaryKey = 'chat_id';
+
     public $timestamps = false;
 
     protected $fillable = [
-        'type' // private, group, etc.
+        'type', // private, group, etc.
     ];
 
     public function participants()

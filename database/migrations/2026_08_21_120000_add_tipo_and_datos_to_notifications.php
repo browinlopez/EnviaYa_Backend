@@ -21,11 +21,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('notifications', function (Blueprint $table) {
-            if (!Schema::hasColumn('notifications', 'tipo')) {
+            if (! Schema::hasColumn('notifications', 'tipo')) {
                 $table->string('tipo', 40)->nullable()->after('user_id');
             }
 
-            if (!Schema::hasColumn('notifications', 'datos')) {
+            if (! Schema::hasColumn('notifications', 'datos')) {
                 $table->json('datos')->nullable()->after('message');
             }
         });

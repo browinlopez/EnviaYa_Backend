@@ -2,31 +2,16 @@
 
 namespace App\Http\Controllers\Admin\Api;
 
-use App\Support\Consultas\AyudasDeAdmin;
-use App\Services\Ajustes;
 use App\Http\Controllers\Controller;
-use App\Models\Area;
-use App\Models\Conjunto\ComplexStaff;
-use App\Models\Operacion\DomiciliaryDocument;
-use App\Models\Reviews\BusinessReview;
-use App\Models\Reviews\DomiciliaryReview;
-use App\Models\User;
-use App\Services\BusinessMediaService;
-use App\Services\ContratoService;
-use App\Services\MediaService;
-use App\Services\VinculosDelRol;
-use App\Support\ListadoPaginado;
-use Carbon\Carbon;
+use App\Support\Consultas\AyudasDeAdmin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class PropietariosApiController extends Controller
 {
     use AyudasDeAdmin;
-
 
     public function owners()
     {
@@ -66,6 +51,7 @@ class PropietariosApiController extends Controller
                 $p->businesses_count = $suyos->count();
                 $p->business_ids = $suyos->pluck('busines_id')->filter()->values();
                 $p->revenue = round($suyos->sum('revenue'), 2);
+
                 return $p;
             })
         );
@@ -100,50 +86,50 @@ class PropietariosApiController extends Controller
     public function storeOwner(Request $request)
     {
         $datos = $request->validate([
-            'name'              => 'required|string|max:255',
-            'email'             => 'required|email|max:255|unique:user,email',
-            'password'          => 'required|string|min:6',
-            'phone'             => 'nullable|string|max:20',
-            'address'           => 'nullable|string|max:255',
-            'document_type_id'  => 'nullable|integer|exists:document_types,id',
-            'document_number'   => 'nullable|string|max:50',
-            'birthdate'         => 'nullable|date',
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:user,email',
+            'password' => 'required|string|min:6',
+            'phone' => 'nullable|string|max:20',
+            'address' => 'nullable|string|max:255',
+            'document_type_id' => 'nullable|integer|exists:document_types,id',
+            'document_number' => 'nullable|string|max:50',
+            'birthdate' => 'nullable|date',
             // La columna es varchar(45): validar con un tope mayor solo
             // cambiaría el 422 por un error de truncado en la base.
             'contact_secondary' => 'nullable|string|max:45',
-            'notes'             => 'nullable|string',
-            'state'             => 'sometimes|boolean',
-            'business_ids'      => 'sometimes|array',
-            'business_ids.*'    => 'integer|exists:business,busines_id',
+            'notes' => 'nullable|string',
+            'state' => 'sometimes|boolean',
+            'business_ids' => 'sometimes|array',
+            'business_ids.*' => 'integer|exists:business,busines_id',
         ]);
 
         $ownerId = DB::transaction(function () use ($datos) {
             $userId = DB::table('user')->insertGetId([
-                'name'              => $datos['name'],
-                'email'             => $datos['email'],
-                'password'          => Hash::make($datos['password']),
-                'phone'             => $datos['phone'] ?? null,
-                'address'           => $datos['address'] ?? null,
-                'rol'               => 2,
-                'state'             => (int) ($datos['state'] ?? 1),
-                'qualification'     => 0,
+                'name' => $datos['name'],
+                'email' => $datos['email'],
+                'password' => Hash::make($datos['password']),
+                'phone' => $datos['phone'] ?? null,
+                'address' => $datos['address'] ?? null,
+                'rol' => 2,
+                'state' => (int) ($datos['state'] ?? 1),
+                'qualification' => 0,
                 // Lo da de alta un administrador: sin verificar, el login lo
                 // rechazaría y la cuenta nacería inservible.
                 'email_verified_at' => now(),
                 // La fecha la pone la aplicación y no la base: `CURRENT_TIMESTAMP`
                 // es el reloj del servidor, que en el VPS no es el de Bogotá.
-                'created_at'        => now(),
-                'updated_at'        => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
 
             $ownerId = DB::table('owner')->insertGetId([
-                'user_id'           => $userId,
-                'document_type_id'  => $datos['document_type_id'] ?? null,
-                'document_number'   => $datos['document_number'] ?? null,
-                'birthdate'         => $datos['birthdate'] ?? null,
+                'user_id' => $userId,
+                'document_type_id' => $datos['document_type_id'] ?? null,
+                'document_number' => $datos['document_number'] ?? null,
+                'birthdate' => $datos['birthdate'] ?? null,
                 'contact_secondary' => $datos['contact_secondary'] ?? null,
-                'notes'             => $datos['notes'] ?? null,
-                'state'             => (int) ($datos['state'] ?? 1),
+                'notes' => $datos['notes'] ?? null,
+                'state' => (int) ($datos['state'] ?? 1),
             ]);
 
             $this->asignarNegocios($ownerId, $datos['business_ids'] ?? []);
@@ -157,36 +143,36 @@ class PropietariosApiController extends Controller
     public function updateOwner(Request $request, $id)
     {
         $owner = DB::table('owner')->where('owner_id', $id)->first();
-        abort_if(!$owner, 404, 'El propietario no existe.');
+        abort_if(! $owner, 404, 'El propietario no existe.');
 
         $datos = $request->validate([
-            'name'              => 'sometimes|string|max:255',
-            'email'             => ['sometimes', 'email', 'max:255', Rule::unique('user', 'email')->ignore($owner->user_id, 'user_id')],
-            'password'          => 'sometimes|nullable|string|min:6',
-            'phone'             => 'sometimes|nullable|string|max:20',
-            'address'           => 'sometimes|nullable|string|max:255',
-            'document_type_id'  => 'sometimes|nullable|integer|exists:document_types,id',
-            'document_number'   => 'sometimes|nullable|string|max:50',
-            'birthdate'         => 'sometimes|nullable|date',
+            'name' => 'sometimes|string|max:255',
+            'email' => ['sometimes', 'email', 'max:255', Rule::unique('user', 'email')->ignore($owner->user_id, 'user_id')],
+            'password' => 'sometimes|nullable|string|min:6',
+            'phone' => 'sometimes|nullable|string|max:20',
+            'address' => 'sometimes|nullable|string|max:255',
+            'document_type_id' => 'sometimes|nullable|integer|exists:document_types,id',
+            'document_number' => 'sometimes|nullable|string|max:50',
+            'birthdate' => 'sometimes|nullable|date',
             'contact_secondary' => 'sometimes|nullable|string|max:45',
-            'notes'             => 'sometimes|nullable|string',
-            'state'             => 'sometimes|boolean',
-            'business_ids'      => 'sometimes|array',
-            'business_ids.*'    => 'integer|exists:business,busines_id',
+            'notes' => 'sometimes|nullable|string',
+            'state' => 'sometimes|boolean',
+            'business_ids' => 'sometimes|array',
+            'business_ids.*' => 'integer|exists:business,busines_id',
         ]);
 
         DB::transaction(function () use ($datos, $owner, $id) {
             $cuenta = array_filter([
-                'name'    => $datos['name'] ?? null,
-                'email'   => $datos['email'] ?? null,
-                'phone'   => array_key_exists('phone', $datos) ? $datos['phone'] : null,
+                'name' => $datos['name'] ?? null,
+                'email' => $datos['email'] ?? null,
+                'phone' => array_key_exists('phone', $datos) ? $datos['phone'] : null,
                 'address' => array_key_exists('address', $datos) ? $datos['address'] : null,
-            ], fn($v) => $v !== null);
+            ], fn ($v) => $v !== null);
 
             if (array_key_exists('state', $datos)) {
                 $cuenta['state'] = (int) $datos['state'];
             }
-            if (!empty($datos['password'])) {
+            if (! empty($datos['password'])) {
                 $cuenta['password'] = Hash::make($datos['password']);
             }
             if ($cuenta) {
@@ -230,9 +216,9 @@ class PropietariosApiController extends Controller
         foreach ($ids as $negocio) {
             DB::table('owner_busines')->where('busines_id', $negocio)->delete();
             DB::table('owner_busines')->insert([
-                'owner_id'   => $ownerId,
+                'owner_id' => $ownerId,
                 'busines_id' => $negocio,
-                'state'      => 1,
+                'state' => 1,
             ]);
         }
     }

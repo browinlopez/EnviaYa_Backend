@@ -2,50 +2,34 @@
 
 namespace App\Http\Controllers\Order;
 
-use App\Http\Controllers\Concerns\ComprobarPertenencia;
-use App\Services\Ajustes;
-use App\Services\ArmadoDelPedido;
-use App\Services\CobroContraEntrega;
-use App\Services\CreditoDeTienda;
-use App\Services\EconomiaDelPedido;
-use App\Services\PagoEnLinea;
-use App\Services\ReglasDeDespacho;
-use App\Services\PlazoPorDistancia;
-use App\Services\TarifaPorDistancia;
-use App\Services\PoliticaDeDomicilio;
-use App\Services\CustodiaDeEfectivo;
-use App\Services\ConfirmacionDePago;
-use App\Services\Avisos;
-use App\Services\AvisoDePedidoNuevo;
-use App\Events\DomiciliaryLocationUpdated;
-use App\Jobs\TrazarLaRutaDelPedido;
-use App\Events\OrderCreated;
 use App\Events\OrderStatusUpdated;
+use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\Payment\PaymentController;
+use App\Jobs\TrazarLaRutaDelPedido;
 use App\Models\Business;
 use App\Models\Buyer\Buyer;
 use App\Models\Domiciliary;
-use App\Models\Order\OrderGeolocation;
 use App\Models\Order\OrdersSales;
-use App\Models\Order\OrdersSalesDetail;
-use App\Models\Payment\Payment;
-use App\Services\FacturaService;
-use Illuminate\Support\Facades\Log;
-use App\Models\Payment\PaymentForms;
-use App\Models\Payment\PaymentIntent;
-use App\Models\Payment\PaymentMethods;
-use App\Models\Product\ProductBusiness;
 use App\Models\User;
 use App\Models\User\UserAddress;
+use App\Services\Ajustes;
+use App\Services\ArmadoDelPedido;
+use App\Services\AvisoDePedidoNuevo;
+use App\Services\Avisos;
 use App\Services\BoldService;
 use App\Services\CancelacionDelPedido;
-use App\Services\CouponService;
+use App\Services\CobroContraEntrega;
+use App\Services\CreditoDeTienda;
+use App\Services\EconomiaDelPedido;
+use App\Services\FacturaService;
+use App\Services\PagoEnLinea;
+use App\Services\PlazoPorDistancia;
+use App\Services\ReglasDeDespacho;
+use App\Services\TarifaPorDistancia;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
 {
@@ -59,20 +43,19 @@ class OrderController extends Controller
         ArmadoDelPedido $armado,
         PagoEnLinea $pasarela,
         TarifaPorDistancia $distancias,
-    )
-    {
+    ) {
         /* ========= COMPATIBILIDAD DE NOMBRES =========
            La app migrada a la API nueva manda business_id / payment_method_id
            / quantity; el contrato original usa busines_id / methods_id /
            amount. Se aceptan ambos. */
-        if (!$request->filled('busines_id') && $request->filled('business_id')) {
+        if (! $request->filled('busines_id') && $request->filled('business_id')) {
             $request->merge(['busines_id' => $request->input('business_id')]);
         }
-        if (!$request->filled('methods_id') && $request->filled('payment_method_id')) {
+        if (! $request->filled('methods_id') && $request->filled('payment_method_id')) {
             $request->merge(['methods_id' => $request->input('payment_method_id')]);
         }
         $normalizedProducts = collect($request->input('products', []))
-            ->map(fn($p) => [
+            ->map(fn ($p) => [
                 'product_id' => $p['product_id'] ?? null,
                 'amount' => $p['amount'] ?? $p['quantity'] ?? null,
                 /*
@@ -136,12 +119,12 @@ class OrderController extends Controller
         /* ========= VALIDACIONES REALES ========= */
 
         $buyer = Buyer::where('user_id', $request->user_id)->first();
-        if (!$buyer) {
+        if (! $buyer) {
             return response()->json(['message' => 'Usuario comprador no encontrado'], 404);
         }
 
         $business = Business::find($request->busines_id);
-        if (!$business) {
+        if (! $business) {
             return response()->json(['message' => 'Negocio no encontrado'], 404);
         }
 
@@ -153,7 +136,7 @@ class OrderController extends Controller
          * quedó abierta— para pedirle a una tienda que la operación creía
          * apagada. Acá es donde de verdad se cierra.
          */
-        if (!$business->state) {
+        if (! $business->state) {
             return response()->json([
                 'message' => 'Esta tienda no está disponible.',
             ], 422);
@@ -171,7 +154,7 @@ class OrderController extends Controller
          * conservar el identificador —un favorito, un pedido anterior, una
          * pantalla abierta desde antes de la pausa— para pedirle igual.
          */
-        if (!$business->recibiendo_ahora) {
+        if (! $business->recibiendo_ahora) {
             return response()->json([
                 'message' => 'La tienda dejó de recibir pedidos por ahora. Intenta más tarde o escoge otra.',
             ], 422);
@@ -182,9 +165,9 @@ class OrderController extends Controller
         // La dirección solo aplica (y solo se exige) para domicilio, y debe
         // pertenecer al usuario que ordena.
         $address = null;
-        if (!$isPickup) {
+        if (! $isPickup) {
             $address = UserAddress::find($request->address_id);
-            if (!$address || (int) $address->user_id !== (int) $request->user_id) {
+            if (! $address || (int) $address->user_id !== (int) $request->user_id) {
                 return response()->json(['message' => 'Dirección no encontrada'], 404);
             }
 
@@ -214,7 +197,7 @@ class OrderController extends Controller
                 $address->longitude !== null ? (float) $address->longitude : null,
             );
 
-            if (!$distancias->reparteHasta($km)) {
+            if (! $distancias->reparteHasta($km)) {
                 return response()->json([
                     'message' => 'Esta tienda no reparte hasta tu dirección. Elige otra dirección o recoge en tienda.',
                     'reason' => 'out_of_range',
@@ -242,7 +225,6 @@ class OrderController extends Controller
             ], 422);
         }
 
-
         /*
          * AL PESO, PERO SIN DECIR CUANTO.
          *
@@ -264,7 +246,7 @@ class OrderController extends Controller
         $deliveryDate = null;
 
         if ($isScheduled) {
-            $deliveryDate = \Carbon\Carbon::parse($request->delivery_date);
+            $deliveryDate = Carbon::parse($request->delivery_date);
             $hour = (int) $deliveryDate->format('G');
             if ($hour < 7 || $hour > 20) {
                 return response()->json([
@@ -303,14 +285,14 @@ class OrderController extends Controller
                 $surtido,
             );
 
-            $subtotal        = $cifras['subtotal'];
-            $descuento       = $cifras['descuento'];
-            $domicilio       = $cifras['domicilio'];
-            $total           = $cifras['total'];
-            $cupon           = $cifras['cupon'];
+            $subtotal = $cifras['subtotal'];
+            $descuento = $cifras['descuento'];
+            $domicilio = $cifras['domicilio'];
+            $total = $cifras['total'];
+            $cupon = $cifras['cupon'];
             $rebajaDomicilio = $cifras['rebajaDomicilio'];
-            $domiciliaryFee  = $cifras['domiciliaryFee'];
-            $platformFee     = $cifras['platformFee'];
+            $domiciliaryFee = $cifras['domiciliaryFee'];
+            $platformFee = $cifras['platformFee'];
 
             /*
              * ¿Sigue valiendo lo que la app prometió?
@@ -334,13 +316,13 @@ class OrderController extends Controller
                 DB::rollBack();
 
                 return response()->json([
-                    'message'  => 'El precio cambió mientras armabas el pedido.',
+                    'message' => 'El precio cambió mientras armabas el pedido.',
                     'expected' => (float) $esperado,
-                    'total'    => $total,
+                    'total' => $total,
                     'breakdown' => [
-                        'subtotal'  => $subtotal,
-                        'delivery'  => $domicilio,
-                        'discount'  => $descuento,
+                        'subtotal' => $subtotal,
+                        'delivery' => $domicilio,
+                        'discount' => $descuento,
                     ],
                 ], 409);
             }
@@ -384,10 +366,10 @@ class OrderController extends Controller
             if (in_array($request->methods_id, PagoEnLinea::CON_PASARELA)) {
                 // Devuelve el intent porque su referencia viaja en la respuesta:
                 // la app la necesita para consultar el estado del cobro.
-                $cobro   = $pasarela->cobrar(
+                $cobro = $pasarela->cobrar(
                     $order, $request->products, $prices, $request, $bold,
                 );
-                $intent  = $cobro?->intent;
+                $intent = $cobro?->intent;
                 $payment = $cobro?->payment;
 
                 /*
@@ -421,7 +403,7 @@ class OrderController extends Controller
                 if (! $hayComoPagar) {
                     throw new \RuntimeException(
                         'No pudimos iniciar el cobro, así que no creamos el pedido. '
-                        . 'Inténtalo de nuevo o elige pago en efectivo.',
+                        .'Inténtalo de nuevo o elige pago en efectivo.',
                     );
                 }
             }
@@ -452,13 +434,13 @@ class OrderController extends Controller
                  * Cuando el pago se confirme, `confirmarPagoDelPedido()` emite
                  * el aviso: llega unos segundos más tarde y ya es de verdad.
                  */
-                if (!$order->esperandoPago()) {
+                if (! $order->esperandoPago()) {
                     AvisoDePedidoNuevo::anunciar($order);
                 }
             } catch (\Throwable $e) {
                 Log::warning('No se pudo anunciar el pedido nuevo', [
                     'order_id' => $order->orderSales_id,
-                    'error'    => $e->getMessage(),
+                    'error' => $e->getMessage(),
                 ]);
             }
 
@@ -512,11 +494,11 @@ class OrderController extends Controller
              * ese momento, y en producción eso no es nadie.
              */
             Log::error('No se pudo crear el pedido', [
-                'user_id'     => $request->user()?->user_id,
-                'busines_id'  => $request->busines_id,
-                'methods_id'  => $request->methods_id,
-                'excepcion'   => $e->getMessage(),
-                'en'          => $e->getFile() . ':' . $e->getLine(),
+                'user_id' => $request->user()?->user_id,
+                'busines_id' => $request->busines_id,
+                'methods_id' => $request->methods_id,
+                'excepcion' => $e->getMessage(),
+                'en' => $e->getFile().':'.$e->getLine(),
             ]);
 
             // Errores de configuración del comercio en Bold → mensaje claro
@@ -527,7 +509,7 @@ class OrderController extends Controller
 
             return response()->json([
                 'message' => $message,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 422);
         }
     }
@@ -564,18 +546,18 @@ class OrderController extends Controller
 
         $order = OrdersSales::with('buyer')->find($id);
 
-        if (!$order) {
+        if (! $order) {
             return response()->json(['message' => 'Pedido no encontrado'], 404);
         }
 
-        if (!$order->buyer || (int) $order->buyer->user_id !== (int) $usuario->user_id) {
+        if (! $order->buyer || (int) $order->buyer->user_id !== (int) $usuario->user_id) {
             return response()->json(['message' => 'Este pedido no es tuyo.'], 403);
         }
 
         if ((int) $order->state !== 1) {
             return response()->json([
                 'message' => 'Ya no se puede cancelar: la tienda empezó a prepararlo. '
-                    . 'Escríbele por el chat del pedido.',
+                    .'Escríbele por el chat del pedido.',
             ], 422);
         }
 
@@ -597,21 +579,20 @@ class OrderController extends Controller
         if ($hecho['ya_estaba']) {
             return response()->json([
                 'message' => 'Este pedido ya estaba cancelado.',
-                'reason'  => 'ya_cancelado',
+                'reason' => 'ya_cancelado',
             ], 409);
         }
 
         return response()->json([
             'message' => 'Pedido cancelado.'
-                . ($hecho['aviso'] ? ' ' . $hecho['aviso'] : ''),
-            'order'   => $order->fresh()->toApi(),
+                .($hecho['aviso'] ? ' '.$hecho['aviso'] : ''),
+            'order' => $order->fresh()->toApi(),
             /* Para que la app pueda decirlo en pantalla y no solo en la
                campana: lo del dinero es lo primero que se pregunta. */
             'devolucion' => $hecho['devolucion'],
-            'motivo'     => $hecho['motivo'],
+            'motivo' => $hecho['motivo'],
         ]);
     }
-
 
     /**
      * ¿ESTE USUARIO ES DUEÑO DE ESTE NEGOCIO?
@@ -622,7 +603,7 @@ class OrderController extends Controller
      */
     private function esDuenoDelNegocio(?int $userId, $businessId): bool
     {
-        if (!$userId || !$businessId) {
+        if (! $userId || ! $businessId) {
             return false;
         }
 
@@ -689,12 +670,11 @@ class OrderController extends Controller
         ReglasDeDespacho $reglas,
         TarifaPorDistancia $distancias,
         PlazoPorDistancia $plazos,
-    )
-    {
+    ) {
         $request->validate([
             'order_id' => 'required|integer',
             'state' => 'required|integer|in:2,3,4',
-            'user_id' => 'nullable|integer|exists:user,user_id'
+            'user_id' => 'nullable|integer|exists:user,user_id',
         ]);
 
         /*
@@ -741,10 +721,9 @@ class OrderController extends Controller
         ReglasDeDespacho $reglas,
         TarifaPorDistancia $distancias,
         PlazoPorDistancia $plazos,
-    )
-    {
+    ) {
 
-        if (!$order) {
+        if (! $order) {
             return response()->json(['message' => 'Orden no encontrada'], 404);
         }
 
@@ -796,16 +775,16 @@ class OrderController extends Controller
             if ((int) $order->weighing_state === OrdersSales::POR_PESAR) {
                 return response()->json([
                     'message' => 'Este pedido lleva productos al peso: pesalos antes de despacharlo.',
-                    'reason'  => 'falta_pesaje',
+                    'reason' => 'falta_pesaje',
                 ], 422);
             }
 
-            if (!$request->user_id) {
+            if (! $request->user_id) {
                 return response()->json(['message' => 'Se requiere el user_id del domiciliario para esta transición.'], 422);
             }
 
             $domiciliary = Domiciliary::where('user_id', $request->user_id)->first();
-            if (!$domiciliary) {
+            if (! $domiciliary) {
                 return response()->json(['message' => 'Domiciliario no encontrado'], 404);
             }
 
@@ -817,7 +796,6 @@ class OrderController extends Controller
             if ($impedimento = $reglas->impedimento($order, $domiciliary)) {
                 return response()->json($impedimento, 422);
             }
-
 
             $order->state = 3;
             $order->domiciliary_id = $domiciliary->domiciliary_id;
@@ -938,7 +916,7 @@ class OrderController extends Controller
         } catch (\Throwable $e) {
             Log::warning('No se pudo anunciar el cambio de estado del pedido', [
                 'order_id' => $order->orderSales_id,
-                'error'    => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
         }
 
@@ -953,13 +931,13 @@ class OrderController extends Controller
          * pasa nada: la primera vez que alguien pida la ruta se traza y se
          * guarda ahí mismo. Por eso no se reintenta en bucle ni se avisa.
          */
-        if ((int) $order->state === 3 && !$order->route_polyline) {
+        if ((int) $order->state === 3 && ! $order->route_polyline) {
             try {
                 TrazarLaRutaDelPedido::dispatch((int) $order->orderSales_id);
             } catch (\Throwable $e) {
                 Log::warning('No se pudo encolar el trazado de la ruta', [
                     'order_id' => $order->orderSales_id,
-                    'error'    => $e->getMessage(),
+                    'error' => $e->getMessage(),
                 ]);
             }
         }
@@ -980,7 +958,7 @@ class OrderController extends Controller
             try {
                 app(FacturaService::class)->emitirPara((int) $order->orderSales_id);
             } catch (\Throwable $e) {
-                Log::warning('No se pudo emitir el comprobante del pedido ' . $order->orderSales_id, [
+                Log::warning('No se pudo emitir el comprobante del pedido '.$order->orderSales_id, [
                     'error' => $e->getMessage(),
                 ]);
             }
@@ -988,7 +966,7 @@ class OrderController extends Controller
 
         return response()->json([
             'message' => 'Estado de la orden actualizado',
-            'order' => $order->load('details.product', 'buyer', 'business', 'address', 'payments')
+            'order' => $order->load('details.product', 'buyer', 'business', 'address', 'payments'),
         ]);
     }
 }

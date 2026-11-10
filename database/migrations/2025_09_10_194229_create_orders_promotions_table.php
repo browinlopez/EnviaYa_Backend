@@ -25,12 +25,12 @@ return new class extends Migration
 
             // Foreign Keys
             $table->foreign('orderSales_id', 'fk_orders_promotions_ordersales')
-                  ->references('orderSales_id')->on('orderssales')
-                  ->onDelete('cascade');
+                ->references('orderSales_id')->on('orderssales')
+                ->onDelete('cascade');
 
             $table->foreign('promotion_id', 'fk_orders_promotions_promotion')
-                  ->references('promotion_id')->on('promotions')
-                  ->onDelete('set null');
+                ->references('promotion_id')->on('promotions')
+                ->onDelete('set null');
         });
     }
 

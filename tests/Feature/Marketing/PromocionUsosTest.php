@@ -26,12 +26,12 @@ use Illuminate\Support\Facades\DB;
 function promocionDeLaTienda(int $businessId, array $extra = []): Promotion
 {
     return Promotion::create(array_merge([
-        'busines_id'          => $businessId,
-        'description'         => 'Mitad de precio en todo',
-        'tipo'                => Promotion::PORCENTAJE,
+        'busines_id' => $businessId,
+        'description' => 'Mitad de precio en todo',
+        'tipo' => Promotion::PORCENTAJE,
         'percentage_discount' => 0.5,
-        'state'               => Promotion::ENVIADA,
-        'start_date'          => now()->subDay(),
+        'state' => Promotion::ENVIADA,
+        'start_date' => now()->subDay(),
     ], $extra));
 }
 
@@ -139,12 +139,12 @@ test('cuando dos pedidos se pelean el último uso, solo uno lo gasta', function 
     $promo = promocionDeLaTienda($e['businessId'], ['max_usos' => 1, 'usos' => 1]);
 
     $otro = OrdersSales::create([
-        'buyer_id'   => $e['buyerId'],
+        'buyer_id' => $e['buyerId'],
         'busines_id' => $e['businessId'],
         'methods_id' => $e['methodId'],
-        'total'      => 30000,
-        'sale_date'  => now(),
-        'state'      => 1,
+        'total' => 30000,
+        'sale_date' => now(),
+        'state' => 1,
     ]);
 
     expect(fn () => app(RedencionDePromociones::class)->canjear($otro, [

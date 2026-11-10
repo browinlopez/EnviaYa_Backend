@@ -20,7 +20,9 @@ use Illuminate\Database\Eloquent\Model;
 class ProductGroup extends Model
 {
     protected $table = 'product_groups';
+
     protected $primaryKey = 'group_id';
+
     public $timestamps = true;
 
     protected $fillable = ['name', 'brand', 'category_id', 'image', 'description', 'origen'];
@@ -49,6 +51,6 @@ class ProductGroup extends Model
             return $this->image;
         }
 
-        return $this->products->firstWhere(fn ($p) => !empty($p->image))?->image;
+        return $this->products->firstWhere(fn ($p) => ! empty($p->image))?->image;
     }
 }

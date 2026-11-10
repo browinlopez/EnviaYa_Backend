@@ -20,7 +20,7 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
  */
 function libroDeLaRespuesta($r): Spreadsheet
 {
-    $ruta = tempnam(sys_get_temp_dir(), 'plantilla') . '.xlsx';
+    $ruta = tempnam(sys_get_temp_dir(), 'plantilla').'.xlsx';
     file_put_contents($ruta, $r->streamedContent());
 
     return IOFactory::load($ruta);
@@ -63,11 +63,11 @@ test('con mi catálogo trae los productos de mi tienda y no los del vecino', fun
 });
 
 test('de un archivo con varias hojas se lee la primera', function () {
-    $libro = new Spreadsheet();
+    $libro = new Spreadsheet;
     $libro->getActiveSheet()->fromArray([['codigo_barras', 'precio', 'cantidad'], ['7702511000014', 3400, 12]]);
     $libro->createSheet()->fromArray([['esto', 'es', 'ayuda'], ['no', 'se', 'importa']]);
 
-    $ruta = tempnam(sys_get_temp_dir(), 'varias') . '.xlsx';
+    $ruta = tempnam(sys_get_temp_dir(), 'varias').'.xlsx';
     (new Xlsx($libro))->save($ruta);
 
     $filas = app(LectorDeArchivoDeCatalogo::class)->leer($ruta);

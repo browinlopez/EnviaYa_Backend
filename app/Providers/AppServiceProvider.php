@@ -2,9 +2,9 @@
 
 namespace App\Providers;
 
+use App\Services\Push\PushApns;
 use App\Services\Push\PushEnRegistro;
 use App\Services\Push\PushFirebase;
-use App\Services\Push\PushApns;
 use App\Services\Push\PushSegunPlataforma;
 use App\Services\Push\TransportePush;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -32,10 +32,10 @@ class AppServiceProvider extends ServiceProvider
          * —segmentar, encolar, contar— no sepa que Firebase existe.
          */
         $this->app->bind(TransportePush::class, function () {
-            $firebase = new PushFirebase();
+            $firebase = new PushFirebase;
 
-            if (!$firebase->configurado()) {
-                return new PushEnRegistro();
+            if (! $firebase->configurado()) {
+                return new PushEnRegistro;
             }
 
             /*
@@ -45,7 +45,7 @@ class AppServiceProvider extends ServiceProvider
              * quedan sin aviso y los Android siguen recibiendo—, asi que no
              * hace falta decidir aca si Apple esta listo.
              */
-            return new PushSegunPlataforma($firebase, new PushApns());
+            return new PushSegunPlataforma($firebase, new PushApns);
         });
     }
 

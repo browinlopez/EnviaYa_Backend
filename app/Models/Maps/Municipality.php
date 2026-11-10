@@ -2,16 +2,18 @@
 
 namespace App\Models\Maps;
 
+use App\Models\Audit\Audit;
 use App\Models\User\UserAddress;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use App\Models\Audit\Audit;
 
 class Municipality extends Audit
 {
     use HasFactory;
 
     protected $table = 'municipalities';
+
     protected $primaryKey = 'id';
+
     protected $fillable = ['name', 'department_id'];
 
     public function department()

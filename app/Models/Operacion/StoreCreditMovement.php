@@ -14,9 +14,12 @@ class StoreCreditMovement extends Model
     protected $table = 'store_credit_movements';
 
     public const CONSUMO = 'consumo';
+
     public const REVERSO = 'reverso';
-    public const ABONO   = 'abono';
-    public const AJUSTE  = 'ajuste';
+
+    public const ABONO = 'abono';
+
+    public const AJUSTE = 'ajuste';
 
     protected $fillable = ['store_credit_id', 'type', 'amount', 'order_id', 'notes', 'comprobante_media_id', 'created_by'];
 

@@ -2,24 +2,21 @@
 
 namespace App\Http\Controllers\Business;
 
-use App\Services\NegocioParaLaApp;
-use App\Services\PlazoPorDistancia;
-use App\Services\TarifaPorDistancia;
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
 use App\Models\Business;
 use App\Models\Promotion;
 use App\Models\User;
+use App\Services\NegocioParaLaApp;
+use App\Services\PlazoPorDistancia;
+use App\Services\TarifaPorDistancia;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class ConsultaDeNegociosController extends Controller
 {
     public function __construct(private readonly TarifaPorDistancia $distancias,
         private readonly PlazoPorDistancia $plazos,
-        private readonly NegocioParaLaApp $presentador)
-    {
-    }
+        private readonly NegocioParaLaApp $presentador) {}
 
     use ComprobarPertenencia;
 
@@ -87,7 +84,7 @@ class ConsultaDeNegociosController extends Controller
             ->recibiendo()
             ->when(count($affiliatedIds) > 0, function ($q) use ($affiliatedIds) {
                 // Ordena los negocios afiliados primero
-                $q->orderByRaw("FIELD(busines_id," . implode(',', $affiliatedIds) . ") DESC");
+                $q->orderByRaw('FIELD(busines_id,'.implode(',', $affiliatedIds).') DESC');
             })
             ->orderBy('name')
             ->get();
@@ -133,31 +130,31 @@ class ConsultaDeNegociosController extends Controller
             );
 
             return [
-                'business_id'   => $business->busines_id,
+                'business_id' => $business->busines_id,
                 // Para pintarlos en el mapa cuando no hay ninguno cerca.
-                'latitude'      => $business->latitude !== null ? (float) $business->latitude : null,
-                'longitude'     => $business->longitude !== null ? (float) $business->longitude : null,
-                'distance_km'   => $km === null ? null : round($km, 2),
-                'delivery_fee'  => $this->distancias->paraDistancia($km),
+                'latitude' => $business->latitude !== null ? (float) $business->latitude : null,
+                'longitude' => $business->longitude !== null ? (float) $business->longitude : null,
+                'distance_km' => $km === null ? null : round($km, 2),
+                'delivery_fee' => $this->distancias->paraDistancia($km),
                 // Lo que tarda desde ESTA tienda: la de la esquina no puede
                 // anunciar el mismo plazo que la del otro barrio.
                 'delivery_time_minutes' => $this->plazos->minutosPara($km),
-                'in_range'      => $this->distancias->reparteHasta($km),
-                'name'          => $business->name,
-                'phone'         => $business->phone,
-                'address'       => $business->address,
+                'in_range' => $this->distancias->reparteHasta($km),
+                'name' => $business->name,
+                'phone' => $business->phone,
+                'address' => $business->address,
                 'qualification' => (float) $business->qualification,
-                'razon_social'  => $business->razonSocial_DCD,
-                'NIT'           => $business->NIT,
-                'logo'          => $business->logo ?? 'https://example.com/default-logo.png',
-                'state'         => (bool) $business->state,
+                'razon_social' => $business->razonSocial_DCD,
+                'NIT' => $business->NIT,
+                'logo' => $business->logo ?? 'https://example.com/default-logo.png',
+                'state' => (bool) $business->state,
                 'accepting_orders' => (bool) $business->accepting_orders,
-                'type'          => $business->type,
-                'municipality'  => $business->municipality ? [
-                    'id'   => $business->municipality->id,
+                'type' => $business->type,
+                'municipality' => $business->municipality ? [
+                    'id' => $business->municipality->id,
                     'name' => $business->municipality->name,
                 ] : null,
-                'owner_count'   => $business->owners->count(),
+                'owner_count' => $business->owners->count(),
                 /*
                  * DEL PROPIETARIO SOLO SALE LO QUE HACE FALTA PARA COMPRAR.
                  *
@@ -173,7 +170,7 @@ class ConsultaDeNegociosController extends Controller
                  * Si algún día el panel necesita esos campos, van por la API de
                  * administración, que ya exige rol 4 y módulo.
                  */
-                'owners'        => $this->presentador->propietarios($business),
+                'owners' => $this->presentador->propietarios($business),
                 /*
                  * Las claves siguen viajando, vacias: la app las lee sin
                  * comprobar si existen, y quitarlas del todo la obligaria a
@@ -207,8 +204,8 @@ class ConsultaDeNegociosController extends Controller
             'user_authenticated' => $userAuthenticated,
             // Si es false, la app dice "no hay tiendas que repartan a tu zona"
             // y enseña igual la lista, ordenada de la más cercana en adelante.
-            'hay_cercanos'       => $formatted->contains(fn ($n) => $n['in_range'] ?? false),
-            'businesses'         => $formatted
+            'hay_cercanos' => $formatted->contains(fn ($n) => $n['in_range'] ?? false),
+            'businesses' => $formatted,
         ]);
     }
 
@@ -264,7 +261,7 @@ class ConsultaDeNegociosController extends Controller
 
         $relaciones = ['owners', 'municipality'];
 
-        if (!$ligero) {
+        if (! $ligero) {
             $relaciones = array_merge($relaciones, [
                 'reviews', 'products.category', 'products.group',
                 'products' => fn ($q) => $q->where('products.state', 1),
@@ -303,31 +300,31 @@ class ConsultaDeNegociosController extends Controller
             );
 
             return [
-                'business_id'   => $business->busines_id,
-                'latitude'      => $business->latitude !== null ? (float) $business->latitude : null,
-                'longitude'     => $business->longitude !== null ? (float) $business->longitude : null,
-                'distance_km'   => $km === null ? null : round($km, 2),
-                'delivery_fee'  => $this->distancias->paraDistancia($km),
+                'business_id' => $business->busines_id,
+                'latitude' => $business->latitude !== null ? (float) $business->latitude : null,
+                'longitude' => $business->longitude !== null ? (float) $business->longitude : null,
+                'distance_km' => $km === null ? null : round($km, 2),
+                'delivery_fee' => $this->distancias->paraDistancia($km),
                 // Lo que tarda desde ESTA tienda: la de la esquina no puede
                 // anunciar el mismo plazo que la del otro barrio.
                 'delivery_time_minutes' => $this->plazos->minutosPara($km),
-                'in_range'      => $this->distancias->reparteHasta($km),
-                'name'          => $business->name,
-                'phone'         => $business->phone,
-                'address'       => $business->address,
-                'description'       => $business->description,
+                'in_range' => $this->distancias->reparteHasta($km),
+                'name' => $business->name,
+                'phone' => $business->phone,
+                'address' => $business->address,
+                'description' => $business->description,
                 'qualification' => (float) $business->qualification,
-                'razon_social'  => $business->razonSocial_DCD,
-                'NIT'           => $business->NIT,
-                'logo'          => $business->logo ?? 'https://example.com/default-logo.png',
-                'state'         => (bool) $business->state,
+                'razon_social' => $business->razonSocial_DCD,
+                'NIT' => $business->NIT,
+                'logo' => $business->logo ?? 'https://example.com/default-logo.png',
+                'state' => (bool) $business->state,
                 'accepting_orders' => (bool) $business->accepting_orders,
-                'type'          => $business->type,
-                'municipality'  => $business->municipality ? [
-                    'id'   => $business->municipality->id,
+                'type' => $business->type,
+                'municipality' => $business->municipality ? [
+                    'id' => $business->municipality->id,
                     'name' => $business->municipality->name,
                 ] : null,
-                'owner_count'   => $business->owners->count(),
+                'owner_count' => $business->owners->count(),
                 /*
                  * DEL PROPIETARIO SOLO SALE LO QUE HACE FALTA PARA COMPRAR.
                  *
@@ -343,16 +340,16 @@ class ConsultaDeNegociosController extends Controller
                  * Si algún día el panel necesita esos campos, van por la API de
                  * administración, que ya exige rol 4 y módulo.
                  */
-                'owners'        => $this->presentador->propietarios($business),
+                'owners' => $this->presentador->propietarios($business),
                 // productos del negocio
                 'products' => $ligero ? [] : $business->products->map(function ($product) use ($isAffiliated, $userId) {
                     return [
-                        'product_id'  => $product->products_id,
-                        'name'        => $product->name,
+                        'product_id' => $product->products_id,
+                        'name' => $product->name,
                         'description' => $product->description,
-                        'category'    => $product->category ? $product->category->name : null,
-                        'image'       => $product->image,
-                        'state'       => (bool) $product->state,
+                        'category' => $product->category ? $product->category->name : null,
+                        'image' => $product->image,
+                        'state' => (bool) $product->state,
                         /*
                          * EL GRUPO DE VARIANTES, PARA QUE LA APP PINTE UNA
                          * TARJETA Y NO OCHO.
@@ -367,15 +364,15 @@ class ConsultaDeNegociosController extends Controller
                          * de la presentación y sirve para mostrarlo bajo el
                          * nombre aunque el producto sea único.
                          */
-                        'variante'    => $product->variante,
-                        'group'       => $product->group ? [
+                        'variante' => $product->variante,
+                        'group' => $product->group ? [
                             'group_id' => (int) $product->group->group_id,
-                            'name'     => $product->group->name,
-                            'image'    => $product->group->image,
+                            'name' => $product->group->name,
+                            'image' => $product->group->image,
                         ] : null,
                         // Si no hay user_id → precio 0
                         // Si hay user_id → mostrar precio solo si está afiliado
-                        'price'       => $userId ? ($isAffiliated ? ($product->pivot->price ?? 0) : 0) : 0,
+                        'price' => $userId ? ($isAffiliated ? ($product->pivot->price ?? 0) : 0) : 0,
                         /*
                          * COMO SE VENDE: por unidad o al peso. Con una unidad
                          * de peso, `price` es el precio por esa medida y la
@@ -383,8 +380,8 @@ class ConsultaDeNegociosController extends Controller
                          * queso»-- y de porcion en vez del +/- de siempre.
                          */
                         'sale_unit' => $product->pivot->sale_unit ?? 'unidad',
-                        'min_qty'   => $product->pivot->min_qty !== null ? (float) $product->pivot->min_qty : null,
-                        'step_qty'  => $product->pivot->step_qty !== null ? (float) $product->pivot->step_qty : null,
+                        'min_qty' => $product->pivot->min_qty !== null ? (float) $product->pivot->min_qty : null,
+                        'step_qty' => $product->pivot->step_qty !== null ? (float) $product->pivot->step_qty : null,
                     ];
                 }),
                 // reviews del negocio
@@ -395,7 +392,7 @@ class ConsultaDeNegociosController extends Controller
 
         return response()->json([
             'user_authenticated' => $userAuthenticated,
-            'businesses'         => $formatted
+            'businesses' => $formatted,
         ]);
     }
 
@@ -404,7 +401,7 @@ class ConsultaDeNegociosController extends Controller
     {
         $request->validate([
             'busines_id' => 'required|integer|exists:business,busines_id',
-            'user_id'    => 'sometimes|nullable|integer|exists:user,user_id',
+            'user_id' => 'sometimes|nullable|integer|exists:user,user_id',
         ]);
 
         /*
@@ -482,34 +479,34 @@ class ConsultaDeNegociosController extends Controller
 
             return [
                 'promotion_id' => (int) $mejor->promotion_id,
-                'texto'        => (string) $mejor->description,
-                'regla'        => $mejor->reglaEnPalabras(),
-                'hasta_texto'  => $mejor->hastaEnPalabras(),
+                'texto' => (string) $mejor->description,
+                'regla' => $mejor->reglaEnPalabras(),
+                'hasta_texto' => $mejor->hastaEnPalabras(),
             ];
         };
 
         return response()->json([
-            'business_id'   => $business->busines_id,
-            'name'          => $business->name,
-            'phone'         => $business->phone,
-            'address'       => $business->address,
+            'business_id' => $business->busines_id,
+            'name' => $business->name,
+            'phone' => $business->phone,
+            'address' => $business->address,
             'qualification' => (float) $business->qualification,
-            'razon_social'  => $business->razonSocial_DCD,
-            'NIT'           => $business->NIT,
-            'logo'          => $business->logo ?? 'https://example.com/default-logo.png',
-            'type'           => $business->type,
-            'state'         => (bool) $business->state,
+            'razon_social' => $business->razonSocial_DCD,
+            'NIT' => $business->NIT,
+            'logo' => $business->logo ?? 'https://example.com/default-logo.png',
+            'type' => $business->type,
+            'state' => (bool) $business->state,
             /*
              * ACÁ ES DONDE IMPORTA. La ficha sí se sirve en pausa, y con esto
              * la app puede decir «no está recibiendo pedidos ahora» y apagar
              * el carrito, en vez de dejar pedir para fallar al final.
              */
             'accepting_orders' => (bool) $business->accepting_orders,
-            'municipality'  => $business->municipality ? [
-                'id'   => $business->municipality->id,
+            'municipality' => $business->municipality ? [
+                'id' => $business->municipality->id,
                 'name' => $business->municipality->name,
             ] : null,
-            'owner_count'   => $business->owners->count(),
+            'owner_count' => $business->owners->count(),
             /*
              * DEL PROPIETARIO SOLO SALE LO QUE HACE FALTA PARA COMPRAR.
              *
@@ -525,7 +522,7 @@ class ConsultaDeNegociosController extends Controller
              * Si algún día el panel necesita esos campos, van por la API de
              * administración, que ya exige rol 4 y módulo.
              */
-            'owners'        => $this->presentador->propietarios($business),
+            'owners' => $this->presentador->propietarios($business),
             'is_affiliated' => $estaAfiliado,
             /*
              * SIN PRECIO NO SE OFRECE.
@@ -544,52 +541,52 @@ class ConsultaDeNegociosController extends Controller
                 ->filter(fn ($p) => (float) ($p->pivot->price ?? 0) > 0)
                 ->values()
                 ->map(function ($product) use ($estaAfiliado, $promoDe) {
-                return [
-                    'product_id' => $product->products_id,
-                    'name'       => $product->name,
-                    'description' => $product->description,
-                    'category_id' => $product->category_id,
-                    // La ficha agrupa por nombre de categoría, igual que el
-                    // listado; con solo el id no podía pintar las secciones.
-                    'category'   => $product->category?->name,
-                    'image'      => $product->image,
-                    'state'      => (bool) $product->state,
-                    'price'      => $estaAfiliado ? ($product->pivot->price ?? 0) : 0,
-                    // Como se vende: por unidad o al peso. Ver arriba.
-                    'sale_unit'  => $product->pivot->sale_unit ?? 'unidad',
-                    'min_qty'    => $product->pivot->min_qty !== null ? (float) $product->pivot->min_qty : null,
-                    'step_qty'   => $product->pivot->step_qty !== null ? (float) $product->pivot->step_qty : null,
-                    /*
-                     * `null` cuando no hay ninguna. La app pinta la etiqueta
-                     * solo si viene algo.
-                     *
-                     * Y NUNCA sobre lo que se vende al peso: el motor de
-                     * descuentos excluye esas lineas --un «lleva 3, paga 2»
-                     * sobre 1,18 kg no esta definido-- asi que la etiqueta
-                     * prometeria una rebaja que el carrito no va a aplicar.
-                     * Es peor que no ensenar nada: el cliente llega al total
-                     * esperando otro numero.
-                     */
-                    'promocion'  => in_array($product->pivot->sale_unit ?? 'unidad', ['kg', 'libra', 'gramo'], true)
-                        ? null
-                        : $promoDe((int) $product->products_id),
-                ];
-            }),
+                    return [
+                        'product_id' => $product->products_id,
+                        'name' => $product->name,
+                        'description' => $product->description,
+                        'category_id' => $product->category_id,
+                        // La ficha agrupa por nombre de categoría, igual que el
+                        // listado; con solo el id no podía pintar las secciones.
+                        'category' => $product->category?->name,
+                        'image' => $product->image,
+                        'state' => (bool) $product->state,
+                        'price' => $estaAfiliado ? ($product->pivot->price ?? 0) : 0,
+                        // Como se vende: por unidad o al peso. Ver arriba.
+                        'sale_unit' => $product->pivot->sale_unit ?? 'unidad',
+                        'min_qty' => $product->pivot->min_qty !== null ? (float) $product->pivot->min_qty : null,
+                        'step_qty' => $product->pivot->step_qty !== null ? (float) $product->pivot->step_qty : null,
+                        /*
+                         * `null` cuando no hay ninguna. La app pinta la etiqueta
+                         * solo si viene algo.
+                         *
+                         * Y NUNCA sobre lo que se vende al peso: el motor de
+                         * descuentos excluye esas lineas --un «lleva 3, paga 2»
+                         * sobre 1,18 kg no esta definido-- asi que la etiqueta
+                         * prometeria una rebaja que el carrito no va a aplicar.
+                         * Es peor que no ensenar nada: el cliente llega al total
+                         * esperando otro numero.
+                         */
+                        'promocion' => in_array($product->pivot->sale_unit ?? 'unidad', ['kg', 'libra', 'gramo'], true)
+                            ? null
+                            : $promoDe((int) $product->products_id),
+                    ];
+                }),
 
             /*
-             * Las promociones de la tienda, para la franja de arriba. Solo las
-             * que DESCUENTAN: una que solo avisa —«traemos pan a las 4»— ya
-             * llegó por la campana y anunciarla otra vez en la ficha sería
-             * ruido sobre algo que no cambia ningún precio.
-             */
+                 * Las promociones de la tienda, para la franja de arriba. Solo las
+                 * que DESCUENTAN: una que solo avisa —«traemos pan a las 4»— ya
+                 * llegó por la campana y anunciarla otra vez en la ficha sería
+                 * ruido sobre algo que no cambia ningún precio.
+                 */
             'promociones' => $promociones
                 ->filter(fn (Promotion $p) => $p->descuenta())
                 ->map(fn (Promotion $p) => [
-                    'promotion_id' => (int) $p->promotion_id,
-                    'texto'        => (string) $p->description,
-                    'regla'        => $p->reglaEnPalabras(),
-                    'hasta_texto'  => $p->hastaEnPalabras(),
-                ])->values(),
+                        'promotion_id' => (int) $p->promotion_id,
+                        'texto' => (string) $p->description,
+                        'regla' => $p->reglaEnPalabras(),
+                        'hasta_texto' => $p->hastaEnPalabras(),
+                    ])->values(),
             'reviews' => $this->presentador->resenas($business),
         ]);
     }

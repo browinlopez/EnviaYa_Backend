@@ -7,7 +7,9 @@ use App\Models\Audit\Audit;
 class GroceryProduct extends Audit
 {
     protected $table = 'grocery_products';
+
     protected $primaryKey = 'grocery_product_id';
+
     public $timestamps = false;
 
     protected $fillable = ['products_id', 'brand', 'size', 'expiration_date'];

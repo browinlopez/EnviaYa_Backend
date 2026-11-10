@@ -17,10 +17,10 @@ class CancelacionesSheet implements FromCollection, WithHeadings, WithTitle
             ->whereBetween('sale_date', [$this->start, $this->end])
             ->where('state', 'cancelado') // ajusta al estado real
             ->get()
-            ->map(fn($o) => [
+            ->map(fn ($o) => [
                 'Pedido' => $o->orderSales_id,
-                'Cliente'=> $o->buyer?->user?->name ?? 'N/A',
-                'Negocio'=> $o->business?->name ?? 'N/A',
+                'Cliente' => $o->buyer?->user?->name ?? 'N/A',
+                'Negocio' => $o->business?->name ?? 'N/A',
                 'Domiciliario' => $o->domiciliary?->user?->name ?? 'N/A',
                 'Fecha' => $o->sale_date,
             ]);
@@ -28,7 +28,7 @@ class CancelacionesSheet implements FromCollection, WithHeadings, WithTitle
 
     public function headings(): array
     {
-        return ['Pedido','Cliente','Negocio','Domiciliario','Fecha'];
+        return ['Pedido', 'Cliente', 'Negocio', 'Domiciliario', 'Fecha'];
     }
 
     public function title(): string

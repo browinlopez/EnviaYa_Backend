@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Rol;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
@@ -15,13 +16,12 @@ use Laravel\Sanctum\Sanctum;
  * SIEMPRE. Un informe rechazado es un fallo que no se conocera nunca, y el
  * cliente que lo manda ya esta roto — no puede encima gestionar un error.
  */
-
 it('guarda el fallo que manda la app', function () {
     $this->postJson('/v1/app/errores', [
-        'mensaje'     => "Cannot read property 'business_id' of undefined",
-        'traza'       => 'en <NegocioDetail>',
-        'pantalla'    => 'NegocioDetail',
-        'plataforma'  => 'ios',
+        'mensaje' => "Cannot read property 'business_id' of undefined",
+        'traza' => 'en <NegocioDetail>',
+        'pantalla' => 'NegocioDetail',
+        'plataforma' => 'ios',
         'app_version' => '1.0.8',
     ])->assertOk();
 
@@ -45,7 +45,7 @@ it('acepta sin sesion: la app puede reventar antes de entrar', function () {
 });
 
 it('si hay sesion, apunta de quien era el telefono', function () {
-    \App\Models\Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
+    Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
     $ana = User::factory()->create(['rol' => 1]);
 
     Sanctum::actingAs($ana);
@@ -71,7 +71,7 @@ it('una traza enorme se recorta en vez de reventar la columna', function () {
     // kilobytes por informe.
     $this->postJson('/v1/app/errores', [
         'mensaje' => 'boom',
-        'traza'   => str_repeat('x', 50000),
+        'traza' => str_repeat('x', 50000),
     ])->assertOk();
 
     expect(mb_strlen((string) DB::table('client_errors')->value('traza')))

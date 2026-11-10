@@ -42,9 +42,7 @@ class OrderStatusUpdated implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public function __construct(public OrdersSales $order)
-    {
-    }
+    public function __construct(public OrdersSales $order) {}
 
     /**
      * Dos canales, no uno.
@@ -63,8 +61,8 @@ class OrderStatusUpdated implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('order.' . $this->order->orderSales_id),
-            new PrivateChannel('business.' . $this->order->busines_id),
+            new PrivateChannel('order.'.$this->order->orderSales_id),
+            new PrivateChannel('business.'.$this->order->busines_id),
         ];
     }
 
@@ -77,7 +75,7 @@ class OrderStatusUpdated implements ShouldBroadcastNow
     {
         return [
             'order_id' => $this->order->orderSales_id,
-            'state'    => (int) $this->order->state,
+            'state' => (int) $this->order->state,
             // El sello que la pantalla de seguimiento necesita para el
             // cronómetro: sin él tendría que volver a pedir el pedido entero
             // solo para saber desde cuándo cuenta.

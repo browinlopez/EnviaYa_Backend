@@ -7,12 +7,13 @@ use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 class ReportGeneralComercial implements WithMultipleSheets
 {
     protected $start;
+
     protected $end;
 
     public function __construct($start, $end)
     {
         $this->start = $start;
-        $this->end   = $end;
+        $this->end = $end;
     }
 
     public function sheets(): array
@@ -22,7 +23,7 @@ class ReportGeneralComercial implements WithMultipleSheets
             new OrdersSheet($this->start, $this->end),
             new UsersSheet($this->start, $this->end),
             new TopBusinessesSheet($this->start, $this->end),
-            new TopCategoriesSheet($this->start, $this->end)
+            new TopCategoriesSheet($this->start, $this->end),
         ];
     }
 }

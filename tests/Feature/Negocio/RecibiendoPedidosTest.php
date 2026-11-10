@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Business;
 use App\Models\Rol;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -30,7 +31,7 @@ function tiendaQueRecibe(bool $recibiendo = true): array
 
     $ownerId = DB::table('owner')->insertGetId([
         'user_id' => $tendero->user_id,
-        'state'   => 1,
+        'state' => 1,
     ], 'owner_id');
 
     // `business.type` es clave foránea a `category_business`: sin la fila, la
@@ -38,10 +39,10 @@ function tiendaQueRecibe(bool $recibiendo = true): array
     $tipo = DB::table('category_business')->insertGetId(['name' => 'Tienda'], 'id');
 
     $businessId = DB::table('business')->insertGetId([
-        'name'             => 'Mercadito del Buho',
-        'qualification'    => 0,
-        'state'            => 1,
-        'type'             => $tipo,
+        'name' => 'Mercadito del Buho',
+        'qualification' => 0,
+        'state' => 1,
+        'type' => $tipo,
         'accepting_orders' => $recibiendo ? 1 : 0,
     ], 'busines_id');
 
@@ -53,7 +54,7 @@ function tiendaQueRecibe(bool $recibiendo = true): array
 }
 
 /* ------------------------------------------------------------------ */
-/* EL INTERRUPTOR                                                      */
+/* EL INTERRUPTOR */
 /* ------------------------------------------------------------------ */
 
 test('una tienda recibe pedidos mientras nadie diga lo contrario', function () {
@@ -104,7 +105,7 @@ test('la ficha del negocio no sirve para apagarlo', function () {
      * conviene que quede escrito cuál de los dos es.
      */
     $this->putJson('/v1/negocio/me', [
-        'name'             => 'Mercadito del Buho',
+        'name' => 'Mercadito del Buho',
         'accepting_orders' => false,
     ])->assertOk();
 
@@ -113,7 +114,7 @@ test('la ficha del negocio no sirve para apagarlo', function () {
 });
 
 test('no se apaga la tienda de otro', function () {
-    $mia  = tiendaQueRecibe();
+    $mia = tiendaQueRecibe();
     $suya = tiendaQueRecibe();
 
     Sanctum::actingAs($mia['tendero']);
@@ -131,7 +132,7 @@ test('no se apaga la tienda de otro', function () {
 });
 
 /* ------------------------------------------------------------------ */
-/* LAS TRES PUERTAS                                                    */
+/* LAS TRES PUERTAS */
 /* ------------------------------------------------------------------ */
 
 test('la tienda en pausa no sale en el escaparate', function () {
@@ -208,7 +209,7 @@ test('encendida otra vez, el pedido entra', function () {
 });
 
 /* ------------------------------------------------------------------ */
-/* LA PAUSA TIENE HORA DE VUELTA                                       */
+/* LA PAUSA TIENE HORA DE VUELTA */
 /* ------------------------------------------------------------------ */
 
 test('se pausa hasta una hora, y se dice cual', function () {
@@ -220,7 +221,7 @@ test('se pausa hasta una hora, y se dice cual', function () {
 
     $r = $this->putJson('/v1/negocio/me/recibiendo', [
         'accepting_orders' => false,
-        'accepting_until'  => $hasta->toIso8601String(),
+        'accepting_until' => $hasta->toIso8601String(),
     ])->assertOk();
 
     expect($r->json('business.accepting_orders'))->toBeFalse()
@@ -240,7 +241,7 @@ test('cuando pasa la hora, la tienda vuelve a recibir sin que nadie la toque', f
      */
     DB::table('business')->where('busines_id', $t['businessId'])->update([
         'accepting_orders' => 0,
-        'accepting_until'  => now()->subMinutes(5),
+        'accepting_until' => now()->subMinutes(5),
     ]);
 
     Sanctum::actingAs($t['tendero']);
@@ -257,7 +258,7 @@ test('una pausa vencida no esconde la tienda ni rechaza el pedido', function () 
 
     DB::table('business')->where('busines_id', $e['businessId'])->update([
         'accepting_orders' => 0,
-        'accepting_until'  => now()->subMinute(),
+        'accepting_until' => now()->subMinute(),
     ]);
 
     // El escaparate la vuelve a ofrecer...
@@ -277,7 +278,7 @@ test('encender borra la hora de vuelta', function () {
 
     $this->putJson('/v1/negocio/me/recibiendo', [
         'accepting_orders' => false,
-        'accepting_until'  => now()->addHour()->toIso8601String(),
+        'accepting_until' => now()->addHour()->toIso8601String(),
     ])->assertOk();
 
     $this->putJson('/v1/negocio/me/recibiendo', ['accepting_orders' => true])->assertOk();
@@ -294,7 +295,7 @@ test('la hora de vuelta no puede ser pasada ni de la semana que viene', function
     // Ayer: una pausa que nace vencida no es una pausa.
     $this->putJson('/v1/negocio/me/recibiendo', [
         'accepting_orders' => false,
-        'accepting_until'  => now()->subHour()->toIso8601String(),
+        'accepting_until' => now()->subHour()->toIso8601String(),
     ])->assertStatus(422);
 
     /*
@@ -304,7 +305,7 @@ test('la hora de vuelta no puede ser pasada ni de la semana que viene', function
      */
     $this->putJson('/v1/negocio/me/recibiendo', [
         'accepting_orders' => false,
-        'accepting_until'  => now()->addMonth()->toIso8601String(),
+        'accepting_until' => now()->addMonth()->toIso8601String(),
     ])->assertStatus(422);
 
     expect((bool) DB::table('business')->where('busines_id', $t['businessId'])->value('accepting_orders'))
@@ -321,10 +322,10 @@ test('la hora de vuelta en UTC se guarda en hora de Colombia', function () {
 
     $this->putJson('/v1/negocio/me/recibiendo', [
         'accepting_orders' => false,
-        'accepting_until'  => $enUnaHora->format('Y-m-d\TH:i:s.v\Z'),
+        'accepting_until' => $enUnaHora->format('Y-m-d\TH:i:s.v\Z'),
     ])->assertOk();
 
-    $guardada = \App\Models\Business::find($t['businessId'])->accepting_until;
+    $guardada = Business::find($t['businessId'])->accepting_until;
 
     // Sin la conversión quedaba cinco horas más tarde.
     expect(abs($guardada->diffInMinutes(now()->addHour())))->toBeLessThan(2);

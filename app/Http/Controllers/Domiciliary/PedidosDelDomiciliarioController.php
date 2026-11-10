@@ -25,12 +25,12 @@ class PedidosDelDomiciliarioController extends Controller
 {
     /** `orderssales.state`: 2 listo para recoger · 3 en camino · 4 entregado. */
     private const POR_TOMAR = 2;
+
     private const EN_CAMINO = 3;
+
     private const ENTREGADO = 4;
 
-    public function __construct(private readonly PedidoParaLaApp $presentador)
-    {
-    }
+    public function __construct(private readonly PedidoParaLaApp $presentador) {}
 
     public function mios(Request $request)
     {
@@ -38,7 +38,7 @@ class PedidosDelDomiciliarioController extends Controller
             ->where('user_id', $request->user()->user_id)
             ->first();
 
-        if (!$domiciliary) {
+        if (! $domiciliary) {
             return response()->json([
                 'message' => 'Esta cuenta no es de un domiciliario.',
             ], 403);
@@ -93,11 +93,11 @@ class PedidosDelDomiciliarioController extends Controller
             // La app arma su pantalla con una sola lista y la reparte por
             // estado, igual que hacía con la de la tienda. Se conserva el
             // nombre `orders` para no tener que tocar el hook.
-            'orders'  => $pedidos,
+            'orders' => $pedidos,
             'resumen' => [
-                'en_camino'  => $mios->where('state', self::EN_CAMINO)->count(),
+                'en_camino' => $mios->where('state', self::EN_CAMINO)->count(),
                 'entregados' => $mios->where('state', self::ENTREGADO)->count(),
-                'por_tomar'  => $porTomar->count(),
+                'por_tomar' => $porTomar->count(),
             ],
         ]);
     }

@@ -55,10 +55,10 @@ return new class extends Migration
     {
         foreach (self::TABLAS as $tabla) {
             Schema::table($tabla, function (Blueprint $t) use ($tabla) {
-                if (!Schema::hasColumn($tabla, 'created_at')) {
+                if (! Schema::hasColumn($tabla, 'created_at')) {
                     $t->timestamp('created_at')->nullable();
                 }
-                if (!Schema::hasColumn($tabla, 'updated_at')) {
+                if (! Schema::hasColumn($tabla, 'updated_at')) {
                     $t->timestamp('updated_at')->nullable();
                 }
             });

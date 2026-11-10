@@ -77,8 +77,8 @@ function superficieCongelada(): array
         $viva = superficieViva();
         file_put_contents(
             $ruta,
-            json_encode($viva, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)."
-",
+            json_encode($viva, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE).'
+',
         );
 
         return $viva;

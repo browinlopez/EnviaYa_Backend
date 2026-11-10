@@ -88,18 +88,18 @@ class ResidentesController extends Controller
         }
 
         $pagina = max(1, (int) $request->query('page', 1));
-        $total  = $filas->count();
+        $total = $filas->count();
 
         return response()->json([
             'data' => $filas->forPage($pagina, $porPagina)->values(),
             'meta' => [
-                'page'      => $pagina,
-                'per_page'  => $porPagina,
-                'total'     => $total,
+                'page' => $pagina,
+                'per_page' => $porPagina,
+                'total' => $total,
                 'last_page' => max(1, (int) ceil($total / $porPagina)),
-                'desde'     => $desde->toDateString(),
+                'desde' => $desde->toDateString(),
                 // Si se llegó al tope, el total no es el del conjunto: se dice.
-                'truncado'  => $total >= 5000,
+                'truncado' => $total >= 5000,
             ],
         ]);
     }
@@ -139,13 +139,13 @@ class ResidentesController extends Controller
 
         $filas = $vecinos->groupBy(fn ($v) => (string) ($v->tower ?? ''))
             ->map(fn ($grupo, $torre) => [
-                'tower'      => $torre === '' ? null : (string) $torre,
+                'tower' => $torre === '' ? null : (string) $torre,
                 'residentes' => $grupo->unique('buyer_id')->count(),
                 // Apartamentos con al menos un vecino en la plataforma: el
                 // «uso» de la torre se mide en hogares, no en personas.
                 'unidades_con_uno' => $grupo->filter(fn ($v) => $v->apartment)
                     ->unique(fn ($v) => trim((string) $v->apartment))->count(),
-                'unidades'   => $torre === '' ? null : ($porTorre ?: null),
+                'unidades' => $torre === '' ? null : ($porTorre ?: null),
                 'domicilios' => $torre === '' ? 0 : (int) ($domiciliosTorre[(string) $torre] ?? 0),
             ])
             ->sortBy(fn ($f) => sprintf(
@@ -156,26 +156,26 @@ class ResidentesController extends Controller
             ))
             ->values();
 
-        $inicioMes   = CarbonImmutable::now()->startOfMonth();
+        $inicioMes = CarbonImmutable::now()->startOfMonth();
         $inicioAntes = $inicioMes->subMonthNoOverflow();
         $nuevosEntre = fn ($desde, $hasta) => $vecinos
             ->filter(fn ($v) => $v->created_at
                 && $v->created_at >= $desde->toDateTimeString()
-                && (!$hasta || $v->created_at < $hasta->toDateTimeString()))
+                && (! $hasta || $v->created_at < $hasta->toDateTimeString()))
             ->unique('buyer_id')->count();
 
         return response()->json([
-            'data'    => $filas,
-            'total'   => (int) $vecinos->unique('buyer_id')->count(),
+            'data' => $filas,
+            'total' => (int) $vecinos->unique('buyer_id')->count(),
             'resumen' => [
-                'unidades'            => $unidades ?: null,
-                'unidades_con_uno'    => (int) $filas->sum('unidades_con_uno'),
-                'domicilios'          => (int) array_sum($domiciliosTorre),
-                'ventana'             => $ventana,
-                'desde'               => $desde->toDateString(),
-                'nuevos_mes'          => $nuevosEntre($inicioMes, null),
+                'unidades' => $unidades ?: null,
+                'unidades_con_uno' => (int) $filas->sum('unidades_con_uno'),
+                'domicilios' => (int) array_sum($domiciliosTorre),
+                'ventana' => $ventana,
+                'desde' => $desde->toDateString(),
+                'nuevos_mes' => $nuevosEntre($inicioMes, null),
                 'nuevos_mes_anterior' => $nuevosEntre($inicioAntes, $inicioMes),
-                'mes_anterior'        => $inicioAntes->locale('es')->isoFormat('MMMM'),
+                'mes_anterior' => $inicioAntes->locale('es')->isoFormat('MMMM'),
             ],
         ]);
     }
@@ -190,7 +190,7 @@ class ResidentesController extends Controller
 
     private function puerta($torre, $apto): string
     {
-        return trim((string) $torre) . '|' . trim((string) $apto);
+        return trim((string) $torre).'|'.trim((string) $apto);
     }
 
     /**
@@ -225,7 +225,7 @@ class ResidentesController extends Controller
                         $puertas[$k]['n'] = ($puertas[$k]['n'] ?? 0) + 1;
 
                         $ultimo = $puertas[$k]['ultimo'] ?? null;
-                        if (!$ultimo || (string) $e->created_at > $ultimo) {
+                        if (! $ultimo || (string) $e->created_at > $ultimo) {
                             $puertas[$k]['ultimo'] = (string) $e->created_at;
                         }
                     }

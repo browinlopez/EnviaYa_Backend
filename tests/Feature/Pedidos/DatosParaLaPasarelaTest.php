@@ -5,6 +5,7 @@ use App\Models\Order\OrdersSales;
 use App\Models\Rol;
 use App\Models\User;
 use App\Services\BoldService;
+use Database\Seeders\DemoSeeder;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -111,8 +112,8 @@ test('las cuentas de demostración usan un dominio que la pasarela acepta', func
      * orden de pago: con las cuentas de demostración era imposible probar un
      * cobro de principio a fin.
      */
-    expect(Database\Seeders\DemoSeeder::DOMINIO)->toEndWith('example.com')
-        ->and(Database\Seeders\DemoSeeder::DOMINIO)->not->toEndWith('.test');
+    expect(DemoSeeder::DOMINIO)->toEndWith('example.com')
+        ->and(DemoSeeder::DOMINIO)->not->toEndWith('.test');
 });
 
 test('el codigo postal y el pais viajan con los nombres que Bold lee', function () {

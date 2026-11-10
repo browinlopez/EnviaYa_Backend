@@ -32,7 +32,7 @@ class AuditApiRequest
     {
         $response = $next($request);
 
-        if (!in_array($request->method(), self::WRITE_METHODS, true)) {
+        if (! in_array($request->method(), self::WRITE_METHODS, true)) {
             return $response;
         }
 

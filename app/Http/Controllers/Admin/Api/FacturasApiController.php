@@ -58,7 +58,7 @@ class FacturasApiController extends Controller
         match ($request->query('estado')) {
             'emitidas' => $q->where('i.state', FacturaService::EMITIDA),
             'anuladas' => $q->where('i.state', FacturaService::ANULADA),
-            default    => null,
+            default => null,
         };
 
         $respuesta = ListadoPaginado::responder(
@@ -67,11 +67,11 @@ class FacturasApiController extends Controller
             buscables: ['i.invoice_number', 'b.name', 'bu.name', 'i.orderSales_id'],
             ordenables: [
                 'invoice_number' => 'i.invoice_number',
-                'invoice_date'   => 'i.invoice_date',
-                'total'          => 'i.total',
-                'business_name'  => 'b.name',
-                'buyer_name'     => 'bu.name',
-                'state'          => 'i.state',
+                'invoice_date' => 'i.invoice_date',
+                'total' => 'i.total',
+                'business_name' => 'b.name',
+                'buyer_name' => 'bu.name',
+                'state' => 'i.state',
             ],
             ordenPorDefecto: 'invoice_date',
             resumen: fn ($f) => $this->resumen($f),
@@ -114,13 +114,13 @@ class FacturasApiController extends Controller
         $emitidas = (int) ($r->emitidas ?? 0);
 
         return [
-            'total'      => (int) ($r->total ?? 0),
-            'emitidas'   => $emitidas,
-            'anuladas'   => (int) ($r->anuladas ?? 0),
-            'facturado'  => round((float) ($r->facturado ?? 0), 2),
+            'total' => (int) ($r->total ?? 0),
+            'emitidas' => $emitidas,
+            'anuladas' => (int) ($r->anuladas ?? 0),
+            'facturado' => round((float) ($r->facturado ?? 0), 2),
             'domicilios' => round((float) ($r->domicilios ?? 0), 2),
             'descuentos' => round((float) ($r->descuentos ?? 0), 2),
-            'promedio'   => $emitidas > 0
+            'promedio' => $emitidas > 0
                 ? round((float) $r->facturado / $emitidas, 2)
                 : 0,
         ];
@@ -171,7 +171,7 @@ class FacturasApiController extends Controller
             ->first();
 
         return [
-            'sin_comprobante'       => (int) ($r->cuantas ?? 0),
+            'sin_comprobante' => (int) ($r->cuantas ?? 0),
             'sin_comprobante_valor' => round((float) ($r->valor ?? 0), 2),
         ];
     }
@@ -208,9 +208,9 @@ class FacturasApiController extends Controller
 
         if ($pendientes === 0) {
             return response()->json([
-                'message'  => 'Todas las entregas ya tienen su comprobante.',
+                'message' => 'Todas las entregas ya tienen su comprobante.',
                 'emitidas' => 0,
-                'faltan'   => 0,
+                'faltan' => 0,
             ]);
         }
 
@@ -245,16 +245,16 @@ class FacturasApiController extends Controller
         }
 
         return response()->json([
-            'message'  => $mensaje,
+            'message' => $mensaje,
             'emitidas' => $emitidas,
-            'faltan'   => $faltan,
+            'faltan' => $faltan,
         ]);
     }
 
     public function show($id)
     {
         $f = Invoice::find($id);
-        abort_if(!$f, 404, 'El comprobante no existe.');
+        abort_if(! $f, 404, 'El comprobante no existe.');
 
         // La foto guardada ya trae negocio, comprador y renglones: no hace falta
         // consultar nada vivo, que es justo el punto de haberla guardado.
@@ -271,14 +271,14 @@ class FacturasApiController extends Controller
     public function pdf($id, FacturaService $facturas)
     {
         $f = Invoice::find($id);
-        abort_if(!$f, 404, 'El comprobante no existe.');
+        abort_if(! $f, 404, 'El comprobante no existe.');
 
         return response($facturas->pdf($f), 200, [
             'Content-Type' => 'application/pdf',
             // `inline` y no `attachment`: el panel lo abre en un visor y desde
             // ahí se descarga. Forzar la descarga obliga a abrir el archivo
             // desde el sistema para ver si era el correcto.
-            'Content-Disposition' => 'inline; filename="' . $facturas->nombreArchivo($f) . '"',
+            'Content-Disposition' => 'inline; filename="'.$facturas->nombreArchivo($f).'"',
         ]);
     }
 
@@ -301,8 +301,8 @@ class FacturasApiController extends Controller
     public function anularLote(Request $request, FacturaService $facturas)
     {
         $datos = $request->validate([
-            'ids'    => 'required|array|min:1|max:50',
-            'ids.*'  => 'integer',
+            'ids' => 'required|array|min:1|max:50',
+            'ids.*' => 'integer',
             'motivo' => 'required|string|min:5|max:255',
         ]);
 
@@ -314,6 +314,7 @@ class FacturasApiController extends Controller
         foreach (Invoice::whereIn('invoice_id', $datos['ids'])->get() as $f) {
             if ($f->estaAnulada()) {
                 $saltados++;
+
                 continue;
             }
 
@@ -331,7 +332,7 @@ class FacturasApiController extends Controller
 
         return response()->json([
             'message' => $mensaje,
-            'voided'  => $anulados,
+            'voided' => $anulados,
             'skipped' => $saltados,
         ]);
     }
@@ -345,7 +346,7 @@ class FacturasApiController extends Controller
         ]);
 
         $f = Invoice::find($id);
-        abort_if(!$f, 404, 'El comprobante no existe.');
+        abort_if(! $f, 404, 'El comprobante no existe.');
 
         try {
             $f = $facturas->anular($f, $datos['motivo'], $request->user()->user_id ?? null);

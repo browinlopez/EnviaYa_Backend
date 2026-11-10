@@ -84,7 +84,7 @@ class AgruparVariantes extends Command
             }
         }
 
-        if (!$aplicar) {
+        if (! $aplicar) {
             $this->newLine();
             $this->line('  Para escribir: <options=bold>php artisan catalogo:agrupar --aplicar</>');
             $this->newLine();
@@ -115,11 +115,11 @@ class AgruparVariantes extends Command
                     $reusados++;
                 } else {
                     $grupo = ProductGroup::create([
-                        'name'        => $g['name'],
-                        'brand'       => $g['brand'],
+                        'name' => $g['name'],
+                        'brand' => $g['brand'],
                         'category_id' => $g['category_id'],
-                        'image'       => $g['image'],
-                        'origen'      => 'automatico',
+                        'image' => $g['image'],
+                        'origen' => 'automatico',
                     ]);
                     $creados++;
                 }
@@ -127,8 +127,8 @@ class AgruparVariantes extends Command
                 foreach ($g['miembros'] as $m) {
                     $asignados += Product::where('products_id', $m['products_id'])
                         ->update([
-                            'group_id'  => $grupo->group_id,
-                            'variante'  => $m['_etiqueta'],
+                            'group_id' => $grupo->group_id,
+                            'variante' => $m['_etiqueta'],
                         ]);
 
                     $sellados[] = (int) $m['products_id'];

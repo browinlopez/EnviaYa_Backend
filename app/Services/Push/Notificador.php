@@ -2,9 +2,9 @@
 
 namespace App\Services\Push;
 
+use App\Jobs\EnviarLotePush;
 use App\Models\DeviceToken;
 use App\Models\Marketing\PushCampaign;
-use App\Jobs\EnviarLotePush;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -33,15 +33,13 @@ class Notificador
      */
     public const POR_LOTE = 100;
 
-    public function __construct(private TransportePush $transporte)
-    {
-    }
+    public function __construct(private TransportePush $transporte) {}
 
     /**
      * Encola el envío de una campaña ya resuelta.
      *
      * @param  list<int>  $usuarios  destinatarios del segmento
-     * @return int  dispositivos a los que se va a intentar
+     * @return int dispositivos a los que se va a intentar
      */
     public function encolar(PushCampaign $campana, array $usuarios): int
     {
@@ -78,12 +76,13 @@ class Notificador
         );
 
         $entregados = 0;
-        $fallidos   = 0;
-        $muertos    = [];
+        $fallidos = 0;
+        $muertos = [];
 
         foreach ($resultados as $token => $r) {
             if ($r->ok) {
                 $entregados++;
+
                 continue;
             }
 
@@ -98,14 +97,14 @@ class Notificador
 
         if ($muertos !== []) {
             DeviceToken::whereIn('token', array_keys($muertos))->update([
-                'failed_at'   => now(),
+                'failed_at' => now(),
                 'fail_reason' => substr((string) reset($muertos), 0, 120),
             ]);
         }
 
         DB::table('push_campaigns')->where('id', $campana->id)->update([
-            'delivered_count' => DB::raw('COALESCE(delivered_count, 0) + ' . $entregados),
-            'failed_count'    => DB::raw('COALESCE(failed_count, 0) + ' . $fallidos),
+            'delivered_count' => DB::raw('COALESCE(delivered_count, 0) + '.$entregados),
+            'failed_count' => DB::raw('COALESCE(failed_count, 0) + '.$fallidos),
         ]);
 
         // Los tokens que sí funcionaron se marcan vistos: es lo que permite
@@ -125,14 +124,14 @@ class Notificador
      */
     private function datosDelEnlace(PushCampaign $campana): array
     {
-        if (($campana->link_type ?? 'none') === 'none' || !$campana->link_value) {
+        if (($campana->link_type ?? 'none') === 'none' || ! $campana->link_value) {
             return ['campaign_id' => (string) $campana->id];
         }
 
         return [
             'campaign_id' => (string) $campana->id,
-            'link_type'   => (string) $campana->link_type,
-            'link_value'  => (string) $campana->link_value,
+            'link_type' => (string) $campana->link_type,
+            'link_value' => (string) $campana->link_value,
         ];
     }
 

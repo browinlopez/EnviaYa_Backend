@@ -1,16 +1,13 @@
 <?php
 
+use App\Models\Marketing\Coupon;
 use App\Models\Order\OrdersSales;
 use App\Models\Payment\Payment;
-use App\Models\Rol;
-use App\Models\User;
 use App\Services\BoldService;
 use App\Services\DevolucionDelPedido;
 use Carbon\Carbon;
-use App\Models\Marketing\Coupon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Laravel\Sanctum\Sanctum;
 
 /**
  * CANCELAR UN PEDIDO: EL REPORTE, LOS AVISOS Y LA PLATA.
@@ -181,8 +178,8 @@ test('si Bold no responde, la cancelacion sigue en pie', function () {
     $t = pedidoCancelable(metodo: 2, cobrado: true);
 
     $bold = Mockery::mock(BoldService::class);
-    $bold->shouldReceive('anular')->andThrow(new \Exception('Bold caido'));
-    $bold->shouldReceive('devolver')->andThrow(new \Exception('Bold caido'));
+    $bold->shouldReceive('anular')->andThrow(new Exception('Bold caido'));
+    $bold->shouldReceive('devolver')->andThrow(new Exception('Bold caido'));
     app()->instance(BoldService::class, $bold);
 
     test()->putJson("/v1/orders/{$t['id']}/cancel", ['motivo' => 'Cancelado'])
@@ -245,12 +242,12 @@ test('el uso del cupon vuelve al cupo al cancelar', function () {
     $e = escenarioPedido();
 
     Coupon::create([
-        'code'      => 'UNICO',
-        'type'      => 'fixed',
-        'value'     => 5000,
-        'max_uses'  => 1,
+        'code' => 'UNICO',
+        'type' => 'fixed',
+        'value' => 5000,
+        'max_uses' => 1,
         'starts_at' => now()->subDay()->toDateString(),
-        'ends_at'   => now()->addDay()->toDateString(),
+        'ends_at' => now()->addDay()->toDateString(),
     ]);
 
     $this->postJson('/v1/orders/orders', cuerpoPedido($e, ['coupon_code' => 'UNICO']))
@@ -283,12 +280,12 @@ test('el cupon devuelto no le gasta a nadie su tope por persona', function () {
     $e = escenarioPedido();
 
     Coupon::create([
-        'code'              => 'UNAVEZ',
-        'type'              => 'fixed',
-        'value'             => 5000,
+        'code' => 'UNAVEZ',
+        'type' => 'fixed',
+        'value' => 5000,
         'max_uses_per_user' => 1,
-        'starts_at'         => now()->subDay()->toDateString(),
-        'ends_at'           => now()->addDay()->toDateString(),
+        'starts_at' => now()->subDay()->toDateString(),
+        'ends_at' => now()->addDay()->toDateString(),
     ]);
 
     $this->postJson('/v1/orders/orders', cuerpoPedido($e, ['coupon_code' => 'UNAVEZ']))

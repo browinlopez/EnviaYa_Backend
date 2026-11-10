@@ -30,13 +30,13 @@ class EnsureModuleAccess
     {
         $user = $request->user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'No autenticado.'], 401);
         }
 
         $area = $user->area_id ? Area::find($user->area_id) : null;
 
-        if (!$area || (int) $area->state !== 1) {
+        if (! $area || (int) $area->state !== 1) {
             return response()->json([
                 'message' => 'Tu cuenta no tiene un área asignada. Pídele a Tecnología que te asigne una.',
             ], 403);
@@ -50,7 +50,7 @@ class EnsureModuleAccess
             ? $area->puedeGestionar($modulo, $nivel)
             : $area->puedeVer($modulo, $nivel);
 
-        if (!$permitido) {
+        if (! $permitido) {
             return response()->json([
                 'message' => $this->explicar($area, $modulo, $alcance, $nivel),
             ], 403);
@@ -76,7 +76,7 @@ class EnsureModuleAccess
         // El área sí lo gestiona; lo que falta es el nivel de la persona.
         if ($nivel === Area::NIVEL_CONSULTA && $area->puedeGestionar($modulo)) {
             return 'Tu acceso es de solo consulta. Para modificar esta sección '
-                . 'pídele a Tecnología que te cambie el nivel a gestor.';
+                .'pídele a Tecnología que te cambie el nivel a gestor.';
         }
 
         return "Tu área ({$area->name}) puede consultar esta sección, pero no modificarla.";

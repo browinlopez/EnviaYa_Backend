@@ -2,22 +2,14 @@
 
 namespace App\Http\Controllers\Admin\Api;
 
-use App\Services\Push\Notificador;
 use App\Http\Controllers\Controller;
-use App\Models\DeviceToken;
 use App\Models\Marketing\AdCampaign;
 use App\Models\Marketing\Advertiser;
-use App\Models\Marketing\Banner;
-use App\Models\Marketing\Coupon;
-use App\Models\Marketing\FeaturedBusiness;
-use App\Models\Marketing\PushCampaign;
-use App\Services\MediaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class AnunciantesApiController extends Controller
 {
-
     public function advertisers(Request $request)
     {
         $q = Advertiser::query()
@@ -41,6 +33,7 @@ class AnunciantesApiController extends Controller
         return response()->json(
             $filas->map(function ($a) use ($campanas) {
                 $a->campaigns_count = (int) ($campanas[$a->id] ?? 0);
+
                 return $a;
             })
         );
@@ -87,14 +80,14 @@ class AnunciantesApiController extends Controller
         $regla = $parcial ? 'sometimes' : 'required';
 
         return $request->validate([
-            'name'          => "{$regla}|string|max:150",
-            'business_id'   => 'sometimes|nullable|integer|exists:business,busines_id',
-            'contact_name'  => 'sometimes|nullable|string|max:150',
+            'name' => "{$regla}|string|max:150",
+            'business_id' => 'sometimes|nullable|integer|exists:business,busines_id',
+            'contact_name' => 'sometimes|nullable|string|max:150',
             'contact_email' => 'sometimes|nullable|email|max:150',
             'contact_phone' => 'sometimes|nullable|string|max:30',
-            'tax_id'        => 'sometimes|nullable|string|max:40',
-            'notes'         => 'sometimes|nullable|string',
-            'state'         => 'sometimes|boolean',
+            'tax_id' => 'sometimes|nullable|string|max:40',
+            'notes' => 'sometimes|nullable|string',
+            'state' => 'sometimes|boolean',
         ]);
     }
 

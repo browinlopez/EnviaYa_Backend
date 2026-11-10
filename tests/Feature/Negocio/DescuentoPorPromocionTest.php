@@ -68,11 +68,11 @@ function escenarioDescuento(float $precio = 1000): array
 function promocionVigente(int $businessId, array $datos, array $productos = []): Promotion
 {
     $promocion = Promotion::create(array_merge([
-        'busines_id'  => $businessId,
+        'busines_id' => $businessId,
         'description' => 'Promoción de prueba',
-        'state'       => Promotion::ENVIADA,
-        'sent_at'     => now(),
-        'start_date'  => now(),
+        'state' => Promotion::ENVIADA,
+        'sent_at' => now(),
+        'start_date' => now(),
     ], $datos));
 
     if ($productos !== []) {
@@ -88,7 +88,7 @@ function cotizar(array $e, int $cantidad): array
     return test()->postJson('/v1/orders/cotizar', [
         'busines_id' => $e['businessId'],
         'address_id' => $e['addressId'],
-        'products'   => [['product_id' => $e['productoId'], 'amount' => $cantidad]],
+        'products' => [['product_id' => $e['productoId'], 'amount' => $cantidad]],
     ])->json();
 }
 
@@ -243,10 +243,10 @@ it('la comisión de la plataforma se cobra sobre el subtotal YA descontado', fun
     ], [$e['productoId']]);
 
     test()->postJson('/v1/orders/orders', [
-        'user_id'    => $e['comprador']->user_id,
+        'user_id' => $e['comprador']->user_id,
         'busines_id' => $e['businessId'],
         'address_id' => $e['addressId'],
-        'products'   => [['product_id' => $e['productoId'], 'amount' => 10]],
+        'products' => [['product_id' => $e['productoId'], 'amount' => 10]],
         'methods_id' => 1,
     ])->assertStatus(201);
 
@@ -270,10 +270,10 @@ it('el descuento se congela en el pedido y no cambia si la promoción cambia', f
     ], [$e['productoId']]);
 
     test()->postJson('/v1/orders/orders', [
-        'user_id'    => $e['comprador']->user_id,
+        'user_id' => $e['comprador']->user_id,
         'busines_id' => $e['businessId'],
         'address_id' => $e['addressId'],
-        'products'   => [['product_id' => $e['productoId'], 'amount' => 5]],
+        'products' => [['product_id' => $e['productoId'], 'amount' => 5]],
         'methods_id' => 1,
     ])->assertStatus(201);
 
@@ -306,7 +306,7 @@ it('no se puede cotizar contra la dirección de otro', function () {
     $r = test()->postJson('/v1/orders/cotizar', [
         'busines_id' => $e['businessId'],
         'address_id' => $suya,
-        'products'   => [['product_id' => $e['productoId'], 'amount' => 1]],
+        'products' => [['product_id' => $e['productoId'], 'amount' => 1]],
     ])->assertOk();
 
     /*

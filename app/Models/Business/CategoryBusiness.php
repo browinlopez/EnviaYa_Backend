@@ -2,9 +2,9 @@
 
 namespace App\Models\Business;
 
+use App\Models\Audit\Audit;
 use App\Models\Business;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use App\Models\Audit\Audit;
 
 class CategoryBusiness extends Audit
 {
@@ -15,7 +15,7 @@ class CategoryBusiness extends Audit
     protected $fillable = [
         'name',
         'description',
-        "image"
+        'image',
     ];
 
     // RelaciÃ³n inversa con Business

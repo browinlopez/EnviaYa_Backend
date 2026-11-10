@@ -16,7 +16,6 @@ use App\Models\User;
  * marcado, y anota la hora— mientras el registro de la aplicacion, que recoge
  * mucho mas, no preguntaba.
  */
-
 beforeEach(function () {
     Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
 });
@@ -25,10 +24,10 @@ beforeEach(function () {
 function datosDeRegistro(array $extra = []): array
 {
     return array_merge([
-        'name'     => 'Ana Perez',
-        'email'    => 'ana' . uniqid() . '@example.com',
+        'name' => 'Ana Perez',
+        'email' => 'ana'.uniqid().'@example.com',
         'password' => 'ClaveDePrueba1',
-        'phone'    => '3001234567',
+        'phone' => '3001234567',
     ], $extra);
 }
 
@@ -57,7 +56,7 @@ it('un consentimiento en false se rechaza igual que si faltara', function () {
 
 it('con el consentimiento queda la constancia: cuando, que version y desde donde', function () {
     $datos = datosDeRegistro([
-        'consentimiento'   => true,
+        'consentimiento' => true,
         'politica_version' => '2026-09',
     ]);
 
@@ -78,7 +77,7 @@ it('la hora la pone el SERVIDOR, no el telefono', function () {
      * aparato para fabricar una autorizacion con la fecha que convenga.
      */
     $datos = datosDeRegistro([
-        'consentimiento'   => true,
+        'consentimiento' => true,
         'politica_version' => '2026-09',
         // Un intento de imponer una fecha desde fuera.
         'policy_accepted_at' => '2001-01-01 00:00:00',

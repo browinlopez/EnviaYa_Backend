@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Business;
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
 use App\Models\Business;
-use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -43,20 +42,21 @@ class BusinessController extends Controller
                 'razonSocial_DCD' => $request->razonSocial_DCD,
                 'logo' => $request->logo,
                 'type' => $request->type,
-                'state' => true
+                'state' => true,
             ]);
 
             DB::commit();
 
             return response()->json([
                 'message' => 'Negocio creado correctamente',
-                'business' => $business->load('municipality')
+                'business' => $business->load('municipality'),
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'message' => 'Error al crear el negocio',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -76,7 +76,7 @@ class BusinessController extends Controller
             'type' => 'nullable|integer|in:1,2',
             'state' => 'nullable|boolean',
             'owner_ids' => 'nullable|array',
-            'owner_ids.*' => 'integer|exists:owner,owner_id'
+            'owner_ids.*' => 'integer|exists:owner,owner_id',
         ]);
 
         /*
@@ -101,7 +101,7 @@ class BusinessController extends Controller
                 'razonSocial_DCD',
                 'logo',
                 'type',
-                'state'
+                'state',
             ]));
 
             if ($request->filled('owner_ids')) {
@@ -112,13 +112,14 @@ class BusinessController extends Controller
 
             return response()->json([
                 'message' => 'Negocio actualizado correctamente',
-                'business' => $business->load('owners', 'products', 'reviews', 'municipality')
+                'business' => $business->load('owners', 'products', 'reviews', 'municipality'),
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'message' => 'Error al actualizar el negocio',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

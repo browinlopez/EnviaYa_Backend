@@ -24,8 +24,8 @@ return new class extends Migration
 
             // Foreign Key
             $table->foreign('user_id', 'fk_notifications_user')
-                  ->references('user_id')->on('user')
-                  ->onDelete('cascade');
+                ->references('user_id')->on('user')
+                ->onDelete('cascade');
         });
     }
 

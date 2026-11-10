@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Models\Product\ProductBusiness;
 use App\Support\UnidadDeVenta;
-
+use Illuminate\Support\Collection;
 
 /**
  * Las cifras que se congelan en un pedido al crearlo.
@@ -26,12 +26,11 @@ class EconomiaDelPedido
         private readonly PoliticaDeDomicilio $domicilios,
         private readonly TarifaPorDistancia $distancias,
         private readonly DescuentoPorPromocion $promociones,
-    ) {
-    }
+    ) {}
 
     /**
-     * @param  iterable  $lineas   Lo pedido: [{product_id, amount}, ...]
-     * @param  \Illuminate\Support\Collection  $precios  products_id => precio del servidor
+     * @param  iterable  $lineas  Lo pedido: [{product_id, amount}, ...]
+     * @param  Collection  $precios  products_id => precio del servidor
      * @return array{subtotal:float,descuento:float,tarifaBase:float,rebajaDomicilio:float,domicilio:float,total:float,domiciliaryFee:float,platformFee:float,cupon:?object}
      */
 
@@ -106,7 +105,7 @@ class EconomiaDelPedido
 
         $unidad = $surtido[$id]->sale_unit ?? UnidadDeVenta::UNIDAD;
 
-        if (!UnidadDeVenta::esPeso($unidad)) {
+        if (! UnidadDeVenta::esPeso($unidad)) {
             return round($precio * (float) ($linea['amount'] ?? 0), 2);
         }
 
@@ -138,7 +137,7 @@ class EconomiaDelPedido
             $id = (int) ($linea['product_id'] ?? 0);
             $unidad = $surtido[$id]->sale_unit ?? UnidadDeVenta::UNIDAD;
 
-            if (!UnidadDeVenta::esPeso($unidad)) {
+            if (! UnidadDeVenta::esPeso($unidad)) {
                 continue;
             }
 
@@ -257,7 +256,7 @@ class EconomiaDelPedido
          * columna para poder medir cuánto cuesta la campaña.
          */
         $rebajaDomicilio = $this->domicilios->rebajaPara($tarifaBase, $cupon);
-        $domicilio       = $tarifaBase - $rebajaDomicilio;
+        $domicilio = $tarifaBase - $rebajaDomicilio;
 
         $total = $subtotal + $domicilio - $descuento;
 
@@ -289,24 +288,24 @@ class EconomiaDelPedido
         );
 
         return [
-            'subtotal'        => $subtotal,
-            'descuento'       => $descuento,
+            'subtotal' => $subtotal,
+            'descuento' => $descuento,
             // Desglosado para poder decir en pantalla de dónde sale la rebaja:
             // «Cupón −$2.000» y «Promoción −$2.500» no son lo mismo.
-            'descuentoCupon'  => round($descuentoCupon, 2),
-            'descuentoPromo'  => $promo['descuento'],
-            'promociones'     => $promo['aplicadas'],
+            'descuentoCupon' => round($descuentoCupon, 2),
+            'descuentoPromo' => $promo['descuento'],
+            'promociones' => $promo['aplicadas'],
             // «Te falta una para que el tercero salga gratis».
             'promocionesCerca' => $promo['cerca'],
-            'tarifaBase'      => $tarifaBase,
+            'tarifaBase' => $tarifaBase,
             'rebajaDomicilio' => $rebajaDomicilio,
-            'domicilio'       => $domicilio,
-            'total'           => $total,
-            'domiciliaryFee'  => $domiciliaryFee,
-            'platformFee'     => $platformFee,
-            'cupon'           => $cupon,
+            'domicilio' => $domicilio,
+            'total' => $total,
+            'domiciliaryFee' => $domiciliaryFee,
+            'platformFee' => $platformFee,
+            'cupon' => $cupon,
             // Con que distancia se calculo, para poder decirlo en pantalla.
-            'km'              => $kmDeEntrega,
+            'km' => $kmDeEntrega,
         ];
     }
 }

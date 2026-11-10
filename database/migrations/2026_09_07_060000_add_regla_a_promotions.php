@@ -35,7 +35,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('promotions', function (Blueprint $table) {
-            if (!Schema::hasColumn('promotions', 'tipo')) {
+            if (! Schema::hasColumn('promotions', 'tipo')) {
                 $table->string('tipo', 20)->default('ninguno')->after('description');
             }
 
@@ -44,11 +44,11 @@ return new class extends Migration
              * validación: un «lleva 100 paga 1» no es una promoción, es un
              * error de dedo que regala el inventario.
              */
-            if (!Schema::hasColumn('promotions', 'lleva')) {
+            if (! Schema::hasColumn('promotions', 'lleva')) {
                 $table->unsignedTinyInteger('lleva')->nullable()->after('percentage_discount');
             }
 
-            if (!Schema::hasColumn('promotions', 'paga')) {
+            if (! Schema::hasColumn('promotions', 'paga')) {
                 $table->unsignedTinyInteger('paga')->nullable()->after('lleva');
             }
         });

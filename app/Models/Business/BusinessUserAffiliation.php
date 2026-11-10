@@ -2,14 +2,16 @@
 
 namespace App\Models\Business;
 
+use App\Models\Audit\Audit;
 use App\Models\Business;
 use App\Models\User;
-use App\Models\Audit\Audit;
 
 class BusinessUserAffiliation extends Audit
 {
     protected $table = 'business_user_affiliations';
+
     protected $fillable = ['user_id', 'busines_id'];
+
     public $timestamps = false;
 
     public function business()

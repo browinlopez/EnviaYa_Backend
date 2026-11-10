@@ -64,7 +64,7 @@ function tiendaConHistorial(array $pedidos): array
 }
 
 /* ------------------------------------------------------------------ */
-/* EL TABLERO                                                          */
+/* EL TABLERO */
 /* ------------------------------------------------------------------ */
 
 test('un pedido sin aceptar de hace meses sigue en el tablero', function () {
@@ -96,7 +96,7 @@ test('los entregados de hace meses salen del tablero', function () {
 });
 
 /* ------------------------------------------------------------------ */
-/* EL ARCHIVO                                                          */
+/* EL ARCHIVO */
 /* ------------------------------------------------------------------ */
 
 test('sin fechas, el historial es la semana en curso', function () {
@@ -185,7 +185,7 @@ test('las fechas al reves se corrigen en vez de no devolver nada', function () {
 });
 
 /* ------------------------------------------------------------------ */
-/* «ENTREGADOS A TIEMPO»                                               */
+/* «ENTREGADOS A TIEMPO» */
 /* ------------------------------------------------------------------ */
 
 /**
@@ -213,9 +213,9 @@ function tiendaConEntregas(array $entregas): array
             'subtotal' => 10000, 'domicilio' => 0, 'total' => 10000,
             'sale_date' => now()->subHours(4),
             'state' => 4, 'payment_state' => 'paid', 'methods_id' => 1,
-            'dispatched_at'     => $prometidos === null ? null : $salida,
-            'delivery_date'     => $tardo === null ? null : $salida->copy()->addMinutes($tardo),
-            'promised_minutes'  => $prometidos,
+            'dispatched_at' => $prometidos === null ? null : $salida,
+            'delivery_date' => $tardo === null ? null : $salida->copy()->addMinutes($tardo),
+            'promised_minutes' => $prometidos,
         ]);
     }
 

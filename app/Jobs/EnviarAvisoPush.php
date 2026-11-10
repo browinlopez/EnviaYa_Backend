@@ -48,8 +48,7 @@ class EnviarAvisoPush implements ShouldQueue
         public string $titulo,
         public string $cuerpo,
         public array $datos = [],
-    ) {
-    }
+    ) {}
 
     public function handle(TransportePush $push): void
     {
@@ -57,7 +56,7 @@ class EnviarAvisoPush implements ShouldQueue
          * Sin proveedor configurado no se encola trabajo inútil ni se llenan
          * los registros: en desarrollo esto es lo normal, no una avería.
          */
-        if (!$push->configurado()) {
+        if (! $push->configurado()) {
             return;
         }
 
@@ -78,6 +77,7 @@ class EnviarAvisoPush implements ShouldQueue
         foreach ($resultados as $token => $r) {
             if ($r->ok) {
                 $entregados[] = $token;
+
                 continue;
             }
 
@@ -93,7 +93,7 @@ class EnviarAvisoPush implements ShouldQueue
 
         if ($muertos !== []) {
             DeviceToken::whereIn('token', array_keys($muertos))->update([
-                'failed_at'   => now(),
+                'failed_at' => now(),
                 'fail_reason' => substr((string) reset($muertos), 0, 120),
             ]);
         }

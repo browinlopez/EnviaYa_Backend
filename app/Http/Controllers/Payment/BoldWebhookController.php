@@ -5,10 +5,10 @@ namespace App\Http\Controllers\Payment;
 use App\Events\PaymentStatusUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Order\OrdersSales;
-use App\Services\ConfirmacionDePago;
 use App\Models\Payment\Payment;
 use App\Models\Payment\PaymentEvent;
 use App\Models\Payment\PaymentIntent;
+use App\Services\ConfirmacionDePago;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -47,7 +47,7 @@ class BoldWebhookController extends Controller
     {
         $rawBody = $request->getContent();
 
-        if (!$this->hasValidSignature($request, $rawBody)) {
+        if (! $this->hasValidSignature($request, $rawBody)) {
             Log::warning('Bold webhook: firma inválida', [
                 'ip' => $request->ip(),
             ]);
@@ -57,7 +57,7 @@ class BoldWebhookController extends Controller
 
         $payload = json_decode($rawBody, true);
 
-        if (!is_array($payload)) {
+        if (! is_array($payload)) {
             return response()->json(['message' => 'Payload inválido'], 400);
         }
 
@@ -81,7 +81,7 @@ class BoldWebhookController extends Controller
 
         $payment = $this->resolvePayment($transactionId, $reference);
 
-        if (!$payment) {
+        if (! $payment) {
             Log::warning('Bold webhook: no se encontró el pago', [
                 'transaction_id' => $transactionId,
                 'reference' => $reference,
@@ -101,7 +101,7 @@ class BoldWebhookController extends Controller
     {
         $signature = $request->header('x-bold-signature');
 
-        if (!$signature) {
+        if (! $signature) {
             return false;
         }
 
@@ -115,7 +115,7 @@ class BoldWebhookController extends Controller
          * esta ruta es la que marca pedidos como pagados. Mejor rechazar todo
          * —y que se note— que aceptar cobros que nadie firmó.
          */
-        if (!$enPruebas && $secret === '') {
+        if (! $enPruebas && $secret === '') {
             Log::error('Bold webhook: falta la llave secreta de Bold en producción; se rechaza todo');
 
             return false;
@@ -184,7 +184,7 @@ class BoldWebhookController extends Controller
         $isApproved = in_array($type, self::APPROVED_TYPES, true);
         $isRejected = in_array($type, self::REJECTED_TYPES, true);
 
-        if (!$isApproved && !$isRejected) {
+        if (! $isApproved && ! $isRejected) {
             // Evento informativo que no cambia el resultado final del pago.
             $payment->update(['provider_snapshot' => $payload]);
 
@@ -236,7 +236,7 @@ class BoldWebhookController extends Controller
         } catch (\Throwable $e) {
             Log::warning('Bold webhook: no se pudo anunciar el cambio de pago', [
                 'payment_id' => $payment->getKey(),
-                'error'      => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
         }
     }

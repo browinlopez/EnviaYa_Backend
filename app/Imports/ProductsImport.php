@@ -14,14 +14,14 @@ class ProductsImport implements ToModel, WithChunkReading, WithHeadingRow
 
     public function model(array $row)
     {
-        if (!$row['nombre_producto']) {
+        if (! $row['nombre_producto']) {
             return null;
         }
 
         // 🔥 Cargar categorías una sola vez
         if (self::$categories === null) {
             self::$categories = Category::pluck('category_id', 'name')
-                ->mapWithKeys(fn($id, $name) => [trim(strtolower($name)) => $id])
+                ->mapWithKeys(fn ($id, $name) => [trim(strtolower($name)) => $id])
                 ->toArray();
         }
 
@@ -31,30 +31,30 @@ class ProductsImport implements ToModel, WithChunkReading, WithHeadingRow
 
         // 🔍 Imagen
         $image = $row['imagen'] ?? null;
-        if (!filter_var($image, FILTER_VALIDATE_URL)) {
+        if (! filter_var($image, FILTER_VALIDATE_URL)) {
             $image = null;
         }
 
         // 🔥 DATA FINAL QUE SE INSERTARÍA
-    /*     $data = [
-            'name'        => $row['nombre_producto'],
-            'description' => $row['descripcion'] ?? null,
-            'category_id' => $categoryId,
-            'image'       => $image,
-            'state'       => isset($row['estado']) && is_numeric($row['estado'])
-                ? (int) $row['estado']
-                : 1,
-        ];
+        /*     $data = [
+                'name'        => $row['nombre_producto'],
+                'description' => $row['descripcion'] ?? null,
+                'category_id' => $categoryId,
+                'image'       => $image,
+                'state'       => isset($row['estado']) && is_numeric($row['estado'])
+                    ? (int) $row['estado']
+                    : 1,
+            ];
 
-        // 🔥 DEBUG (ver uno y cortar ejecución)
-        dd($data); */
+            // 🔥 DEBUG (ver uno y cortar ejecución)
+            dd($data); */
 
         return new Product([
-            'name'        => $row['nombre_producto'],
+            'name' => $row['nombre_producto'],
             'description' => $row['descripcion'] ?? null,
             'category_id' => $categoryId,
-            'image'       => $image,
-            'state'       => isset($row['estado']) && is_numeric($row['estado'])
+            'image' => $image,
+            'state' => isset($row['estado']) && is_numeric($row['estado'])
                 ? (int) $row['estado']
                 : 1,
         ]);

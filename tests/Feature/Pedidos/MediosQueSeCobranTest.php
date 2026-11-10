@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Rol;
 use App\Models\User;
 use App\Services\PagoEnLinea;
 use Illuminate\Support\Facades\DB;
@@ -24,7 +25,6 @@ use Laravel\Sanctum\Sanctum;
  * Se filtra POR CÓDIGO y no apagando las filas: si mañana alguien vuelve a
  * encender una desde el panel, el hueco no reaparece.
  */
-
 beforeEach(function () {
     foreach ([
         1 => 'Efectivo',
@@ -40,7 +40,7 @@ beforeEach(function () {
         ]);
     }
 
-    \App\Models\Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
+    Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
 });
 
 it('solo se ofrecen los medios que el sistema sabe cobrar', function () {

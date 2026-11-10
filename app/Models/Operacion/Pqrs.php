@@ -15,10 +15,13 @@ class Pqrs extends Model
 {
     protected $table = 'pqrs';
 
-    public const ABIERTO    = 0;
+    public const ABIERTO = 0;
+
     public const EN_GESTION = 1;
-    public const RESUELTO   = 2;
-    public const CERRADO    = 3;
+
+    public const RESUELTO = 2;
+
+    public const CERRADO = 3;
 
     /**
      * Plazo de respuesta en días hábiles aproximados, por prioridad.
@@ -50,14 +53,14 @@ class Pqrs extends Model
     ];
 
     protected $casts = [
-        'user_id'        => 'integer',
-        'order_id'       => 'integer',
-        'business_id'    => 'integer',
+        'user_id' => 'integer',
+        'order_id' => 'integer',
+        'business_id' => 'integer',
         'domiciliary_id' => 'integer',
-        'state'          => 'integer',
-        'assigned_to'    => 'integer',
-        'due_at'         => 'datetime',
-        'resolved_at'    => 'datetime',
+        'state' => 'integer',
+        'assigned_to' => 'integer',
+        'due_at' => 'datetime',
+        'resolved_at' => 'datetime',
     ];
 
     public function notes(): HasMany
@@ -95,7 +98,7 @@ class Pqrs extends Model
     /** ¿Se pasó del plazo sin resolverse? */
     public function vencido(): bool
     {
-        if (!$this->due_at || in_array($this->state, [self::RESUELTO, self::CERRADO], true)) {
+        if (! $this->due_at || in_array($this->state, [self::RESUELTO, self::CERRADO], true)) {
             return false;
         }
 

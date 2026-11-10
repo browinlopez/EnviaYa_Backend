@@ -34,16 +34,16 @@ class VisitantesController extends Controller
         $complexId = (int) $request->attributes->get('complex_id');
 
         $datos = $request->validate([
-            'kind'             => 'required|string|in:' . implode(',', self::CLASES),
-            'visitor_name'     => 'required|string|max:120',
+            'kind' => 'required|string|in:'.implode(',', self::CLASES),
+            'visitor_name' => 'required|string|max:120',
             'visitor_document' => 'nullable|string|max:40',
-            'visitor_phone'    => 'nullable|string|max:40',
-            'visitor_company'  => 'nullable|string|max:120',
-            'vehicle_plate'    => 'nullable|string|max:20',
-            'tower'            => 'nullable|string|max:30',
-            'apartment'        => 'nullable|string|max:30',
-            'authorized_by'    => 'nullable|string|max:120',
-            'notes'            => 'nullable|string|max:1000',
+            'visitor_phone' => 'nullable|string|max:40',
+            'visitor_company' => 'nullable|string|max:120',
+            'vehicle_plate' => 'nullable|string|max:20',
+            'tower' => 'nullable|string|max:30',
+            'apartment' => 'nullable|string|max:30',
+            'authorized_by' => 'nullable|string|max:120',
+            'notes' => 'nullable|string|max:1000',
         ]);
 
         /*
@@ -65,24 +65,24 @@ class VisitantesController extends Controller
         if ($exige && empty($datos['authorized_by'])) {
             return response()->json([
                 'message' => 'Este conjunto exige dejar constancia de quién dio permiso. Anota quién autorizó.',
-                'errors'  => ['authorized_by' => ['Falta anotar quién dio permiso.']],
+                'errors' => ['authorized_by' => ['Falta anotar quién dio permiso.']],
             ], 422);
         }
 
         $id = DB::table('complex_entries')->insertGetId($datos + [
-            'complex_id'     => $complexId,
+            'complex_id' => $complexId,
             // Sin domiciliario y sin método de identificación del sistema: no
             // hay nada que verificar, sólo lo que el celador anotó.
             'domiciliary_id' => null,
-            'method'         => 'manual',
-            'orders_count'   => 0,
-            'registered_by'  => $request->user()->user_id,
-            'created_at'     => now(),
-            'updated_at'     => now(),
+            'method' => 'manual',
+            'orders_count' => 0,
+            'registered_by' => $request->user()->user_id,
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
 
         return response()->json([
-            'message'  => 'Entrada registrada.',
+            'message' => 'Entrada registrada.',
             'entry_id' => $id,
         ], 201);
     }
@@ -105,7 +105,7 @@ class VisitantesController extends Controller
 
         // 404 y no 403: confirmar que existe pero es de otro conjunto ya sería
         // decir algo del edificio del vecino.
-        if (!$entrada) {
+        if (! $entrada) {
             return response()->json(['message' => 'Esa entrada no es de tu conjunto.'], 404);
         }
 
@@ -122,9 +122,9 @@ class VisitantesController extends Controller
         }
 
         DB::table('complex_entries')->where('id', $id)->update([
-            'exited_at'          => now(),
+            'exited_at' => now(),
             'exit_registered_by' => $request->user()->user_id,
-            'updated_at'         => now(),
+            'updated_at' => now(),
         ]);
 
         return response()->json(['message' => 'Salida registrada.']);

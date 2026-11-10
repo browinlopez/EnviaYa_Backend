@@ -75,7 +75,7 @@ return new class extends Migration
             'SELECT TABLE_NAME t, COLUMN_NAME c, REFERENCED_TABLE_NAME r
                FROM information_schema.KEY_COLUMN_USAGE
               WHERE CONSTRAINT_SCHEMA = DATABASE()
-                AND REFERENCED_TABLE_NAME IN (' . implode(',', array_fill(0, count(self::AJENAS), '?')) . ')',
+                AND REFERENCED_TABLE_NAME IN ('.implode(',', array_fill(0, count(self::AJENAS), '?')).')',
             self::AJENAS,
         );
 

@@ -44,14 +44,14 @@ class SoloParaCambiarPorSesion
          */
         $bearer = $request->bearerToken();
 
-        if (!$bearer) {
+        if (! $bearer) {
             return $next($request);
         }
 
         $token = PersonalAccessToken::findToken($bearer);
 
         // Sin token de por medio —sesión de navegador, ruta pública— no aplica.
-        if (!$token || $token->name !== AccesoBiometricoController::NOMBRE_TOKEN) {
+        if (! $token || $token->name !== AccesoBiometricoController::NOMBRE_TOKEN) {
             return $next($request);
         }
 
@@ -61,7 +61,7 @@ class SoloParaCambiarPorSesion
 
         return response()->json([
             'message' => 'Esta credencial solo sirve para volver a entrar con tu huella.',
-            'reason'  => 'biometric_token_scope',
+            'reason' => 'biometric_token_scope',
         ], 403);
     }
 }

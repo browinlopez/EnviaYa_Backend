@@ -39,8 +39,7 @@ class EnviarLotePush implements ShouldQueue
     public function __construct(
         public int $campanaId,
         public array $tokens,
-    ) {
-    }
+    ) {}
 
     public function handle(Notificador $notificador): void
     {
@@ -48,7 +47,7 @@ class EnviarLotePush implements ShouldQueue
 
         // La campaña pudo borrarse entre el encolado y la ejecución. Mandar una
         // notificación de algo que ya no existe es peor que no mandarla.
-        if (!$campana) {
+        if (! $campana) {
             return;
         }
 

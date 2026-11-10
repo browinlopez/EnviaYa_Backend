@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Negocio;
 use App\Http\Controllers\Controller;
 use App\Models\Product\Product;
 use App\Models\Product\ProductBusiness;
-use App\Support\UnidadDeVenta;
 use App\Services\CatalogoDeProductos;
+use App\Support\UnidadDeVenta;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -48,14 +48,12 @@ use Illuminate\Support\Facades\DB;
  */
 class ProductosDelNegocioController extends Controller
 {
-    public function __construct(private CatalogoDeProductos $catalogo)
-    {
-    }
+    public function __construct(private CatalogoDeProductos $catalogo) {}
 
     /** En cuántos negocios se vende cada uno de estos productos. */
     private function vecesVendido(array $productIds): array
     {
-        if (!$productIds) {
+        if (! $productIds) {
             return [];
         }
 
@@ -85,34 +83,34 @@ class ProductosDelNegocioController extends Controller
 
                 return [
                     'products_id' => (int) $p->products_id,
-                    'name'        => $p->name,
-                    'barcode'     => $p->barcode,
-                    'brand'       => $p->brand,
+                    'name' => $p->name,
+                    'barcode' => $p->barcode,
+                    'brand' => $p->brand,
                     'description' => $p->description,
-                    'image'       => $p->image,
-                    'category'    => $p->category ? [
+                    'image' => $p->image,
+                    'category' => $p->category ? [
                         'category_id' => (int) $p->category->category_id,
-                        'name'        => $p->category->name,
+                        'name' => $p->category->name,
                     ] : null,
-                    'state'       => (bool) $p->state,
-                    'price'       => (float) $pb->price,
-                    'amount'      => (int) $pb->amount,
+                    'state' => (bool) $p->state,
+                    'price' => (float) $pb->price,
+                    'amount' => (int) $pb->amount,
                     /*
                      * Como lo vende ESTA tienda. Con una unidad de peso,
                      * `price` es el precio por esa medida y las existencias
                      * estan en `stock_weight`: `amount` se queda para lo que
                      * se vende por unidad.
                      */
-                    'sale_unit'    => $pb->sale_unit ?? 'unidad',
+                    'sale_unit' => $pb->sale_unit ?? 'unidad',
                     'stock_weight' => (float) $pb->stock_weight,
-                    'min_qty'      => $pb->min_qty !== null ? (float) $pb->min_qty : null,
-                    'step_qty'     => $pb->step_qty !== null ? (float) $pb->step_qty : null,
+                    'min_qty' => $pb->min_qty !== null ? (float) $pb->min_qty : null,
+                    'step_qty' => $pb->step_qty !== null ? (float) $pb->step_qty : null,
                     /*
                      * Sin precio no se ofrece al comprador. Los que llegan por
                      * copia de otra tienda nacen asi, y el panel tiene que
                      * poder senalarlos: son la lista de trabajo del tendero.
                      */
-                    'sin_precio'  => (float) $pb->price <= 0,
+                    'sin_precio' => (float) $pb->price <= 0,
                     /*
                      * El vencimiento es del LOTE de esta tienda. Antes colgaba
                      * del producto compartido, asi que la fecha que escribiera
@@ -125,7 +123,7 @@ class ProductosDelNegocioController extends Controller
                      * Cuántas tiendas MÁS lo venden. Cero significa que es solo
                      * suyo y los campos compartidos se pueden editar.
                      */
-                    'compartido'  => max(0, (int) ($compartidos[$p->products_id] ?? 1) - 1),
+                    'compartido' => max(0, (int) ($compartidos[$p->products_id] ?? 1) - 1),
                 ];
             })
             ->sortBy('name')
@@ -139,8 +137,8 @@ class ProductosDelNegocioController extends Controller
         $businessId = (int) $request->attributes->get('busines_id');
 
         $datos = $request->validate([
-            'price'       => 'nullable|numeric|min:0',
-            'amount'      => 'nullable|integer|min:0',
+            'price' => 'nullable|numeric|min:0',
+            'amount' => 'nullable|integer|min:0',
             /*
              * COMO LO VENDE ESTA TIENDA. Por unidad o al peso --kilo, libra o
              * gramo-- y es del par tienda-producto: la misma referencia va
@@ -152,15 +150,15 @@ class ProductosDelNegocioController extends Controller
              * unidad: migrarlo a decimal habria cambiado en silencio el
              * significado de veintidos sitios.
              */
-            'sale_unit'    => 'nullable|string|in:' . implode(',', UnidadDeVenta::TODAS),
+            'sale_unit' => 'nullable|string|in:'.implode(',', UnidadDeVenta::TODAS),
             'stock_weight' => 'nullable|numeric|min:0|max:100000',
-            'min_qty'      => 'nullable|numeric|min:0.001|max:100',
-            'step_qty'     => 'nullable|numeric|min:0.001|max:100',
+            'min_qty' => 'nullable|numeric|min:0.001|max:100',
+            'step_qty' => 'nullable|numeric|min:0.001|max:100',
             'expiration_date' => 'nullable|date',
-            'name'        => 'nullable|string|max:255',
+            'name' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'category_id' => 'nullable|integer|exists:category,category_id',
-            'state'       => 'nullable|boolean',
+            'state' => 'nullable|boolean',
         ]);
 
         $pb = ProductBusiness::where('products_id', $id)
@@ -172,7 +170,7 @@ class ProductosDelNegocioController extends Controller
          * confirmar que el producto existe pero es de otra tienda ya es
          * decir algo del catálogo del vecino.
          */
-        if (!$pb) {
+        if (! $pb) {
             return response()->json(['message' => 'Ese producto no es de tu negocio.'], 404);
         }
 
@@ -190,23 +188,23 @@ class ProductosDelNegocioController extends Controller
                 'message' => ($otras === 1
                     ? 'Otra tienda vende este mismo producto'
                     : "Otras {$otras} tiendas venden este mismo producto")
-                    . ', así que su nombre, su categoría y su disponibilidad son de todas y no se cambian desde acá. '
-                    . 'El precio y las existencias sí son tuyos: para dejar de ofrecerlo, pon las existencias en cero.',
+                    .', así que su nombre, su categoría y su disponibilidad son de todas y no se cambian desde acá. '
+                    .'El precio y las existencias sí son tuyos: para dejar de ofrecerlo, pon las existencias en cero.',
             ], 422);
         }
 
         DB::transaction(function () use ($datos, $pb, $id, $otras) {
             $deLaTienda = array_filter(
                 [
-                    'price'  => $datos['price'] ?? null,
+                    'price' => $datos['price'] ?? null,
                     'amount' => $datos['amount'] ?? null,
                     'expiration_date' => $datos['expiration_date'] ?? null,
                     // Como lo vende ESTA tienda. `null` es «no lo mandaste» y
                     // no se pisa lo que hubiera, igual que el resto.
-                    'sale_unit'    => $datos['sale_unit'] ?? null,
+                    'sale_unit' => $datos['sale_unit'] ?? null,
                     'stock_weight' => $datos['stock_weight'] ?? null,
-                    'min_qty'      => $datos['min_qty'] ?? null,
-                    'step_qty'     => $datos['step_qty'] ?? null,
+                    'min_qty' => $datos['min_qty'] ?? null,
+                    'step_qty' => $datos['step_qty'] ?? null,
                 ],
                 fn ($v) => $v !== null,
             );
@@ -218,10 +216,10 @@ class ProductosDelNegocioController extends Controller
             if ($otras === 0) {
                 $delProducto = array_filter(
                     [
-                        'name'        => $datos['name'] ?? null,
+                        'name' => $datos['name'] ?? null,
                         'description' => $datos['description'] ?? null,
                         'category_id' => $datos['category_id'] ?? null,
-                        'state'       => $datos['state'] ?? null,
+                        'state' => $datos['state'] ?? null,
                     ],
                     fn ($v) => $v !== null,
                 );
@@ -272,8 +270,8 @@ class ProductosDelNegocioController extends Controller
 
         $datos = $request->validate([
             'products_id' => 'required|integer|exists:products,products_id',
-            'price'       => 'required|numeric|min:0',
-            'amount'      => 'required|integer|min:0',
+            'price' => 'required|numeric|min:0',
+            'amount' => 'required|integer|min:0',
             /*
              * COMO LO VENDE ESTA TIENDA. Por unidad o al peso --kilo, libra o
              * gramo-- y es del par tienda-producto: la misma referencia va
@@ -285,10 +283,10 @@ class ProductosDelNegocioController extends Controller
              * unidad: migrarlo a decimal habria cambiado en silencio el
              * significado de veintidos sitios.
              */
-            'sale_unit'    => 'nullable|string|in:' . implode(',', UnidadDeVenta::TODAS),
+            'sale_unit' => 'nullable|string|in:'.implode(',', UnidadDeVenta::TODAS),
             'stock_weight' => 'nullable|numeric|min:0|max:100000',
-            'min_qty'      => 'nullable|numeric|min:0.001|max:100',
-            'step_qty'     => 'nullable|numeric|min:0.001|max:100',
+            'min_qty' => 'nullable|numeric|min:0.001|max:100',
+            'step_qty' => 'nullable|numeric|min:0.001|max:100',
         ]);
 
         $yaLoTenia = ProductBusiness::where('busines_id', $businessId)
@@ -301,10 +299,10 @@ class ProductosDelNegocioController extends Controller
             (float) $datos['price'],
             (int) $datos['amount'],
             array_filter([
-                'sale_unit'    => $datos['sale_unit'] ?? null,
+                'sale_unit' => $datos['sale_unit'] ?? null,
                 'stock_weight' => $datos['stock_weight'] ?? null,
-                'min_qty'      => $datos['min_qty'] ?? null,
-                'step_qty'     => $datos['step_qty'] ?? null,
+                'min_qty' => $datos['min_qty'] ?? null,
+                'step_qty' => $datos['step_qty'] ?? null,
             ], fn ($v) => $v !== null),
         );
 
@@ -336,7 +334,7 @@ class ProductosDelNegocioController extends Controller
             ->where('products_id', $id)
             ->delete();
 
-        if (!$borradas) {
+        if (! $borradas) {
             return response()->json(['message' => 'Ese producto no es de tu negocio.'], 404);
         }
 
@@ -360,10 +358,10 @@ class ProductosDelNegocioController extends Controller
         $businessId = (int) $request->attributes->get('busines_id');
 
         $datos = $request->validate([
-            'cambios'               => 'required|array|min:1|max:500',
+            'cambios' => 'required|array|min:1|max:500',
             'cambios.*.products_id' => 'required|integer',
-            'cambios.*.price'       => 'nullable|numeric|min:0',
-            'cambios.*.amount'      => 'nullable|integer|min:0',
+            'cambios.*.price' => 'nullable|numeric|min:0',
+            'cambios.*.amount' => 'nullable|integer|min:0',
         ]);
 
         $mios = ProductBusiness::where('busines_id', $businessId)
@@ -378,8 +376,9 @@ class ProductosDelNegocioController extends Controller
             foreach ($datos['cambios'] as $c) {
                 $id = (int) $c['products_id'];
 
-                if (!in_array($id, $mios, true)) {
+                if (! in_array($id, $mios, true)) {
                     $ajenos[] = $id;
+
                     continue;
                 }
 
@@ -388,7 +387,7 @@ class ProductosDelNegocioController extends Controller
                     fn ($v) => $v !== null,
                 );
 
-                if (!$campos) {
+                if (! $campos) {
                     continue;
                 }
 
@@ -401,14 +400,14 @@ class ProductosDelNegocioController extends Controller
         });
 
         return response()->json([
-            'message'      => "Se actualizaron {$tocados} productos.",
+            'message' => "Se actualizaron {$tocados} productos.",
             'actualizados' => $tocados,
             /*
              * Los que no son suyos se informan en vez de reventar la petición
              * entera: con una lista larga, un id equivocado no puede tirar
              * abajo los otros cuatrocientos cambios buenos.
              */
-            'ignorados'    => $ajenos,
+            'ignorados' => $ajenos,
         ]);
     }
 

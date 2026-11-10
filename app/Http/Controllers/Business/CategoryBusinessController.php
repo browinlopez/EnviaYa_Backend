@@ -28,7 +28,7 @@ class CategoryBusinessController extends Controller
     public function show(Request $request)
     {
         $validated = $request->validate([
-            'id' => 'required|integer|exists:category_business,id'
+            'id' => 'required|integer|exists:category_business,id',
         ]);
 
         $category = CategoryBusiness::findOrFail($validated['id']);
@@ -56,7 +56,7 @@ class CategoryBusinessController extends Controller
     public function destroy(Request $request)
     {
         $validated = $request->validate([
-            'id' => 'required|integer|exists:category_business,id'
+            'id' => 'required|integer|exists:category_business,id',
         ]);
 
         $category = CategoryBusiness::findOrFail($validated['id']);
@@ -64,5 +64,4 @@ class CategoryBusinessController extends Controller
 
         return response()->json(null, 204);
     }
-
 }

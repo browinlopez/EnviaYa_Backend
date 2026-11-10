@@ -14,12 +14,11 @@ use Illuminate\Support\Str;
  * la app e intentar entrar. Ahora pide el correo y manda un enlace nuevo ahí
  * mismo, y con ese enlace la cuenta se verifica.
  */
-
 function pendienteDeVerificar(array $datos = []): User
 {
     return User::factory()->unverified()->create(array_merge([
-        'email'                         => 'vecino@ejemplo.com',
-        'email_verification_token'      => Str::random(60),
+        'email' => 'vecino@ejemplo.com',
+        'email_verification_token' => Str::random(60),
         'email_verification_expires_at' => now()->subHours(2),
     ], $datos));
 }
@@ -34,7 +33,7 @@ test('la página de error ofrece pedir un enlace nuevo', function () {
 test('con un enlace vencido, el formulario ya trae el correo', function () {
     $user = pendienteDeVerificar();
 
-    $this->get('/verify-email?token=' . $user->email_verification_token)
+    $this->get('/verify-email?token='.$user->email_verification_token)
         ->assertOk()
         ->assertSee('caducó')
         ->assertSee('value="vecino@ejemplo.com"', false);
@@ -55,7 +54,7 @@ test('pedirlo manda un enlace nuevo, y ese enlace verifica la cuenta', function 
 
     Mail::assertSent(VerifyEmailCustomMail::class, 1);
 
-    $this->get('/verify-email?token=' . $user->email_verification_token)
+    $this->get('/verify-email?token='.$user->email_verification_token)
         ->assertOk()
         ->assertSee('Correo verificado');
 

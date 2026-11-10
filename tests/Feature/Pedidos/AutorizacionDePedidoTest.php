@@ -68,8 +68,8 @@ function mover(int $orderId, int $estado, ?int $userId = null): array
 {
     return array_filter([
         'order_id' => $orderId,
-        'state'    => $estado,
-        'user_id'  => $userId,
+        'state' => $estado,
+        'user_id' => $userId,
     ], fn ($v) => $v !== null);
 }
 

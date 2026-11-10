@@ -2,6 +2,7 @@
 
 use App\Models\Order\OrdersSales;
 use App\Services\Ajustes;
+use App\Services\PlazoPorDistancia;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -16,20 +17,19 @@ use Illuminate\Support\Facades\DB;
  * Lo que se fija acá es sobre todo la regla de congelar: sin ella, subir el
  * estándar convertiría en "a tiempo" entregas pasadas que llegaron tarde.
  */
-
 function pedidoConPlazo(int $prometidos, int $tardo): OrdersSales
 {
     $despacho = now()->subHours(2);
 
     $id = DB::table('orderssales')->insertGetId([
-        'total'            => 12000,
-        'subtotal'         => 10000,
-        'domicilio'        => 2000,
-        'sale_date'        => $despacho->copy()->subMinutes(10),
-        'dispatched_at'    => $despacho,
-        'delivery_date'    => $despacho->copy()->addMinutes($tardo),
+        'total' => 12000,
+        'subtotal' => 10000,
+        'domicilio' => 2000,
+        'sale_date' => $despacho->copy()->subMinutes(10),
+        'dispatched_at' => $despacho,
+        'delivery_date' => $despacho->copy()->addMinutes($tardo),
         'promised_minutes' => $prometidos,
-        'state'            => 4,
+        'state' => 4,
     ], 'orderSales_id');
 
     return OrdersSales::find($id);
@@ -49,7 +49,7 @@ test('el plazo prometido llega a la app en la configuración', function () {
 /* ------------------------------ POR DISTANCIA ------------------------- */
 
 test('cuanto más lejos, más minutos, redondeando de cinco en cinco', function () {
-    $plazos = app(App\Services\PlazoPorDistancia::class);
+    $plazos = app(PlazoPorDistancia::class);
 
     // Base 20 + 4 por km: 0,8 km son 23,2 → 25; 3,2 km son 32,8 → 35.
     expect($plazos->minutosPara(0.8))->toBe(25)
@@ -57,14 +57,14 @@ test('cuanto más lejos, más minutos, redondeando de cinco en cinco', function 
 });
 
 test('el tope evita prometer hora y media en el borde de la cobertura', function () {
-    $plazos = app(App\Services\PlazoPorDistancia::class);
+    $plazos = app(PlazoPorDistancia::class);
 
     // 12,5 km serían 70 minutos; el máximo los deja en 60.
     expect($plazos->minutosPara(12.5))->toBe(60);
 });
 
 test('sin distancia se promete la base, como antes', function () {
-    $plazos = app(App\Services\PlazoPorDistancia::class);
+    $plazos = app(PlazoPorDistancia::class);
 
     // Una tienda sin coordenadas o alguien que todavía no eligió dirección.
     expect($plazos->minutosPara(null))->toBe(20)
@@ -73,7 +73,7 @@ test('sin distancia se promete la base, como antes', function () {
 
 test('con los minutos por kilómetro en cero vuelve a ser un plazo único', function () {
     Ajustes::guardar(['operacion.minutos_por_km' => 0], null);
-    $plazos = app(App\Services\PlazoPorDistancia::class);
+    $plazos = app(PlazoPorDistancia::class);
 
     expect($plazos->minutosPara(0.5))->toBe(20)
         ->and($plazos->minutosPara(9.0))->toBe(20);
@@ -82,7 +82,7 @@ test('con los minutos por kilómetro en cero vuelve a ser un plazo único', func
 test('un tope mal puesto nunca promete menos que la base', function () {
     // Menos que la base no tiene sentido: es lo que cuesta preparar y salir.
     Ajustes::guardar(['operacion.tiempo_entrega_max' => 10], null);
-    $plazos = app(App\Services\PlazoPorDistancia::class);
+    $plazos = app(PlazoPorDistancia::class);
 
     expect($plazos->minutosPara(8.0))->toBe(20);
 });
@@ -92,10 +92,10 @@ test('cada tienda anuncia su propio plazo en el listado', function () {
     // por kilómetro en cero, y los ajustes viven en la base.
     Ajustes::guardar([
         'operacion.tiempo_entrega_min' => 20,
-        'operacion.minutos_por_km'     => 4,
+        'operacion.minutos_por_km' => 4,
         'operacion.tiempo_entrega_max' => 60,
     ], null);
-    $plazos = app(App\Services\PlazoPorDistancia::class);
+    $plazos = app(PlazoPorDistancia::class);
 
     /*
      * Lo que se ve en la lista: la tienda de la esquina no puede anunciar el
@@ -140,11 +140,11 @@ test('cambiar el estándar no reescribe lo ya entregado', function () {
 test('un pedido sin entregar no cuenta ni a favor ni en contra', function () {
     // Null y no false: de una entrega que no ha ocurrido no hay nada que decir.
     $id = DB::table('orderssales')->insertGetId([
-        'total'            => 12000,
-        'sale_date'        => now(),
-        'dispatched_at'    => now(),
+        'total' => 12000,
+        'sale_date' => now(),
+        'dispatched_at' => now(),
         'promised_minutes' => 20,
-        'state'            => 3,
+        'state' => 3,
     ], 'orderSales_id');
 
     $order = OrdersSales::find($id);
@@ -173,13 +173,13 @@ test('un pedido en camino no reporta tiempo de entrega', function () {
      * min de 20" sobre un pedido que iba de camino.
      */
     $id = DB::table('orderssales')->insertGetId([
-        'total'            => 12000,
-        'sale_date'        => now()->subDay(),
+        'total' => 12000,
+        'sale_date' => now()->subDay(),
         // La marca vieja: anterior al despacho.
-        'delivery_date'    => now()->subDay(),
-        'dispatched_at'    => now()->subHour(),
+        'delivery_date' => now()->subDay(),
+        'dispatched_at' => now()->subHour(),
         'promised_minutes' => 20,
-        'state'            => 3,
+        'state' => 3,
     ], 'orderSales_id');
 
     $order = OrdersSales::find($id);
@@ -194,12 +194,12 @@ test('una entrega anterior a su despacho no se juzga', function () {
     $despacho = now()->subHour();
 
     $id = DB::table('orderssales')->insertGetId([
-        'total'            => 12000,
-        'sale_date'        => $despacho->copy()->subMinutes(30),
-        'delivery_date'    => $despacho->copy()->subMinutes(10),
-        'dispatched_at'    => $despacho,
+        'total' => 12000,
+        'sale_date' => $despacho->copy()->subMinutes(30),
+        'delivery_date' => $despacho->copy()->subMinutes(10),
+        'dispatched_at' => $despacho,
         'promised_minutes' => 20,
-        'state'            => 4,
+        'state' => 4,
     ], 'orderSales_id');
 
     expect(OrdersSales::find($id)->delivery_minutes)->toBeNull();

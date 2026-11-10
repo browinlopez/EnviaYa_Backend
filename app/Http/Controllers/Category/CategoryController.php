@@ -14,7 +14,7 @@ class CategoryController extends Controller
     {
         // Validar que venga el parámetro type
         $request->validate([
-            'type' => 'required|integer|exists:category_business,id'
+            'type' => 'required|integer|exists:category_business,id',
         ]);
 
         $businessType = $request->type;
@@ -32,7 +32,7 @@ class CategoryController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'Categorías filtradas correctamente',
-            'data' => $categories
+            'data' => $categories,
         ]);
     }
 
@@ -42,14 +42,14 @@ class CategoryController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'state' => 'nullable|boolean'
+            'state' => 'nullable|boolean',
         ]);
 
         $category = Category::create($validated);
 
         return response()->json([
             'message' => 'Categoría creada correctamente',
-            'category' => $category
+            'category' => $category,
         ], 201);
     }
 
@@ -72,7 +72,7 @@ class CategoryController extends Controller
             'category_id' => 'required|integer|exists:category,category_id',
             'name' => 'nullable|string|max:255',
             'description' => 'nullable|string',
-            'state' => 'nullable|boolean'
+            'state' => 'nullable|boolean',
         ]);
 
         $category = Category::findOrFail($validated['category_id']);
@@ -80,7 +80,7 @@ class CategoryController extends Controller
 
         return response()->json([
             'message' => 'Categoría actualizada correctamente',
-            'category' => $category
+            'category' => $category,
         ]);
     }
 

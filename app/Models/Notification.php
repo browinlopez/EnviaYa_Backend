@@ -13,7 +13,9 @@ use Illuminate\Database\Eloquent\Model;
 class Notification extends Model
 {
     protected $table = 'notifications';
+
     protected $primaryKey = 'notification_id';
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -28,9 +30,9 @@ class Notification extends Model
 
     protected $casts = [
         'datos' => 'array',
-        'read'  => 'boolean',
+        'read' => 'boolean',
         'state' => 'boolean',
-        'date'  => 'datetime',
+        'date' => 'datetime',
     ];
 
     public function user()

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Negocio;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order\OrdersSales;
+use App\Services\BusinessMediaService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -33,40 +34,40 @@ class MiNegocioController extends Controller
      * calificado puede quitar no es una calificación.
      */
     private const PERMISOS = [
-        'pedidos'       => ['view' => true, 'manage' => true],
-        'productos'     => ['view' => true, 'manage' => true],
+        'pedidos' => ['view' => true, 'manage' => true],
+        'productos' => ['view' => true, 'manage' => true],
         'domiciliarios' => ['view' => true, 'manage' => true],
-        'torre'         => ['view' => true, 'manage' => false],
-        'chats'         => ['view' => true, 'manage' => true],
-        'promociones'   => ['view' => true, 'manage' => true],
-        'clientes'      => ['view' => true, 'manage' => true],
-        'ingresos'      => ['view' => true, 'manage' => false],
-        'resenas'       => ['view' => true, 'manage' => false],
-        'negocio'       => ['view' => true, 'manage' => true],
+        'torre' => ['view' => true, 'manage' => false],
+        'chats' => ['view' => true, 'manage' => true],
+        'promociones' => ['view' => true, 'manage' => true],
+        'clientes' => ['view' => true, 'manage' => true],
+        'ingresos' => ['view' => true, 'manage' => false],
+        'resenas' => ['view' => true, 'manage' => false],
+        'negocio' => ['view' => true, 'manage' => true],
         // La cuenta de quien entra: su clave, su segundo factor y sus
         // sesiones. Nunca se le quita a nadie.
-        'cuenta'        => ['view' => true, 'manage' => true],
+        'cuenta' => ['view' => true, 'manage' => true],
     ];
 
     public function mio(Request $request)
     {
-        $negocio  = $request->attributes->get('negocio');
+        $negocio = $request->attributes->get('negocio');
         $negocios = $request->attributes->get('negocios');
 
         return response()->json([
-            'business'    => $this->ficha($negocio),
-            'businesses'  => $negocios->map(fn ($b) => [
+            'business' => $this->ficha($negocio),
+            'businesses' => $negocios->map(fn ($b) => [
                 'busines_id' => (int) $b->busines_id,
-                'name'       => $b->name,
-                'logo'       => $b->logo,
-                'state'      => (int) $b->state,
+                'name' => $b->name,
+                'logo' => $b->logo,
+                'state' => (int) $b->state,
                 // Para que el selector de local pueda marcar el que está en
                 // pausa: con dos tiendas, apagar una y olvidarlo es fácil.
                 'accepting_orders' => (bool) $b->recibiendo_ahora,
             ])->values(),
-            'role'        => 'tendero',
+            'role' => 'tendero',
             'permissions' => self::PERMISOS,
-            'stats'       => $this->resumen((int) $negocio->busines_id),
+            'stats' => $this->resumen((int) $negocio->busines_id),
         ]);
     }
 
@@ -92,11 +93,11 @@ class MiNegocioController extends Controller
         $negocio = $request->attributes->get('negocio');
 
         $datos = $request->validate([
-            'name'            => 'required|string|max:255',
-            'phone'           => 'nullable|string|max:40',
-            'address'         => 'nullable|string|max:255',
-            'description'     => 'nullable|string|max:1000',
-            'NIT'             => 'nullable|string|max:40',
+            'name' => 'required|string|max:255',
+            'phone' => 'nullable|string|max:40',
+            'address' => 'nullable|string|max:255',
+            'description' => 'nullable|string|max:1000',
+            'NIT' => 'nullable|string|max:40',
             'razonSocial_DCD' => 'nullable|string|max:255',
             'municipality_id' => 'nullable|integer|exists:municipalities,id',
             /*
@@ -118,7 +119,7 @@ class MiNegocioController extends Controller
         $negocio->fill($datos)->save();
 
         return response()->json([
-            'message'  => 'Datos de tu negocio actualizados.',
+            'message' => 'Datos de tu negocio actualizados.',
             'business' => $this->ficha($negocio->fresh()),
         ]);
     }
@@ -157,7 +158,7 @@ class MiNegocioController extends Controller
              * manera de desaparecer del catálogo sin que nadie se entere sería
              * pausar hasta el año que viene.
              */
-            'accepting_until'  => 'nullable|date|after:now|before:' . now()->addDay()->addMinute()->toIso8601String(),
+            'accepting_until' => 'nullable|date|after:now|before:'.now()->addDay()->addMinute()->toIso8601String(),
         ]);
 
         $recibe = (bool) $datos['accepting_orders'];
@@ -172,7 +173,7 @@ class MiNegocioController extends Controller
          * del servidor antes de guardarla.
          */
         $hasta = $datos['accepting_until'] ?? null;
-        $negocio->accepting_until = $recibe || !$hasta
+        $negocio->accepting_until = $recibe || ! $hasta
             ? null
             : Carbon::parse($hasta)->setTimezone(config('app.timezone'));
         $negocio->accepting_changed_at = now();
@@ -210,19 +211,19 @@ class MiNegocioController extends Controller
     private function ficha($b): array
     {
         return [
-            'busines_id'      => (int) $b->busines_id,
-            'name'            => $b->name,
-            'phone'           => $b->phone,
-            'address'         => $b->address,
-            'description'     => $b->description,
-            'NIT'             => $b->NIT,
+            'busines_id' => (int) $b->busines_id,
+            'name' => $b->name,
+            'phone' => $b->phone,
+            'address' => $b->address,
+            'description' => $b->description,
+            'NIT' => $b->NIT,
             'razonSocial_DCD' => $b->razonSocial_DCD,
-            'logo'            => $b->logo,
+            'logo' => $b->logo,
             // El tope de efectivo de sus domiciliarios. Sin él, la pantalla
             // de la app lo mostraba vacío y al guardar lo borraba.
             'max_courier_cash' => $b->max_courier_cash !== null ? (float) $b->max_courier_cash : null,
-            'type'            => (int) $b->type,
-            'state'           => (int) $b->state,
+            'type' => (int) $b->type,
+            'state' => (int) $b->state,
             /*
              * El interruptor del mostrador. Va junto a `state` y separado de
              * él a propósito: `state` es el alta en la plataforma, esto es si
@@ -242,10 +243,10 @@ class MiNegocioController extends Controller
             // Desde cuándo está así, para poder avisar «llevas cuatro horas
             // sin recibir pedidos» a quien pausó sin hora y se le olvidó.
             'accepting_changed_at' => $b->accepting_changed_at?->toIso8601String(),
-            'qualification'   => $b->qualification !== null ? (float) $b->qualification : null,
+            'qualification' => $b->qualification !== null ? (float) $b->qualification : null,
             'municipality_id' => $b->municipality_id !== null ? (int) $b->municipality_id : null,
-            'latitude'        => $b->latitude !== null ? (float) $b->latitude : null,
-            'longitude'       => $b->longitude !== null ? (float) $b->longitude : null,
+            'latitude' => $b->latitude !== null ? (float) $b->latitude : null,
+            'longitude' => $b->longitude !== null ? (float) $b->longitude : null,
         ];
     }
 
@@ -271,14 +272,14 @@ class MiNegocioController extends Controller
             // Los que esperan que alguien pulse "Aceptar". Es la cifra que
             // manda en este panel: mientras no baje a cero, hay gente
             // esperando sin saber si su pedido fue visto.
-            'nuevos'    => (int) $base()->where('state', 1)->count(),
+            'nuevos' => (int) $base()->where('state', 1)->count(),
             // Desde cuándo espera el más viejo de los que nadie ha aceptado.
             // La franja de aviso del panel dice cuánto le queda antes de los
             // treinta minutos, y sin esta fecha ese reloj no se puede contar:
             // el panel solo sabe cuántos hay, no desde cuándo.
             'espera_desde' => $base()->where('state', 1)->min('sale_date'),
-            'en_curso'  => (int) $base()->whereIn('state', [2, 3])->count(),
-            'hoy'       => (int) (clone $hoy)->count(),
+            'en_curso' => (int) $base()->whereIn('state', [2, 3])->count(),
+            'hoy' => (int) (clone $hoy)->count(),
             // Solo el subtotal: el domicilio no es del negocio, es del
             // domiciliario. Sumar el total le enseñaría una venta más alta que
             // la que se le va a liquidar.
@@ -295,7 +296,7 @@ class MiNegocioController extends Controller
      * se puede pintar en la app— y queda apuntado en `business.logo`, que es
      * lo que lee la app, igual que cuando lo sube el equipo.
      */
-    public function logo(Request $request, \App\Services\BusinessMediaService $medios)
+    public function logo(Request $request, BusinessMediaService $medios)
     {
         $negocioId = (int) $request->attributes->get('busines_id');
 
@@ -303,12 +304,12 @@ class MiNegocioController extends Controller
             'logo' => 'required|image|mimes:jpg,jpeg,png,webp|max:4096',
         ], [
             'logo.required' => 'Elige la imagen del logo.',
-            'logo.image'    => 'El logo tiene que ser una imagen (JPG, PNG o WEBP).',
-            'logo.mimes'    => 'El logo tiene que ser una imagen (JPG, PNG o WEBP).',
-            'logo.max'      => 'La imagen pesa más de 4 MB.',
+            'logo.image' => 'El logo tiene que ser una imagen (JPG, PNG o WEBP).',
+            'logo.mimes' => 'El logo tiene que ser una imagen (JPG, PNG o WEBP).',
+            'logo.max' => 'La imagen pesa más de 4 MB.',
         ]);
 
-        if (!$medios->configurado()) {
+        if (! $medios->configurado()) {
             return response()->json([
                 'message' => 'No se pudo guardar el logo: el almacenamiento de archivos no está configurado.',
             ], 503);
@@ -319,7 +320,7 @@ class MiNegocioController extends Controller
         try {
             $subido = $medios->subir($negocio, $request->file('logo'), 'logo');
         } catch (\Throwable $e) {
-            return response()->json(['message' => 'No se pudo guardar el logo. ' . $e->getMessage()], 422);
+            return response()->json(['message' => 'No se pudo guardar el logo. '.$e->getMessage()], 422);
         }
 
         DB::table('business')->where('busines_id', $negocioId)->update(['logo' => $subido['url']]);

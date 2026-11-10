@@ -21,8 +21,11 @@ use App\Models\Product\RestaurantProducts;
 class ProductTypeSchema
 {
     public const TYPE_GROCERY = 1;
+
     public const TYPE_PHARMACY = 2;
+
     public const TYPE_RESTAURANT = 3;
+
     public const TYPE_CAR_PARTS = 4;
 
     private const SCHEMAS = [
@@ -154,7 +157,7 @@ class ProductTypeSchema
     {
         $relation = self::relation($type);
 
-        if (!$relation || !$product->{$relation}) {
+        if (! $relation || ! $product->{$relation}) {
             return null;
         }
 

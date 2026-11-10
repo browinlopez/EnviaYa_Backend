@@ -16,7 +16,6 @@ use Illuminate\Support\Facades\DB;
  * vista— como que NO devuelva de más: es un endpoint sin autenticación, y lo
  * que se cuele en él lo puede leer cualquiera.
  */
-
 beforeEach(function () {
     // La respuesta se cachea cinco minutos. Sin limpiar, la primera prueba le
     // dejaría su resultado a la siguiente y las demás pasarían por casualidad.
@@ -26,7 +25,7 @@ beforeEach(function () {
     // y este al país. Crear solo el municipio revienta contra la restricción.
     $pais = Country::forceCreate(['name' => 'Colombia', 'iso_code' => 'CO']);
     $departamento = Department::forceCreate([
-        'name'       => 'Atlántico',
+        'name' => 'Atlántico',
         'country_id' => $pais->id,
     ]);
 
@@ -37,7 +36,7 @@ beforeEach(function () {
     }
 
     $this->municipio = Municipality::forceCreate([
-        'name'          => 'Barranquilla',
+        'name' => 'Barranquilla',
         'department_id' => $departamento->id,
     ]);
 });
@@ -46,12 +45,12 @@ beforeEach(function () {
 function negocioEn(array $atributos = []): Business
 {
     return Business::forceCreate(array_merge([
-        'name'          => 'Tienda de prueba',
-        'address'       => 'Calle 79 #42-15',
-        'latitude'      => 10.9985,
-        'longitude'     => -74.8032,
-        'state'         => 1,
-        'type'          => 1,
+        'name' => 'Tienda de prueba',
+        'address' => 'Calle 79 #42-15',
+        'latitude' => 10.9985,
+        'longitude' => -74.8032,
+        'state' => 1,
+        'type' => 1,
         'qualification' => 0,
     ], $atributos));
 }
@@ -64,11 +63,11 @@ test('el mapa se consulta sin cuenta', function () {
 
 test('devuelve los comercios publicados con su punto', function () {
     negocioEn([
-        'name'            => 'Droguería Vida Sana',
+        'name' => 'Droguería Vida Sana',
         'municipality_id' => $this->municipio->id,
-        'latitude'        => 11.0071,
-        'longitude'       => -74.8121,
-        'type'            => 2,
+        'latitude' => 11.0071,
+        'longitude' => -74.8121,
+        'type' => 2,
     ]);
 
     $this->getJson('/v1/cobertura-free')
@@ -105,22 +104,22 @@ test('el (0,0) se descarta como si no hubiera coordenada', function () {
 
 test('incluye los conjuntos activos y omite los inactivos', function () {
     ResidentialComplex::forceCreate([
-        'name'         => 'Conjunto Villa Carolina',
-        'address'      => 'Calle 79 #42-15',
-        'state'        => 1,
+        'name' => 'Conjunto Villa Carolina',
+        'address' => 'Calle 79 #42-15',
+        'state' => 1,
         'people_count' => 480,
     ]);
     DB::table('residential_complexes')
         ->where('name', 'Conjunto Villa Carolina')
         ->update([
-            'latitude'        => 10.9962,
-            'longitude'       => -74.8070,
+            'latitude' => 10.9962,
+            'longitude' => -74.8070,
             'municipality_id' => $this->municipio->id,
         ]);
 
     ResidentialComplex::forceCreate([
-        'name'         => 'Altos de Malambo',
-        'state'        => 0,
+        'name' => 'Altos de Malambo',
+        'state' => 0,
         'people_count' => 140,
     ]);
 
@@ -140,8 +139,8 @@ test('se pueden dejar los conjuntos fuera del mapa', function () {
     DB::table('residential_complexes')
         ->where('name', 'Portal de Alameda')
         ->update([
-            'latitude'        => 11.0119,
-            'longitude'       => -74.8158,
+            'latitude' => 11.0119,
+            'longitude' => -74.8158,
             'municipality_id' => $this->municipio->id,
         ]);
 
@@ -151,20 +150,20 @@ test('se pueden dejar los conjuntos fuera del mapa', function () {
 test('no publica nada que no haga falta para pintar un pin', function () {
     negocioEn([
         'municipality_id' => $this->municipio->id,
-        'NIT'             => '9001234567',
-        'phone'           => '3002464966',
+        'NIT' => '9001234567',
+        'phone' => '3002464966',
     ]);
 
     ResidentialComplex::forceCreate([
-        'name'         => 'Conjunto Miramar',
-        'state'        => 1,
+        'name' => 'Conjunto Miramar',
+        'state' => 1,
         'people_count' => 210,
     ]);
     DB::table('residential_complexes')
         ->where('name', 'Conjunto Miramar')
         ->update([
-            'latitude'        => 11.0044,
-            'longitude'       => -74.8093,
+            'latitude' => 11.0044,
+            'longitude' => -74.8093,
             'municipality_id' => $this->municipio->id,
         ]);
 

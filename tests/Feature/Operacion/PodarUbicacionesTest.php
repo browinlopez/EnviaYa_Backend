@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * LAS UBICACIONES SE BORRAN A LOS NOVENTA DIAS.
@@ -26,9 +27,9 @@ function posicionDeHace(int $dias): int
 
     $id = DB::table('order_geolocation')->insertGetId([
         'domiciliary_id' => $e['domiId'],
-        'orderSales_id'  => $e['orderId'],
-        'latitude'       => 10.9878,
-        'longitude'      => -74.7889,
+        'orderSales_id' => $e['orderId'],
+        'latitude' => 10.9878,
+        'longitude' => -74.7889,
     ], 'geolocation_id');
 
     DB::table('order_geolocation')->where('geolocation_id', $id)
@@ -38,7 +39,7 @@ function posicionDeHace(int $dias): int
 }
 
 test('borra lo anterior al plazo y conserva lo de dentro', function () {
-    $vieja  = posicionDeHace(91);
+    $vieja = posicionDeHace(91);
     $reciente = posicionDeHace(89);
 
     $this->artisan('ubicaciones:podar')->assertSuccessful();
@@ -78,7 +79,7 @@ test('lo que la poda borra está indexado por fecha', function () {
      * borrar, y la tabla es justamente lo que está creciendo: el comando que
      * existe para que no se desborde sería lo más caro de la madrugada.
      */
-    $porFecha = collect(\Illuminate\Support\Facades\Schema::getIndexes('order_geolocation'))
+    $porFecha = collect(Schema::getIndexes('order_geolocation'))
         ->contains(fn ($i) => (string) ($i['columns'][0] ?? '') === 'created_at');
 
     expect($porFecha)->toBeTrue();

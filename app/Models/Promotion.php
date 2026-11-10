@@ -42,6 +42,7 @@ class Promotion extends Audit
     public const TIPOS = [self::SIN_DESCUENTO, self::PORCENTAJE, self::NXM];
 
     protected $table = 'promotions';
+
     protected $primaryKey = 'promotion_id';
 
     /*
@@ -72,19 +73,19 @@ class Promotion extends Audit
 
     protected $casts = [
         'percentage_discount' => 'float',
-        'lleva'               => 'integer',
-        'paga'                => 'integer',
-        'sent_at'          => 'datetime',
-        'start_date'       => 'datetime',
-        'end_date'         => 'datetime',
+        'lleva' => 'integer',
+        'paga' => 'integer',
+        'sent_at' => 'datetime',
+        'start_date' => 'datetime',
+        'end_date' => 'datetime',
         'recipients_count' => 'integer',
-        'state'            => 'integer',
+        'state' => 'integer',
         /*
          * `max_usos` se queda SIN cast a entero: NULL significa «sin tope» y
          * un cast lo convertiría en 0, que significa justo lo contrario
          * —agotada antes de empezar—. `usos` sí, que nunca es nulo.
          */
-        'usos'             => 'integer',
+        'usos' => 'integer',
     ];
 
     public function business()
@@ -120,37 +121,37 @@ class Promotion extends Audit
     public function toApi(): array
     {
         return [
-            'promotion_id'     => $this->promotion_id,
-            'busines_id'       => $this->busines_id,
-            'texto'            => $this->description,
-            'productos'        => $this->relationLoaded('products')
+            'promotion_id' => $this->promotion_id,
+            'busines_id' => $this->busines_id,
+            'texto' => $this->description,
+            'productos' => $this->relationLoaded('products')
                 ? $this->products->map(fn ($p) => [
                     'products_id' => $p->products_id,
-                    'name'        => $p->name,
-                    'image'       => $p->image ?? null,
+                    'name' => $p->name,
+                    'image' => $p->image ?? null,
                 ])->values()
                 : [],
-            'enviada_el'       => $this->sent_at?->toIso8601String(),
-            'destinatarios'    => (int) $this->recipients_count,
-            'state'            => (int) $this->state,
-            'desde'            => $this->start_date?->toIso8601String(),
-            'hasta'            => $this->end_date?->toIso8601String(),
-            'hasta_texto'      => $this->hastaEnPalabras(),
-            'vencida'          => $this->vencida(),
-            'empezada'         => $this->empezada(),
+            'enviada_el' => $this->sent_at?->toIso8601String(),
+            'destinatarios' => (int) $this->recipients_count,
+            'state' => (int) $this->state,
+            'desde' => $this->start_date?->toIso8601String(),
+            'hasta' => $this->end_date?->toIso8601String(),
+            'hasta_texto' => $this->hastaEnPalabras(),
+            'vencida' => $this->vencida(),
+            'empezada' => $this->empezada(),
             // `max_usos` viaja como null —y no como 0— cuando no hay tope: la
             // app distingue «sin límite» de «agotada» por ese null.
-            'max_usos'         => $this->max_usos === null ? null : (int) $this->max_usos,
-            'usos'             => (int) $this->usos,
-            'agotada'          => $this->agotada(),
-            'retirada'         => (int) $this->state === self::RETIRADA,
-            'tipo'             => $this->tipo ?? self::SIN_DESCUENTO,
-            'porcentaje'       => $this->tipo === self::PORCENTAJE
+            'max_usos' => $this->max_usos === null ? null : (int) $this->max_usos,
+            'usos' => (int) $this->usos,
+            'agotada' => $this->agotada(),
+            'retirada' => (int) $this->state === self::RETIRADA,
+            'tipo' => $this->tipo ?? self::SIN_DESCUENTO,
+            'porcentaje' => $this->tipo === self::PORCENTAJE
                 ? round(((float) $this->percentage_discount) * 100)
                 : null,
-            'lleva'            => $this->lleva,
-            'paga'             => $this->paga,
-            'regla_texto'      => $this->reglaEnPalabras(),
+            'lleva' => $this->lleva,
+            'paga' => $this->paga,
+            'regla_texto' => $this->reglaEnPalabras(),
         ];
     }
 
@@ -173,7 +174,7 @@ class Promotion extends Audit
      */
     public function empezada(): bool
     {
-        return $this->start_date === null || !$this->start_date->isFuture();
+        return $this->start_date === null || ! $this->start_date->isFuture();
     }
 
     /**
@@ -206,19 +207,19 @@ class Promotion extends Audit
     {
         return (int) $this->state === self::ENVIADA
             && $this->empezada()
-            && !$this->vencida()
-            && !$this->agotada();
+            && ! $this->vencida()
+            && ! $this->agotada();
     }
 
     /**
      * CUÁNTO REBAJA sobre una línea del carrito.
      *
-     * @param  int    $cantidad  Unidades de ese producto en el carrito.
-     * @param  float  $precio    Precio unitario, el del servidor.
+     * @param  int  $cantidad  Unidades de ese producto en el carrito.
+     * @param  float  $precio  Precio unitario, el del servidor.
      */
     public function descuentoSobre(int $cantidad, float $precio): float
     {
-        if (!$this->descuenta() || $cantidad < 1 || $precio <= 0) {
+        if (! $this->descuenta() || $cantidad < 1 || $precio <= 0) {
             return 0.0;
         }
 
@@ -230,7 +231,7 @@ class Promotion extends Audit
         // `lleva - paga` unidades. Con 7 unidades y un 3x2 van dos grupos
         // completos —6— y sobra una que se paga: se regalan 2.
         $lleva = (int) $this->lleva;
-        $paga  = (int) $this->paga;
+        $paga = (int) $this->paga;
 
         if ($lleva < 2 || $paga < 1 || $paga >= $lleva) {
             // Una regla imposible no regala nada. Se comprueba también al
@@ -253,12 +254,12 @@ class Promotion extends Audit
      */
     public function reglaEnPalabras(): ?string
     {
-        if (!$this->descuenta()) {
+        if (! $this->descuenta()) {
             return null;
         }
 
         if ($this->tipo === self::PORCENTAJE) {
-            return round(((float) $this->percentage_discount) * 100) . '% de descuento';
+            return round(((float) $this->percentage_discount) * 100).'% de descuento';
         }
 
         return "Lleva {$this->lleva}, paga {$this->paga}";
@@ -303,9 +304,9 @@ class Promotion extends Audit
         // Dentro de la semana se dice el día: «hasta el domingo» se entiende
         // sin mirar el calendario, y «hasta el 14/09» no.
         if ($fin->diffInDays($hoy) < 7) {
-            return 'Hasta el ' . $fin->locale('es')->dayName;
+            return 'Hasta el '.$fin->locale('es')->dayName;
         }
 
-        return 'Hasta el ' . $fin->locale('es')->isoFormat('D [de] MMMM');
+        return 'Hasta el '.$fin->locale('es')->isoFormat('D [de] MMMM');
     }
 }

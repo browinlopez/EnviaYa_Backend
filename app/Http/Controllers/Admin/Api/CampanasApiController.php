@@ -2,22 +2,14 @@
 
 namespace App\Http\Controllers\Admin\Api;
 
-use App\Services\Push\Notificador;
 use App\Http\Controllers\Controller;
-use App\Models\DeviceToken;
 use App\Models\Marketing\AdCampaign;
-use App\Models\Marketing\Advertiser;
 use App\Models\Marketing\Banner;
-use App\Models\Marketing\Coupon;
-use App\Models\Marketing\FeaturedBusiness;
-use App\Models\Marketing\PushCampaign;
-use App\Services\MediaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class CampanasApiController extends Controller
 {
-
     public function campaigns(Request $request)
     {
         $q = AdCampaign::with('advertiser:id,name')->orderByDesc('starts_at');
@@ -49,9 +41,9 @@ class CampanasApiController extends Controller
 
                 return array_merge($c->toArray(), [
                     'advertiser_name' => $c->advertiser?->name,
-                    'banners_count'   => (int) ($m->banners_count ?? 0),
-                    'impressions'     => (int) ($m->impressions ?? 0),
-                    'clicks'          => (int) ($m->clicks ?? 0),
+                    'banners_count' => (int) ($m->banners_count ?? 0),
+                    'impressions' => (int) ($m->impressions ?? 0),
+                    'clicks' => (int) ($m->clicks ?? 0),
                 ]);
             })
         );
@@ -95,16 +87,16 @@ class CampanasApiController extends Controller
 
         $datos = $request->validate([
             'advertiser_id' => "{$regla}|integer|exists:advertisers,id",
-            'name'          => "{$regla}|string|max:150",
-            'description'   => 'sometimes|nullable|string',
-            'objective'     => 'sometimes|in:awareness,traffic,conversion',
-            'starts_at'     => "{$regla}|date",
+            'name' => "{$regla}|string|max:150",
+            'description' => 'sometimes|nullable|string',
+            'objective' => 'sometimes|in:awareness,traffic,conversion',
+            'starts_at' => "{$regla}|date",
             // La fecha final nunca antes de la inicial: una campaña invertida
             // no falla al guardarse, simplemente no entrega nada, y eso se
             // descubre tarde y sin mensaje.
-            'ends_at'       => "{$regla}|date|after_or_equal:starts_at",
-            'budget'        => 'sometimes|numeric|min:0',
-            'state'         => 'sometimes|integer|in:0,1,2,3',
+            'ends_at' => "{$regla}|date|after_or_equal:starts_at",
+            'budget' => 'sometimes|numeric|min:0',
+            'state' => 'sometimes|integer|in:0,1,2,3',
         ]);
 
         return $datos;

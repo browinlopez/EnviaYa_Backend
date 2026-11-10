@@ -45,10 +45,10 @@ test('el panel de aliados esta autorizado por su propia variable', function () {
      * un cambio hecho en otro sitio.
      */
     $cors = corsCon([
-        'SITIO_URL'   => 'https://dominio-anterior.example',
-        'PANEL_URL'   => 'https://panel.dominio-anterior.example',
+        'SITIO_URL' => 'https://dominio-anterior.example',
+        'PANEL_URL' => 'https://panel.dominio-anterior.example',
         'ALIADOS_URL' => 'https://aliados.dominio-anterior.example',
-        'APP_URL'     => 'https://api.dominio-anterior.example',
+        'APP_URL' => 'https://api.dominio-anterior.example',
         'CORS_ALLOWED_ORIGIN_PATTERNS' => '#^https://nada\.example$#',
     ]);
 
@@ -66,10 +66,10 @@ test('nunca queda un solo origen permitido', function () {
      */
     $cors = corsCon([
         'CORS_ALLOWED_ORIGINS' => 'https://panel.dominio-anterior.example',
-        'SITIO_URL'   => 'https://dominio-anterior.example',
-        'PANEL_URL'   => 'https://panel.dominio-anterior.example',
+        'SITIO_URL' => 'https://dominio-anterior.example',
+        'PANEL_URL' => 'https://panel.dominio-anterior.example',
         'ALIADOS_URL' => 'https://aliados.dominio-anterior.example',
-        'APP_URL'     => 'https://api.dominio-anterior.example',
+        'APP_URL' => 'https://api.dominio-anterior.example',
     ]);
 
     expect(count($cors['allowed_origins']))->toBeGreaterThan(1);
@@ -86,7 +86,7 @@ test('los puertos de desarrollo incluyen el de aliados', function () {
 
 test('el resto de internet sigue fuera', function () {
     $cors = corsCon([
-        'SITIO_URL'   => 'https://dominio-anterior.example',
+        'SITIO_URL' => 'https://dominio-anterior.example',
         'ALIADOS_URL' => 'https://aliados.dominio-anterior.example',
     ]);
 

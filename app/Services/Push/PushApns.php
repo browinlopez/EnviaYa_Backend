@@ -110,7 +110,7 @@ class PushApns implements TransportePush
      */
     public function enviar(array $tokens, string $titulo, string $cuerpo, array $datos = []): array
     {
-        if (!$this->configurado()) {
+        if (! $this->configurado()) {
             return $this->todosFallan($tokens, 'APNs sin configurar');
         }
 
@@ -138,12 +138,12 @@ class PushApns implements TransportePush
     ): ResultadoPush {
         try {
             $r = Http::withHeaders([
-                'authorization'    => 'bearer ' . $jwt,
-                'apns-topic'       => (string) config('services.apns.bundle_id'),
+                'authorization' => 'bearer '.$jwt,
+                'apns-topic' => (string) config('services.apns.bundle_id'),
                 // `alert` es lo que hace que el sistema la MUESTRE con la app
                 // cerrada. Con `background` llegaría callada.
-                'apns-push-type'   => 'alert',
-                'apns-priority'    => '10',
+                'apns-push-type' => 'alert',
+                'apns-priority' => '10',
             ])
                 ->timeout(15)
                 /*
@@ -152,7 +152,7 @@ class PushApns implements TransportePush
                  * que se le pide explícitamente.
                  */
                 ->withOptions(['version' => 2.0])
-                ->post($this->host() . '/3/device/' . $token, [
+                ->post($this->host().'/3/device/'.$token, [
                     'aps' => [
                         'alert' => ['title' => $titulo, 'body' => $cuerpo],
                         'sound' => 'default',
@@ -166,7 +166,7 @@ class PushApns implements TransportePush
                 return ResultadoPush::entregado();
             }
 
-            $motivo = (string) $r->json('reason', 'HTTP ' . $r->status());
+            $motivo = (string) $r->json('reason', 'HTTP '.$r->status());
 
             /*
              * `BadDeviceToken` y `Unregistered` significan que ESE teléfono ya
@@ -203,8 +203,8 @@ class PushApns implements TransportePush
     private function jwt(): ?string
     {
         $huella = substr(hash('sha256', (string) $this->clave()
-            . (string) config('services.apns.key_id')
-            . (string) config('services.apns.team_id')), 0, 12);
+            .(string) config('services.apns.key_id')
+            .(string) config('services.apns.team_id')), 0, 12);
 
         return Cache::remember("apns.jwt.{$huella}", self::VIDA_TOKEN, function () {
             $clave = $this->clave();
@@ -226,13 +226,13 @@ class PushApns implements TransportePush
             $firma = '';
             $pk = openssl_pkey_get_private($clave);
 
-            if ($pk === false || !openssl_sign("{$cabecera}.{$cuerpo}", $firma, $pk, OPENSSL_ALGO_SHA256)) {
+            if ($pk === false || ! openssl_sign("{$cabecera}.{$cuerpo}", $firma, $pk, OPENSSL_ALGO_SHA256)) {
                 Log::error('APNs: no se pudo firmar con la clave .p8.');
 
                 return null;
             }
 
-            return "{$cabecera}.{$cuerpo}." . $this->base64Url($this->derACrudo($firma));
+            return "{$cabecera}.{$cuerpo}.".$this->base64Url($this->derACrudo($firma));
         });
     }
 
@@ -284,7 +284,7 @@ class PushApns implements TransportePush
         $r = $leerEntero();
         $s = $leerEntero();
 
-        return ($r === '' || $s === '') ? $der : $r . $s;
+        return ($r === '' || $s === '') ? $der : $r.$s;
     }
 
     private function base64Url(string $dato): string

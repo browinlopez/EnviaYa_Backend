@@ -2,31 +2,16 @@
 
 namespace App\Http\Controllers\Admin\Api;
 
-use App\Support\Consultas\AyudasDeAdmin;
-use App\Services\Ajustes;
 use App\Http\Controllers\Controller;
-use App\Models\Area;
-use App\Models\Conjunto\ComplexStaff;
-use App\Models\Operacion\DomiciliaryDocument;
-use App\Models\Reviews\BusinessReview;
-use App\Models\Reviews\DomiciliaryReview;
-use App\Models\User;
 use App\Services\BusinessMediaService;
-use App\Services\ContratoService;
 use App\Services\MediaService;
-use App\Services\VinculosDelRol;
-use App\Support\ListadoPaginado;
-use Carbon\Carbon;
+use App\Support\Consultas\AyudasDeAdmin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 
 class NegociosApiController extends Controller
 {
     use AyudasDeAdmin;
-
 
     public function businesses(MediaService $medios)
     {
@@ -41,53 +26,53 @@ class NegociosApiController extends Controller
          * $9.858.000).
          */
         $filas = DB::table('business as b')
-                ->orderBy('b.name')
-                ->leftJoin('municipalities as m', 'm.id', '=', 'b.municipality_id')
-                ->leftJoin('departments as dp', 'dp.id', '=', 'm.department_id')
+            ->orderBy('b.name')
+            ->leftJoin('municipalities as m', 'm.id', '=', 'b.municipality_id')
+            ->leftJoin('departments as dp', 'dp.id', '=', 'm.department_id')
                 // `business.type` guarda el ID de la categoría de negocio.
-                ->leftJoin('category_business as cb', 'cb.id', '=', 'b.type')
-                ->select([
-                    'b.busines_id', 'b.name', 'b.phone', 'b.address', 'b.qualification',
-                    'b.razonSocial_DCD', 'b.NIT', 'b.logo', 'b.description',
-                    'b.latitude', 'b.longitude', 'b.type', 'b.state',
-                    // El editor se siembra con esta fila: sin el tope, guardar
-                    // cualquier otro cambio lo mandaba vacío y lo borraba.
-                    'b.credit_debt_cap',
-                    'b.municipality_id', 'm.name as municipality_name',
-                    'dp.id as department_id', 'dp.name as department_name',
-                    'cb.name as type_name',
-                ])
+            ->leftJoin('category_business as cb', 'cb.id', '=', 'b.type')
+            ->select([
+                'b.busines_id', 'b.name', 'b.phone', 'b.address', 'b.qualification',
+                'b.razonSocial_DCD', 'b.NIT', 'b.logo', 'b.description',
+                'b.latitude', 'b.longitude', 'b.type', 'b.state',
+                // El editor se siembra con esta fila: sin el tope, guardar
+                // cualquier otro cambio lo mandaba vacío y lo borraba.
+                'b.credit_debt_cap',
+                'b.municipality_id', 'm.name as municipality_name',
+                'dp.id as department_id', 'dp.name as department_name',
+                'cb.name as type_name',
+            ])
                 // El dueño en subconsulta: unir `owner_busines` repetiría la
                 // fila del negocio si alguna vez tuviera dos vínculos.
-                ->selectSub(
-                    DB::table('owner_busines as ob')
-                        ->join('owner as o', 'o.owner_id', '=', 'ob.owner_id')
-                        ->join('user as u', 'u.user_id', '=', 'o.user_id')
-                        ->selectRaw('u.name')
-                        ->whereColumn('ob.busines_id', 'b.busines_id')
-                        ->limit(1),
-                    'owner_name',
-                )
-                ->selectSub(
-                    DB::table('products_business')
-                        ->selectRaw('COUNT(*)')
-                        ->whereColumn('products_business.busines_id', 'b.busines_id'),
-                    'products_count',
-                )
-                ->selectSub(
-                    DB::table('orderssales')
-                        ->selectRaw('COUNT(*)')
-                        ->whereColumn('orderssales.busines_id', 'b.busines_id'),
-                    'orders_count',
-                )
-                ->selectSub(
-                    DB::table('orderssales')
-                        ->selectRaw('COALESCE(SUM(total), 0)')
-                        ->whereColumn('orderssales.busines_id', 'b.busines_id')
-                        ->where('state', self::ENTREGADO),
-                    'revenue',
-                )
-                ->get();
+            ->selectSub(
+                DB::table('owner_busines as ob')
+                    ->join('owner as o', 'o.owner_id', '=', 'ob.owner_id')
+                    ->join('user as u', 'u.user_id', '=', 'o.user_id')
+                    ->selectRaw('u.name')
+                    ->whereColumn('ob.busines_id', 'b.busines_id')
+                    ->limit(1),
+                'owner_name',
+            )
+            ->selectSub(
+                DB::table('products_business')
+                    ->selectRaw('COUNT(*)')
+                    ->whereColumn('products_business.busines_id', 'b.busines_id'),
+                'products_count',
+            )
+            ->selectSub(
+                DB::table('orderssales')
+                    ->selectRaw('COUNT(*)')
+                    ->whereColumn('orderssales.busines_id', 'b.busines_id'),
+                'orders_count',
+            )
+            ->selectSub(
+                DB::table('orderssales')
+                    ->selectRaw('COALESCE(SUM(total), 0)')
+                    ->whereColumn('orderssales.busines_id', 'b.busines_id')
+                    ->where('state', self::ENTREGADO),
+                'revenue',
+            )
+            ->get();
 
         return response()->json(
             $this->conImagenPrincipal($filas, 'negocios', 'busines_id', 'logo', $medios)
@@ -108,7 +93,7 @@ class NegociosApiController extends Controller
                 'dp.name as department_name',
                 'cb.name as type_name',
             ]);
-        abort_if(!$negocio, 404, 'El negocio no existe.');
+        abort_if(! $negocio, 404, 'El negocio no existe.');
 
         return response()->json($negocio);
     }
@@ -134,12 +119,13 @@ class NegociosApiController extends Controller
                 ->get(['id', 'name'])
                 ->map(function ($d) use ($municipios) {
                     $d->municipalities = ($municipios[$d->id] ?? collect())
-                        ->map(fn($m) => ['id' => $m->id, 'name' => $m->name])
+                        ->map(fn ($m) => ['id' => $m->id, 'name' => $m->name])
                         ->values();
+
                     return $d;
                 })
                 // Un departamento sin municipios cargados no sirve para elegir.
-                ->filter(fn($d) => count($d->municipalities) > 0)
+                ->filter(fn ($d) => count($d->municipalities) > 0)
                 ->values()
         );
     }
@@ -150,26 +136,26 @@ class NegociosApiController extends Controller
         $req = $creando ? 'required' : 'sometimes';
 
         return [
-            'name'            => "{$req}|string|max:255",
-            'phone'           => 'sometimes|nullable|string|max:30',
-            'address'         => 'sometimes|nullable|string|max:255',
-            'description'     => 'sometimes|nullable|string',
+            'name' => "{$req}|string|max:255",
+            'phone' => 'sometimes|nullable|string|max:30',
+            'address' => 'sometimes|nullable|string|max:255',
+            'description' => 'sometimes|nullable|string',
             'razonSocial_DCD' => 'sometimes|nullable|string|max:255',
-            'NIT'             => 'sometimes|nullable|string|max:50',
-            'logo'            => 'sometimes|nullable|string',
+            'NIT' => 'sometimes|nullable|string|max:50',
+            'logo' => 'sometimes|nullable|string',
             // Es el ID de una categoría de negocio: si se aceptara cualquier
             // valor, la tienda quedaría fuera de todos los carruseles y sus
             // productos no podrían clasificarse en ninguna categoría.
-            'type'            => 'sometimes|nullable|integer|exists:category_business,id',
-            'state'           => 'sometimes|boolean',
+            'type' => 'sometimes|nullable|integer|exists:category_business,id',
+            'state' => 'sometimes|boolean',
             // El municipio acota la búsqueda de direcciones: sin él, "calle 18
             // carrera 37b" aparece en cualquier ciudad del país.
             'municipality_id' => 'sometimes|nullable|integer|exists:municipalities,id',
             // Coordenadas: el panel las obtiene de un mapa, así que llegan como
             // decimales. Se acotan al rango válido para que un error de captura
             // no deje un punto en mitad del océano.
-            'latitude'        => 'sometimes|nullable|numeric|between:-90,90',
-            'longitude'       => 'sometimes|nullable|numeric|between:-180,180',
+            'latitude' => 'sometimes|nullable|numeric|between:-90,90',
+            'longitude' => 'sometimes|nullable|numeric|between:-180,180',
             /*
              * Tope de crédito: lo que la tienda puede fiar entre todos sus
              * clientes y la deuda que puede arrastrar con la plataforma. Solo
@@ -201,7 +187,7 @@ class NegociosApiController extends Controller
 
     public function updateBusiness(Request $request, $id)
     {
-        abort_if(!DB::table('business')->where('busines_id', $id)->exists(), 404, 'El negocio no existe.');
+        abort_if(! DB::table('business')->where('busines_id', $id)->exists(), 404, 'El negocio no existe.');
 
         $datos = $request->validate($this->reglasNegocio(false));
 
@@ -211,7 +197,6 @@ class NegociosApiController extends Controller
 
         return $this->showBusiness($id);
     }
-
 
     /**
      * Sube una imagen o documento a la carpeta del negocio.
@@ -223,7 +208,7 @@ class NegociosApiController extends Controller
     public function uploadBusinessMedia(Request $request, $id, BusinessMediaService $medios)
     {
         $negocio = DB::table('business')->where('busines_id', $id)->first(['busines_id', 'name']);
-        abort_if(!$negocio, 404, 'El negocio no existe.');
+        abort_if(! $negocio, 404, 'El negocio no existe.');
 
         $request->validate([
             'file' => 'required|file|max:8192|mimes:jpg,jpeg,png,webp,gif,pdf',
@@ -255,7 +240,7 @@ class NegociosApiController extends Controller
     public function businessMedia($id, BusinessMediaService $medios)
     {
         $negocio = DB::table('business')->where('busines_id', $id)->first(['busines_id', 'name']);
-        abort_if(!$negocio, 404, 'El negocio no existe.');
+        abort_if(! $negocio, 404, 'El negocio no existe.');
 
         return response()->json([
             'folder' => $medios->carpeta($negocio),
@@ -268,7 +253,7 @@ class NegociosApiController extends Controller
     public function deleteBusinessMedia(Request $request, $id, BusinessMediaService $medios)
     {
         $negocio = DB::table('business')->where('busines_id', $id)->first(['busines_id', 'name', 'logo']);
-        abort_if(!$negocio, 404, 'El negocio no existe.');
+        abort_if(! $negocio, 404, 'El negocio no existe.');
 
         $datos = $request->validate(['key' => 'required|string']);
 

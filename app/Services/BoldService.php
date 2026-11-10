@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Http;
 class BoldService
 {
     protected string $apiUrl;
+
     protected string $apiKey;
 
     public function __construct()
@@ -18,9 +19,9 @@ class BoldService
     protected function headers(): array
     {
         return [
-            'Authorization' => 'x-api-key ' . $this->apiKey,
-            'Content-Type'  => 'application/json',
-            'Accept'        => 'application/json',
+            'Authorization' => 'x-api-key '.$this->apiKey,
+            'Content-Type' => 'application/json',
+            'Accept' => 'application/json',
         ];
     }
 
@@ -85,9 +86,9 @@ class BoldService
     {
         $response = Http::withHeaders($this->headers())
             ->post("{$this->apiUrl}/v1/payment/refund", [
-                'reference_id'   => $referenceId,
+                'reference_id' => $referenceId,
                 'transaction_id' => $transactionId,
-                'reason'         => $motivo,
+                'reason' => $motivo,
             ]);
 
         if ($response->failed()) {

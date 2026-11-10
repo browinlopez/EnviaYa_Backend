@@ -28,7 +28,7 @@ class AreaSeeder extends Seeder
 
         $this->command?->info(
             'Áreas resincronizadas con el reparto de fábrica. '
-            . 'Las áreas creadas desde el panel no se modificaron.',
+            .'Las áreas creadas desde el panel no se modificaron.',
         );
     }
 }

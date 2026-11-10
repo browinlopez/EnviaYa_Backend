@@ -6,15 +6,16 @@ use App\Models\Audit\Audit;
 use App\Models\Reviews\BusinessReview;
 use App\Models\Reviews\DomiciliaryReview;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Model;
 
 class Buyer extends Audit
 {
     protected $table = 'buyer';
+
     protected $primaryKey = 'buyer_id';
+
     public $timestamps = false;
 
-    protected $fillable = ['user_id', 'qualification', 'state', "belongs_to_complex"];
+    protected $fillable = ['user_id', 'qualification', 'state', 'belongs_to_complex'];
 
     public function user()
     {

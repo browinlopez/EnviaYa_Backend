@@ -42,7 +42,7 @@ test('una dirección del dominio anterior se traduce con su misma ruta', functio
 });
 
 test('el panel cambió de subdominio en la mudanza', function () {
-    expect(DominioPropio::url('https://panel.' . DominioPropio::ANTERIOR, 'x'))
+    expect(DominioPropio::url('https://panel.'.DominioPropio::ANTERIOR, 'x'))
         ->toBe('https://admin.vecipaya.com');
 });
 
@@ -52,7 +52,7 @@ test('cualquier otro dominio pasa sin tocarse', function () {
         'https://api.vecipaya.com',
         'https://staging.example.com',
         // Se parece, pero no es el dominio anterior.
-        'https://mal' . DominioPropio::ANTERIOR,
+        'https://mal'.DominioPropio::ANTERIOR,
     ] as $url) {
         expect(DominioPropio::url($url, 'x'))->toBe($url);
     }
@@ -65,7 +65,7 @@ test('con el entorno viejo, el correo de verificación apunta al API vigente', f
     $viejo = DominioPropio::ANTERIOR;
 
     $app = configuracionCon('app', [
-        'APP_URL'   => "https://api.{$viejo}",
+        'APP_URL' => "https://api.{$viejo}",
         'PANEL_URL' => "https://panel.{$viejo}",
     ]);
     $servicios = configuracionCon('services', ['SITIO_URL' => "https://{$viejo}"]);

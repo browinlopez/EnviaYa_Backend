@@ -46,8 +46,8 @@ beforeEach(function () {
     }
 
     DB::table('document_types')->insertOrIgnore([
-        'id'      => 1,
-        'code'    => 'CC',
+        'id' => 1,
+        'code' => 'CC',
         'name_en' => 'Citizenship ID',
         'name_es' => 'Cédula de ciudadanía',
     ]);
@@ -145,7 +145,7 @@ it('el login acepta al administrador recién sembrado', function () {
     sembrar(UsersSeeder::class);
 
     $this->postJson('/v1/login', [
-        'email'    => 'admin@gmail.com',
+        'email' => 'admin@gmail.com',
         'password' => 'clave-de-prueba',
     ])->assertOk()->assertJsonStructure(['token', 'user']);
 });
@@ -169,7 +169,7 @@ it('en producción tampoco siembra la demostración', function () {
 
     sembrar(DemoSeeder::class);
 
-    expect(User::where('email', 'like', '%@' . DemoSeeder::DOMINIO)->exists())->toBeFalse();
+    expect(User::where('email', 'like', '%@'.DemoSeeder::DOMINIO)->exists())->toBeFalse();
 });
 
 it('con permiso explícito sí corre en producción', function () {

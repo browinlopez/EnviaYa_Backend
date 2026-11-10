@@ -2,22 +2,12 @@
 
 namespace App\Http\Controllers\Admin\Api;
 
-use App\Services\Push\Notificador;
 use App\Http\Controllers\Controller;
-use App\Models\DeviceToken;
-use App\Models\Marketing\AdCampaign;
-use App\Models\Marketing\Advertiser;
-use App\Models\Marketing\Banner;
-use App\Models\Marketing\Coupon;
 use App\Models\Marketing\FeaturedBusiness;
-use App\Models\Marketing\PushCampaign;
-use App\Services\MediaService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class DestacadosApiController extends Controller
 {
-
     public function featured(Request $request)
     {
         $q = FeaturedBusiness::query()
@@ -111,12 +101,12 @@ class DestacadosApiController extends Controller
 
         return $request->validate([
             'business_id' => "{$regla}|integer|exists:business,busines_id",
-            'placement'   => 'sometimes|in:home_top,category_top,search_top',
-            'priority'    => 'sometimes|integer|min:0|max:999',
-            'starts_at'   => "{$regla}|date",
-            'ends_at'     => "{$regla}|date|after_or_equal:starts_at",
+            'placement' => 'sometimes|in:home_top,category_top,search_top',
+            'priority' => 'sometimes|integer|min:0|max:999',
+            'starts_at' => "{$regla}|date",
+            'ends_at' => "{$regla}|date|after_or_equal:starts_at",
             'paid_amount' => 'sometimes|numeric|min:0',
-            'state'       => 'sometimes|boolean',
+            'state' => 'sometimes|boolean',
         ]);
     }
 

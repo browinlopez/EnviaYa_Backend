@@ -19,15 +19,14 @@ use Illuminate\Support\Facades\Mail;
  *  · y el permiso sigue mandando, para no contarle a nadie algo de una sección
  *    que no puede abrir.
  */
-
 function personalDe(string $codigoArea, int $cuantos = 1): void
 {
     Rol::firstOrCreate(['rol_id' => 4], ['name' => 'admin', 'guard_name' => 'web']);
 
     User::factory()->count($cuantos)->create([
-        'rol'     => 4,
+        'rol' => 4,
         'area_id' => Area::where('code', $codigoArea)->firstOrFail()->id,
-        'state'   => 1,
+        'state' => 1,
     ]);
 }
 
@@ -37,11 +36,11 @@ function domiciliarioSinAcuerdo(): void
     $u = User::factory()->create(['rol' => 3]);
 
     DB::table('domiciliary')->insert([
-        'user_id'            => $u->user_id,
-        'available'          => 1,
-        'state'              => 1,
+        'user_id' => $u->user_id,
+        'available' => 1,
+        'state' => 1,
         'contract_signed_at' => null,
-        'qualification'      => 0,
+        'qualification' => 0,
     ]);
 }
 
@@ -121,11 +120,11 @@ it('lo NO urgente de otra área no se reenvía a quien supervisa', function () {
 
     DB::table('domiciliary_documents')->insert([
         'domiciliary_id' => $id,
-        'type'           => 'soat',
-        'expires_at'     => now()->addDays(10)->toDateString(),
-        'state'          => 1,
-        'created_at'     => now(),
-        'updated_at'     => now(),
+        'type' => 'soat',
+        'expires_at' => now()->addDays(10)->toDateString(),
+        'state' => 1,
+        'created_at' => now(),
+        'updated_at' => now(),
     ]);
 
     $asuntos = app(ResumenDeArea::class)

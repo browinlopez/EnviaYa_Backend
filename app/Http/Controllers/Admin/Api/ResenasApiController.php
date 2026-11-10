@@ -2,29 +2,16 @@
 
 namespace App\Http\Controllers\Admin\Api;
 
-use App\Services\Ajustes;
 use App\Http\Controllers\Controller;
-use App\Models\Area;
-use App\Models\Conjunto\ComplexStaff;
-use App\Models\Operacion\DomiciliaryDocument;
 use App\Models\Reviews\BusinessReview;
 use App\Models\Reviews\DomiciliaryReview;
 use App\Models\User;
-use App\Services\BusinessMediaService;
-use App\Services\ContratoService;
-use App\Services\MediaService;
-use App\Services\VinculosDelRol;
 use App\Support\ListadoPaginado;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 
 class ResenasApiController extends Controller
 {
-
     /** Las tres tablas de reseñas tienen forma distinta; se unifican acá. */
     private function mapaResenas(string $scope): array
     {
@@ -62,7 +49,7 @@ class ResenasApiController extends Controller
         $scope = $request->query('scope', 'business');
         $m = $this->mapaResenas($scope);
 
-        $q = DB::table($m['table'] . ' as r');
+        $q = DB::table($m['table'].' as r');
         $cols = ['r.reviews_id', 'r.qualification', 'r.comment', 'r.state'];
 
         if ($m['has_dates']) {
@@ -114,9 +101,9 @@ class ResenasApiController extends Controller
         };
 
         $ordenables = [
-            'reviews_id'    => 'r.reviews_id',
+            'reviews_id' => 'r.reviews_id',
             'qualification' => 'r.qualification',
-            'target_name'   => 't.name',
+            'target_name' => 't.name',
         ];
 
         if ($m['has_dates']) {
@@ -134,9 +121,10 @@ class ResenasApiController extends Controller
 
         // `user_reviews` no tiene created_at en el esquema; se envía nulo en
         // vez de omitir la clave para que el panel no tenga que adivinar.
-        if (!$m['has_dates']) {
+        if (! $m['has_dates']) {
             $r['data'] = collect($r['data'])->map(function ($f) {
                 $f->created_at = null;
+
                 return $f;
             });
         }
@@ -154,11 +142,11 @@ class ResenasApiController extends Controller
         ");
 
         return [
-            'total'      => (int) ($r->total ?? 0),
+            'total' => (int) ($r->total ?? 0),
             // Sin reseñas el promedio no es 0 estrellas, es que no hay: un 0,0
             // se lee como "todo el mundo la odia".
-            'promedio'   => $r && $r->total > 0 ? round((float) $r->promedio, 2) : null,
-            'negativas'  => (int) ($r->negativas ?? 0),
+            'promedio' => $r && $r->total > 0 ? round((float) $r->promedio, 2) : null,
+            'negativas' => (int) ($r->negativas ?? 0),
             'comentadas' => (int) ($r->comentadas ?? 0),
         ];
     }
@@ -182,9 +170,9 @@ class ResenasApiController extends Controller
     {
         foreach (array_filter($destinos) as $id) {
             match ($scope) {
-                'business'    => BusinessReview::recalcularPromedio($id),
+                'business' => BusinessReview::recalcularPromedio($id),
                 'domiciliary' => DomiciliaryReview::recalcularPromedio($id),
-                default       => null,
+                default => null,
             };
         }
     }
@@ -192,7 +180,7 @@ class ResenasApiController extends Controller
     public function deleteReview(Request $request)
     {
         $datos = $request->validate([
-            'scope'      => 'required|in:business,domiciliary,user',
+            'scope' => 'required|in:business,domiciliary,user',
             'reviews_id' => 'required|integer',
         ]);
 
@@ -205,7 +193,7 @@ class ResenasApiController extends Controller
             ->value($m['target_key']);
 
         $borradas = DB::table($m['table'])->where('reviews_id', $datos['reviews_id'])->delete();
-        abort_if(!$borradas, 404, 'La reseña no existe.');
+        abort_if(! $borradas, 404, 'La reseña no existe.');
 
         $this->recalcularCalificacion($datos['scope'], $destino ? [(int) $destino] : []);
 
@@ -227,7 +215,7 @@ class ResenasApiController extends Controller
     {
         $datos = $request->validate([
             'scope' => 'required|in:business,domiciliary,user',
-            'ids'   => 'required|array|min:1|max:100',
+            'ids' => 'required|array|min:1|max:100',
             'ids.*' => 'integer',
         ]);
 
@@ -259,7 +247,7 @@ class ResenasApiController extends Controller
             'message' => $borradas === $pedidas
                 ? ($borradas === 1 ? 'Reseña eliminada.' : "Se eliminaron {$borradas} reseñas.")
                 : "Se eliminaron {$borradas} de {$pedidas}: el resto ya no existía.",
-            'deleted'   => $borradas,
+            'deleted' => $borradas,
             'requested' => $pedidas,
         ]);
     }

@@ -7,20 +7,22 @@ use App\Models\Owner\Owner;
 use App\Models\Reviews\BusinessReview;
 use App\Models\Reviews\UserReview;
 use App\Models\User\UserAddress;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 use OwenIt\Auditing\Contracts\Auditable;
 use Spatie\Permission\Traits\HasRoles;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
 
 class User extends Authenticatable implements Auditable, MustVerifyEmail
 {
     use HasApiTokens, HasFactory, HasRoles, Notifiable, \OwenIt\Auditing\Auditable;
 
     protected $table = 'user';
+
     protected $primaryKey = 'user_id';
+
     /*
      * Ahora sí lleva `created_at` / `updated_at`.
      *
@@ -99,7 +101,6 @@ class User extends Authenticatable implements Auditable, MustVerifyEmail
         return $this->two_factor_secret !== null
             && $this->two_factor_confirmed_at !== null;
     }
-
 
     // Relaciones
     public function rolRelation()

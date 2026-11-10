@@ -17,13 +17,12 @@ use Laravel\Sanctum\Sanctum;
  * era indistinguible de cualquier otra, así que no se podía responder "cuánto
  * vendimos en este conjunto".
  */
-
 function gestorDeConjuntos(): User
 {
     Rol::firstOrCreate(['rol_id' => 4], ['name' => 'admin', 'guard_name' => 'web']);
 
     $user = User::factory()->create(['rol' => 4]);
-    $user->area_id      = Area::where('code', 'sistema')->first()->id;
+    $user->area_id = Area::where('code', 'sistema')->first()->id;
     $user->access_level = Area::NIVEL_GESTOR;
     $user->save();
 

@@ -2,31 +2,15 @@
 
 namespace App\Http\Controllers\Admin\Api;
 
-use App\Support\Consultas\AyudasDeAdmin;
-use App\Services\Ajustes;
 use App\Http\Controllers\Controller;
-use App\Models\Area;
-use App\Models\Conjunto\ComplexStaff;
-use App\Models\Operacion\DomiciliaryDocument;
-use App\Models\Reviews\BusinessReview;
-use App\Models\Reviews\DomiciliaryReview;
-use App\Models\User;
-use App\Services\BusinessMediaService;
-use App\Services\ContratoService;
 use App\Services\MediaService;
-use App\Services\VinculosDelRol;
-use App\Support\ListadoPaginado;
-use Carbon\Carbon;
+use App\Support\Consultas\AyudasDeAdmin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 
 class CategoriasApiController extends Controller
 {
     use AyudasDeAdmin;
-
 
     public function categories(Request $request, MediaService $medios)
     {
@@ -87,8 +71,9 @@ class CategoriasApiController extends Controller
         return response()->json(
             $filas->map(function ($c) use ($vinculos) {
                 $suyas = $vinculos[$c->id] ?? collect();
-                $c->business_categories = $suyas->map(fn($v) => ['id' => $v->id, 'name' => $v->name])->values();
+                $c->business_categories = $suyas->map(fn ($v) => ['id' => $v->id, 'name' => $v->name])->values();
                 $c->business_category_ids = $suyas->pluck('id')->values();
+
                 return $c;
             })
         );
@@ -114,7 +99,7 @@ class CategoriasApiController extends Controller
 
             foreach ($ids as $id) {
                 DB::table('category_category_business')->insertOrIgnore([
-                    'category_id'          => $categoryId,
+                    'category_id' => $categoryId,
                     'business_category_id' => $id,
                 ]);
             }
@@ -127,28 +112,28 @@ class CategoriasApiController extends Controller
     public function storeCategory(Request $request)
     {
         $datos = $request->validate([
-            'scope'                  => 'required|in:product,business',
-            'name'                   => 'required|string|max:255',
-            'description'            => 'nullable|string',
-            'image'                  => 'nullable|string',
-            'state'                  => 'sometimes|boolean',
-            'business_category_ids'   => 'sometimes|array',
+            'scope' => 'required|in:product,business',
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'image' => 'nullable|string',
+            'state' => 'sometimes|boolean',
+            'business_category_ids' => 'sometimes|array',
             'business_category_ids.*' => 'integer|exists:category_business,id',
         ]);
 
         if ($datos['scope'] === 'business') {
             $id = DB::table('category_business')->insertGetId([
-                'name'        => $datos['name'],
+                'name' => $datos['name'],
                 'description' => $datos['description'] ?? null,
-                'image'       => $datos['image'] ?? null,
-                'created_at'  => now(),
-                'updated_at'  => now(),
+                'image' => $datos['image'] ?? null,
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
         } else {
             $id = DB::table('category')->insertGetId([
-                'name'        => $datos['name'],
+                'name' => $datos['name'],
                 'description' => $datos['description'] ?? null,
-                'state'       => (int) ($datos['state'] ?? 1),
+                'state' => (int) ($datos['state'] ?? 1),
             ]);
 
             $this->sincronizarCategoriasDeNegocio($id, $datos['business_category_ids'] ?? []);
@@ -160,37 +145,37 @@ class CategoriasApiController extends Controller
     public function updateCategory(Request $request)
     {
         $datos = $request->validate([
-            'scope'                  => 'required|in:product,business',
-            'id'                     => 'required|integer',
-            'name'                   => 'required|string|max:255',
-            'description'            => 'nullable|string',
-            'image'                  => 'nullable|string',
-            'state'                  => 'sometimes|boolean',
-            'business_category_ids'   => 'sometimes|array',
+            'scope' => 'required|in:product,business',
+            'id' => 'required|integer',
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'image' => 'nullable|string',
+            'state' => 'sometimes|boolean',
+            'business_category_ids' => 'sometimes|array',
             'business_category_ids.*' => 'integer|exists:category_business,id',
         ]);
 
         if ($datos['scope'] === 'business') {
             $existe = DB::table('category_business')->where('id', $datos['id'])->exists();
-            abort_if(!$existe, 404, 'La categoría no existe.');
+            abort_if(! $existe, 404, 'La categoría no existe.');
 
             DB::table('category_business')->where('id', $datos['id'])->update([
-                'name'        => $datos['name'],
+                'name' => $datos['name'],
                 'description' => $datos['description'] ?? null,
-                'image'       => $datos['image'] ?? null,
-                'updated_at'  => now(),
+                'image' => $datos['image'] ?? null,
+                'updated_at' => now(),
             ]);
         } else {
             $existe = DB::table('category')->where('category_id', $datos['id'])->exists();
-            abort_if(!$existe, 404, 'La categoría no existe.');
+            abort_if(! $existe, 404, 'La categoría no existe.');
 
             // `update()` devuelve 0 cuando no cambia ningún valor, así que la
             // existencia se comprueba aparte: si no, guardar sin tocar nada
             // respondía "no existe".
             DB::table('category')->where('category_id', $datos['id'])->update([
-                'name'        => $datos['name'],
+                'name' => $datos['name'],
                 'description' => $datos['description'] ?? null,
-                'state'       => (int) ($datos['state'] ?? 1),
+                'state' => (int) ($datos['state'] ?? 1),
             ]);
 
             $this->sincronizarCategoriasDeNegocio(
@@ -206,14 +191,14 @@ class CategoriasApiController extends Controller
     {
         $datos = $request->validate([
             'scope' => 'required|in:product,business',
-            'id'    => 'required|integer',
+            'id' => 'required|integer',
         ]);
 
         // Borrar una categoría en uso dejaría productos apuntando a un id
         // inexistente; se rechaza con un mensaje que explica el porqué.
         if ($datos['scope'] === 'business') {
             $cat = DB::table('category_business')->where('id', $datos['id'])->first();
-            abort_if(!$cat, 404, 'La categoría no existe.');
+            abort_if(! $cat, 404, 'La categoría no existe.');
 
             // `business.type` guarda el ID, no el nombre.
             $enUso = DB::table('business')->where('type', $cat->id)->count();
@@ -241,7 +226,7 @@ class CategoriasApiController extends Controller
             }
 
             $n = DB::table('category')->where('category_id', $datos['id'])->delete();
-            abort_if(!$n, 404, 'La categoría no existe.');
+            abort_if(! $n, 404, 'La categoría no existe.');
         }
 
         return response()->json(['message' => 'Categoría eliminada.']);

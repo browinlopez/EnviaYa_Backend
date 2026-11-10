@@ -15,7 +15,6 @@ use App\Services\Totp;
  * El secreto de los vectores es el ASCII "12345678901234567890", que en base32
  * es GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ.
  */
-
 const SECRETO_RFC = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ';
 
 it('reproduce los códigos del RFC 6238', function (int $instante, string $esperado) {

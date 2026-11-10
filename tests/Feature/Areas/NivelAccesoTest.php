@@ -13,15 +13,14 @@ use Laravel\Sanctum\Sanctum;
  * en ellas. Un auxiliar de contabilidad y el contador miran las mismas
  * pantallas, pero solo uno aprueba liquidaciones.
  */
-
 function comoNivel(string $codigoArea, string $nivel): User
 {
     Rol::firstOrCreate(['rol_id' => 4], ['name' => 'admin', 'guard_name' => 'web']);
     $area = Area::where('code', $codigoArea)->firstOrFail();
 
     $u = User::factory()->create([
-        'rol'          => 4,
-        'area_id'      => $area->id,
+        'rol' => 4,
+        'area_id' => $area->id,
         'access_level' => $nivel,
     ]);
 
@@ -35,8 +34,8 @@ function comoNivel(string $codigoArea, string $nivel): User
 test('el auxiliar ve exactamente lo mismo que su jefe', function () {
     $area = Area::where('code', 'contabilidad')->first();
 
-    $delGestor   = $area->permisos(Area::NIVEL_GESTOR);
-    $deConsulta  = $area->permisos(Area::NIVEL_CONSULTA);
+    $delGestor = $area->permisos(Area::NIVEL_GESTOR);
+    $deConsulta = $area->permisos(Area::NIVEL_CONSULTA);
 
     // Mismas secciones: el nivel recorta la profundidad, no el alcance.
     // Quitarle también la vista lo dejaría sin poder hacer su trabajo.
@@ -64,7 +63,7 @@ test('consulta no puede crear en lo que su área sí gestiona', function () {
     $r = $this->postJson('/v1/admin/settlements', [
         'type' => 'business', 'target_id' => 1,
         'period_start' => now()->subDays(10)->toDateString(),
-        'period_end'   => now()->toDateString(),
+        'period_end' => now()->toDateString(),
     ]);
 
     $r->assertForbidden();
@@ -81,7 +80,7 @@ test('el mismo endpoint sí lo acepta a un gestor', function () {
     $this->postJson('/v1/admin/settlements', [
         'type' => 'business', 'target_id' => 999999,
         'period_start' => now()->subDays(10)->toDateString(),
-        'period_end'   => now()->toDateString(),
+        'period_end' => now()->toDateString(),
     ])->assertStatus(422);
 });
 

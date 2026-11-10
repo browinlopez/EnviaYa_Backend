@@ -26,7 +26,7 @@ class MasVendidosController extends Controller
         $negocioId = (int) $request->attributes->get('busines_id');
 
         $datos = $request->validate([
-            'dias'   => 'sometimes|integer|in:7,30,90,365',
+            'dias' => 'sometimes|integer|in:7,30,90,365',
             'limite' => 'sometimes|integer|min:1|max:50',
         ]);
         $dias = (int) ($datos['dias'] ?? 30);
@@ -57,15 +57,15 @@ class MasVendidosController extends Controller
             ]);
 
         return response()->json([
-            'dias'      => $dias,
+            'dias' => $dias,
             'productos' => $filas->map(fn ($f) => [
                 'product_id' => (int) $f->product_id,
-                'nombre'     => $f->name,
-                'imagen'     => $f->image,
-                'precio'     => $f->price === null ? null : (float) $f->price,
-                'unidades'   => round((float) $f->unidades, 2),
-                'facturado'  => round((float) $f->facturado, 2),
-                'pedidos'    => (int) $f->pedidos,
+                'nombre' => $f->name,
+                'imagen' => $f->image,
+                'precio' => $f->price === null ? null : (float) $f->price,
+                'unidades' => round((float) $f->unidades, 2),
+                'facturado' => round((float) $f->facturado, 2),
+                'pedidos' => (int) $f->pedidos,
             ])->values(),
         ]);
     }

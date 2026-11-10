@@ -1,8 +1,7 @@
 <?php
 
-use App\Models\Rol;
-use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
 
 /**
@@ -27,21 +26,21 @@ function conEfectivoEncima(int $domiId, float $cuanto): void
 {
     DB::table('cash_movements')->insert([
         'domiciliary_id' => $domiId,
-        'type'       => 'ajuste',
-        'amount'     => $cuanto,
+        'type' => 'ajuste',
+        'amount' => $cuanto,
         'created_at' => now(),
         'updated_at' => now(),
     ]);
 }
 
-function despacharPedido(array $e): \Illuminate\Testing\TestResponse
+function despacharPedido(array $e): TestResponse
 {
     Sanctum::actingAs($e['tendero']);
 
     return test()->putJson('/v1/orders/update', [
         'order_id' => $e['orderId'],
-        'state'    => 3,
-        'user_id'  => $e['repartidor']->user_id,
+        'state' => 3,
+        'user_id' => $e['repartidor']->user_id,
     ]);
 }
 

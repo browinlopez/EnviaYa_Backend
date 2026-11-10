@@ -6,7 +6,6 @@ use App\Models\Operacion\LandingRequest;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * LO QUE MANDAN LOS FORMULARIOS DE LA WEB PÚBLICA
@@ -56,25 +55,24 @@ class LandingRequestController extends Controller
          * existe para no perder.
          */
         $datos = $request->validate([
-            'nombre'           => 'nullable|string|max:150',
-            'contacto'         => 'required|string|max:150',
-            'barrio'           => 'nullable|string|max:150',
-            'mensaje'          => 'nullable|string|max:5000',
-            'tipo'             => 'nullable|string|max:30',
-            'motivo'           => 'nullable|string|max:60',
-            'origen'           => 'nullable|string|max:40',
-            'pagina'           => 'nullable|string|max:120',
-            'consentimiento'   => 'accepted',
+            'nombre' => 'nullable|string|max:150',
+            'contacto' => 'required|string|max:150',
+            'barrio' => 'nullable|string|max:150',
+            'mensaje' => 'nullable|string|max:5000',
+            'tipo' => 'nullable|string|max:30',
+            'motivo' => 'nullable|string|max:60',
+            'origen' => 'nullable|string|max:40',
+            'pagina' => 'nullable|string|max:120',
+            'consentimiento' => 'accepted',
             'politica_version' => 'nullable|string|max:20',
-            'aceptado_en'      => 'nullable|date',
+            'aceptado_en' => 'nullable|date',
             // La foto o el comprobante de una PQRS. Llega en multipart; el
             // resto de formularios sigue mandando JSON.
-            'adjunto'          => 'nullable|file|max:' . LandingRequest::ADJUNTO_MAX_KB
-                . '|mimes:' . LandingRequest::ADJUNTO_TIPOS,
+            'adjunto' => 'nullable|file|max:'.LandingRequest::ADJUNTO_MAX_KB
+                .'|mimes:'.LandingRequest::ADJUNTO_TIPOS,
         ], [
-            'consentimiento.accepted' =>
-                'Falta la autorización de tratamiento de datos.',
-            'adjunto.max'   => 'El archivo pesa más de 8 MB.',
+            'consentimiento.accepted' => 'Falta la autorización de tratamiento de datos.',
+            'adjunto.max' => 'El archivo pesa más de 8 MB.',
             'adjunto.mimes' => 'Sube una foto (JPG, PNG, WEBP, HEIC) o un PDF.',
         ]);
 
@@ -92,23 +90,23 @@ class LandingRequestController extends Controller
         $contacto = trim($datos['contacto']);
 
         $solicitud = LandingRequest::create([
-            'code'           => LandingRequest::siguienteRadicado(),
-            'type'           => $tipo,
-            'origin'         => $datos['origen'] ?? null,
-            'page'           => $datos['pagina'] ?? null,
-            'name'           => $datos['nombre'] ?? null,
-            'contact'        => $contacto,
+            'code' => LandingRequest::siguienteRadicado(),
+            'type' => $tipo,
+            'origin' => $datos['origen'] ?? null,
+            'page' => $datos['pagina'] ?? null,
+            'name' => $datos['nombre'] ?? null,
+            'contact' => $contacto,
             // Se guarda aparte solo si de verdad es un correo: así el panel
             // puede ofrecer "responder" sin adivinar si eso es un WhatsApp.
-            'contact_email'  => filter_var($contacto, FILTER_VALIDATE_EMAIL) ? $contacto : null,
-            'neighborhood'   => $datos['barrio'] ?? null,
-            'message'        => $datos['mensaje'] ?? null,
-            'payload'        => $this->extras($request),
+            'contact_email' => filter_var($contacto, FILTER_VALIDATE_EMAIL) ? $contacto : null,
+            'neighborhood' => $datos['barrio'] ?? null,
+            'message' => $datos['mensaje'] ?? null,
+            'payload' => $this->extras($request),
             // Solo la eliminación y la PQRS tienen plazo comprometido: los dos
             // están prometidos por escrito en la web (/eliminar-cuenta es la
             // página que revisa Google Play). Se fija al recibir y no se
             // recalcula.
-            'due_at'         => ($dias = LandingRequest::diasDePlazo($tipo))
+            'due_at' => ($dias = LandingRequest::diasDePlazo($tipo))
                 ? now()->addWeekdays($dias)
                 : null,
             'policy_version' => $datos['politica_version'] ?? null,
@@ -120,18 +118,18 @@ class LandingRequestController extends Controller
              * de diferencia en el dato que sirve justamente para demostrar
              * cuándo se autorizó.
              */
-            'accepted_at'    => isset($datos['aceptado_en'])
+            'accepted_at' => isset($datos['aceptado_en'])
                 ? Carbon::parse($datos['aceptado_en'])->setTimezone(config('app.timezone'))
                 : now(),
-            'ip'             => $request->ip(),
-            'user_agent'     => substr((string) $request->userAgent(), 0, 255),
+            'ip' => $request->ip(),
+            'user_agent' => substr((string) $request->userAgent(), 0, 255),
         ]);
 
         $this->guardarAdjunto($request, $solicitud);
 
         return response()->json([
             'message' => 'Solicitud recibida.',
-            'code'    => $solicitud->code,
+            'code' => $solicitud->code,
         ], 201);
     }
 
@@ -147,17 +145,17 @@ class LandingRequestController extends Controller
     {
         $archivo = $request->file('adjunto');
 
-        if (!$archivo || $solicitud->type !== 'pqrs') {
+        if (! $archivo || $solicitud->type !== 'pqrs') {
             return;
         }
 
         // Nombre al azar: el original puede traer el nombre de la persona.
         $ruta = $archivo->store(
-            'solicitudes/' . $solicitud->code,
+            'solicitudes/'.$solicitud->code,
             LandingRequest::ADJUNTO_DISCO,
         );
 
-        if (!$ruta) {
+        if (! $ruta) {
             // La PQRS ya quedó radicada; perder la foto no puede tumbarla. Se
             // deja rastro para que quien la atienda sepa que hubo un intento.
             Log::warning('No se pudo guardar el adjunto de una PQRS', [

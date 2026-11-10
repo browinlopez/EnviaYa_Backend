@@ -5,10 +5,6 @@ namespace App\Http\Controllers\Review;
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
 use App\Models\Buyer\Buyer;
-use App\Models\Domiciliary;
-use App\Models\Order\OrdersSales;
-use App\Models\Reviews\BusinessReview;
-use App\Models\Reviews\DomiciliaryReview;
 use App\Models\Reviews\UserReview;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -16,8 +12,8 @@ use Illuminate\Support\Facades\DB;
 
 class ResenasDeUsuarioController extends Controller
 {
-    use ComprobarPertenencia;
     use AyudasDeResenas;
+    use ComprobarPertenencia;
 
     public function listAllUserReviews(Request $request)
     {
@@ -32,10 +28,10 @@ class ResenasDeUsuarioController extends Controller
                 // Sin el correo: una reseña se enseña con el nombre, y estos
                 // listados los puede pedir cualquier cuenta con sesión.
                 'user' => [
-                    'user_id'       => $review->user->user_id,
-                    'name'          => $review->user->name,
+                    'user_id' => $review->user->user_id,
+                    'name' => $review->user->name,
                     'qualification' => $review->user->qualification,
-                    'state'         => $review->user->state,
+                    'state' => $review->user->state,
                 ],
                 'domiciliary' => [
                     'domiciliary_id' => $review->domiciliary->domiciliary_id,
@@ -43,20 +39,20 @@ class ResenasDeUsuarioController extends Controller
                     'available' => $review->domiciliary->available,
                     'qualification' => $review->domiciliary->qualification,
                     'state' => $review->domiciliary->state,
-                ]
+                ],
             ];
         });
 
         return response()->json([
             'message' => 'Reseñas de usuarios encontradas',
-            'reviews' => $formatted
+            'reviews' => $formatted,
         ]);
     }
 
     public function listUserReviewsByUser(Request $request)
     {
         $request->validate([
-            'user_id' => 'required|integer|exists:user,user_id'
+            'user_id' => 'required|integer|exists:user,user_id',
         ]);
 
         $reviews = UserReview::with('user', 'domiciliary')
@@ -72,10 +68,10 @@ class ResenasDeUsuarioController extends Controller
                 // Sin el correo: una reseña se enseña con el nombre, y estos
                 // listados los puede pedir cualquier cuenta con sesión.
                 'user' => [
-                    'user_id'       => $review->user->user_id,
-                    'name'          => $review->user->name,
+                    'user_id' => $review->user->user_id,
+                    'name' => $review->user->name,
                     'qualification' => $review->user->qualification,
-                    'state'         => $review->user->state,
+                    'state' => $review->user->state,
                 ],
                 'domiciliary' => [
                     'domiciliary_id' => $review->domiciliary->domiciliary_id,
@@ -83,24 +79,24 @@ class ResenasDeUsuarioController extends Controller
                     'available' => $review->domiciliary->available,
                     'qualification' => $review->domiciliary->qualification,
                     'state' => $review->domiciliary->state,
-                ]
+                ],
             ];
         });
 
         return response()->json([
             'message' => 'Reviews del usuario',
-            'reviews' => $formatted
+            'reviews' => $formatted,
         ]);
     }
 
     public function createUserReview(Request $request)
     {
         $request->validate([
-            'user_id'        => 'required|integer|exists:user,user_id',
+            'user_id' => 'required|integer|exists:user,user_id',
             'domiciliary_id' => 'nullable|integer|exists:domiciliary,domiciliary_id',
-            'qualification'  => 'required|numeric|min:0|max:5',
-            'comment'        => 'nullable|string',
-            'state'          => 'boolean'
+            'qualification' => 'required|numeric|min:0|max:5',
+            'comment' => 'nullable|string',
+            'state' => 'boolean',
         ]);
 
         DB::beginTransaction();
@@ -111,11 +107,11 @@ class ResenasDeUsuarioController extends Controller
 
             // Crear la reseña asociada al buyer
             $review = UserReview::create([
-                'user_id'      => $buyer->user_id,
+                'user_id' => $buyer->user_id,
                 'domiciliary_id' => $request->domiciliary_id,
                 'qualification' => $request->qualification,
-                'comment'       => $request->comment,
-                'state'         => $request->state ?? true
+                'comment' => $request->comment,
+                'state' => $request->state ?? true,
             ]);
 
             // Recalcular el promedio de calificaciones activas del buyer
@@ -131,15 +127,16 @@ class ResenasDeUsuarioController extends Controller
             DB::commit();
 
             return response()->json([
-                'message'           => 'Review creada y calificación del buyer actualizada',
-                'review'            => $review,
-                'buyer_qualification' => $average
+                'message' => 'Review creada y calificación del buyer actualizada',
+                'review' => $review,
+                'buyer_qualification' => $average,
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'message' => 'Error al crear la reseña',
-                'error'   => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -152,14 +149,14 @@ class ResenasDeUsuarioController extends Controller
             'domiciliary_id' => 'nullable|integer|exists:domiciliary,domiciliary_id',
             'qualification' => 'nullable|numeric|min:0|max:5',
             'comment' => 'nullable|string',
-            'state' => 'nullable|boolean'
+            'state' => 'nullable|boolean',
         ]);
 
         DB::beginTransaction();
 
         try {
             $review = UserReview::find($request->review_id);
-            if (!$review) {
+            if (! $review) {
                 throw new \Exception('Review no encontrada');
             }
 
@@ -168,7 +165,7 @@ class ResenasDeUsuarioController extends Controller
                 'domiciliary_id',
                 'qualification',
                 'comment',
-                'state'
+                'state',
             ]));
 
             // Recalcular promedio de calificaciones activas
@@ -188,13 +185,14 @@ class ResenasDeUsuarioController extends Controller
             return response()->json([
                 'message' => 'Review actualizada correctamente',
                 'review' => $review,
-                'new_qualification' => $average
+                'new_qualification' => $average,
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'message' => 'Error al actualizar la reseña',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -202,14 +200,14 @@ class ResenasDeUsuarioController extends Controller
     public function deleteUserReview(Request $request)
     {
         $request->validate([
-            'review_id' => 'required|integer|exists:user_reviews,reviews_id'
+            'review_id' => 'required|integer|exists:user_reviews,reviews_id',
         ]);
 
         DB::beginTransaction();
 
         try {
             $review = UserReview::find($request->review_id);
-            if (!$review) {
+            if (! $review) {
                 throw new \Exception('Review no encontrada');
             }
 
@@ -220,7 +218,7 @@ class ResenasDeUsuarioController extends Controller
              * nota a cualquiera o borrarla. Una calificacion que el calificado
              * puede borrar no es una calificacion.
              */
-            if (!$this->esSuyaLaResena($request, $review->user_id, 'user')) {
+            if (! $this->esSuyaLaResena($request, $review->user_id, 'user')) {
                 DB::rollBack();
 
                 return response()->json(['message' => 'Esa resena no es tuya.'], 403);
@@ -246,13 +244,14 @@ class ResenasDeUsuarioController extends Controller
 
             return response()->json([
                 'message' => 'Review eliminada correctamente',
-                'new_qualification' => $average
+                'new_qualification' => $average,
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'message' => 'Error al eliminar la reseña',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

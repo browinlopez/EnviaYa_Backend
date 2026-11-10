@@ -1,9 +1,9 @@
 <?php
 
+use App\Models\Area;
 use App\Models\Marketing\AdCampaign;
 use App\Models\Marketing\Advertiser;
 use App\Models\Marketing\Banner;
-use App\Models\Area;
 use App\Models\Marketing\Coupon;
 use App\Models\Rol;
 use App\Models\User;
@@ -17,7 +17,6 @@ use Laravel\Sanctum\Sanctum;
  * perder plata o historial: que no se borre lo que ya facturó, que no se
  * vendan dos veces los mismos puestos, y que la puerta de rol 4 esté puesta.
  */
-
 function comoAdmin(): User
 {
     Rol::firstOrCreate(['rol_id' => 4], ['name' => 'admin', 'guard_name' => 'web']);
@@ -44,10 +43,10 @@ function anuncianteConCampana(): array
 
     $c = AdCampaign::create([
         'advertiser_id' => $a->id,
-        'name'          => 'Campaña X',
-        'starts_at'     => now()->subDay()->toDateString(),
-        'ends_at'       => now()->addDays(20)->toDateString(),
-        'state'         => AdCampaign::ACTIVA,
+        'name' => 'Campaña X',
+        'starts_at' => now()->subDay()->toDateString(),
+        'ends_at' => now()->addDays(20)->toDateString(),
+        'state' => AdCampaign::ACTIVA,
     ]);
 
     return [$a, $c];
@@ -103,9 +102,9 @@ test('rechaza una campaña que termina antes de empezar', function () {
     // se descubre tarde y sin mensaje.
     $this->postJson('/v1/admin/marketing/campaigns', [
         'advertiser_id' => $a->id,
-        'name'          => 'Invertida',
-        'starts_at'     => now()->addDays(10)->toDateString(),
-        'ends_at'       => now()->addDay()->toDateString(),
+        'name' => 'Invertida',
+        'starts_at' => now()->addDays(10)->toDateString(),
+        'ends_at' => now()->addDay()->toDateString(),
     ])->assertStatus(422)->assertJsonValidationErrors(['ends_at']);
 });
 
@@ -115,8 +114,8 @@ test('no deja borrar una campaña con piezas', function () {
 
     Banner::create([
         'campaign_id' => $c->id,
-        'title'       => 'Pieza',
-        'placement'   => 'home_hero',
+        'title' => 'Pieza',
+        'placement' => 'home_hero',
     ]);
 
     $this->deleteJson("/v1/admin/marketing/campaigns/{$c->id}")
@@ -130,12 +129,12 @@ test('crea un banner con segmentación y la devuelve como arreglo', function () 
     [, $c] = anuncianteConCampana();
 
     $r = $this->postJson('/v1/admin/marketing/banners', [
-        'campaign_id'           => $c->id,
-        'title'                 => 'Pieza segmentada',
-        'placement'             => 'home_strip',
-        'platform'              => 'app',
+        'campaign_id' => $c->id,
+        'title' => 'Pieza segmentada',
+        'placement' => 'home_strip',
+        'platform' => 'app',
         'target_municipalities' => [1, 2, 3],
-        'priority'              => 10,
+        'priority' => 10,
     ])->assertCreated();
 
     $id = $r->json('id');
@@ -154,8 +153,8 @@ test('las métricas de un banner nuevo salen en cero y el CTR queda indefinido',
 
     $b = Banner::create([
         'campaign_id' => $c->id,
-        'title'       => 'Sin eventos',
-        'placement'   => 'home_hero',
+        'title' => 'Sin eventos',
+        'placement' => 'home_hero',
     ]);
 
     $r = $this->getJson("/v1/admin/marketing/banners/{$b->id}/metrics")
@@ -182,14 +181,14 @@ test('las métricas comparan contra la ventana anterior de igual tamaño', funct
 
     $b = Banner::create([
         'campaign_id' => $c->id,
-        'title'       => 'Con recorrido',
-        'placement'   => 'home_hero',
+        'title' => 'Con recorrido',
+        'placement' => 'home_hero',
     ]);
 
     $evento = fn (string $tipo, int $haceDias) => [
-        'banner_id'  => $b->id,
-        'type'       => $tipo,
-        'day'        => now()->subDays($haceDias)->toDateString(),
+        'banner_id' => $b->id,
+        'type' => $tipo,
+        'day' => now()->subDays($haceDias)->toDateString(),
         'created_at' => now()->subDays($haceDias),
     ];
 
@@ -227,10 +226,10 @@ test('el código del cupón se guarda en mayúsculas', function () {
     comoAdmin();
 
     $this->postJson('/v1/admin/marketing/coupons', [
-        'code'      => '  verano25 ',
-        'value'     => 20,
+        'code' => '  verano25 ',
+        'value' => 20,
         'starts_at' => now()->toDateString(),
-        'ends_at'   => now()->addDays(10)->toDateString(),
+        'ends_at' => now()->addDays(10)->toDateString(),
     ])->assertCreated()->assertJsonPath('code', 'VERANO25');
 });
 
@@ -238,10 +237,10 @@ test('no admite dos cupones con el mismo código', function () {
     comoAdmin();
 
     $datos = [
-        'code'      => 'REPETIDO',
-        'value'     => 10,
+        'code' => 'REPETIDO',
+        'value' => 10,
         'starts_at' => now()->toDateString(),
-        'ends_at'   => now()->addDays(10)->toDateString(),
+        'ends_at' => now()->addDays(10)->toDateString(),
     ];
 
     $this->postJson('/v1/admin/marketing/coupons', $datos)->assertCreated();
@@ -254,10 +253,10 @@ test('no deja borrar un cupón que ya se canjeó', function () {
     comoAdmin();
 
     $c = Coupon::create([
-        'code'      => 'USADO',
-        'value'     => 10,
+        'code' => 'USADO',
+        'value' => 10,
         'starts_at' => now()->toDateString(),
-        'ends_at'   => now()->addDays(10)->toDateString(),
+        'ends_at' => now()->addDays(10)->toDateString(),
     ]);
 
     DB::table('coupons')->where('id', $c->id)->update(['uses_count' => 3]);
@@ -272,16 +271,16 @@ test('rechaza destacar el mismo negocio dos veces en el mismo sitio y periodo', 
     comoAdmin();
 
     $negocio = DB::table('business')->insertGetId([
-        'name'          => 'Tienda Test',
-        'type'          => null,
+        'name' => 'Tienda Test',
+        'type' => null,
         'qualification' => 0,
     ]);
 
     $datos = [
         'business_id' => $negocio,
-        'placement'   => 'home_top',
-        'starts_at'   => now()->toDateString(),
-        'ends_at'     => now()->addDays(30)->toDateString(),
+        'placement' => 'home_top',
+        'starts_at' => now()->toDateString(),
+        'ends_at' => now()->addDays(30)->toDateString(),
         'paid_amount' => 150000,
     ];
 
@@ -290,13 +289,13 @@ test('rechaza destacar el mismo negocio dos veces en el mismo sitio y periodo', 
     // Se pagaría dos veces por el mismo puesto y el listado lo duplicaría.
     $this->postJson('/v1/admin/marketing/featured', array_merge($datos, [
         'starts_at' => now()->addDays(10)->toDateString(),
-        'ends_at'   => now()->addDays(40)->toDateString(),
+        'ends_at' => now()->addDays(40)->toDateString(),
     ]))->assertStatus(422);
 
     // Un periodo que NO se pisa sí debe pasar.
     $this->postJson('/v1/admin/marketing/featured', array_merge($datos, [
         'starts_at' => now()->addDays(31)->toDateString(),
-        'ends_at'   => now()->addDays(60)->toDateString(),
+        'ends_at' => now()->addDays(60)->toDateString(),
     ]))->assertCreated();
 });
 
@@ -323,7 +322,7 @@ test('una notificación enviada no se puede editar ni reenviar', function () {
 
     $id = $this->postJson('/v1/admin/marketing/push', [
         'title' => 'Aviso',
-        'body'  => 'Cuerpo del aviso',
+        'body' => 'Cuerpo del aviso',
     ])->assertCreated()->json('id');
 
     $this->postJson("/v1/admin/marketing/push/{$id}/send")

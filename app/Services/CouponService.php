@@ -45,7 +45,7 @@ class CouponService
 
         $cupon = Coupon::vigente()->where('code', $codigo)->first();
 
-        if (!$cupon) {
+        if (! $cupon) {
             throw new RuntimeException('El cupón no existe o ya no está vigente.');
         }
 
@@ -55,7 +55,7 @@ class CouponService
 
         if ($subtotal < (float) $cupon->min_order) {
             throw new RuntimeException(
-                'Este cupón aplica desde $' . number_format((float) $cupon->min_order, 0, ',', '.') . '.'
+                'Este cupón aplica desde $'.number_format((float) $cupon->min_order, 0, ',', '.').'.'
             );
         }
 
@@ -104,16 +104,16 @@ class CouponService
             )
             ->increment('uses_count');
 
-        if (!$consumido) {
+        if (! $consumido) {
             throw new RuntimeException('Este cupón ya alcanzó su número máximo de usos.');
         }
 
         CouponRedemption::create([
             'coupon_id' => $cupon->id,
-            'user_id'   => $usuarioId,
-            'order_id'  => $ordenId,
-            'discount'  => $descuento,
-            'state'     => self::APLICADO,
+            'user_id' => $usuarioId,
+            'order_id' => $ordenId,
+            'discount' => $descuento,
+            'state' => self::APLICADO,
         ]);
     }
 

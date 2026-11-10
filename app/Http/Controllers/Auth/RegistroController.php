@@ -2,23 +2,19 @@
 
 namespace App\Http\Controllers\Auth;
 
-use App\Services\Totp;
 use App\Http\Controllers\Controller;
 use App\Models\Buyer\Buyer;
 use App\Models\Buyer\BuyerComplex;
 use App\Models\Buyer\ResidentialComplex;
-use App\Models\User\UserAddress;
 use App\Models\User;
+use App\Models\User\UserAddress;
 use Carbon\Carbon;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Password;
-use Illuminate\Auth\Events\Registered;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use App\Mail\VerifyEmailCustomMail;
 
 class RegistroController extends Controller
 {
@@ -49,10 +45,10 @@ class RegistroController extends Controller
          *
          * Se retira cuando la version con la casilla lleve tiempo publicada.
          */
-        if (!$request->has('consentimiento')) {
+        if (! $request->has('consentimiento')) {
             return response()->json([
                 'message' => 'Tu version de la app no permite completar el registro. Actualizala desde la tienda y vuelve a intentarlo.',
-                'errors'  => [
+                'errors' => [
                     'consentimiento' => [
                         'Tu version de la app no permite completar el registro. Actualizala desde la tienda y vuelve a intentarlo.',
                     ],
@@ -61,12 +57,12 @@ class RegistroController extends Controller
         }
 
         $validated = $request->validate([
-            'name'               => 'required|string|max:255',
-            'email'              => 'required|string|email|unique:user,email',
-            'password'           => 'required|string|min:6',
-            'phone'              => 'nullable|string|max:20',
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|unique:user,email',
+            'password' => 'required|string|min:6',
+            'phone' => 'nullable|string|max:20',
             'belongs_to_complex' => 'boolean',
-            'complex_id'         => 'nullable|integer|exists:residential_complexes,complex_id',
+            'complex_id' => 'nullable|integer|exists:residential_complexes,complex_id',
             /*
              * Dónde vive dentro del conjunto.
              *
@@ -77,8 +73,8 @@ class RegistroController extends Controller
              * Texto y no número: hay conjuntos con "Torre A" y apartamentos
              * como "502B".
              */
-            'tower'              => 'nullable|string|max:40',
-            'apartment'          => 'nullable|string|max:40',
+            'tower' => 'nullable|string|max:40',
+            'apartment' => 'nullable|string|max:40',
             /*
              * LA AUTORIZACION DE TRATAMIENTO DE DATOS.
              *
@@ -91,11 +87,10 @@ class RegistroController extends Controller
              * el campo ausente, que es lo que corresponde a un consentimiento.
              * Mismo criterio que el formulario de la web, que ya lo exigia.
              */
-            'consentimiento'     => 'accepted',
-            'politica_version'   => 'nullable|string|max:20',
+            'consentimiento' => 'accepted',
+            'politica_version' => 'nullable|string|max:20',
         ], [
-            'consentimiento.accepted' =>
-                'Falta la autorizacion de tratamiento de datos.',
+            'consentimiento.accepted' => 'Falta la autorizacion de tratamiento de datos.',
         ]);
 
         /*
@@ -106,20 +101,20 @@ class RegistroController extends Controller
          */
         $huellaDelConsentimiento = [
             'policy_accepted_at' => now(),
-            'policy_version'     => $validated['politica_version'] ?? null,
-            'policy_ip'          => $request->ip(),
+            'policy_version' => $validated['politica_version'] ?? null,
+            'policy_ip' => $request->ip(),
         ];
 
         try {
             $usuario = DB::transaction(function () use ($validated, $huellaDelConsentimiento) {
 
                 $user = User::create([
-                    'name'     => $validated['name'],
-                    'email'    => $validated['email'],
+                    'name' => $validated['name'],
+                    'email' => $validated['email'],
                     'password' => Hash::make($validated['password']),
-                    'phone'    => $validated['phone'] ?? null,
-                    'rol'      => 1,
-                    'state'    => true,
+                    'phone' => $validated['phone'] ?? null,
+                    'rol' => 1,
+                    'state' => true,
                     'email_verification_token' => Str::random(60),
                     'email_verification_expires_at' => Carbon::now()->addMinutes(60),
                     ...$huellaDelConsentimiento,
@@ -147,10 +142,10 @@ class RegistroController extends Controller
                      * primera pantalla que toca cualquiera. Se comprobo contra
                      * el servidor de verdad.
                      */
-                    'belongs_to_complex' => !empty($validated['belongs_to_complex']) ? 1 : 0,
+                    'belongs_to_complex' => ! empty($validated['belongs_to_complex']) ? 1 : 0,
                 ]);
 
-                if (!empty($validated['belongs_to_complex']) && !empty($validated['complex_id'])) {
+                if (! empty($validated['belongs_to_complex']) && ! empty($validated['complex_id'])) {
                     BuyerComplex::create([
                         'buyer_id' => $buyer->buyer_id,
                         'complex_id' => $validated['complex_id'],
@@ -169,19 +164,19 @@ class RegistroController extends Controller
                      * dejarla sin punto: sin coordenadas el domiciliario no
                      * puede abrir la ruta.
                      */
-                    if (!empty($validated['tower']) && !empty($validated['apartment'])) {
+                    if (! empty($validated['tower']) && ! empty($validated['apartment'])) {
                         $conjunto = ResidentialComplex::find($validated['complex_id']);
 
                         UserAddress::create([
-                            'user_id'         => $user->user_id,
-                            'address'         => $conjunto?->address ?: ($conjunto?->name ?: 'Conjunto'),
-                            'complex_id'      => $validated['complex_id'],
-                            'tower'           => $validated['tower'],
-                            'apartment'       => $validated['apartment'],
-                            'latitude'        => $conjunto?->latitude,
-                            'longitude'       => $conjunto?->longitude,
+                            'user_id' => $user->user_id,
+                            'address' => $conjunto?->address ?: ($conjunto?->name ?: 'Conjunto'),
+                            'complex_id' => $validated['complex_id'],
+                            'tower' => $validated['tower'],
+                            'apartment' => $validated['apartment'],
+                            'latitude' => $conjunto?->latitude,
+                            'longitude' => $conjunto?->longitude,
                             'municipality_id' => $conjunto?->municipality_id,
-                            'state'           => true,
+                            'state' => true,
                         ]);
                     }
                 }
@@ -205,7 +200,7 @@ class RegistroController extends Controller
             try {
                 $this->sendVerificationEmail($usuario);
             } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::error('No se pudo enviar la verificacion', [
+                Log::error('No se pudo enviar la verificacion', [
                     'email' => $usuario->email,
                     'error' => $e->getMessage(),
                 ]);
@@ -220,16 +215,16 @@ class RegistroController extends Controller
                 'message' => 'Registro exitoso. Revisa tu correo para verificar tu cuenta.',
                 'email_enviado' => true,
             ], 201);
-        } catch (\Illuminate\Database\QueryException $e) {
+        } catch (QueryException $e) {
             if ($e->errorInfo[1] == 1062) {
                 return response()->json([
-                    'message' => 'El correo ya está registrado'
+                    'message' => 'El correo ya está registrado',
                 ], 409);
             }
 
             return response()->json([
                 'message' => 'Error al registrar el usuario',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

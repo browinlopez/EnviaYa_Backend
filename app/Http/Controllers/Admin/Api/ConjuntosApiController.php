@@ -2,34 +2,18 @@
 
 namespace App\Http\Controllers\Admin\Api;
 
-use App\Services\AdministradorDeConjunto;
-use App\Services\Ajustes;
 use App\Http\Controllers\Controller;
-use App\Models\Area;
 use App\Models\Conjunto\ComplexStaff;
-use App\Models\Operacion\DomiciliaryDocument;
-use App\Models\Reviews\BusinessReview;
-use App\Models\Reviews\DomiciliaryReview;
-use App\Models\User;
-use App\Services\BusinessMediaService;
-use App\Services\ContratoService;
+use App\Services\AdministradorDeConjunto;
 use App\Services\MediaService;
-use App\Services\VinculosDelRol;
-use App\Support\ListadoPaginado;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 
 class ConjuntosApiController extends Controller
 {
     public function __construct(
         private readonly AdministradorDeConjunto $administradores,
-    ) {
-    }
-
+    ) {}
 
     public function complexes()
     {
@@ -102,10 +86,10 @@ class ConjuntosApiController extends Controller
                     $d = $duenos[$c->complex_id] ?? null;
 
                     $c->admin_user_id = $d->user_id ?? null;
-                    $c->admin_email   = $d->email   ?? null;
-                    $c->admin_account = $d->name    ?? null;
-                    $c->admin_active  = $d ? (bool) $d->state : null;
-                    $c->guards_count  = $celadores[$c->complex_id] ?? 0;
+                    $c->admin_email = $d->email ?? null;
+                    $c->admin_account = $d->name ?? null;
+                    $c->admin_active = $d ? (bool) $d->state : null;
+                    $c->guards_count = $celadores[$c->complex_id] ?? 0;
 
                     return $c;
                 })
@@ -115,14 +99,14 @@ class ConjuntosApiController extends Controller
     public function storeComplex(Request $request)
     {
         $datos = $request->validate([
-            'name'         => 'required|string|max:255',
-            'address'      => 'nullable|string|max:255',
+            'name' => 'required|string|max:255',
+            'address' => 'nullable|string|max:255',
             'people_count' => 'nullable|integer|min:0',
-            'state'        => 'nullable|boolean',
+            'state' => 'nullable|boolean',
             // Mismo tratamiento que los negocios: el conjunto se ubica en el
             // mapa y su municipio acota la búsqueda de direcciones.
-            'latitude'        => 'nullable|numeric|between:-90,90',
-            'longitude'       => 'nullable|numeric|between:-180,180',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
             'municipality_id' => 'nullable|integer|exists:municipalities,id',
             /*
              * Cuántas torres y cuántos apartamentos tiene cada una.
@@ -131,7 +115,7 @@ class ConjuntosApiController extends Controller
              * sirve para dimensionar el conjunto y para ofrecer listas en el
              * registro, no para validar que una dirección exista.
              */
-            'towers_count'         => 'nullable|integer|min:1|max:500',
+            'towers_count' => 'nullable|integer|min:1|max:500',
             'apartments_per_tower' => 'nullable|integer|min:1|max:2000',
 
             /*
@@ -146,11 +130,11 @@ class ConjuntosApiController extends Controller
              * La foto va como URL porque MediaService ya sube a Cloudflare y
              * devuelve una: el formulario sube primero y manda el enlace.
              */
-            'photo'      => 'nullable|string|max:2048',
-            'phone'      => 'nullable|string|max:40',
-            'email'      => 'nullable|email|max:120',
+            'photo' => 'nullable|string|max:2048',
+            'phone' => 'nullable|string|max:40',
+            'email' => 'nullable|email|max:120',
             'admin_name' => 'nullable|string|max:120',
-            'nit'        => 'nullable|string|max:40',
+            'nit' => 'nullable|string|max:40',
             'gate_notes' => 'nullable|string',
             /*
              * Que la porteria tenga que pedirle permiso al residente antes de
@@ -162,27 +146,27 @@ class ConjuntosApiController extends Controller
         ]);
 
         $id = DB::table('residential_complexes')->insertGetId([
-            'name'            => $datos['name'],
-            'address'         => $datos['address'] ?? null,
-            'people_count'    => $datos['people_count'] ?? 0,
-            'state'           => $datos['state'] ?? 1,
-            'latitude'        => $datos['latitude'] ?? null,
-            'longitude'       => $datos['longitude'] ?? null,
+            'name' => $datos['name'],
+            'address' => $datos['address'] ?? null,
+            'people_count' => $datos['people_count'] ?? 0,
+            'state' => $datos['state'] ?? 1,
+            'latitude' => $datos['latitude'] ?? null,
+            'longitude' => $datos['longitude'] ?? null,
             'municipality_id' => $datos['municipality_id'] ?? null,
-            'towers_count'         => $datos['towers_count'] ?? null,
+            'towers_count' => $datos['towers_count'] ?? null,
             'apartments_per_tower' => $datos['apartments_per_tower'] ?? null,
 
-            'photo'      => $datos['photo'] ?? null,
-            'phone'      => $datos['phone'] ?? null,
-            'email'      => $datos['email'] ?? null,
+            'photo' => $datos['photo'] ?? null,
+            'phone' => $datos['phone'] ?? null,
+            'email' => $datos['email'] ?? null,
             'admin_name' => $datos['admin_name'] ?? null,
-            'nit'        => $datos['nit'] ?? null,
+            'nit' => $datos['nit'] ?? null,
             'gate_notes' => $datos['gate_notes'] ?? null,
             'require_authorization' => $datos['require_authorization'] ?? false,
             // La fecha la pone la aplicación y no la base: `CURRENT_TIMESTAMP`
             // es el reloj del servidor, que en el VPS no es el de Bogotá.
-            'created_at'        => now(),
-            'updated_at'        => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
 
         return response()->json(['message' => 'Conjunto creado.', 'complex_id' => $id], 201);
@@ -191,27 +175,27 @@ class ConjuntosApiController extends Controller
     public function updateComplex(Request $request, $id)
     {
         $datos = $request->validate([
-            'name'         => 'sometimes|string|max:255',
-            'address'      => 'sometimes|nullable|string|max:255',
+            'name' => 'sometimes|string|max:255',
+            'address' => 'sometimes|nullable|string|max:255',
             'people_count' => 'sometimes|nullable|integer|min:0',
-            'state'        => 'sometimes|boolean',
-            'latitude'        => 'sometimes|nullable|numeric|between:-90,90',
-            'longitude'       => 'sometimes|nullable|numeric|between:-180,180',
+            'state' => 'sometimes|boolean',
+            'latitude' => 'sometimes|nullable|numeric|between:-90,90',
+            'longitude' => 'sometimes|nullable|numeric|between:-180,180',
             'municipality_id' => 'sometimes|nullable|integer|exists:municipalities,id',
-            'towers_count'         => 'sometimes|nullable|integer|min:1|max:500',
+            'towers_count' => 'sometimes|nullable|integer|min:1|max:500',
             'apartments_per_tower' => 'sometimes|nullable|integer|min:1|max:2000',
 
-            'photo'      => 'sometimes|nullable|string|max:2048',
-            'phone'      => 'sometimes|nullable|string|max:40',
-            'email'      => 'sometimes|nullable|email|max:120',
+            'photo' => 'sometimes|nullable|string|max:2048',
+            'phone' => 'sometimes|nullable|string|max:40',
+            'email' => 'sometimes|nullable|email|max:120',
             'admin_name' => 'sometimes|nullable|string|max:120',
-            'nit'        => 'sometimes|nullable|string|max:40',
+            'nit' => 'sometimes|nullable|string|max:40',
             'gate_notes' => 'sometimes|nullable|string',
             'require_authorization' => 'sometimes|boolean',
         ]);
 
         $n = DB::table('residential_complexes')->where('complex_id', $id)->update($datos);
-        abort_if(!$n && !DB::table('residential_complexes')->where('complex_id', $id)->exists(), 404, 'El conjunto no existe.');
+        abort_if(! $n && ! DB::table('residential_complexes')->where('complex_id', $id)->exists(), 404, 'El conjunto no existe.');
 
         return response()->json(['message' => 'Conjunto actualizado.']);
     }
@@ -236,7 +220,7 @@ class ConjuntosApiController extends Controller
     public function deleteComplex($id)
     {
         abort_if(
-            !DB::table('residential_complexes')->where('complex_id', $id)->exists(),
+            ! DB::table('residential_complexes')->where('complex_id', $id)->exists(),
             404,
             'El conjunto no existe.',
         );
@@ -252,7 +236,7 @@ class ConjuntosApiController extends Controller
         if ($personal) {
             return response()->json([
                 'message' => "No se puede eliminar: tiene {$personal} persona(s) a cargo de su portería. "
-                    . 'Cámbiales el rol desde Comunidad → Usuarios antes de borrarlo.',
+                    .'Cámbiales el rol desde Comunidad → Usuarios antes de borrarlo.',
             ], 422);
         }
 
@@ -260,7 +244,7 @@ class ConjuntosApiController extends Controller
         if ($entradas) {
             return response()->json([
                 'message' => "No se puede eliminar: su portería tiene {$entradas} entrada(s) registradas, "
-                    . 'y son la constancia de quién entró al conjunto. Desactívalo en su lugar.',
+                    .'y son la constancia de quién entró al conjunto. Desactívalo en su lugar.',
             ], 422);
         }
 
@@ -288,7 +272,7 @@ class ConjuntosApiController extends Controller
     public function complexStaff($id)
     {
         abort_if(
-            !DB::table('residential_complexes')->where('complex_id', $id)->exists(),
+            ! DB::table('residential_complexes')->where('complex_id', $id)->exists(),
             404,
             'El conjunto no existe.',
         );
@@ -298,7 +282,7 @@ class ConjuntosApiController extends Controller
             ->leftJoin('user as c', 'c.user_id', '=', 'cs.created_by')
             ->where('cs.complex_id', $id)
             // El dueno primero: es el que se busca al abrir la ficha.
-            ->orderByRaw("CASE WHEN cs.role = '" . ComplexStaff::DUENO . "' THEN 0 ELSE 1 END")
+            ->orderByRaw("CASE WHEN cs.role = '".ComplexStaff::DUENO."' THEN 0 ELSE 1 END")
             ->orderBy('u.name')
             ->get([
                 'cs.id', 'cs.role', 'cs.state', 'cs.created_at',
@@ -308,11 +292,10 @@ class ConjuntosApiController extends Controller
             ]);
 
         return response()->json([
-            'dueno'     => $personal->firstWhere('role', ComplexStaff::DUENO),
+            'dueno' => $personal->firstWhere('role', ComplexStaff::DUENO),
             'celadores' => $personal->where('role', ComplexStaff::CELADOR)->values(),
         ]);
     }
-
 
     /**
      * Nombrar al administrador de un conjunto.
@@ -326,5 +309,4 @@ class ConjuntosApiController extends Controller
     {
         return $this->administradores->assignComplexOwner($request, $id);
     }
-
 }

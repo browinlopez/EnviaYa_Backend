@@ -18,7 +18,6 @@ use Laravel\Sanctum\Sanctum;
  *
  * Las pruebas que más importan son las dos que piden el negocio del vecino.
  */
-
 function tenderoConNegocios(array $nombres): array
 {
     Rol::firstOrCreate(['rol_id' => 2], ['name' => 'tendero', 'guard_name' => 'web']);
@@ -27,7 +26,7 @@ function tenderoConNegocios(array $nombres): array
 
     $ownerId = DB::table('owner')->insertGetId([
         'user_id' => $user->user_id,
-        'state'   => 1,
+        'state' => 1,
     ], 'owner_id');
 
     $negocios = [];
@@ -95,7 +94,7 @@ test('con la cabecera se cambia al otro negocio propio', function () {
 });
 
 test('pedir el negocio de otro no cae al propio en silencio: lo rechaza', function () {
-    $mio   = tenderoConNegocios(['La Mía']);
+    $mio = tenderoConNegocios(['La Mía']);
     $ajeno = tenderoConNegocios(['La Ajena']);
 
     Sanctum::actingAs($mio['user']);
@@ -112,7 +111,7 @@ test('pedir el negocio de otro no cae al propio en silencio: lo rechaza', functi
 });
 
 test('los pedidos que llegan son los del negocio activo y de ningun otro', function () {
-    $mio   = tenderoConNegocios(['La Mía']);
+    $mio = tenderoConNegocios(['La Mía']);
     $ajeno = tenderoConNegocios(['La Ajena']);
 
     pedidoConfirmadoEn($mio['negocios']['La Mía']);
@@ -127,7 +126,7 @@ test('los pedidos que llegan son los del negocio activo y de ningun otro', funct
 });
 
 test('un business_id en el cuerpo no cambia de quien son los pedidos', function () {
-    $mio   = tenderoConNegocios(['La Mía']);
+    $mio = tenderoConNegocios(['La Mía']);
     $ajeno = tenderoConNegocios(['La Ajena']);
 
     pedidoConfirmadoEn($ajeno['negocios']['La Ajena']);
@@ -140,7 +139,7 @@ test('un business_id en el cuerpo no cambia de quien son los pedidos', function 
      * pedidos de la otra tienda aunque la puerta hubiera dejado pasar bien.
      */
     $r = $this->getJson(
-        '/v1/negocio/pedidos?business_id=' . $ajeno['negocios']['La Ajena'],
+        '/v1/negocio/pedidos?business_id='.$ajeno['negocios']['La Ajena'],
     )->assertOk();
 
     expect($r->json('orders'))->toHaveCount(0);
@@ -202,7 +201,7 @@ function productoEn(int $businessId, string $nombre, float $precio = 1000): int
 }
 
 test('el catalogo solo trae lo del negocio activo', function () {
-    $mio   = tenderoConNegocios(['La Mía']);
+    $mio = tenderoConNegocios(['La Mía']);
     $ajeno = tenderoConNegocios(['La Ajena']);
 
     productoEn($mio['negocios']['La Mía'], 'Pan');
@@ -231,7 +230,7 @@ test('el precio de un producto exclusivo se cambia, y el nombre tambien', functi
 });
 
 test('el nombre de un producto que vende otra tienda no se toca, pero el precio si', function () {
-    $mio   = tenderoConNegocios(['La Mía']);
+    $mio = tenderoConNegocios(['La Mía']);
     $ajeno = tenderoConNegocios(['La Ajena']);
 
     $id = productoEn($mio['negocios']['La Mía'], 'Arroz Diana 500g', 3000);
@@ -260,7 +259,7 @@ test('el nombre de un producto que vende otra tienda no se toca, pero el precio 
 });
 
 test('tocar un producto de otra tienda responde 404, no 403', function () {
-    $mio   = tenderoConNegocios(['La Mía']);
+    $mio = tenderoConNegocios(['La Mía']);
     $ajeno = tenderoConNegocios(['La Ajena']);
 
     $id = productoEn($ajeno['negocios']['La Ajena'], 'Leche');
@@ -281,11 +280,11 @@ test('el tendero corrige su ficha pero no puede cambiar de duenos ni apagarse', 
     Sanctum::actingAs($t['user']);
 
     $this->putJson('/v1/negocio/me', [
-        'name'    => 'La Mía Express',
-        'phone'   => '3001234567',
-        'NIT'     => '900123456-1',
+        'name' => 'La Mía Express',
+        'phone' => '3001234567',
+        'NIT' => '900123456-1',
         // Los dos que `BusinessController@update` sí acepta y acá no existen.
-        'state'     => 0,
+        'state' => 0,
         'owner_ids' => [999],
     ])->assertOk();
 
@@ -336,7 +335,7 @@ test('cambiar el nombre de un producto propio queda auditado', function () {
      * rastro es lo único que queda.
      */
     $rastro = DB::table('audits')
-        ->where('auditable_type', \App\Models\Product\Product::class)
+        ->where('auditable_type', Product::class)
         ->where('auditable_id', $id)
         ->where('event', 'updated')
         ->first();

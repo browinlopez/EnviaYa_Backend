@@ -34,7 +34,7 @@ class NegocioDelUsuario
      */
     public function negociosDe(?int $userId): Collection
     {
-        if (!$userId) {
+        if (! $userId) {
             return collect();
         }
 
@@ -56,7 +56,7 @@ class NegocioDelUsuario
      */
     public function administra(?int $userId, $businessId): bool
     {
-        if (!$userId || !$businessId) {
+        if (! $userId || ! $businessId) {
             return false;
         }
 

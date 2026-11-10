@@ -22,18 +22,18 @@ function bannerDePrueba(array $atributos = []): Banner
 
     $campana = AdCampaign::create([
         'advertiser_id' => $anunciante->id,
-        'name'          => 'Campaña vigente',
-        'starts_at'     => now()->subDays(5)->toDateString(),
-        'ends_at'       => now()->addDays(5)->toDateString(),
-        'state'         => AdCampaign::ACTIVA,
+        'name' => 'Campaña vigente',
+        'starts_at' => now()->subDays(5)->toDateString(),
+        'ends_at' => now()->addDays(5)->toDateString(),
+        'state' => AdCampaign::ACTIVA,
     ]);
 
     return Banner::create(array_merge([
         'campaign_id' => $campana->id,
-        'title'       => 'Banner de prueba',
-        'placement'   => 'home_hero',
-        'platform'    => 'both',
-        'state'       => 1,
+        'title' => 'Banner de prueba',
+        'placement' => 'home_hero',
+        'platform' => 'both',
+        'state' => 1,
     ], $atributos));
 }
 
@@ -59,7 +59,7 @@ test('no entrega banners de una campaña que no está activa', function () {
 test('no entrega banners cuya vigencia propia ya venció', function () {
     bannerDePrueba([
         'starts_at' => now()->subDays(10)->toDateString(),
-        'ends_at'   => now()->subDay()->toDateString(),
+        'ends_at' => now()->subDay()->toDateString(),
     ]);
 
     $this->getJson('/v1/ads/banners?placement=home_hero')
@@ -156,17 +156,17 @@ test('entrega los negocios destacados vigentes', function () {
      * ninguna prueba lo ejercitaba CON un negocio unido de verdad.
      */
     $negocio = DB::table('business')->insertGetId([
-        'name'          => 'Tienda Destacada',
+        'name' => 'Tienda Destacada',
         'qualification' => 0,
-        'state'         => 1,
+        'state' => 1,
     ]);
 
     FeaturedBusiness::create([
         'business_id' => $negocio,
-        'placement'   => 'home_top',
-        'priority'    => 5,
-        'starts_at'   => now()->subDay()->toDateString(),
-        'ends_at'     => now()->addDays(10)->toDateString(),
+        'placement' => 'home_top',
+        'priority' => 5,
+        'starts_at' => now()->subDay()->toDateString(),
+        'ends_at' => now()->addDays(10)->toDateString(),
         'paid_amount' => 150000,
     ]);
 
@@ -179,16 +179,16 @@ test('entrega los negocios destacados vigentes', function () {
 test('no entrega un destaque cuyo negocio está inactivo', function () {
     // El destaque compra posición, no visibilidad de algo cerrado.
     $negocio = DB::table('business')->insertGetId([
-        'name'          => 'Tienda Cerrada',
+        'name' => 'Tienda Cerrada',
         'qualification' => 0,
-        'state'         => 0,
+        'state' => 0,
     ]);
 
     FeaturedBusiness::create([
         'business_id' => $negocio,
-        'placement'   => 'home_top',
-        'starts_at'   => now()->subDay()->toDateString(),
-        'ends_at'     => now()->addDays(10)->toDateString(),
+        'placement' => 'home_top',
+        'starts_at' => now()->subDay()->toDateString(),
+        'ends_at' => now()->addDays(10)->toDateString(),
     ]);
 
     $this->getJson('/v1/ads/featured?placement=home_top')
@@ -198,16 +198,16 @@ test('no entrega un destaque cuyo negocio está inactivo', function () {
 
 test('no entrega un destaque fuera de su periodo', function () {
     $negocio = DB::table('business')->insertGetId([
-        'name'          => 'Tienda Vencida',
+        'name' => 'Tienda Vencida',
         'qualification' => 0,
-        'state'         => 1,
+        'state' => 1,
     ]);
 
     FeaturedBusiness::create([
         'business_id' => $negocio,
-        'placement'   => 'home_top',
-        'starts_at'   => now()->subDays(30)->toDateString(),
-        'ends_at'     => now()->subDay()->toDateString(),
+        'placement' => 'home_top',
+        'starts_at' => now()->subDays(30)->toDateString(),
+        'ends_at' => now()->subDay()->toDateString(),
     ]);
 
     $this->getJson('/v1/ads/featured?placement=home_top')
@@ -219,11 +219,11 @@ test('no entrega un destaque fuera de su periodo', function () {
 
 test('valida un cupón porcentual y devuelve el descuento', function () {
     Coupon::create([
-        'code'      => 'verano25',
-        'type'      => 'percent',
-        'value'     => 25,
+        'code' => 'verano25',
+        'type' => 'percent',
+        'value' => 25,
         'starts_at' => now()->subDay()->toDateString(),
-        'ends_at'   => now()->addDay()->toDateString(),
+        'ends_at' => now()->addDay()->toDateString(),
     ]);
 
     // Se envía en minúscula a propósito: el usuario lo escribe como quiere.
@@ -236,12 +236,12 @@ test('valida un cupón porcentual y devuelve el descuento', function () {
 
 test('el tope máximo limita el descuento porcentual', function () {
     Coupon::create([
-        'code'         => 'TOPE',
-        'type'         => 'percent',
-        'value'        => 50,
+        'code' => 'TOPE',
+        'type' => 'percent',
+        'value' => 50,
         'max_discount' => 3000,
-        'starts_at'    => now()->subDay()->toDateString(),
-        'ends_at'      => now()->addDay()->toDateString(),
+        'starts_at' => now()->subDay()->toDateString(),
+        'ends_at' => now()->addDay()->toDateString(),
     ]);
 
     $this->postJson('/v1/ads/coupons/validate', ['code' => 'TOPE', 'subtotal' => 40000])
@@ -251,11 +251,11 @@ test('el tope máximo limita el descuento porcentual', function () {
 
 test('un cupón fijo nunca deja el total en negativo', function () {
     Coupon::create([
-        'code'      => 'FIJO',
-        'type'      => 'fixed',
-        'value'     => 10000,
+        'code' => 'FIJO',
+        'type' => 'fixed',
+        'value' => 10000,
         'starts_at' => now()->subDay()->toDateString(),
-        'ends_at'   => now()->addDay()->toDateString(),
+        'ends_at' => now()->addDay()->toDateString(),
     ]);
 
     $this->postJson('/v1/ads/coupons/validate', ['code' => 'FIJO', 'subtotal' => 8000])
@@ -266,11 +266,11 @@ test('un cupón fijo nunca deja el total en negativo', function () {
 
 test('rechaza un cupón vencido', function () {
     Coupon::create([
-        'code'      => 'VIEJO',
-        'type'      => 'percent',
-        'value'     => 10,
+        'code' => 'VIEJO',
+        'type' => 'percent',
+        'value' => 10,
         'starts_at' => now()->subDays(10)->toDateString(),
-        'ends_at'   => now()->subDays(2)->toDateString(),
+        'ends_at' => now()->subDays(2)->toDateString(),
     ]);
 
     $this->postJson('/v1/ads/coupons/validate', ['code' => 'VIEJO', 'subtotal' => 20000])
@@ -280,12 +280,12 @@ test('rechaza un cupón vencido', function () {
 
 test('rechaza un cupón agotado', function () {
     $c = Coupon::create([
-        'code'      => 'AGOTADO',
-        'type'      => 'percent',
-        'value'     => 10,
-        'max_uses'  => 2,
+        'code' => 'AGOTADO',
+        'type' => 'percent',
+        'value' => 10,
+        'max_uses' => 2,
         'starts_at' => now()->subDay()->toDateString(),
-        'ends_at'   => now()->addDay()->toDateString(),
+        'ends_at' => now()->addDay()->toDateString(),
     ]);
     // Se actualiza por la tabla y no con `update()`: `uses_count` queda fuera
     // de $fillable a propósito, porque solo debe moverlo el canje real. Que
@@ -299,12 +299,12 @@ test('rechaza un cupón agotado', function () {
 
 test('respeta el pedido mínimo', function () {
     Coupon::create([
-        'code'      => 'MINIMO',
-        'type'      => 'fixed',
-        'value'     => 2000,
+        'code' => 'MINIMO',
+        'type' => 'fixed',
+        'value' => 2000,
         'min_order' => 30000,
         'starts_at' => now()->subDay()->toDateString(),
-        'ends_at'   => now()->addDay()->toDateString(),
+        'ends_at' => now()->addDay()->toDateString(),
     ]);
 
     $this->postJson('/v1/ads/coupons/validate', ['code' => 'MINIMO', 'subtotal' => 10000])

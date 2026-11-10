@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Negocio;
 
+use App\Events\OrderStatusUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Order\OrdersSales;
 use App\Models\Order\OrdersSalesDetail;
-use App\Services\ExistenciasDelPedido;
 use App\Services\Ajustes;
+use App\Services\ExistenciasDelPedido;
 use App\Support\UnidadDeVenta;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -34,21 +36,19 @@ use Illuminate\Support\Facades\DB;
  */
 class PesajeDelPedidoController extends Controller
 {
-    public function __construct(private readonly ExistenciasDelPedido $existencias)
-    {
-    }
+    public function __construct(private readonly ExistenciasDelPedido $existencias) {}
 
     public function registrar(Request $request)
     {
         $request->validate([
-            'order_id'              => 'required|integer',
-            'lineas'                => 'required|array|min:1',
-            'lineas.*.orderDet_id'  => 'required|integer',
+            'order_id' => 'required|integer',
+            'lineas' => 'required|array|min:1',
+            'lineas.*.orderDet_id' => 'required|integer',
             /*
              * Hasta tres decimales: la báscula de mostrador pesa en gramos y
              * un kilo tiene mil. Más precisión sería inventarla.
              */
-            'lineas.*.qty_final'    => 'required|numeric|min:0.001|max:1000',
+            'lineas.*.qty_final' => 'required|numeric|min:0.001|max:1000',
         ]);
 
         $businessId = (int) $request->attributes->get('busines_id');
@@ -68,7 +68,7 @@ class PesajeDelPedidoController extends Controller
                     ->lockForUpdate()
                     ->first();
 
-                if (!$pedido) {
+                if (! $pedido) {
                     /*
                      * 404 y no 403: responder «prohibido» sobre el número de
                      * otra tienda confirmaría que ese pedido existe.
@@ -87,7 +87,7 @@ class PesajeDelPedidoController extends Controller
                         : 'Este pedido no lleva productos al peso.');
                 }
 
-                if (!in_array((int) $pedido->state, [1, 2], true)) {
+                if (! in_array((int) $pedido->state, [1, 2], true)) {
                     abort(409, 'Este pedido ya salió: no se puede pesar.');
                 }
 
@@ -100,7 +100,7 @@ class PesajeDelPedidoController extends Controller
                 foreach ($request->input('lineas') as $entrada) {
                     $linea = $lineas[(int) $entrada['orderDet_id']] ?? null;
 
-                    if (!$linea || !UnidadDeVenta::esPeso($linea->sale_unit)) {
+                    if (! $linea || ! UnidadDeVenta::esPeso($linea->sale_unit)) {
                         abort(422, 'Una de esas líneas no se vende al peso.');
                     }
 
@@ -163,7 +163,7 @@ class PesajeDelPedidoController extends Controller
 
                 return $pedido;
             });
-        } catch (\Illuminate\Http\Exceptions\HttpResponseException $e) {
+        } catch (HttpResponseException $e) {
             throw $e;
         }
 
@@ -174,14 +174,14 @@ class PesajeDelPedidoController extends Controller
          * movio el inventario.
          */
         try {
-            broadcast(new \App\Events\OrderStatusUpdated($resultado->fresh()));
+            broadcast(new OrderStatusUpdated($resultado->fresh()));
         } catch (\Throwable $e) {
             // El estado del pedido no cambió; el aviso es una cortesía.
         }
 
         return response()->json([
             'message' => 'Pesaje guardado.',
-            'data'    => $resultado->fresh()->toApi(),
+            'data' => $resultado->fresh()->toApi(),
         ]);
     }
 }

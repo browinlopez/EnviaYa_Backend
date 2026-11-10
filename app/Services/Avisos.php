@@ -37,13 +37,13 @@ class Avisos
      * diga ya el icono; «Tu pedido va en camino» se entiende sin abrir.
      */
     private const TITULOS = [
-        'pedido_aceptado'  => 'Pedido aceptado',
+        'pedido_aceptado' => 'Pedido aceptado',
         'pedido_en_camino' => 'Tu pedido va en camino',
         'pedido_entregado' => 'Pedido entregado',
         'pedido_cancelado' => 'Pedido cancelado',
         'entrega_asignada' => 'Tienes una entrega',
-        'pedido_nuevo'     => '¡Pedido nuevo!',
-        'mensaje_nuevo'    => 'Mensaje nuevo',
+        'pedido_nuevo' => '¡Pedido nuevo!',
+        'mensaje_nuevo' => 'Mensaje nuevo',
     ];
 
     /**
@@ -55,9 +55,9 @@ class Avisos
      *                      uno por persona; sin esto, cada cliente recibiría la
      *                      misma promoción DOS veces.
      * @param  string|null  $titulo  Para cuando el título no depende del tipo
-     *                      sino del contenido: en un chat es el NOMBRE de quien
-     *                      escribe, que es lo que hace que se reconozca en la
-     *                      barra sin abrir nada.
+     *                               sino del contenido: en un chat es el NOMBRE de quien
+     *                               escribe, que es lo que hace que se reconozca en la
+     *                               barra sin abrir nada.
      */
     public static function para(
         int|string $userId,
@@ -70,20 +70,20 @@ class Avisos
         try {
             $aviso = Notification::create([
                 'user_id' => $userId,
-                'tipo'    => $tipo,
+                'tipo' => $tipo,
                 'message' => $mensaje,
-                'datos'   => $datos,
-                'read'    => false,
-                'date'    => now(),
-                'state'   => true,
+                'datos' => $datos,
+                'read' => false,
+                'date' => now(),
+                'state' => true,
             ]);
         } catch (\Throwable $e) {
             // Si no se puede ni guardar, no hay aviso que dar. Se registra y se
             // sigue: ninguna operación debe caerse por no poder avisar.
             Log::warning('No se pudo guardar el aviso', [
                 'user_id' => $userId,
-                'tipo'    => $tipo,
-                'error'   => $e->getMessage(),
+                'tipo' => $tipo,
+                'error' => $e->getMessage(),
             ]);
 
             return null;
@@ -99,7 +99,7 @@ class Avisos
         } catch (\Throwable $e) {
             Log::warning('No se pudo anunciar el aviso', [
                 'notification_id' => $aviso->notification_id,
-                'error'           => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
         }
 
@@ -126,7 +126,7 @@ class Avisos
             } catch (\Throwable $e) {
                 Log::warning('No se pudo encolar el push del aviso', [
                     'notification_id' => $aviso->notification_id,
-                    'error'           => $e->getMessage(),
+                    'error' => $e->getMessage(),
                 ]);
             }
         }

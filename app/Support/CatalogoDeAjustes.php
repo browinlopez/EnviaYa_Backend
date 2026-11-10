@@ -23,12 +23,12 @@ class CatalogoDeAjustes
     /** Grupos, en el orden en que se pintan. */
     public const GRUPOS = [
         'operacion' => [
-            'titulo'   => 'Reglas de la operación',
-            'ayuda'    => 'Gobiernan cómo se reparte el dinero y cuándo el panel considera que algo va mal. Se aplican de inmediato a lo nuevo; lo ya entregado guardó sus cifras y no se reescribe.',
+            'titulo' => 'Reglas de la operación',
+            'ayuda' => 'Gobiernan cómo se reparte el dinero y cuándo el panel considera que algo va mal. Se aplican de inmediato a lo nuevo; lo ya entregado guardó sus cifras y no se reescribe.',
         ],
         'app' => [
-            'titulo'   => 'Control de la aplicación móvil',
-            'ayuda'    => 'Permite parar la app y exigir una versión mínima sin publicar nada en las tiendas. Lo que se ponga acá lo lee la app al abrir, y el servidor además lo aplica.',
+            'titulo' => 'Control de la aplicación móvil',
+            'ayuda' => 'Permite parar la app y exigir una versión mínima sin publicar nada en las tiendas. Lo que se ponga acá lo lee la app al abrir, y el servidor además lo aplica.',
         ],
     ];
 
@@ -44,22 +44,22 @@ class CatalogoDeAjustes
             /* ------------------------- OPERACIÓN ------------------------- */
 
             'operacion.reparto_domiciliario' => [
-                'grupo'    => 'operacion',
+                'grupo' => 'operacion',
                 'etiqueta' => 'Porción del domicilio para el domiciliario',
-                'tipo'     => 'porcentaje',
-                'ayuda'    => 'De cada tarifa de domicilio, cuánto le queda a quien entrega. El resto es de la plataforma. Se calcula al crear el pedido y se guarda ahí, así que cambiarlo no altera lo ya entregado ni las liquidaciones cerradas.',
-                'defecto'  => (float) config('services.domiciliary_share', 0.25),
-                'reglas'   => 'required|numeric|min:0|max:1',
+                'tipo' => 'porcentaje',
+                'ayuda' => 'De cada tarifa de domicilio, cuánto le queda a quien entrega. El resto es de la plataforma. Se calcula al crear el pedido y se guarda ahí, así que cambiarlo no altera lo ya entregado ni las liquidaciones cerradas.',
+                'defecto' => (float) config('services.domiciliary_share', 0.25),
+                'reglas' => 'required|numeric|min:0|max:1',
             ],
 
             'operacion.tarifa_domicilio' => [
-                'grupo'    => 'operacion',
+                'grupo' => 'operacion',
                 'etiqueta' => 'Tarifa de domicilio',
-                'tipo'     => 'entero',
-                'sufijo'   => 'COP',
-                'ayuda'    => 'Lo que paga el cliente por la entrega. La app la consulta al abrir, así que cambiarla acá se ve en el teléfono sin publicar una versión nueva. Se congela en cada pedido al crearlo: subirla no reescribe lo ya entregado. Los pedidos que el cliente recoge en tienda no la pagan.',
-                'defecto'  => (int) config('services.delivery_fee', 2000),
-                'reglas'   => 'required|integer|min:0|max:100000',
+                'tipo' => 'entero',
+                'sufijo' => 'COP',
+                'ayuda' => 'Lo que paga el cliente por la entrega. La app la consulta al abrir, así que cambiarla acá se ve en el teléfono sin publicar una versión nueva. Se congela en cada pedido al crearlo: subirla no reescribe lo ya entregado. Los pedidos que el cliente recoge en tienda no la pagan.',
+                'defecto' => (int) config('services.delivery_fee', 2000),
+                'reglas' => 'required|integer|min:0|max:100000',
             ],
 
             /*
@@ -77,100 +77,100 @@ class CatalogoDeAjustes
              * exigiria pantalla propia; esto se configura con tres numeros.
              */
             'operacion.radio_base_km' => [
-                'grupo'    => 'operacion',
+                'grupo' => 'operacion',
                 'etiqueta' => 'Radio de la tarifa base',
-                'tipo'     => 'decimal',
-                'sufijo'   => 'km',
-                'ayuda'    => 'Hasta esta distancia en linea recta entre la tienda y la direccion, el domicilio cuesta la tarifa base. Mas alla empieza a subir por escalones.',
-                'defecto'  => 1.5,
-                'reglas'   => 'required|numeric|min:0.1|max:50',
+                'tipo' => 'decimal',
+                'sufijo' => 'km',
+                'ayuda' => 'Hasta esta distancia en linea recta entre la tienda y la direccion, el domicilio cuesta la tarifa base. Mas alla empieza a subir por escalones.',
+                'defecto' => 1.5,
+                'reglas' => 'required|numeric|min:0.1|max:50',
             ],
 
             'operacion.paso_km' => [
-                'grupo'    => 'operacion',
+                'grupo' => 'operacion',
                 'etiqueta' => 'Cada cuanto sube',
-                'tipo'     => 'decimal',
-                'sufijo'   => 'km',
-                'ayuda'    => 'Pasado el radio base, cada cuantos kilometros sube un escalon la tarifa.',
-                'defecto'  => 1.0,
-                'reglas'   => 'required|numeric|min:0.1|max:50',
+                'tipo' => 'decimal',
+                'sufijo' => 'km',
+                'ayuda' => 'Pasado el radio base, cada cuantos kilometros sube un escalon la tarifa.',
+                'defecto' => 1.0,
+                'reglas' => 'required|numeric|min:0.1|max:50',
             ],
 
             'operacion.paso_precio' => [
-                'grupo'    => 'operacion',
+                'grupo' => 'operacion',
                 'etiqueta' => 'Cuanto sube cada escalon',
-                'tipo'     => 'entero',
-                'sufijo'   => 'COP',
-                'ayuda'    => 'Lo que se suma a la tarifa por cada escalon de distancia. Se congela en el pedido al crearlo, como el resto de lo que decide dinero.',
-                'defecto'  => 1000,
-                'reglas'   => 'required|integer|min:0|max:100000',
+                'tipo' => 'entero',
+                'sufijo' => 'COP',
+                'ayuda' => 'Lo que se suma a la tarifa por cada escalon de distancia. Se congela en el pedido al crearlo, como el resto de lo que decide dinero.',
+                'defecto' => 1000,
+                'reglas' => 'required|integer|min:0|max:100000',
             ],
 
             'operacion.radio_maximo_km' => [
-                'grupo'    => 'operacion',
+                'grupo' => 'operacion',
                 'etiqueta' => 'Hasta donde se entrega',
-                'tipo'     => 'decimal',
-                'sufijo'   => 'km',
-                'ayuda'    => 'Distancia maxima a la que una tienda reparte. Mas alla no aparece en la lista de quien busca, y su catalogo se puede mirar pero no pedir. En 0 no hay limite.',
-                'defecto'  => 6.0,
-                'reglas'   => 'required|numeric|min:0|max:100',
+                'tipo' => 'decimal',
+                'sufijo' => 'km',
+                'ayuda' => 'Distancia maxima a la que una tienda reparte. Mas alla no aparece en la lista de quien busca, y su catalogo se puede mirar pero no pedir. En 0 no hay limite.',
+                'defecto' => 6.0,
+                'reglas' => 'required|numeric|min:0|max:100',
             ],
 
             'operacion.desvio_peso_max' => [
-                'grupo'    => 'operacion',
+                'grupo' => 'operacion',
                 'etiqueta' => 'Desvío máximo al pesar',
-                'tipo'     => 'porcentaje',
-                'ayuda'    => 'Cuánto puede alejarse el peso real de lo que pidió el cliente. Es lo único que limita a quien pone el peso en el mostrador: sin tope, un pedido de $8.000 se podría convertir en uno de $80.000 y el cliente lo pagaría en la puerta sin haberlo aceptado nunca. Demasiado estricto y no se puede cortar un trozo de queso de verdad; demasiado laxo y no protege nada.',
-                'defecto'  => 0.25,
-                'reglas'   => 'required|numeric|min:0.01|max:1',
+                'tipo' => 'porcentaje',
+                'ayuda' => 'Cuánto puede alejarse el peso real de lo que pidió el cliente. Es lo único que limita a quien pone el peso en el mostrador: sin tope, un pedido de $8.000 se podría convertir en uno de $80.000 y el cliente lo pagaría en la puerta sin haberlo aceptado nunca. Demasiado estricto y no se puede cortar un trozo de queso de verdad; demasiado laxo y no protege nada.',
+                'defecto' => 0.25,
+                'reglas' => 'required|numeric|min:0.01|max:1',
             ],
 
             'operacion.comision_plataforma' => [
-                'grupo'    => 'operacion',
+                'grupo' => 'operacion',
                 'etiqueta' => 'Comisión de la plataforma sobre la venta',
-                'tipo'     => 'porcentaje',
-                'ayuda'    => 'De lo que vende un negocio, cuánto retiene la plataforma al liquidarle. Se calcula sobre el subtotal de productos menos los descuentos —el domicilio va aparte, con su propio reparto— y se congela en cada pedido al crearlo: subirla no rehace liquidaciones ya emitidas ni le cambia a nadie lo que se le pagó el mes pasado.',
-                'defecto'  => (float) config('services.platform_commission', 0.03),
-                'reglas'   => 'required|numeric|min:0|max:1',
+                'tipo' => 'porcentaje',
+                'ayuda' => 'De lo que vende un negocio, cuánto retiene la plataforma al liquidarle. Se calcula sobre el subtotal de productos menos los descuentos —el domicilio va aparte, con su propio reparto— y se congela en cada pedido al crearlo: subirla no rehace liquidaciones ya emitidas ni le cambia a nadie lo que se le pagó el mes pasado.',
+                'defecto' => (float) config('services.platform_commission', 0.03),
+                'reglas' => 'required|numeric|min:0|max:1',
             ],
 
             'operacion.tiempo_entrega_min' => [
-                'grupo'    => 'operacion',
+                'grupo' => 'operacion',
                 'etiqueta' => 'Plazo base de entrega',
-                'tipo'     => 'entero',
-                'sufijo'   => 'minutos',
-                'ayuda'    => 'Lo que se promete para una entrega al lado de la tienda: preparar el pedido y salir. A esto se le suman los minutos por kilómetro. El plazo se congela en cada pedido al despacharlo, así que subirlo no convierte en "a tiempo" entregas pasadas que llegaron tarde: cada domiciliario se mide contra el plazo que regía ese día.',
-                'defecto'  => 20,
-                'reglas'   => 'required|integer|min:5|max:240',
+                'tipo' => 'entero',
+                'sufijo' => 'minutos',
+                'ayuda' => 'Lo que se promete para una entrega al lado de la tienda: preparar el pedido y salir. A esto se le suman los minutos por kilómetro. El plazo se congela en cada pedido al despacharlo, así que subirlo no convierte en "a tiempo" entregas pasadas que llegaron tarde: cada domiciliario se mide contra el plazo que regía ese día.',
+                'defecto' => 20,
+                'reglas' => 'required|integer|min:5|max:240',
             ],
 
             'operacion.minutos_por_km' => [
-                'grupo'    => 'operacion',
+                'grupo' => 'operacion',
                 'etiqueta' => 'Minutos por kilómetro',
-                'tipo'     => 'entero',
-                'sufijo'   => 'minutos/km',
-                'ayuda'    => 'Lo que suma cada kilómetro entre la tienda y la dirección. El total se redondea hacia arriba de cinco en cinco, porque nadie promete "23 minutos". En 0 el plazo vuelve a ser uno solo para todos.',
-                'defecto'  => 4,
-                'reglas'   => 'required|integer|min:0|max:60',
+                'tipo' => 'entero',
+                'sufijo' => 'minutos/km',
+                'ayuda' => 'Lo que suma cada kilómetro entre la tienda y la dirección. El total se redondea hacia arriba de cinco en cinco, porque nadie promete "23 minutos". En 0 el plazo vuelve a ser uno solo para todos.',
+                'defecto' => 4,
+                'reglas' => 'required|integer|min:0|max:60',
             ],
 
             'operacion.tiempo_entrega_max' => [
-                'grupo'    => 'operacion',
+                'grupo' => 'operacion',
                 'etiqueta' => 'Plazo máximo prometido',
-                'tipo'     => 'entero',
-                'sufijo'   => 'minutos',
-                'ayuda'    => 'El tope del cálculo por distancia: una dirección en el borde de la cobertura no debería prometer hora y media. Nunca baja del plazo base.',
-                'defecto'  => 60,
-                'reglas'   => 'required|integer|min:5|max:240',
+                'tipo' => 'entero',
+                'sufijo' => 'minutos',
+                'ayuda' => 'El tope del cálculo por distancia: una dirección en el borde de la cobertura no debería prometer hora y media. Nunca baja del plazo base.',
+                'defecto' => 60,
+                'reglas' => 'required|integer|min:5|max:240',
             ],
 
             'operacion.entregas_simultaneas' => [
-                'grupo'    => 'operacion',
+                'grupo' => 'operacion',
                 'etiqueta' => 'Entregas a la vez por domiciliario',
-                'tipo'     => 'entero',
-                'ayuda'    => 'Tope de pedidos activos que puede llevar una misma persona. Subirlo aumenta la capacidad y empeora los tiempos; bajarlo hace lo contrario.',
-                'defecto'  => (int) config('services.max_active_deliveries', 3),
-                'reglas'   => 'required|integer|min:1|max:20',
+                'tipo' => 'entero',
+                'ayuda' => 'Tope de pedidos activos que puede llevar una misma persona. Subirlo aumenta la capacidad y empeora los tiempos; bajarlo hace lo contrario.',
+                'defecto' => (int) config('services.max_active_deliveries', 3),
+                'reglas' => 'required|integer|min:1|max:20',
             ],
 
             /*
@@ -186,69 +186,69 @@ class CatalogoDeAjustes
              * sin tocar código.
              */
             'operacion.promociones_por_dia' => [
-                'grupo'    => 'operacion',
+                'grupo' => 'operacion',
                 'etiqueta' => 'Promociones que puede enviar una tienda al día',
-                'tipo'     => 'entero',
-                'ayuda'    => 'Cuántas veces al día puede una tienda avisar a sus clientes afiliados. Subirlo mucho hace que la gente silencie los avisos de la app, y entonces se pierden también los de sus pedidos.',
-                'defecto'  => 2,
-                'reglas'   => 'required|integer|min:1|max:10',
+                'tipo' => 'entero',
+                'ayuda' => 'Cuántas veces al día puede una tienda avisar a sus clientes afiliados. Subirlo mucho hace que la gente silencie los avisos de la app, y entonces se pierden también los de sus pedidos.',
+                'defecto' => 2,
+                'reglas' => 'required|integer|min:1|max:10',
             ],
 
             'operacion.horas_estancado' => [
-                'grupo'    => 'operacion',
+                'grupo' => 'operacion',
                 'etiqueta' => 'Horas para considerar un pedido atascado',
-                'tipo'     => 'entero',
-                'sufijo'   => 'horas',
-                'ayuda'    => 'A partir de acá el pedido aparece en "requieren atención" y entra en el resumen diario por correo. Bajarlo llena la lista de casos que todavía iban bien; subirlo esconde los que ya se enfriaron.',
-                'defecto'  => 24,
-                'reglas'   => 'required|integer|min:1|max:240',
+                'tipo' => 'entero',
+                'sufijo' => 'horas',
+                'ayuda' => 'A partir de acá el pedido aparece en "requieren atención" y entra en el resumen diario por correo. Bajarlo llena la lista de casos que todavía iban bien; subirlo esconde los que ya se enfriaron.',
+                'defecto' => 24,
+                'reglas' => 'required|integer|min:1|max:240',
             ],
 
             /* --------------------- CONTROL DE LA APP --------------------- */
 
             'app.mantenimiento' => [
-                'grupo'    => 'app',
+                'grupo' => 'app',
                 'etiqueta' => 'App en mantenimiento',
-                'tipo'     => 'booleano',
-                'ayuda'    => 'Encendido, la app deja de operar y el servidor responde 503 a las peticiones de compradores y domiciliarios. El panel sigue funcionando —si no, no habría forma de apagarlo— y los avisos de pago de la pasarela también, para no perder cobros en curso.',
-                'defecto'  => false,
-                'reglas'   => 'required|boolean',
+                'tipo' => 'booleano',
+                'ayuda' => 'Encendido, la app deja de operar y el servidor responde 503 a las peticiones de compradores y domiciliarios. El panel sigue funcionando —si no, no habría forma de apagarlo— y los avisos de pago de la pasarela también, para no perder cobros en curso.',
+                'defecto' => false,
+                'reglas' => 'required|boolean',
             ],
 
             'app.mantenimiento_mensaje' => [
-                'grupo'    => 'app',
+                'grupo' => 'app',
                 'etiqueta' => 'Mensaje de mantenimiento',
-                'tipo'     => 'texto_largo',
-                'ayuda'    => 'Lo que lee la persona en la app mientras está parado. Un mensaje con una hora estimada evita la mitad de las llamadas.',
-                'defecto'  => 'Estamos en mantenimiento y volvemos en un rato. Gracias por la paciencia.',
-                'reglas'   => 'nullable|string|max:300',
+                'tipo' => 'texto_largo',
+                'ayuda' => 'Lo que lee la persona en la app mientras está parado. Un mensaje con una hora estimada evita la mitad de las llamadas.',
+                'defecto' => 'Estamos en mantenimiento y volvemos en un rato. Gracias por la paciencia.',
+                'reglas' => 'nullable|string|max:300',
             ],
 
             'app.version_minima_android' => [
-                'grupo'    => 'app',
+                'grupo' => 'app',
                 'etiqueta' => 'Versión mínima en Android',
-                'tipo'     => 'version',
-                'ayuda'    => 'Quien tenga una anterior verá que debe actualizar antes de seguir. Se usa cuando una versión vieja ya no habla bien con el servidor. Vacío = no se exige ninguna.',
-                'defecto'  => '',
-                'reglas'   => 'nullable|string|max:20|regex:/^\d+(\.\d+){0,2}$/',
+                'tipo' => 'version',
+                'ayuda' => 'Quien tenga una anterior verá que debe actualizar antes de seguir. Se usa cuando una versión vieja ya no habla bien con el servidor. Vacío = no se exige ninguna.',
+                'defecto' => '',
+                'reglas' => 'nullable|string|max:20|regex:/^\d+(\.\d+){0,2}$/',
             ],
 
             'app.version_minima_ios' => [
-                'grupo'    => 'app',
+                'grupo' => 'app',
                 'etiqueta' => 'Versión mínima en iOS',
-                'tipo'     => 'version',
-                'ayuda'    => 'Igual que la de Android, aparte porque las tiendas aprueban en tiempos distintos y casi nunca van a la par.',
-                'defecto'  => '',
-                'reglas'   => 'nullable|string|max:20|regex:/^\d+(\.\d+){0,2}$/',
+                'tipo' => 'version',
+                'ayuda' => 'Igual que la de Android, aparte porque las tiendas aprueban en tiempos distintos y casi nunca van a la par.',
+                'defecto' => '',
+                'reglas' => 'nullable|string|max:20|regex:/^\d+(\.\d+){0,2}$/',
             ],
 
             'app.mensaje_actualizacion' => [
-                'grupo'    => 'app',
+                'grupo' => 'app',
                 'etiqueta' => 'Mensaje al exigir actualización',
-                'tipo'     => 'texto_largo',
-                'ayuda'    => 'Lo que se le dice a quien tiene una versión por debajo de la mínima.',
-                'defecto'  => 'Hay una versión nueva con mejoras importantes. Actualiza para seguir pidiendo.',
-                'reglas'   => 'nullable|string|max:300',
+                'tipo' => 'texto_largo',
+                'ayuda' => 'Lo que se le dice a quien tiene una versión por debajo de la mínima.',
+                'defecto' => 'Hay una versión nueva con mejoras importantes. Actualiza para seguir pidiendo.',
+                'reglas' => 'nullable|string|max:300',
             ],
         ];
     }
@@ -270,7 +270,7 @@ class CatalogoDeAjustes
 
         foreach (self::todos() as $clave => $def) {
             // Los ajustes llegan como un objeto plano: {"operacion.horas_estancado": 24}
-            $reglas[$clave] = 'sometimes|' . $def['reglas'];
+            $reglas[$clave] = 'sometimes|'.$def['reglas'];
         }
 
         return $reglas;
@@ -289,16 +289,16 @@ class CatalogoDeAjustes
     {
         $def = self::definicion($clave);
 
-        if (!$def || $crudo === null) {
+        if (! $def || $crudo === null) {
             return $def['defecto'] ?? null;
         }
 
         return match ($def['tipo']) {
             'porcentaje' => (float) $crudo,
-            'decimal'    => (float) $crudo,
-            'entero'     => (int) $crudo,
-            'booleano'   => filter_var($crudo, FILTER_VALIDATE_BOOLEAN),
-            default      => $crudo,
+            'decimal' => (float) $crudo,
+            'entero' => (int) $crudo,
+            'booleano' => filter_var($crudo, FILTER_VALIDATE_BOOLEAN),
+            default => $crudo,
         };
     }
 
@@ -309,7 +309,7 @@ class CatalogoDeAjustes
 
         return match ($def['tipo'] ?? 'texto') {
             'booleano' => filter_var($valor, FILTER_VALIDATE_BOOLEAN) ? '1' : '0',
-            default    => (string) $valor,
+            default => (string) $valor,
         };
     }
 }

@@ -2,29 +2,12 @@
 
 namespace App\Http\Controllers\Admin\Api;
 
-use App\Services\Ajustes;
 use App\Http\Controllers\Controller;
-use App\Models\Area;
-use App\Models\Conjunto\ComplexStaff;
-use App\Models\Operacion\DomiciliaryDocument;
-use App\Models\Reviews\BusinessReview;
-use App\Models\Reviews\DomiciliaryReview;
-use App\Models\User;
-use App\Services\BusinessMediaService;
-use App\Services\ContratoService;
-use App\Services\MediaService;
-use App\Services\VinculosDelRol;
-use App\Support\ListadoPaginado;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 
 class ChatsApiController extends Controller
 {
-
     public function chats(Request $request)
     {
         $chats = DB::table('chats as c')
@@ -64,6 +47,7 @@ class ChatsApiController extends Controller
                 $c->last_message = $contenido && str_starts_with(trim($contenido), '{')
                     ? '[Pre-orden]'
                     : $contenido;
+
                 return $c;
             })
         );
@@ -71,7 +55,7 @@ class ChatsApiController extends Controller
 
     public function chatMessages($chatId)
     {
-        abort_if(!DB::table('chats')->where('chat_id', $chatId)->exists(), 404, 'La conversación no existe.');
+        abort_if(! DB::table('chats')->where('chat_id', $chatId)->exists(), 404, 'La conversación no existe.');
 
         return response()->json(
             DB::table('messages as m')

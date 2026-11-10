@@ -40,9 +40,9 @@ class ResidentialComplexController extends Controller
             ]);
 
         return response()->json([
-            'status'  => true,
+            'status' => true,
             'message' => 'Conjuntos disponibles',
-            'data'    => $conjuntos,
+            'data' => $conjuntos,
         ]);
     }
 }

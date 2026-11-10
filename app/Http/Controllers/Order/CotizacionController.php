@@ -35,15 +35,14 @@ class CotizacionController extends Controller
     public function __construct(
         private EconomiaDelPedido $economia,
         private TarifaPorDistancia $distancias,
-    ) {
-    }
+    ) {}
 
     public function cotizar(Request $request)
     {
         // Las mismas dos grafías que acepta `store`: la app manda
         // `business_id` y `quantity`; el contrato viejo, `busines_id` y
         // `amount`.
-        if (!$request->filled('busines_id') && $request->filled('business_id')) {
+        if (! $request->filled('busines_id') && $request->filled('business_id')) {
             $request->merge(['busines_id' => $request->input('business_id')]);
         }
 
@@ -51,7 +50,7 @@ class CotizacionController extends Controller
             'products' => collect($request->input('products', []))
                 ->map(fn ($p) => [
                     'product_id' => $p['product_id'] ?? null,
-                    'amount'     => $p['amount'] ?? $p['quantity'] ?? null,
+                    'amount' => $p['amount'] ?? $p['quantity'] ?? null,
                     /*
                      * LO QUE HACE FALTA PARA VENDER AL PESO, y nada mas.
                      *
@@ -61,28 +60,28 @@ class CotizacionController extends Controller
                      * vale 1-- para que la app ya publicada en las tiendas
                      * siga pidiendo igual.
                      */
-                    'pedido_por'      => $p['pedido_por'] ?? null,
-                    'requested_qty'   => $p['requested_qty'] ?? null,
+                    'pedido_por' => $p['pedido_por'] ?? null,
+                    'requested_qty' => $p['requested_qty'] ?? null,
                     'requested_value' => $p['requested_value'] ?? null,
                 ])->all(),
         ]);
 
         $request->validate([
-            'busines_id'            => 'required|integer|exists:business,busines_id',
-            'products'              => 'required|array|min:1',
+            'busines_id' => 'required|integer|exists:business,busines_id',
+            'products' => 'required|array|min:1',
             'products.*.product_id' => 'required|integer',
-            'products.*.amount'     => 'required|integer|min:1|max:1000',
+            'products.*.amount' => 'required|integer|min:1|max:1000',
             /*
              * El peso va en campos propios y `amount` se queda entero: migrar
              * esa regla a decimal cambiaria el significado de veintidos sitios
              * que la dan por hecha, en silencio.
              */
-            'products.*.pedido_por'      => 'sometimes|nullable|in:valor,cantidad',
-            'products.*.requested_qty'   => 'sometimes|nullable|numeric|min:0.001|max:100',
+            'products.*.pedido_por' => 'sometimes|nullable|in:valor,cantidad',
+            'products.*.requested_qty' => 'sometimes|nullable|numeric|min:0.001|max:100',
             'products.*.requested_value' => 'sometimes|nullable|numeric|min:100|max:1000000',
-            'address_id'            => 'sometimes|nullable|integer',
-            'pickup'                => 'sometimes|boolean',
-            'coupon_code'           => 'sometimes|nullable|string|max:40',
+            'address_id' => 'sometimes|nullable|integer',
+            'pickup' => 'sometimes|boolean',
+            'coupon_code' => 'sometimes|nullable|string|max:40',
         ]);
 
         $business = Business::find($request->busines_id);
@@ -108,8 +107,8 @@ class CotizacionController extends Controller
 
         if ($vigentes === []) {
             return response()->json([
-                'message'   => 'Ninguno de esos productos sigue disponible en la tienda.',
-                'no_estan'  => $faltantes->values(),
+                'message' => 'Ninguno de esos productos sigue disponible en la tienda.',
+                'no_estan' => $faltantes->values(),
             ], 422);
         }
 
@@ -118,7 +117,7 @@ class CotizacionController extends Controller
         // puerta de cualquiera pasando números.
         $direccion = null;
 
-        if (!$esRecogida && $request->filled('address_id')) {
+        if (! $esRecogida && $request->filled('address_id')) {
             $direccion = DB::table('user_address')
                 ->where('address_id', $request->address_id)
                 ->where('user_id', $request->user()->user_id)
@@ -154,25 +153,25 @@ class CotizacionController extends Controller
         );
 
         return response()->json([
-            'subtotal'          => round($cifras['subtotal'], 2),
-            'descuento'         => $cifras['descuento'],
-            'descuento_cupon'   => $cifras['descuentoCupon'],
-            'descuento_promo'   => $cifras['descuentoPromo'],
-            'promociones'       => $cifras['promociones'],
+            'subtotal' => round($cifras['subtotal'], 2),
+            'descuento' => $cifras['descuento'],
+            'descuento_cupon' => $cifras['descuentoCupon'],
+            'descuento_promo' => $cifras['descuentoPromo'],
+            'promociones' => $cifras['promociones'],
             'promociones_cerca' => $cifras['promocionesCerca'],
-            'domicilio'         => round($cifras['domicilio'], 2),
-            'total'             => round($cifras['total'], 2),
-            'distancia_km'      => $cifras['km'],
+            'domicilio' => round($cifras['domicilio'], 2),
+            'total' => round($cifras['total'], 2),
+            'distancia_km' => $cifras['km'],
             /*
              * Si reparte hasta acá. El carrito ya lo comprobaba por su cuenta
              * con `in_range` del listado, que es una foto del momento en que
              * se cargó; esto es el dato de ahora y de esta dirección.
              */
-            'reparte'           => $esRecogida || $cifras['km'] === null
+            'reparte' => $esRecogida || $cifras['km'] === null
                 ? true
                 : $this->distancias->reparteHasta($cifras['km']),
             // Lo que se cayó del carrito, para poder decirlo.
-            'no_estan'          => $faltantes->values(),
+            'no_estan' => $faltantes->values(),
         ]);
     }
 }

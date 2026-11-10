@@ -20,8 +20,10 @@ class Coupon extends Model
      * `PoliticaDeDomicilio`: son dos bolsillos distintos, y mezclarlos fue
      * justo lo que se evitó desde el principio.
      */
-    public const TIPO_PORCENTAJE   = 'percent';
-    public const TIPO_FIJO         = 'fixed';
+    public const TIPO_PORCENTAJE = 'percent';
+
+    public const TIPO_FIJO = 'fixed';
+
     public const TIPO_ENVIO_GRATIS = 'free_shipping';
 
     public const TIPOS = [self::TIPO_PORCENTAJE, self::TIPO_FIJO, self::TIPO_ENVIO_GRATIS];
@@ -46,18 +48,18 @@ class Coupon extends Model
     ];
 
     protected $casts = [
-        'value'             => 'decimal:2',
-        'max_discount'      => 'decimal:2',
-        'min_order'         => 'decimal:2',
-        'max_uses'          => 'integer',
+        'value' => 'decimal:2',
+        'max_discount' => 'decimal:2',
+        'min_order' => 'decimal:2',
+        'max_uses' => 'integer',
         'max_uses_per_user' => 'integer',
-        'uses_count'        => 'integer',
-        'business_id'       => 'integer',
-        'category_id'       => 'integer',
-        'advertiser_id'     => 'integer',
-        'starts_at'         => 'date',
-        'ends_at'           => 'date',
-        'state'             => 'integer',
+        'uses_count' => 'integer',
+        'business_id' => 'integer',
+        'category_id' => 'integer',
+        'advertiser_id' => 'integer',
+        'starts_at' => 'date',
+        'ends_at' => 'date',
+        'state' => 'integer',
     ];
 
     /**

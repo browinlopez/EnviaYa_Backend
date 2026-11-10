@@ -2,6 +2,7 @@
 
 use App\Models\Product\Product;
 use App\Models\Product\ProductAlias;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -21,7 +22,6 @@ use Illuminate\Support\Facades\DB;
  * mejor sino un sitio donde guardar la decisión, para que la siguiente carga
  * no la repita mal.
  */
-
 test('normaliza el nombre antes de guardarlo o buscarlo', function (string $entra, string $sale) {
     expect(ProductAlias::normalizar($entra))->toBe($sale);
 })->with([
@@ -38,8 +38,8 @@ test('el alias encuentra el producto aunque el nombre no se parezca', function (
 
     ProductAlias::create([
         'products_id' => $p->products_id,
-        'alias'       => ProductAlias::normalizar('ACETAMINOFEN'),
-        'origen'      => 'equipo',
+        'alias' => ProductAlias::normalizar('ACETAMINOFEN'),
+        'origen' => 'equipo',
     ]);
 
     expect(ProductAlias::resolver('ACETAMINOFEN'))->toBe($p->products_id);
@@ -64,15 +64,15 @@ test('el alias de una tienda gana sobre el general', function () {
 
     ProductAlias::create([
         'products_id' => $general->products_id,
-        'alias'       => ProductAlias::normalizar('LA GRANDE'),
-        'origen'      => 'equipo',
+        'alias' => ProductAlias::normalizar('LA GRANDE'),
+        'origen' => 'equipo',
     ]);
 
     ProductAlias::create([
         'products_id' => $suyo->products_id,
-        'alias'       => ProductAlias::normalizar('LA GRANDE'),
-        'busines_id'  => $t['mio'],
-        'origen'      => 'equipo',
+        'alias' => ProductAlias::normalizar('LA GRANDE'),
+        'busines_id' => $t['mio'],
+        'origen' => 'equipo',
     ]);
 
     expect(ProductAlias::resolver('LA GRANDE', $t['mio']))->toBe($suyo->products_id);
@@ -88,8 +88,8 @@ test('la carga usa el alias en vez de crear un duplicado', function () {
 
     ProductAlias::create([
         'products_id' => $p->products_id,
-        'alias'       => ProductAlias::normalizar('NORAVER GARGANTA'),
-        'origen'      => 'equipo',
+        'alias' => ProductAlias::normalizar('NORAVER GARGANTA'),
+        'origen' => 'equipo',
     ]);
 
     $antes = Product::count();
@@ -142,7 +142,7 @@ test('dos aliases generales iguales no pueden existir', function () {
 
     expect(fn () => ProductAlias::create([
         'products_id' => $b->products_id, 'alias' => 'MISMO', 'origen' => 'equipo',
-    ]))->toThrow(Illuminate\Database\QueryException::class);
+    ]))->toThrow(QueryException::class);
 });
 
 test('un nombre ambiguo se queda SIN alias, para que la carga pregunte', function () {
@@ -181,8 +181,8 @@ test('un alias decidido a mano no lo borra uno automatico', function () {
 
     ProductAlias::create([
         'products_id' => $bueno->products_id,
-        'alias'       => ProductAlias::normalizar('ACETAMINOFEN'),
-        'origen'      => 'equipo',
+        'alias' => ProductAlias::normalizar('ACETAMINOFEN'),
+        'origen' => 'equipo',
     ]);
 
     // Llega un producto que se llama justo así.

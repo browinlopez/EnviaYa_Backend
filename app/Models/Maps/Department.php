@@ -2,15 +2,17 @@
 
 namespace App\Models\Maps;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\Audit\Audit;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Department extends Audit
 {
     use HasFactory;
 
     protected $table = 'departments';
+
     protected $primaryKey = 'id';
+
     protected $fillable = ['name', 'country_id'];
 
     public function country()

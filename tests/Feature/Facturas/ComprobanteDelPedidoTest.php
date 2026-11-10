@@ -34,13 +34,13 @@ function compraEntregadaConTienda(): array
 
     DB::table('orderssales_detail')->insert([
         'orderSales_id' => $e['id'],
-        'product_id'    => $producto,
-        'amount'        => 2,
-        'unit_price'    => 6250,
+        'product_id' => $producto,
+        'amount' => 2,
+        'unit_price' => 6250,
     ]);
 
     DB::table('orderssales')->where('orderSales_id', $e['id'])->update([
-        'state'         => 4,
+        'state' => 4,
         'delivery_date' => now(),
     ]);
 
@@ -135,7 +135,7 @@ describe('el enlace del PDF', function () {
         $url = $this->getJson("/v1/orders/{$e['id']}/comprobante")->json('pdf_url');
 
         // Le cambiamos un carácter a la firma: es el ataque entero.
-        $this->get(substr($url, 0, -1) . 'x')->assertForbidden();
+        $this->get(substr($url, 0, -1).'x')->assertForbidden();
 
         // Y sin firma ninguna tampoco.
         $this->get(strtok($url, '?'))->assertForbidden();

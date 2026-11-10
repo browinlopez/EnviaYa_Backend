@@ -31,7 +31,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (!Schema::hasColumn('user_address', 'municipalities_id')) {
+        if (! Schema::hasColumn('user_address', 'municipalities_id')) {
             return;
         }
 

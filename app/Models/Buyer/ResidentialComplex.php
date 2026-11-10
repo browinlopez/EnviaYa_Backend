@@ -7,7 +7,9 @@ use App\Models\Audit\Audit;
 class ResidentialComplex extends Audit
 {
     protected $table = 'residential_complexes';
+
     protected $primaryKey = 'complex_id';
+
     /*
      * Ahora sí lleva `created_at` / `updated_at`.
      *

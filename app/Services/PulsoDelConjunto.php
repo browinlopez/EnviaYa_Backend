@@ -57,7 +57,7 @@ class PulsoDelConjunto
      */
     public function resumen(int $complexId, int $dias = 14): array
     {
-        $hoy   = CarbonImmutable::today();
+        $hoy = CarbonImmutable::today();
         $desde = $hoy->subDays($dias - 1);
 
         /*
@@ -67,14 +67,14 @@ class PulsoDelConjunto
          * «hoy» con «los últimos 30 días» sin decirlo.
          */
         return [
-            'hoy'          => $this->deHoy($complexId, $hoy),
-            'comparativa'  => $this->comparativa($complexId, $hoy),
-            'series'       => $this->series($complexId, $desde, $hoy),
-            'por_hora'     => $this->porHora($complexId, $desde),
-            'torres'       => $this->torres($complexId, $desde),
+            'hoy' => $this->deHoy($complexId, $hoy),
+            'comparativa' => $this->comparativa($complexId, $hoy),
+            'series' => $this->series($complexId, $desde, $hoy),
+            'por_hora' => $this->porHora($complexId, $desde),
+            'torres' => $this->torres($complexId, $desde),
             'identificacion' => $this->identificacion($complexId, $desde),
-            'comunidad'    => $this->comunidad($complexId),
-            'ultimas'      => $this->ultimasEntradas($complexId, 6),
+            'comunidad' => $this->comunidad($complexId),
+            'ultimas' => $this->ultimasEntradas($complexId, 6),
         ];
     }
 
@@ -84,7 +84,7 @@ class PulsoDelConjunto
             ->whereDate('e.created_at', $hoy->toDateString());
 
         return [
-            'pedidos'  => (int) (clone $this->pedidos($complexId))
+            'pedidos' => (int) (clone $this->pedidos($complexId))
                 ->whereDate('o.sale_date', $hoy->toDateString())->count(),
             'entradas' => (int) (clone $entradasHoy)->count(),
             // Cuántas personas distintas, no cuántas veces. Un domiciliario que
@@ -124,22 +124,22 @@ class PulsoDelConjunto
     /** Esta semana contra la anterior, para saber si sube o baja. */
     private function comparativa(int $complexId, CarbonImmutable $hoy): array
     {
-        $inicio   = $hoy->subDays(6);
+        $inicio = $hoy->subDays(6);
         $anterior = $hoy->subDays(13);
 
         $cuenta = fn ($q, $col, $d, $h) => (int) (clone $q)
             ->whereBetween($col, [$d->startOfDay(), $h->endOfDay()])->count();
 
-        $pedidos  = $this->pedidos($complexId);
+        $pedidos = $this->pedidos($complexId);
         $entradas = $this->entradas($complexId);
 
         return [
             'pedidos' => [
-                'actual'   => $cuenta($pedidos, 'o.sale_date', $inicio, $hoy),
+                'actual' => $cuenta($pedidos, 'o.sale_date', $inicio, $hoy),
                 'anterior' => $cuenta($pedidos, 'o.sale_date', $anterior, $inicio->subDay()),
             ],
             'entradas' => [
-                'actual'   => $cuenta($entradas, 'e.created_at', $inicio, $hoy),
+                'actual' => $cuenta($entradas, 'e.created_at', $inicio, $hoy),
                 'anterior' => $cuenta($entradas, 'e.created_at', $anterior, $inicio->subDay()),
             ],
         ];
@@ -156,11 +156,11 @@ class PulsoDelConjunto
     {
         $porDia = fn ($q, $col) => (clone $q)
             ->whereBetween($col, [$desde->startOfDay(), $hasta->endOfDay()])
-            ->selectRaw(SqlPortable::soloFecha($col) . ' as dia, COUNT(*) as total')
+            ->selectRaw(SqlPortable::soloFecha($col).' as dia, COUNT(*) as total')
             ->groupBy('dia')
             ->pluck('total', 'dia');
 
-        $pedidos  = $porDia($this->pedidos($complexId), 'o.sale_date');
+        $pedidos = $porDia($this->pedidos($complexId), 'o.sale_date');
         $entradas = $porDia($this->entradas($complexId), 'e.created_at');
 
         $filas = [];
@@ -169,9 +169,9 @@ class PulsoDelConjunto
             $clave = $d->toDateString();
 
             $filas[] = [
-                'dia'      => $clave,
+                'dia' => $clave,
                 'etiqueta' => $d->locale('es')->isoFormat('DD MMM'),
-                'pedidos'  => (int) ($pedidos[$clave] ?? 0),
+                'pedidos' => (int) ($pedidos[$clave] ?? 0),
                 'entradas' => (int) ($entradas[$clave] ?? 0),
             ];
         }
@@ -191,14 +191,14 @@ class PulsoDelConjunto
     {
         $cuentas = $this->entradas($complexId)
             ->where('e.created_at', '>=', $desde->startOfDay())
-            ->selectRaw(SqlPortable::hora('e.created_at') . ' as hora, COUNT(*) as total')
+            ->selectRaw(SqlPortable::hora('e.created_at').' as hora, COUNT(*) as total')
             ->groupBy('hora')
             ->pluck('total', 'hora');
 
         return collect(range(0, 23))->map(fn ($h) => [
-            'hora'     => $h,
-            'etiqueta' => str_pad((string) $h, 2, '0', STR_PAD_LEFT) . ':00',
-            'total'    => (int) ($cuentas[$h] ?? 0),
+            'hora' => $h,
+            'etiqueta' => str_pad((string) $h, 2, '0', STR_PAD_LEFT).':00',
+            'total' => (int) ($cuentas[$h] ?? 0),
         ])->all();
     }
 
@@ -249,7 +249,7 @@ class PulsoDelConjunto
 
         $codigo = (int) ($filas['codigo'] ?? 0);
         $cedula = (int) ($filas['cedula'] ?? 0);
-        $total  = $codigo + $cedula;
+        $total = $codigo + $cedula;
 
         /*
          * Lo anotado a mano —visitas, servicio, domicilios de otras apps— va
@@ -265,10 +265,10 @@ class PulsoDelConjunto
         return [
             'codigo' => $codigo,
             'cedula' => $cedula,
-            'total'  => $total,
+            'total' => $total,
             'parte_codigo' => $total ? round($codigo / $total, 4) : null,
             'manual' => $anotadas,
-            'todas'  => $total + $anotadas,
+            'todas' => $total + $anotadas,
         ];
     }
 
@@ -285,11 +285,11 @@ class PulsoDelConjunto
 
         return [
             'residentes' => $residentes,
-            'unidades'   => $unidades ?: null,
+            'unidades' => $unidades ?: null,
             // Sobre unidades y no sobre personas: una cuenta suele ser un
             // hogar, no un individuo.
             'penetracion' => $unidades ? round($residentes / $unidades, 4) : null,
-            'celadores'  => (int) ComplexStaff::where('complex_id', $complexId)
+            'celadores' => (int) ComplexStaff::where('complex_id', $complexId)
                 ->where('role', ComplexStaff::CELADOR)
                 ->where('state', true)
                 ->count(),
@@ -326,17 +326,17 @@ class PulsoDelConjunto
      */
     public static function destinoDe(object $e): ?string
     {
-        $orders  = $e->orders ?? null;
+        $orders = $e->orders ?? null;
         $pedidos = is_string($orders) ? json_decode($orders, true) : (array) $orders;
 
         $puertas = collect($pedidos ?: [])
             ->map(fn ($p) => ($p['tower'] ?? null)
-                ? 'T' . $p['tower'] . (($p['apartment'] ?? null) ? '-' . $p['apartment'] : '')
+                ? 'T'.$p['tower'].(($p['apartment'] ?? null) ? '-'.$p['apartment'] : '')
                 : null)
             ->filter()->unique()->values();
 
         if ($puertas->isEmpty() && ($e->tower ?? null)) {
-            $puertas = collect(['T' . $e->tower . (($e->apartment ?? null) ? '-' . $e->apartment : '')]);
+            $puertas = collect(['T'.$e->tower.(($e->apartment ?? null) ? '-'.$e->apartment : '')]);
         }
 
         return $puertas->implode(' · ') ?: null;
@@ -357,7 +357,7 @@ class PulsoDelConjunto
 
         return [
             'entradas' => (int) (clone $q)->count(),
-            'ultima'   => $ultima,
+            'ultima' => $ultima,
             'pedidos_entregados' => (int) $this->pedidos($complexId)
                 ->where('o.domiciliary_id', $domiciliaryId)
                 ->where('o.state', 4)
@@ -379,7 +379,7 @@ class PulsoDelConjunto
         $ventana = fn ($q, $col) => (clone $q)
             ->whereBetween($col, [$desde->startOfDay(), $hasta->endOfDay()]);
 
-        $pedidos  = fn () => $ventana($this->pedidos($complexId), 'o.sale_date');
+        $pedidos = fn () => $ventana($this->pedidos($complexId), 'o.sale_date');
         $entradas = fn () => $ventana($this->entradas($complexId), 'e.created_at');
 
         $dias = max(1, $desde->diffInDays($hasta) + 1);
@@ -388,10 +388,10 @@ class PulsoDelConjunto
             'periodo' => [
                 'desde' => $desde->toDateString(),
                 'hasta' => $hasta->toDateString(),
-                'dias'  => $dias,
+                'dias' => $dias,
             ],
             'totales' => [
-                'pedidos'  => (int) $pedidos()->count(),
+                'pedidos' => (int) $pedidos()->count(),
                 'entregados' => (int) $pedidos()->where('o.state', 4)->count(),
                 'cancelados' => (int) $pedidos()->where('o.state', 5)->count(),
                 'entradas' => (int) $entradas()->count(),
@@ -408,7 +408,7 @@ class PulsoDelConjunto
                 ->orderByRaw('CAST(ua.tower AS UNSIGNED), ua.tower')
                 ->get(),
             'por_dia' => $ventana($this->pedidos($complexId), 'o.sale_date')
-                ->selectRaw(SqlPortable::soloFecha('o.sale_date') . ' as dia, COUNT(*) as pedidos')
+                ->selectRaw(SqlPortable::soloFecha('o.sale_date').' as dia, COUNT(*) as pedidos')
                 ->groupBy('dia')
                 ->orderBy('dia')
                 ->get(),
@@ -458,7 +458,7 @@ class PulsoDelConjunto
         $serie = [];
         for ($d = $desde; $d->lessThanOrEqualTo($hasta); $d = $d->addDay()) {
             $serie[] = [
-                'dia'      => $d->toDateString(),
+                'dia' => $d->toDateString(),
                 'etiqueta' => $d->locale('es')->isoFormat('D MMM'),
                 'entradas' => isset($porDia[$d->toDateString()]) ? $porDia[$d->toDateString()]->count() : 0,
             ];
@@ -470,7 +470,7 @@ class PulsoDelConjunto
         foreach ($domis as $e) {
             $pedidos = is_string($e->orders) ? json_decode($e->orders, true) : [];
             foreach ($pedidos ?: [] as $p) {
-                if (!empty($p['tower'])) {
+                if (! empty($p['tower'])) {
                     $torres[(string) $p['tower']] = ($torres[(string) $p['tower']] ?? 0) + 1;
                 }
             }
@@ -486,10 +486,10 @@ class PulsoDelConjunto
                 $tiempos = $g->map($minutos)->filter(fn ($m) => $m !== null);
 
                 return [
-                    'nombre'   => $g->first()->name ?? 'Sin nombre',
+                    'nombre' => $g->first()->name ?? 'Sin nombre',
                     'entradas' => $g->count(),
-                    'por_qr'   => round($g->where('method', 'codigo')->count() / max(1, $g->count()), 4),
-                    'minutos'  => $tiempos->isEmpty() ? null : (int) round($tiempos->avg()),
+                    'por_qr' => round($g->where('method', 'codigo')->count() / max(1, $g->count()), 4),
+                    'minutos' => $tiempos->isEmpty() ? null : (int) round($tiempos->avg()),
                 ];
             })
             ->sortByDesc('entradas')
@@ -497,17 +497,17 @@ class PulsoDelConjunto
             ->values();
 
         return [
-            'entradas'          => $filas->count(),
+            'entradas' => $filas->count(),
             'entradas_anterior' => $anterior,
             'pedidos_recibidos' => (int) $domis->sum('orders_count'),
-            'visitantes'        => $filas->where('kind', '!=', 'domiciliario')->count(),
-            'identificacion'    => [
+            'visitantes' => $filas->where('kind', '!=', 'domiciliario')->count(),
+            'identificacion' => [
                 'codigo' => $domis->where('method', 'codigo')->count(),
                 'cedula' => $domis->where('method', 'cedula')->count(),
                 'manual' => $filas->count() - $domis->where('method', 'codigo')->count() - $domis->where('method', 'cedula')->count(),
             ],
-            'por_dia'       => $serie,
-            'por_torre'     => collect($torres)->map(fn ($n, $t) => ['torre' => (string) $t, 'pedidos' => $n])->values(),
+            'por_dia' => $serie,
+            'por_torre' => collect($torres)->map(fn ($n, $t) => ['torre' => (string) $t, 'pedidos' => $n])->values(),
             'domiciliarios' => $quienes,
         ];
     }

@@ -21,15 +21,13 @@ use Illuminate\Http\Request;
  */
 class CatalogoController extends Controller
 {
-    public function __construct(private CatalogoDeProductos $catalogo)
-    {
-    }
+    public function __construct(private CatalogoDeProductos $catalogo) {}
 
     /** Buscar para el select filtrado del panel. */
     public function buscar(Request $request)
     {
         $request->validate([
-            'q'     => 'nullable|string|max:120',
+            'q' => 'nullable|string|max:120',
             'limit' => 'nullable|integer|min:1|max:50',
         ]);
 
@@ -57,7 +55,7 @@ class CatalogoController extends Controller
 
         $ficha = $this->catalogo->porCodigo($barcode, $businessId);
 
-        if (!$ficha) {
+        if (! $ficha) {
             return response()->json([
                 'message' => 'Ese código no está en el catálogo. Puedes darlo de alta.',
                 'barcode' => preg_replace('/\D/', '', $barcode),
@@ -78,24 +76,24 @@ class CatalogoController extends Controller
     public function proponer(Request $request)
     {
         $datos = $request->validate([
-            'name'        => 'required|string|max:255',
-            'barcode'     => 'nullable|string|max:20',
-            'brand'       => 'nullable|string|max:120',
+            'name' => 'required|string|max:255',
+            'barcode' => 'nullable|string|max:20',
+            'brand' => 'nullable|string|max:120',
             'description' => 'nullable|string',
             'category_id' => 'required|integer|exists:category,category_id',
-            'image'       => 'nullable|string|max:2048',
+            'image' => 'nullable|string|max:2048',
         ]);
 
         $producto = $this->catalogo->proponer($datos, 'tendero');
 
         return response()->json([
             'message' => 'Producto agregado al catálogo.',
-            'data'    => [
+            'data' => [
                 'products_id' => (int) $producto->products_id,
-                'barcode'     => $producto->barcode,
-                'name'        => $producto->name,
-                'brand'       => $producto->brand,
-                'image'       => $producto->image,
+                'barcode' => $producto->barcode,
+                'name' => $producto->name,
+                'brand' => $producto->brand,
+                'image' => $producto->image,
             ],
         ], 201);
     }

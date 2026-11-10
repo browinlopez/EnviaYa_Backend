@@ -14,10 +14,9 @@ use App\Services\AgrupadorDeVariantes;
  * Por eso casi todos los casos de abajo son de la forma «esto parece lo mismo
  * y no lo es».
  */
-
 function agrupador(): AgrupadorDeVariantes
 {
-    return new AgrupadorDeVariantes();
+    return new AgrupadorDeVariantes;
 }
 
 /** Fila mínima como la que devuelve `products`. */
@@ -25,16 +24,16 @@ function producto(int $id, string $nombre, ?int $categoria = 1, ?string $marca =
 {
     return [
         'products_id' => $id,
-        'name'        => $nombre,
-        'barcode'     => null,
-        'brand'       => $marca,
+        'name' => $nombre,
+        'barcode' => null,
+        'brand' => $marca,
         'category_id' => $categoria,
-        'image'       => $imagen,
+        'image' => $imagen,
     ];
 }
 
 /* ------------------------------------------------------------------ */
-/* LEER UN NOMBRE                                                      */
+/* LEER UN NOMBRE */
 /* ------------------------------------------------------------------ */
 
 it('separa el nucleo de la presentacion', function (string $nombre, string $nucleo, ?string $etiqueta) {
@@ -79,7 +78,7 @@ it('no confunde el numero de la medida con el de la variante', function () {
 });
 
 /* ------------------------------------------------------------------ */
-/* LAS TRES REGLAS                                                     */
+/* LAS TRES REGLAS */
 /* ------------------------------------------------------------------ */
 
 it('agrupa las presentaciones de un mismo producto', function () {
@@ -159,7 +158,7 @@ it('NO agrupa un producto solo', function () {
 });
 
 /* ------------------------------------------------------------------ */
-/* LO QUE SE GUARDA DEL GRUPO                                          */
+/* LO QUE SE GUARDA DEL GRUPO */
 /* ------------------------------------------------------------------ */
 
 it('nombra el grupo sin nada que distinga a una variante de otra', function () {
@@ -220,7 +219,7 @@ it('toma como imagen del grupo la primera que tenga una variante', function () {
 });
 
 /* ------------------------------------------------------------------ */
-/* LO QUE SE ARREGLÓ AL REVISAR LOS GRUPOS QUE SALIERON                 */
+/* LO QUE SE ARREGLÓ AL REVISAR LOS GRUPOS QUE SALIERON */
 /* ------------------------------------------------------------------ */
 
 it('junta lo que dos catalogos escriben distinto', function () {

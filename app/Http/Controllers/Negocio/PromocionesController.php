@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Business;
 use App\Models\Promotion;
 use App\Services\PromocionesDeLaTienda;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -25,9 +26,7 @@ use Illuminate\Support\Facades\DB;
  */
 class PromocionesController extends Controller
 {
-    public function __construct(private PromocionesDeLaTienda $promociones)
-    {
-    }
+    public function __construct(private PromocionesDeLaTienda $promociones) {}
 
     /**
      * Su historial, y de paso lo que necesita la pantalla para abrirse.
@@ -57,7 +56,7 @@ class PromocionesController extends Controller
             ->map(fn (Promotion $p) => $p->toApi());
 
         return response()->json([
-            'promociones'   => $lista,
+            'promociones' => $lista,
             'destinatarios' => count($this->promociones->destinatarios($businessId)),
             'le_quedan_hoy' => $this->promociones->leQuedanHoy($businessId),
             'maximo_letras' => PromocionesDeLaTienda::MAXIMO_CARACTERES,
@@ -68,7 +67,7 @@ class PromocionesController extends Controller
     private function reglas(): array
     {
         return [
-            'texto' => 'required|string|min:5|max:' . PromocionesDeLaTienda::MAXIMO_CARACTERES,
+            'texto' => 'required|string|min:5|max:'.PromocionesDeLaTienda::MAXIMO_CARACTERES,
             'productos' => 'sometimes|array|max:20',
             'productos.*' => 'integer|exists:products,products_id',
             /*
@@ -112,10 +111,10 @@ class PromocionesController extends Controller
              * promociona. El tope de 70 es la barrera contra el error de dedo
              * —escribir 90 queriendo 9— sobre algo que cobra de su bolsillo.
              */
-            'tipo' => 'sometimes|in:' . implode(',', Promotion::TIPOS),
-            'porcentaje' => 'required_if:tipo,' . Promotion::PORCENTAJE . '|nullable|integer|min:1|max:70',
-            'lleva' => 'required_if:tipo,' . Promotion::NXM . '|nullable|integer|min:2|max:12',
-            'paga' => 'required_if:tipo,' . Promotion::NXM . '|nullable|integer|min:1|lt:lleva',
+            'tipo' => 'sometimes|in:'.implode(',', Promotion::TIPOS),
+            'porcentaje' => 'required_if:tipo,'.Promotion::PORCENTAJE.'|nullable|integer|min:1|max:70',
+            'lleva' => 'required_if:tipo,'.Promotion::NXM.'|nullable|integer|min:2|max:12',
+            'paga' => 'required_if:tipo,'.Promotion::NXM.'|nullable|integer|min:1|lt:lleva',
         ];
     }
 
@@ -123,10 +122,10 @@ class PromocionesController extends Controller
     {
         return [
             'texto.required' => 'Escribe qué quieres ofrecer.',
-            'texto.min'      => 'Escribe un poco más para que se entienda.',
-            'texto.max'      => 'La promoción es muy larga; en el teléfono se cortaría.',
+            'texto.min' => 'Escribe un poco más para que se entienda.',
+            'texto.max' => 'La promoción es muy larga; en el teléfono se cortaría.',
             'porcentaje.max' => 'Un descuento mayor al 70% suele ser un error de dedo. Escríbelo en el texto si de verdad es así.',
-            'paga.lt'        => 'Tiene que pagar menos de lo que lleva; si no, no hay promoción.',
+            'paga.lt' => 'Tiene que pagar menos de lo que lleva; si no, no hay promoción.',
         ];
     }
 
@@ -146,7 +145,7 @@ class PromocionesController extends Controller
      */
     private function tope(Request $request): array
     {
-        if (!$request->has('max_usos')) {
+        if (! $request->has('max_usos')) {
             return [];
         }
 
@@ -164,7 +163,7 @@ class PromocionesController extends Controller
      * YA RESUELTAS —un plazo como «fin de semana» se vuelve fecha acá—, que es
      * lo único que se puede comparar.
      */
-    private function fechasIncoherentes(Request $request): ?\Illuminate\Http\JsonResponse
+    private function fechasIncoherentes(Request $request): ?JsonResponse
     {
         $ventana = $this->ventana($request);
         if ($ventana === []) {
@@ -179,17 +178,17 @@ class PromocionesController extends Controller
         if ($hasta->lt(now())) {
             return response()->json([
                 'message' => 'Esa fecha de fin ya pasó: la promoción nacería vencida.',
-                'errors'  => ['hasta' => ['Esa fecha de fin ya pasó: la promoción nacería vencida.']],
+                'errors' => ['hasta' => ['Esa fecha de fin ya pasó: la promoción nacería vencida.']],
             ], 422);
         }
 
         if ($desde !== null && $hasta->lt($desde)) {
             $texto = 'La promoción termina antes de empezar. Elige una fecha de fin igual o posterior al '
-                . $desde->locale('es')->translatedFormat('j \d\e F') . '.';
+                .$desde->locale('es')->translatedFormat('j \d\e F').'.';
 
             return response()->json([
                 'message' => $texto,
-                'errors'  => ['desde' => [$texto]],
+                'errors' => ['desde' => [$texto]],
             ], 422);
         }
 
@@ -232,16 +231,16 @@ class PromocionesController extends Controller
                 // esperaba la columna desde 2025 y lo que multiplica directo.
                 'percentage_discount' => ((int) $request->input('porcentaje')) / 100,
                 'lleva' => null,
-                'paga'  => null,
+                'paga' => null,
             ];
         }
 
         if ($tipo === Promotion::NXM) {
             return [
-                'tipo'  => $tipo,
+                'tipo' => $tipo,
                 'percentage_discount' => null,
                 'lleva' => (int) $request->input('lleva'),
-                'paga'  => (int) $request->input('paga'),
+                'paga' => (int) $request->input('paga'),
             ];
         }
 
@@ -249,7 +248,7 @@ class PromocionesController extends Controller
             'tipo' => Promotion::SIN_DESCUENTO,
             'percentage_discount' => null,
             'lleva' => null,
-            'paga'  => null,
+            'paga' => null,
         ];
     }
 
@@ -293,16 +292,16 @@ class PromocionesController extends Controller
         if ($this->promociones->leQuedanHoy($businessId) < 1) {
             return response()->json([
                 'message' => 'Ya enviaste tus promociones de hoy. Puedes mandar otra mañana.',
-                'reason'  => 'limite_diario',
+                'reason' => 'limite_diario',
             ], 422);
         }
 
         $productos = array_map('intval', $request->input('productos', []));
 
-        if (!$this->sonSuyos($businessId, $productos)) {
+        if (! $this->sonSuyos($businessId, $productos)) {
             return response()->json([
                 'message' => 'Alguno de esos productos no es de tu tienda.',
-                'reason'  => 'producto_ajeno',
+                'reason' => 'producto_ajeno',
             ], 422);
         }
 
@@ -313,7 +312,7 @@ class PromocionesController extends Controller
             // agota el tiempo de espera y hay que moverlo a la cola.
             return response()->json([
                 'message' => 'Tu tienda tiene demasiados clientes para enviar desde acá. Escríbenos y lo hacemos por ti.',
-                'reason'  => 'demasiados_destinatarios',
+                'reason' => 'demasiados_destinatarios',
             ], 422);
         }
 
@@ -331,13 +330,13 @@ class PromocionesController extends Controller
         );
 
         return response()->json([
-            'message'    => count($destinatarios) === 0
+            'message' => count($destinatarios) === 0
                 // Se dice claro en vez de cantar «enviada» sobre cero personas:
                 // el tendero creería que su promoción salió y no entendería por
                 // qué no vende más.
                 ? 'Guardamos tu promoción, pero todavía no tienes clientes afiliados que la reciban.'
-                : 'Tu promoción salió a ' . count($destinatarios) . ' cliente' . (count($destinatarios) === 1 ? '' : 's') . '.',
-            'promocion'     => $promocion->toApi(),
+                : 'Tu promoción salió a '.count($destinatarios).' cliente'.(count($destinatarios) === 1 ? '' : 's').'.',
+            'promocion' => $promocion->toApi(),
             'le_quedan_hoy' => $this->promociones->leQuedanHoy($businessId),
         ], 201);
     }
@@ -369,14 +368,14 @@ class PromocionesController extends Controller
         $businessId = (int) $request->attributes->get('busines_id');
         $promocion = $this->suya($request, $id);
 
-        if (!$promocion) {
+        if (! $promocion) {
             return response()->json(['message' => 'Esa promoción no es de tu tienda.'], 404);
         }
 
         if ((int) $promocion->state === Promotion::RETIRADA) {
             return response()->json([
                 'message' => 'Esa promoción ya la retiraste. Escribe una nueva.',
-                'reason'  => 'ya_retirada',
+                'reason' => 'ya_retirada',
             ], 422);
         }
 
@@ -388,10 +387,10 @@ class PromocionesController extends Controller
 
         $productos = array_map('intval', $request->input('productos', []));
 
-        if (!$this->sonSuyos($businessId, $productos)) {
+        if (! $this->sonSuyos($businessId, $productos)) {
             return response()->json([
                 'message' => 'Alguno de esos productos no es de tu tienda.',
-                'reason'  => 'producto_ajeno',
+                'reason' => 'producto_ajeno',
             ], 422);
         }
 
@@ -404,7 +403,7 @@ class PromocionesController extends Controller
         );
 
         return response()->json([
-            'message'   => 'Corregimos tu promoción. A quien ya la recibió le aparecerá el texto nuevo.',
+            'message' => 'Corregimos tu promoción. A quien ya la recibió le aparecerá el texto nuevo.',
             'promocion' => $corregida->toApi(),
         ]);
     }
@@ -420,7 +419,7 @@ class PromocionesController extends Controller
     {
         $promocion = $this->suya($request, $id);
 
-        if (!$promocion) {
+        if (! $promocion) {
             return response()->json(['message' => 'Esa promoción no es de tu tienda.'], 404);
         }
 

@@ -25,14 +25,14 @@ class FeaturedBusiness extends Model
     ];
 
     protected $casts = [
-        'business_id'       => 'integer',
-        'priority'          => 'integer',
-        'starts_at'         => 'date',
-        'ends_at'           => 'date',
-        'paid_amount'       => 'decimal:2',
+        'business_id' => 'integer',
+        'priority' => 'integer',
+        'starts_at' => 'date',
+        'ends_at' => 'date',
+        'paid_amount' => 'decimal:2',
         'impressions_count' => 'integer',
-        'clicks_count'      => 'integer',
-        'state'             => 'integer',
+        'clicks_count' => 'integer',
+        'state' => 'integer',
     ];
 
     public function business(): BelongsTo

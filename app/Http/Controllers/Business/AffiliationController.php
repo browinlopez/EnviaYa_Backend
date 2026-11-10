@@ -36,7 +36,7 @@ class AffiliationController extends Controller
     public function toggle(Request $request)
     {
         $request->validate([
-            'user_id'    => 'required|integer|exists:user,user_id',
+            'user_id' => 'required|integer|exists:user,user_id',
             'busines_id' => 'required|integer|exists:business,busines_id',
         ]);
 
@@ -48,7 +48,7 @@ class AffiliationController extends Controller
             return $no;
         }
 
-        $userId     = $request->user_id;
+        $userId = $request->user_id;
         $businessId = $request->busines_id;
 
         $affiliation = BusinessUserAffiliation::where('user_id', $userId)
@@ -57,15 +57,18 @@ class AffiliationController extends Controller
 
         if ($affiliation) {
             $affiliation->delete();
+
             return response()->json(['message' => 'Usuario desafiliado']);
         } else {
             BusinessUserAffiliation::create([
-                'user_id'    => $userId,
+                'user_id' => $userId,
                 'busines_id' => $businessId,
             ]);
+
             return response()->json(['message' => 'Usuario afiliado']);
         }
     }
+
     // Listar usuarios afiliados a una tienda
     public function listUsers(Request $request)
     {
@@ -92,7 +95,7 @@ class AffiliationController extends Controller
                         ->with([
                             'buyer:buyer_id,user_id,qualification,state,belongs_to_complex',
                             'domiciliary:domiciliary_id,user_id,available,document,qualification,state',
-                            'rolRelation:rol_id,name'
+                            'rolRelation:rol_id,name',
                         ]);
                 },
             ])
@@ -136,7 +139,8 @@ class AffiliationController extends Controller
             'count' => $formatted->count(),
         ]);
     }
-    //Buscar comprador por número de teléfono y rol
+
+    // Buscar comprador por número de teléfono y rol
     public function searchBuyerByPhone(Request $request)
     {
         $request->validate([
@@ -151,7 +155,7 @@ class AffiliationController extends Controller
             ->whereHas('buyer') // Solo los que tienen relación con comprador
             ->first();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'No se encontró comprador con ese número y rol'], 404);
         }
 
@@ -170,24 +174,25 @@ class AffiliationController extends Controller
          * correo, que es lo que enseña la pantalla. Nada más.
          */
         return response()->json([
-            'user'  => [
+            'user' => [
                 'user_id' => (int) $user->user_id,
-                'name'    => $user->name,
-                'email'   => $user->email,
-                'phone'   => $user->phone,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
             ],
             'buyer' => $user->buyer ? [
-                'buyer_id'      => (int) $user->buyer->buyer_id,
-                'user_id'       => (int) $user->buyer->user_id,
+                'buyer_id' => (int) $user->buyer->buyer_id,
+                'user_id' => (int) $user->buyer->user_id,
                 'qualification' => $user->buyer->qualification,
             ] : null,
         ]);
     }
-    //Afiliacion movil usuarios
+
+    // Afiliacion movil usuarios
     public function AfiliationUser(Request $request)
     {
         $request->validate([
-            'user_id'    => 'required|integer|exists:user,user_id',
+            'user_id' => 'required|integer|exists:user,user_id',
             'busines_id' => 'required|integer|exists:business,busines_id',
         ]);
 
@@ -195,7 +200,7 @@ class AffiliationController extends Controller
             return $no;
         }
 
-        $userId     = $request->user_id;
+        $userId = $request->user_id;
         $businessId = $request->busines_id;
 
         // 1️⃣ Verificar si ya está afiliado a este negocio
@@ -205,7 +210,7 @@ class AffiliationController extends Controller
 
         if ($alreadyAffiliated) {
             return response()->json([
-                'message' => 'El usuario ya está afiliado a este negocio'
+                'message' => 'El usuario ya está afiliado a este negocio',
             ], 409);
         }
 
@@ -214,26 +219,27 @@ class AffiliationController extends Controller
 
         if ($affiliationsCount >= 3) {
             return response()->json([
-                'message' => 'El usuario ya alcanzó el máximo de 3 negocios afiliados'
+                'message' => 'El usuario ya alcanzó el máximo de 3 negocios afiliados',
             ], 422);
         }
 
         // 3️⃣ Crear afiliación
         $affiliation = BusinessUserAffiliation::create([
-            'user_id'    => $userId,
+            'user_id' => $userId,
             'busines_id' => $businessId,
         ]);
 
         return response()->json([
             'message' => 'Usuario afiliado correctamente',
-            'affiliation' => $affiliation
+            'affiliation' => $affiliation,
         ], 201);
     }
-    //desafiliar usuario movil
+
+    // desafiliar usuario movil
     public function DesafiliationUser(Request $request)
     {
         $request->validate([
-            'user_id'    => 'required|integer|exists:user,user_id',
+            'user_id' => 'required|integer|exists:user,user_id',
             'busines_id' => 'required|integer|exists:business,busines_id',
         ]);
 
@@ -245,16 +251,16 @@ class AffiliationController extends Controller
             ->where('busines_id', $request->busines_id)
             ->first();
 
-        if (!$affiliation) {
+        if (! $affiliation) {
             return response()->json([
-                'message' => 'El usuario no está afiliado a este negocio'
+                'message' => 'El usuario no está afiliado a este negocio',
             ], 404);
         }
 
         $affiliation->delete();
 
         return response()->json([
-            'message' => 'Usuario desafiliado correctamente'
+            'message' => 'Usuario desafiliado correctamente',
         ]);
     }
 
@@ -282,9 +288,9 @@ class AffiliationController extends Controller
                         ->with([
                             'buyer:buyer_id,user_id,qualification,state,belongs_to_complex',
                             'domiciliary:domiciliary_id,user_id,available,document,qualification,state',
-                            'rolRelation:rol_id,name'
+                            'rolRelation:rol_id,name',
                         ]);
-                }
+                },
             ])
             ->get();
 
@@ -318,7 +324,7 @@ class AffiliationController extends Controller
 
         return response()->json([
             'affiliations' => $formatted,
-            'count' => $formatted->count()
+            'count' => $formatted->count(),
         ]);
     }
 }

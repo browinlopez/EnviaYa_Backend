@@ -16,9 +16,12 @@ class Settlement extends Model
     protected $table = 'settlements';
 
     public const BORRADOR = 0;
+
     public const APROBADA = 1;
-    public const PAGADA   = 2;
-    public const ANULADA  = 3;
+
+    public const PAGADA = 2;
+
+    public const ANULADA = 3;
 
     protected $fillable = [
         'type',
@@ -43,23 +46,23 @@ class Settlement extends Model
     ];
 
     protected $casts = [
-        'business_id'    => 'integer',
+        'business_id' => 'integer',
         'domiciliary_id' => 'integer',
-        'period_start'   => 'date',
-        'period_end'     => 'date',
-        'orders_count'   => 'integer',
-        'gross'          => 'decimal:2',
-        'delivery_fees'  => 'decimal:2',
-        'discounts'      => 'decimal:2',
-        'platform_fee'   => 'decimal:2',
-        'credit_sales'   => 'decimal:2',
-        'carried_in'     => 'decimal:2',
+        'period_start' => 'date',
+        'period_end' => 'date',
+        'orders_count' => 'integer',
+        'gross' => 'decimal:2',
+        'delivery_fees' => 'decimal:2',
+        'discounts' => 'decimal:2',
+        'platform_fee' => 'decimal:2',
+        'credit_sales' => 'decimal:2',
+        'carried_in' => 'decimal:2',
         'carried_from_id' => 'integer',
-        'net_payable'    => 'decimal:2',
-        'state'          => 'integer',
-        'approved_at'    => 'datetime',
-        'paid_at'        => 'datetime',
-        'created_by'     => 'integer',
+        'net_payable' => 'decimal:2',
+        'state' => 'integer',
+        'approved_at' => 'datetime',
+        'paid_at' => 'datetime',
+        'created_by' => 'integer',
     ];
 
     public function items(): HasMany

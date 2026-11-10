@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\Operacion\CashDeposit;
 use App\Models\Operacion\Settlement;
 use App\Models\Operacion\SettlementItem;
+use App\Models\Order\OrdersSales;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -25,7 +27,7 @@ use RuntimeException;
 class LiquidacionService
 {
     /**
-     * @param string $tipo 'business' | 'domiciliary'
+     * @param  string  $tipo  'business' | 'domiciliary'
      */
     public function generar(
         string $tipo,
@@ -34,7 +36,7 @@ class LiquidacionService
         string $hasta,
         ?int $creadoPor = null,
     ): Settlement {
-        if (!in_array($tipo, ['business', 'domiciliary'], true)) {
+        if (! in_array($tipo, ['business', 'domiciliary'], true)) {
             throw new RuntimeException('Tipo de liquidación no válido.');
         }
 
@@ -53,7 +55,7 @@ class LiquidacionService
                  * `confirmados()` es el mismo criterio que usa el resto del
                  * sistema para saber si un pedido está pagado.
                  */
-                ->whereNotIn('o.payment_state', \App\Models\Order\OrdersSales::SIN_PAGO)
+                ->whereNotIn('o.payment_state', OrdersSales::SIN_PAGO)
                 ->whereDate('o.sale_date', '>=', $desde)
                 ->whereDate('o.sale_date', '<=', $hasta)
                 // Ya liquidados en otro corte vivo del mismo tipo.
@@ -86,13 +88,13 @@ class LiquidacionService
             }
 
             $liq = Settlement::create([
-                'type'           => $tipo,
-                'business_id'    => $tipo === 'business' ? $destinatarioId : null,
+                'type' => $tipo,
+                'business_id' => $tipo === 'business' ? $destinatarioId : null,
                 'domiciliary_id' => $tipo === 'domiciliary' ? $destinatarioId : null,
-                'period_start'   => $desde,
-                'period_end'     => $hasta,
-                'state'          => Settlement::BORRADOR,
-                'created_by'     => $creadoPor,
+                'period_start' => $desde,
+                'period_end' => $hasta,
+                'state' => Settlement::BORRADOR,
+                'created_by' => $creadoPor,
             ]);
 
             $totales = [
@@ -105,20 +107,20 @@ class LiquidacionService
 
                 SettlementItem::create([
                     'settlement_id' => $liq->id,
-                    'order_id'      => $p->orderSales_id,
-                    'gross'         => $bruto,
-                    'delivery_fee'  => $domicilio,
-                    'discount'      => $descuento,
-                    'credit'        => $credito,
-                    'net'           => $neto,
+                    'order_id' => $p->orderSales_id,
+                    'gross' => $bruto,
+                    'delivery_fee' => $domicilio,
+                    'discount' => $descuento,
+                    'credit' => $credito,
+                    'net' => $neto,
                 ]);
-                $totales['credito']   += $credito;
+                $totales['credito'] += $credito;
 
-                $totales['gross']     += $bruto;
-                $totales['delivery']  += $domicilio;
+                $totales['gross'] += $bruto;
+                $totales['delivery'] += $domicilio;
                 $totales['discounts'] += $descuento;
-                $totales['net']       += $neto;
-                $totales['retenido']  += $retenido;
+                $totales['net'] += $neto;
+                $totales['retenido'] += $retenido;
             }
 
             /*
@@ -153,29 +155,29 @@ class LiquidacionService
             $mostrador = 0.0;
             if ($tipo === 'business') {
                 $anuladas = Settlement::where('state', Settlement::ANULADA)->select('id');
-                $entregas = \App\Models\Operacion\CashDeposit::where('busines_id', $destinatarioId)
-                    ->where('canal', \App\Models\Operacion\CashDeposit::MOSTRADOR)
-                    ->where('state', \App\Models\Operacion\CashDeposit::CONFIRMADA)
+                $entregas = CashDeposit::where('busines_id', $destinatarioId)
+                    ->where('canal', CashDeposit::MOSTRADOR)
+                    ->where('state', CashDeposit::CONFIRMADA)
                     ->where(fn ($q) => $q->whereNull('settlement_id')->orWhereIn('settlement_id', $anuladas))
                     ->lockForUpdate()
                     ->get(['id', 'amount']);
 
                 $mostrador = round((float) $entregas->sum('amount'), 2);
                 if ($entregas->isNotEmpty()) {
-                    \App\Models\Operacion\CashDeposit::whereIn('id', $entregas->pluck('id'))
+                    CashDeposit::whereIn('id', $entregas->pluck('id'))
                         ->update(['settlement_id' => $liq->id]);
                 }
             }
 
             $liq->update([
-                'counter_cash'    => $mostrador,
-                'credit_sales'    => round($totales['credito'], 2),
-                'carried_in'      => round($arrastrado, 2),
+                'counter_cash' => $mostrador,
+                'credit_sales' => round($totales['credito'], 2),
+                'carried_in' => round($arrastrado, 2),
                 'carried_from_id' => $arrastre?->id,
-                'orders_count'  => $pedidos->count(),
-                'gross'         => round($totales['gross'], 2),
+                'orders_count' => $pedidos->count(),
+                'gross' => round($totales['gross'], 2),
                 'delivery_fees' => round($totales['delivery'], 2),
-                'discounts'     => round($totales['discounts'], 2),
+                'discounts' => round($totales['discounts'], 2),
                 /*
                  * Lo retenido se SUMA de lo congelado en cada pedido, ya no se
                  * deduce restando totales. Antes salía como residuo y para un
@@ -184,8 +186,8 @@ class LiquidacionService
                  * que no era suya. Con el efectivo de por medio esa resta ya no
                  * significaría nada.
                  */
-                'platform_fee'  => round($totales['retenido'], 2),
-                'net_payable'   => round($totales['net'] + $arrastrado - $mostrador, 2),
+                'platform_fee' => round($totales['retenido'], 2),
+                'net_payable' => round($totales['net'] + $arrastrado - $mostrador, 2),
             ]);
 
             return $liq->fresh();
@@ -212,19 +214,19 @@ class LiquidacionService
      * corte. Por eso el neto del negocio YA NO se topa en cero.
      *
      * @return array{0: float, 1: float, 2: float, 3: float, 4: float, 5: float}
-     *         bruto, domicilio, descuento, neto, retenido, crédito
+     *                                                                           bruto, domicilio, descuento, neto, retenido, crédito
      */
     private function repartir(string $tipo, object $p): array
     {
-        $credito   = (int) ($p->methods_id ?? 0) === CreditoDeTienda::METODO
+        $credito = (int) ($p->methods_id ?? 0) === CreditoDeTienda::METODO
             ? (float) ($p->total ?? 0)
             : 0.0;
-        $subtotal  = (float) ($p->subtotal ?? 0);
+        $subtotal = (float) ($p->subtotal ?? 0);
         $domicilio = (float) ($p->domicilio ?? 0);
         $descuento = (float) ($p->discount ?? 0);
-        $comision  = (float) ($p->domiciliary_fee ?? 0);
+        $comision = (float) ($p->domiciliary_fee ?? 0);
         $retencion = (float) ($p->platform_fee ?? 0);
-        $efectivo  = (float) ($p->cash_due ?? 0);
+        $efectivo = (float) ($p->cash_due ?? 0);
 
         if ($tipo === 'business') {
             $neto = $subtotal - $descuento - $retencion - $credito;

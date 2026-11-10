@@ -62,7 +62,7 @@ class EnsureBusinessOwner
     {
         $usuario = $request->user();
 
-        if (!$usuario) {
+        if (! $usuario) {
             return response()->json(['message' => 'No autenticado.'], 401);
         }
 
@@ -109,7 +109,7 @@ class EnsureBusinessOwner
              * enseñaría los datos de su propia tienda bajo el nombre de otra y
              * nadie se enteraría. Se rechaza y se dice por qué.
              */
-            if (!$activo) {
+            if (! $activo) {
                 return response()->json([
                     'message' => 'Ese negocio no es tuyo.',
                 ], 403);
@@ -124,7 +124,7 @@ class EnsureBusinessOwner
 
         $request->merge([
             'business_id' => (int) $activo->busines_id,
-            'busines_id'  => (int) $activo->busines_id,
+            'busines_id' => (int) $activo->busines_id,
         ]);
 
         App::setLocale('es');

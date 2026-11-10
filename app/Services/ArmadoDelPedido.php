@@ -2,11 +2,10 @@
 
 namespace App\Services;
 
-use App\Services\PagoEnLinea;
-
 use App\Models\Order\OrdersSales;
 use App\Models\Order\OrdersSalesDetail;
 use App\Support\UnidadDeVenta;
+use Carbon\Carbon;
 
 /**
  * Escribe el pedido y sus lineas.
@@ -27,8 +26,7 @@ class ArmadoDelPedido
         private readonly ExistenciasDelPedido $existencias,
         private readonly RedencionDePromociones $promociones,
         private readonly EconomiaDelPedido $economia,
-    ) {
-    }
+    ) {}
 
     public function guardar(
         $comprador,
@@ -82,7 +80,7 @@ class ArmadoDelPedido
             'coupon_id' => $cifras['cupon']?->id,
             'domiciliary_fee' => $cifras['domiciliaryFee'],
             // Congeladas al crear, como todo lo que decide dinero.
-            'platform_fee'     => $cifras['platformFee'],
+            'platform_fee' => $cifras['platformFee'],
             'delivery_subsidy' => $cifras['rebajaDomicilio'],
             /*
              * Con cuanto dice el cliente que va a pagar, para que la tienda
@@ -106,7 +104,7 @@ class ArmadoDelPedido
             'is_scheduled' => $esProgramado,
             'pickup' => $esRecogida,
             'pickup_time' => $esRecogida && $horaDeRecogida
-                ? \Carbon\Carbon::parse($horaDeRecogida)->format('Y-m-d H:i:s')
+                ? Carbon::parse($horaDeRecogida)->format('Y-m-d H:i:s')
                 : null,
             'state' => 1,
             /*
@@ -117,7 +115,7 @@ class ArmadoDelPedido
              */
             'payment_state' => in_array($metodoId, PagoEnLinea::CON_PASARELA)
                 ? OrdersSales::ESPERANDO_PAGO
-                : ($metodoId === CreditoDeTienda::METODO ? OrdersSales::A_CREDITO : 'pending_cash')
+                : ($metodoId === CreditoDeTienda::METODO ? OrdersSales::A_CREDITO : 'pending_cash'),
         ];
 
         /*

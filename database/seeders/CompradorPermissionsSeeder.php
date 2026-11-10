@@ -26,7 +26,7 @@ class CompradorPermissionsSeeder extends Seeder
 
         // Crear o asignar rol COMPRADOR (rol_id = 1 por ejemplo)
         $compradorRole = Rol::firstOrCreate(
-             ['rol_id' => 1],
+            ['rol_id' => 1],
             ['name' => 'comprador', 'guard_name' => 'web']
         );
 

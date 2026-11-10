@@ -2,47 +2,21 @@
 
 namespace App\Http\Controllers\Order;
 
-use App\Services\PedidoParaLaApp;
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
-use App\Services\Ajustes;
-use App\Services\PoliticaDeDomicilio;
-use App\Services\CustodiaDeEfectivo;
-use App\Services\CreditoDeTienda;
-use App\Services\ConfirmacionDePago;
-use App\Services\Avisos;
-use App\Events\DomiciliaryLocationUpdated;
-use App\Events\OrderCreated;
-use App\Events\OrderStatusUpdated;
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\Payment\PaymentController;
 use App\Models\Business;
 use App\Models\Buyer\Buyer;
-use App\Models\Domiciliary;
 use App\Models\Order\OrderGeolocation;
 use App\Models\Order\OrdersSales;
-use App\Models\Order\OrdersSalesDetail;
-use App\Models\Payment\Payment;
-use App\Services\FacturaService;
-use Illuminate\Support\Facades\Log;
-use App\Models\Payment\PaymentForms;
-use App\Models\Payment\PaymentIntent;
-use App\Models\Payment\PaymentMethods;
-use App\Models\Product\ProductBusiness;
 use App\Models\User;
-use App\Models\User\UserAddress;
-use App\Services\BoldService;
-use App\Services\CouponService;
-use Carbon\Carbon;
+use App\Services\CreditoDeTienda;
+use App\Services\PedidoParaLaApp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Str;
 
 class ConsultaDePedidosController extends Controller
 {
-    public function __construct(private readonly PedidoParaLaApp $presentador)
-    {
-    }
+    public function __construct(private readonly PedidoParaLaApp $presentador) {}
 
     use ComprobarPertenencia;
 
@@ -50,14 +24,14 @@ class ConsultaDePedidosController extends Controller
     public function ordersUser(Request $request)
     {
         $request->validate([
-            'user_id' => 'required|integer'
+            'user_id' => 'required|integer',
         ]);
 
         $buyer = Buyer::where('user_id', $request->user_id)->first();
 
-        if (!$buyer) {
+        if (! $buyer) {
             return response()->json([
-                'message' => 'Usuario comprador no encontrado'
+                'message' => 'Usuario comprador no encontrado',
             ], 404);
         }
 
@@ -113,14 +87,14 @@ class ConsultaDePedidosController extends Controller
                     'name' => $order->business->name,
                     'address' => $order->business->address,
                     'address' => $order->business->address,
-                    'latitude' => $order->business->latitude !== null ? (float)$order->business->latitude : null,
-                    'longitude' => $order->business->longitude !== null ? (float)$order->business->longitude : null,
+                    'latitude' => $order->business->latitude !== null ? (float) $order->business->latitude : null,
+                    'longitude' => $order->business->longitude !== null ? (float) $order->business->longitude : null,
                     'phone' => $order->business->phone,
                     'city' => $order->business->city,
                     'state' => $order->business->state,
                     'logo' => $order->business->logo,
                 ],
-                'delivery_address' => !$order->pickup && $order->address ? [
+                'delivery_address' => ! $order->pickup && $order->address ? [
                     'address_id' => $order->address->address_id,
                     /*
                      * La calle va JUNTO a la dirección del mapa, no en vez de
@@ -140,8 +114,8 @@ class ConsultaDePedidosController extends Controller
                     'municipality' => $order->address->municipality?->name,
                     'department' => $order->address->department?->name,
                     'country' => $order->address->country?->name,
-                    'latitude' => $order->address->latitude !== null ? (float)$order->address->latitude : null,
-                    'longitude' => $order->address->longitude !== null ? (float)$order->address->longitude : null,
+                    'latitude' => $order->address->latitude !== null ? (float) $order->address->latitude : null,
+                    'longitude' => $order->address->longitude !== null ? (float) $order->address->longitude : null,
                 ] : null,
                 'domiciliary' => $order->domiciliary ? [
                     'name' => $order->domiciliary->user->name,
@@ -191,7 +165,7 @@ class ConsultaDePedidosController extends Controller
 
         return response()->json([
             'message' => 'Órdenes encontradas',
-            'orders' => $formattedOrders
+            'orders' => $formattedOrders,
         ]);
     }
 
@@ -199,7 +173,7 @@ class ConsultaDePedidosController extends Controller
     public function ordersBusiness(Request $request)
     {
         $request->validate([
-            'business_id' => 'required|integer'
+            'business_id' => 'required|integer',
         ]);
 
         /*
@@ -213,9 +187,9 @@ class ConsultaDePedidosController extends Controller
 
         $business = Business::find($request->business_id);
 
-        if (!$business) {
+        if (! $business) {
             return response()->json([
-                'message' => 'Negocio no encontrado'
+                'message' => 'Negocio no encontrado',
             ], 404);
         }
 
@@ -253,14 +227,14 @@ class ConsultaDePedidosController extends Controller
                    * entregado tiene su fecha; el cancelado, la de su último
                    * cambio.
                    */
-                  ->orWhere(function ($q2) {
-                      $q2->where('state', 4)
-                         ->whereDate(DB::raw('COALESCE(delivery_date, sale_date)'), now()->toDateString());
-                  })
-                  ->orWhere(function ($q2) {
-                      $q2->where('state', 5)
-                         ->whereDate(DB::raw('COALESCE(updated_at, sale_date)'), now()->toDateString());
-                  });
+                    ->orWhere(function ($q2) {
+                        $q2->where('state', 4)
+                            ->whereDate(DB::raw('COALESCE(delivery_date, sale_date)'), now()->toDateString());
+                    })
+                    ->orWhere(function ($q2) {
+                        $q2->where('state', 5)
+                            ->whereDate(DB::raw('COALESCE(updated_at, sale_date)'), now()->toDateString());
+                    });
             })
             ->with([
                 'business',
@@ -269,7 +243,7 @@ class ConsultaDePedidosController extends Controller
                 'promotions',
                 'payments',
                 'address.municipality.department.country',
-                'address.alias'
+                'address.alias',
             ])
             ->get();
 
@@ -283,7 +257,7 @@ class ConsultaDePedidosController extends Controller
         return response()->json([
             'message' => 'Órdenes del negocio encontradas',
             'business' => $businessData,  // incluimos business una sola vez
-            'orders' => $formattedOrders
+            'orders' => $formattedOrders,
         ]);
     }
 
@@ -310,7 +284,7 @@ class ConsultaDePedidosController extends Controller
          * (efectivo, state 4). Antes se sumaba desde `payments`, que solo
          * existe para pagos online: las ventas en efectivo no contaban.
          */
-        $incomeOrders = fn() => OrdersSales::where('busines_id', $business_id)
+        $incomeOrders = fn () => OrdersSales::where('busines_id', $business_id)
             ->where(function ($q) {
                 $q->where('payment_state', 'paid')->orWhere('state', 4);
             });
@@ -358,14 +332,14 @@ class ConsultaDePedidosController extends Controller
         };
 
         $currentWeekStart = now()->startOfWeek();
-        $currentWeekEnd   = (clone $currentWeekStart)->endOfWeek();
+        $currentWeekEnd = (clone $currentWeekStart)->endOfWeek();
         $previousWeekStart = (clone $currentWeekStart)->subWeek();
-        $previousWeekEnd   = (clone $previousWeekStart)->endOfWeek();
+        $previousWeekEnd = (clone $previousWeekStart)->endOfWeek();
 
         $weeklyIncome = $incomeByDay($currentWeekStart, $currentWeekEnd);
         $previousWeeklyIncome = $incomeByDay($previousWeekStart, $previousWeekEnd);
 
-        $currentWeekTotal  = array_sum($weeklyIncome);
+        $currentWeekTotal = array_sum($weeklyIncome);
         $previousWeekTotal = array_sum($previousWeeklyIncome);
 
         $difference = $currentWeekTotal - $previousWeekTotal;
@@ -407,7 +381,7 @@ class ConsultaDePedidosController extends Controller
             ->all();
 
         $month_start = now()->startOfMonth();
-        $month_end   = (clone $month_start)->endOfMonth();
+        $month_end = (clone $month_start)->endOfMonth();
 
         $monthlyIncome = $incomeOrders()
             ->whereBetween('sale_date', [$month_start, $month_end])
@@ -427,7 +401,7 @@ class ConsultaDePedidosController extends Controller
 
             return [
                 'inicio' => $inicio->toDateString(),
-                'total'  => (float) $incomeOrders()->whereBetween('sale_date', [$inicio, $fin])->sum('total'),
+                'total' => (float) $incomeOrders()->whereBetween('sale_date', [$inicio, $fin])->sum('total'),
             ];
         })->values()->all();
 
@@ -435,11 +409,11 @@ class ConsultaDePedidosController extends Controller
             'business_id' => $business_id,
 
             'week_start' => $currentWeekStart->toDateString(),
-            'week_end'   => $currentWeekEnd->toDateString(),
+            'week_end' => $currentWeekEnd->toDateString(),
             // Las de la semana pasada: el panel enseñaba las de ESTA bajo el
             // rótulo «Semana pasada» porque no tenía otras.
             'previous_week_start' => $previousWeekStart->toDateString(),
-            'previous_week_end'   => $previousWeekEnd->toDateString(),
+            'previous_week_end' => $previousWeekEnd->toDateString(),
 
             /* LA SEMANA PASADA A ESTA MISMA ALTURA: de su lunes hasta el mismo
                día y hora de hoy. Comparar el miércoles contra una semana
@@ -449,10 +423,10 @@ class ConsultaDePedidosController extends Controller
                 ->whereBetween('sale_date', [$previousWeekStart, now()->subWeek()])
                 ->sum('total'),
 
-            'ventas_semana'   => $cuantasSemana,
+            'ventas_semana' => $cuantasSemana,
             'ticket_promedio' => $cuantasSemana ? round((float) $currentWeekTotal / $cuantasSemana, 2) : 0.0,
-            'hoy'             => (float) (clone $hoy)->sum('total'),
-            'ventas_hoy'      => (clone $hoy)->count(),
+            'hoy' => (float) (clone $hoy)->sum('total'),
+            'ventas_hoy' => (clone $hoy)->count(),
             'ultimas_semanas' => $ultimasSemanas,
 
             'weekly_income' => $weeklyIncome,
@@ -460,16 +434,16 @@ class ConsultaDePedidosController extends Controller
             // y la línea comparativa del chart no tenía datos)
             'previous_weekly_income' => $previousWeeklyIncome,
 
-            'current_week_income'  => (float)$currentWeekTotal,
-            'previous_week_income' => (float)$previousWeekTotal,
-            'difference'            => (float)$difference,
-            'percentage_change'     => round($percentageChange, 2),
+            'current_week_income' => (float) $currentWeekTotal,
+            'previous_week_income' => (float) $previousWeekTotal,
+            'difference' => (float) $difference,
+            'percentage_change' => round($percentageChange, 2),
 
-            'month_start'    => $month_start->toDateString(),
-            'month_end'      => $month_end->toDateString(),
-            'monthly_income' => (float)$monthlyIncome,
+            'month_start' => $month_start->toDateString(),
+            'month_end' => $month_end->toDateString(),
+            'monthly_income' => (float) $monthlyIncome,
 
-            'total_income' => (float)$totalIncome,
+            'total_income' => (float) $totalIncome,
 
             // Cómo le pagaron esta semana, de mayor a menor.
             'por_medio' => $porMedio,
@@ -497,7 +471,7 @@ class ConsultaDePedidosController extends Controller
     public function latest(Request $request)
     {
         $data = $request->validate([
-            'domiciliary_id' => 'required|exists:domiciliary,domiciliary_id'
+            'domiciliary_id' => 'required|exists:domiciliary,domiciliary_id',
         ]);
 
         abort_unless(
@@ -528,7 +502,7 @@ class ConsultaDePedidosController extends Controller
     {
         $user = $request->user();
 
-        if (!$user) {
+        if (! $user) {
             return false;
         }
 
@@ -581,7 +555,7 @@ class ConsultaDePedidosController extends Controller
          */
         $buyer = Buyer::where('user_id', $request->user()->user_id)->first();
 
-        if (!$buyer) {
+        if (! $buyer) {
             return response()->json([
                 'message' => 'Órdenes pendientes de review',
                 'orders' => [],
@@ -599,7 +573,7 @@ class ConsultaDePedidosController extends Controller
                 'payments',
                 'address.municipality.department.country',
                 'address.alias',
-                'domiciliary.user'
+                'domiciliary.user',
             ])
             ->get();
 

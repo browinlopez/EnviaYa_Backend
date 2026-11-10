@@ -7,6 +7,7 @@ use App\Models\Rol;
 use App\Models\User;
 use App\Services\CustodiaDeEfectivo;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
 
 /**
@@ -21,7 +22,6 @@ use Laravel\Sanctum\Sanctum;
  * Lo que se fija acá es que el dinero deje rastro desde que se recibe hasta
  * que se consigna.
  */
-
 function domiciliarioConPedido(int $total = 32000, int $metodo = 1): array
 {
     Rol::firstOrCreate(['rol_id' => 3], ['name' => 'domiciliario', 'guard_name' => 'web']);
@@ -62,14 +62,14 @@ function domiciliarioConPedido(int $total = 32000, int $metodo = 1): array
     return compact('repartidor', 'domiId', 'orderId', 'total');
 }
 
-function entregar(array $e): \Illuminate\Testing\TestResponse
+function entregar(array $e): TestResponse
 {
     Sanctum::actingAs($e['repartidor']);
 
     return test()->putJson('/v1/orders/update', [
         'order_id' => $e['orderId'],
-        'state'    => 4,
-        'user_id'  => $e['repartidor']->user_id,
+        'state' => 4,
+        'user_id' => $e['repartidor']->user_id,
     ]);
 }
 
@@ -158,7 +158,7 @@ test('no se confirma dos veces el mismo deposito', function () {
 
     $custodia = app(CustodiaDeEfectivo::class);
     $deposito = $custodia->declararDeposito($e['domiId'], ['amount' => 32000]);
-    $quien    = revisor();
+    $quien = revisor();
 
     $custodia->confirmarDeposito($deposito, $quien);
 

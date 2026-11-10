@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Order\OrdersSales;
 use App\Models\Payment\Payment;
+use App\Models\Payment\PaymentIntent;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -35,9 +36,7 @@ class DevolucionDelPedido
     /** Los que Bold sabe devolver solo. El resto van a mano. */
     private const AUTOMATICOS = [2];
 
-    public function __construct(private readonly BoldService $bold)
-    {
-    }
+    public function __construct(private readonly BoldService $bold) {}
 
     /**
      * Devuelve lo cobrado de un pedido, si hay algo que devolver.
@@ -79,11 +78,11 @@ class DevolucionDelPedido
             $pago->save();
 
             Log::warning('Devolución que hay que hacer A MANO en el panel de Bold', [
-                'order_id'       => $order->orderSales_id,
-                'payment_id'     => $pago->payments_id,
+                'order_id' => $order->orderSales_id,
+                'payment_id' => $pago->payments_id,
                 'transaction_id' => $pago->provider_payment_id,
-                'methods_id'     => $pago->methods_id,
-                'monto'          => $pago->total,
+                'methods_id' => $pago->methods_id,
+                'monto' => $pago->total,
             ]);
 
             return 'manual';
@@ -96,7 +95,7 @@ class DevolucionDelPedido
             $pago->save();
 
             Log::error('No se puede devolver: el pago no tiene transacción de Bold', [
-                'order_id'   => $order->orderSales_id,
+                'order_id' => $order->orderSales_id,
                 'payment_id' => $pago->payments_id,
             ]);
 
@@ -111,11 +110,11 @@ class DevolucionDelPedido
             } else {
                 /* La referencia del intento, que es la que Bold conoce. Si no
                    la hubiera, se manda la del pedido antes que no mandar nada. */
-                $referencia = \App\Models\Payment\PaymentIntent::where(
+                $referencia = PaymentIntent::where(
                     'orderSales_id',
                     $order->orderSales_id,
                 )->latest('id')->value('bold_reference_id')
-                    ?? 'ORD-' . $order->orderSales_id;
+                    ?? 'ORD-'.$order->orderSales_id;
 
                 $respuesta = $this->bold->devolver($referencia, $transaccion, $motivo);
                 // Solicitada, no devuelta: Bold todavía tiene que aprobarla.
@@ -137,9 +136,9 @@ class DevolucionDelPedido
             $pago->save();
 
             Log::error('No se pudo devolver el cobro', [
-                'order_id'   => $order->orderSales_id,
+                'order_id' => $order->orderSales_id,
                 'payment_id' => $pago->payments_id,
-                'excepcion'  => $e->getMessage(),
+                'excepcion' => $e->getMessage(),
             ]);
 
             return 'pendiente';
@@ -168,15 +167,15 @@ class DevolucionDelPedido
      */
     public static function queDecirle(?string $estado, float $monto): ?string
     {
-        $plata = '$' . number_format($monto, 0, ',', '.');
+        $plata = '$'.number_format($monto, 0, ',', '.');
 
         return match ($estado) {
             'anulada' => "Anulamos el cobro de {$plata}. No te van a cobrar nada.",
             'solicitada' => "Pedimos la devolución de {$plata}. Tu banco puede tardar "
-                . 'unos días hábiles en reflejarla.',
+                .'unos días hábiles en reflejarla.',
             'devuelta' => "Te devolvimos {$plata}.",
             'manual', 'pendiente' => "Vamos a devolverte {$plata}. Te escribimos "
-                . 'en cuanto esté hecho.',
+                .'en cuanto esté hecho.',
             default => null,
         };
     }

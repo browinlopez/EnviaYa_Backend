@@ -6,6 +6,8 @@ use App\Models\Business;
 use App\Models\DeviceToken;
 use App\Models\Promotion;
 use App\Services\Push\TransportePush;
+use Carbon\CarbonInterface;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -85,18 +87,18 @@ class PromocionesDeLaTienda
     public const PLAZOS = ['hoy', 'manana', 'fin_de_semana', 'semana', 'sin_fecha'];
 
     /** El instante en que deja de valer, en hora colombiana. */
-    public function fechaLimite(?string $plazo): ?\Illuminate\Support\Carbon
+    public function fechaLimite(?string $plazo): ?Carbon
     {
         $hoy = now('America/Bogota');
 
         return match ($plazo) {
-            'hoy'   => $hoy->copy()->endOfDay(),
+            'hoy' => $hoy->copy()->endOfDay(),
             'manana' => $hoy->copy()->addDay()->endOfDay(),
             // El domingo de ESTA semana. Si ya es domingo, hoy mismo: prometer
             // el domingo que viene sería una semana entera de más.
-            'fin_de_semana' => $hoy->copy()->endOfWeek(\Carbon\CarbonInterface::SUNDAY)->endOfDay(),
+            'fin_de_semana' => $hoy->copy()->endOfWeek(CarbonInterface::SUNDAY)->endOfDay(),
             'semana' => $hoy->copy()->addDays(7)->endOfDay(),
-            default  => null,
+            default => null,
         };
     }
 
@@ -115,7 +117,7 @@ class PromocionesDeLaTienda
      * `endOfDay`— porque es lo que significan para quien las escribe: «del 20
      * al 25» incluye el 25 completo, no hasta las 00:00 del 25.
      *
-     * @return array{0: \Illuminate\Support\Carbon, 1: ?\Illuminate\Support\Carbon}
+     * @return array{0: Carbon, 1: ?Carbon}
      */
     public function ventana(?string $plazo, ?string $desde = null, ?string $hasta = null): array
     {
@@ -125,7 +127,7 @@ class PromocionesDeLaTienda
 
         return [
             $desde !== null
-                ? \Illuminate\Support\Carbon::parse($desde, 'America/Bogota')->startOfDay()
+                ? Carbon::parse($desde, 'America/Bogota')->startOfDay()
                 : now(),
             /*
              * Sin fecha de fin, MANDA EL PLAZO si venía uno.
@@ -138,14 +140,12 @@ class PromocionesDeLaTienda
              * plazo campo por campo, no de golpe.
              */
             $hasta !== null
-                ? \Illuminate\Support\Carbon::parse($hasta, 'America/Bogota')->endOfDay()
+                ? Carbon::parse($hasta, 'America/Bogota')->endOfDay()
                 : $this->fechaLimite($plazo),
         ];
     }
 
-    public function __construct(private TransportePush $push)
-    {
-    }
+    public function __construct(private TransportePush $push) {}
 
     /** Los usuarios afiliados a esta tienda. Son los que reciben. */
     public function destinatarios(int $businessId): array
@@ -206,12 +206,12 @@ class PromocionesDeLaTienda
          */
         $promocion = DB::transaction(function () use ($negocio, $texto, $productos, $creadaPor, $desde, $hasta, $regla) {
             $promocion = Promotion::create([
-                'busines_id'  => $negocio->busines_id,
+                'busines_id' => $negocio->busines_id,
                 'description' => $texto,
-                'start_date'  => $desde,
-                'end_date'    => $hasta,
-                'state'       => Promotion::BORRADOR,
-                'created_by'  => $creadaPor,
+                'start_date' => $desde,
+                'end_date' => $hasta,
+                'state' => Promotion::BORRADOR,
+                'created_by' => $creadaPor,
                 ...$regla,
             ]);
 
@@ -227,8 +227,8 @@ class PromocionesDeLaTienda
         $this->avisar($promocion, $negocio, $texto, $destinatarios);
 
         $promocion->forceFill([
-            'state'            => Promotion::ENVIADA,
-            'sent_at'          => now(),
+            'state' => Promotion::ENVIADA,
+            'sent_at' => now(),
             'recipients_count' => count($destinatarios),
         ])->save();
 
@@ -339,7 +339,7 @@ class PromocionesDeLaTienda
 
         $datos = [
             'promotion_id' => $promocion->promotion_id,
-            'business_id'  => $negocio->busines_id,
+            'business_id' => $negocio->busines_id,
             // El nombre viaja EN el aviso y no se resuelve al pintarlo: si la
             // tienda cambia de nombre, el aviso viejo tiene que seguir diciendo
             // lo que decía cuando llegó.
@@ -352,7 +352,7 @@ class PromocionesDeLaTienda
              * ese aviso seguiría diciendo «solo hoy». Acá la campana lo pinta
              * como una línea aparte y puede dejar de enseñarla al vencer.
              */
-            'hasta'       => $promocion->end_date?->toIso8601String(),
+            'hasta' => $promocion->end_date?->toIso8601String(),
             'hasta_texto' => $promocion->hastaEnPalabras(),
         ];
 
@@ -393,9 +393,9 @@ class PromocionesDeLaTienda
                 $negocio->name,
                 $texto,
                 [
-                    'tipo'         => 'promocion',
+                    'tipo' => 'promocion',
                     'promotion_id' => (string) $promocion->promotion_id,
-                    'business_id'  => (string) $negocio->busines_id,
+                    'business_id' => (string) $negocio->busines_id,
                 ],
             );
         } catch (\Throwable $e) {
@@ -403,7 +403,7 @@ class PromocionesDeLaTienda
             // promoción no se pierde: se pierde la inmediatez.
             Log::warning('No se pudo enviar el push de la promoción', [
                 'promotion_id' => $promocion->promotion_id,
-                'error'        => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
         }
     }

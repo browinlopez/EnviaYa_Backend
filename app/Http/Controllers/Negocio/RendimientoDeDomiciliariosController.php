@@ -24,9 +24,7 @@ use Illuminate\Http\Request;
  */
 class RendimientoDeDomiciliariosController extends Controller
 {
-    public function __construct(private readonly GeneradorDeReportes $reportes)
-    {
-    }
+    public function __construct(private readonly GeneradorDeReportes $reportes) {}
 
     public function index(Request $request)
     {
@@ -46,10 +44,10 @@ class RendimientoDeDomiciliariosController extends Controller
          * sirven para sacar cifras raras.
          */
         $filtros = [
-            'business_id'       => (int) $request->attributes->get('busines_id'),
-            'municipality_id'   => null,
+            'business_id' => (int) $request->attributes->get('busines_id'),
+            'municipality_id' => null,
             'business_category' => null,
-            'complex_id'        => null,
+            'complex_id' => null,
         ];
 
         $datos = $this->reportes->reporteOperacional($ventana, $filtros);
@@ -59,10 +57,10 @@ class RendimientoDeDomiciliariosController extends Controller
             // Se renombra a castellano en la frontera, como el resto de este
             // grupo de rutas; la clave interna del reporte es `couriers`.
             'domiciliarios' => $datos['couriers'],
-            'totales'       => $datos['totals'],
-            'anterior'      => $datos['previous'],
-            'serie'         => $datos['series'],
-            'periodo'       => [
+            'totales' => $datos['totals'],
+            'anterior' => $datos['previous'],
+            'serie' => $datos['series'],
+            'periodo' => [
                 'desde' => $ventana['desde']->toDateString(),
                 'hasta' => $ventana['hasta']->toDateString(),
             ],

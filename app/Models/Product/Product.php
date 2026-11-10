@@ -4,16 +4,16 @@ namespace App\Models\Product;
 
 use App\Models\Audit\Audit;
 use App\Models\Business;
-use App\Models\Product\ProductAlias;
 use App\Models\Order\OrdersSales;
 use App\Models\Order\OrdersSalesDetail;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 
 class Product extends Audit
 {
     protected $table = 'products';
+
     protected $primaryKey = 'products_id';
+
     /*
      * Ahora sí lleva `created_at` / `updated_at`.
      *
@@ -85,11 +85,11 @@ class Product extends Audit
 
             ProductAlias::insertOrIgnore([
                 'products_id' => $producto->products_id,
-                'alias'       => $alias,
-                'busines_id'  => ProductAlias::TODAS,
-                'origen'      => 'automatico',
-                'created_at'  => now(),
-                'updated_at'  => now(),
+                'alias' => $alias,
+                'busines_id' => ProductAlias::TODAS,
+                'origen' => 'automatico',
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
         });
     }
@@ -149,7 +149,7 @@ class Product extends Audit
             'busines_products_id',
             'price',
             'amount',
-            'qualification'
+            'qualification',
         ]);
     }
 

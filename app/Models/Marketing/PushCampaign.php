@@ -11,10 +11,13 @@ class PushCampaign extends Model
 {
     protected $table = 'push_campaigns';
 
-    public const BORRADOR   = 0;
+    public const BORRADOR = 0;
+
     public const PROGRAMADA = 1;
-    public const ENVIADA    = 2;
-    public const CANCELADA  = 3;
+
+    public const ENVIADA = 2;
+
+    public const CANCELADA = 3;
 
     protected $fillable = [
         'title',
@@ -28,12 +31,12 @@ class PushCampaign extends Model
     ];
 
     protected $casts = [
-        'segment'          => 'array',
-        'scheduled_at'     => 'datetime',
-        'sent_at'          => 'datetime',
+        'segment' => 'array',
+        'scheduled_at' => 'datetime',
+        'sent_at' => 'datetime',
         'recipients_count' => 'integer',
-        'state'            => 'integer',
-        'created_by'       => 'integer',
+        'state' => 'integer',
+        'created_by' => 'integer',
     ];
 
     /**

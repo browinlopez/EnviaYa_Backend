@@ -4,12 +4,13 @@ namespace App\Models\Product;
 
 use App\Models\Audit\Audit;
 use App\Models\Business;
-use Illuminate\Database\Eloquent\Model;
 
 class ProductBusiness extends Audit
 {
     protected $table = 'products_business';
-    protected $primaryKey = "busines_products_id"; // 👈 es tabla pivote con PK compuesta
+
+    protected $primaryKey = 'busines_products_id'; // 👈 es tabla pivote con PK compuesta
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -38,10 +39,10 @@ class ProductBusiness extends Audit
     ];
 
     protected $casts = [
-        'price'        => 'decimal:2',
+        'price' => 'decimal:2',
         'stock_weight' => 'decimal:3',
-        'min_qty'      => 'decimal:3',
-        'step_qty'     => 'decimal:3',
+        'min_qty' => 'decimal:3',
+        'step_qty' => 'decimal:3',
     ];
 
     public function business()

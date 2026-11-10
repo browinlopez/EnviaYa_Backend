@@ -51,11 +51,11 @@ class ListadoPaginado
     }
 
     /**
-     * @param Builder $q                consulta ya construida, sin orden ni límite
-     * @param list<string> $buscables   columnas calificadas donde busca `search`
-     * @param array<string,string> $ordenables  alias público => columna real
-     * @param ?callable $resumen        recibe la consulta YA FILTRADA y devuelve
-     *                                  los indicadores de la pantalla
+     * @param  Builder  $q  consulta ya construida, sin orden ni límite
+     * @param  list<string>  $buscables  columnas calificadas donde busca `search`
+     * @param  array<string,string>  $ordenables  alias público => columna real
+     * @param  ?callable  $resumen  recibe la consulta YA FILTRADA y devuelve
+     *                              los indicadores de la pantalla
      */
     public static function responder(
         Request $request,
@@ -80,20 +80,20 @@ class ListadoPaginado
          * Así la capacidad queda disponible y cada pantalla se pasa cuando se
          * migren también su filtrado y sus totales, sin romper ninguna hoy.
          */
-        if (!$request->has('page') && !$request->has('per_page')) {
+        if (! $request->has('page') && ! $request->has('per_page')) {
             if ($ordenPorDefecto && ($ordenables[$ordenPorDefecto] ?? null)) {
                 $q->orderBy($ordenables[$ordenPorDefecto], $direccionPorDefecto);
             }
 
             return [
-                'data'    => $q->get(),
-                'meta'    => null,
+                'data' => $q->get(),
+                'meta' => null,
                 'summary' => $resumen ? $resumen(clone $q) : null,
             ];
         }
 
         $porPagina = min(self::MAXIMO, max(1, (int) $request->query('per_page', 25)));
-        $pagina    = max(1, (int) $request->query('page', 1));
+        $pagina = max(1, (int) $request->query('page', 1));
 
         /*
          * La búsqueda va antes de contar: el total tiene que ser el de lo
@@ -145,16 +145,16 @@ class ListadoPaginado
         $filas = $q->forPage($pagina, $porPagina)->get();
 
         return [
-            'data'    => $filas,
+            'data' => $filas,
             'summary' => $indicadores,
             'meta' => [
-                'page'      => $pagina,
-                'per_page'  => $porPagina,
-                'total'     => $total,
+                'page' => $pagina,
+                'per_page' => $porPagina,
+                'total' => $total,
                 'last_page' => max(1, (int) ceil($total / $porPagina)),
-                'search'    => $termino,
-                'sort'      => $orden,
-                'dir'       => $direccion,
+                'search' => $termino,
+                'sort' => $orden,
+                'dir' => $direccion,
             ],
         ];
     }

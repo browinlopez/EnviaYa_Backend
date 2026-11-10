@@ -2,13 +2,14 @@
 
 namespace App\Models\Business;
 
+use App\Models\Audit\Audit;
 use App\Models\Business;
 use App\Models\User;
-use App\Models\Audit\Audit;
 
 class BusinessUserFavorite extends Audit
 {
     protected $table = 'business_user_favorites';
+
     protected $fillable = ['user_id', 'busines_id'];
 
     public function business()
@@ -21,4 +22,3 @@ class BusinessUserFavorite extends Audit
         return $this->belongsTo(User::class, 'user_id', 'user_id');
     }
 }
-

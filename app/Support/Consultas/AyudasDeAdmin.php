@@ -2,25 +2,9 @@
 
 namespace App\Support\Consultas;
 
-use App\Services\Ajustes;
-use App\Http\Controllers\Controller;
-use App\Models\Area;
-use App\Models\Conjunto\ComplexStaff;
-use App\Models\Operacion\DomiciliaryDocument;
-use App\Models\Reviews\BusinessReview;
-use App\Models\Reviews\DomiciliaryReview;
 use App\Models\User;
-use App\Services\BusinessMediaService;
-use App\Services\ContratoService;
 use App\Services\MediaService;
-use App\Services\VinculosDelRol;
-use App\Support\ListadoPaginado;
-use Carbon\Carbon;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 
 /**
  * Consultas base que comparten los controladores del panel y los servicios.
@@ -75,7 +59,7 @@ trait AyudasDeAdmin
     {
         $ids = $filas->pluck($campoId)->filter()->all();
 
-        if (!$ids) {
+        if (! $ids) {
             return $filas;
         }
 
@@ -107,7 +91,6 @@ trait AyudasDeAdmin
     /* ==================================================================
        MEDIOS DE CUALQUIER ENTIDAD (Cloudflare R2)
        ================================================================== */
-
 
     /** Consulta base con los nombres ya resueltos, para lista y detalle. */
     private function ordenesBase()
@@ -143,13 +126,12 @@ trait AyudasDeAdmin
             );
     }
 
-
     private function resumenDomiciliarios(?int $negocioId = null)
     {
         // Mismo criterio que en `businesses()`: agregados por subconsulta.
         // Unir a la vez `orderssales` y `business_domiciliary` multiplicaba
         // las ganancias por la cantidad de negocios asignados al repartidor.
-        $deOrdenes = fn(callable $extra) => $extra(
+        $deOrdenes = fn (callable $extra) => $extra(
             DB::table('orderssales')->whereColumn('orderssales.domiciliary_id', 'd.domiciliary_id'),
         );
 
@@ -181,16 +163,16 @@ trait AyudasDeAdmin
                 'u.state as account_active',
             ])
             ->selectSub(
-                $deOrdenes(fn($q) => $q->selectRaw('COUNT(*)')->where('state', self::ENTREGADO)),
+                $deOrdenes(fn ($q) => $q->selectRaw('COUNT(*)')->where('state', self::ENTREGADO)),
                 'deliveries',
             )
             ->selectSub(
-                $deOrdenes(fn($q) => $q->selectRaw('COUNT(*)')->whereIn('state', self::ACTIVOS)),
+                $deOrdenes(fn ($q) => $q->selectRaw('COUNT(*)')->whereIn('state', self::ACTIVOS)),
                 'active_deliveries',
             )
             ->selectSub(
                 $deOrdenes(
-                    fn($q) => $q->selectRaw('COALESCE(SUM(domiciliary_fee), 0)')
+                    fn ($q) => $q->selectRaw('COALESCE(SUM(domiciliary_fee), 0)')
                         ->where('state', self::ENTREGADO),
                 ),
                 'earnings',

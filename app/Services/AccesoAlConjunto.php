@@ -31,7 +31,7 @@ class AccesoAlConjunto
 
     private function llave(string $codigo): string
     {
-        return 'acceso_conjunto:' . $codigo;
+        return 'acceso_conjunto:'.$codigo;
     }
 
     /**
@@ -42,7 +42,7 @@ class AccesoAlConjunto
      */
     public function generar(Domiciliary $domiciliario): array
     {
-        $previo = Cache::pull('acceso_conjunto_de:' . $domiciliario->domiciliary_id);
+        $previo = Cache::pull('acceso_conjunto_de:'.$domiciliario->domiciliary_id);
 
         if ($previo) {
             Cache::forget($this->llave($previo));
@@ -53,10 +53,10 @@ class AccesoAlConjunto
         $codigo = strtoupper(Str::random(8));
 
         Cache::put($this->llave($codigo), $domiciliario->domiciliary_id, self::VIGENCIA_SEGUNDOS);
-        Cache::put('acceso_conjunto_de:' . $domiciliario->domiciliary_id, $codigo, self::VIGENCIA_SEGUNDOS);
+        Cache::put('acceso_conjunto_de:'.$domiciliario->domiciliary_id, $codigo, self::VIGENCIA_SEGUNDOS);
 
         return [
-            'code'       => $codigo,
+            'code' => $codigo,
             'expires_in' => self::VIGENCIA_SEGUNDOS,
             'expires_at' => now()->addSeconds(self::VIGENCIA_SEGUNDOS)->toIso8601String(),
         ];
@@ -88,13 +88,13 @@ class AccesoAlConjunto
     public function resolverCodigo(string $codigo): ?Domiciliary
     {
         $limpio = strtoupper(trim($codigo));
-        $id     = Cache::pull($this->llave($limpio));
+        $id = Cache::pull($this->llave($limpio));
 
-        if (!$id) {
+        if (! $id) {
             return null;
         }
 
-        Cache::forget('acceso_conjunto_de:' . $id);
+        Cache::forget('acceso_conjunto_de:'.$id);
 
         return Domiciliary::find($id);
     }
@@ -167,13 +167,13 @@ class AccesoAlConjunto
             $items = $detalles->get($o->orderSales_id, collect());
 
             $o->items = $items->map(fn ($i) => [
-                'name'          => $i->name,
-                'amount'        => (int) $i->amount,
-                'unit_price'    => (float) $i->unit_price,
-                'line_total'    => $i->line_total === null ? null : (float) $i->line_total,
-                'sale_unit'     => $i->sale_unit ?? 'unidad',
+                'name' => $i->name,
+                'amount' => (int) $i->amount,
+                'unit_price' => (float) $i->unit_price,
+                'line_total' => $i->line_total === null ? null : (float) $i->line_total,
+                'sale_unit' => $i->sale_unit ?? 'unidad',
                 'qty_requested' => $i->qty_requested === null ? null : (float) $i->qty_requested,
-                'qty_final'     => $i->qty_final === null ? null : (float) $i->qty_final,
+                'qty_final' => $i->qty_final === null ? null : (float) $i->qty_final,
             ])->values();
 
             $o->items_count = $items->sum('amount');

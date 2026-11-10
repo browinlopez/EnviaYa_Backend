@@ -18,13 +18,15 @@ class ComplexStaff extends Audit
 {
     protected $table = 'complex_staff';
 
-    public const DUENO   = 'dueno';
+    public const DUENO = 'dueno';
+
     public const CELADOR = 'celador';
 
     public const ROLES = [self::DUENO, self::CELADOR];
 
     /** Los identificadores de la tabla `rol`, que no es autoincremental. */
-    public const ROL_DUENO   = 5;
+    public const ROL_DUENO = 5;
+
     public const ROL_CELADOR = 6;
 
     /** Los dos roles que pueden entrar por la puerta del conjunto. */
@@ -53,7 +55,7 @@ class ComplexStaff extends Audit
     /** La ficha activa de quien pide, o null si no es personal de conjunto. */
     public static function de(?int $userId): ?self
     {
-        if (!$userId) {
+        if (! $userId) {
             return null;
         }
 

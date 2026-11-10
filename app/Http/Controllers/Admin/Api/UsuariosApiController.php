@@ -2,33 +2,17 @@
 
 namespace App\Http\Controllers\Admin\Api;
 
-use App\Services\AltasYCambiosDeUsuario;
-use App\Services\Ajustes;
 use App\Http\Controllers\Controller;
 use App\Models\Area;
-use App\Models\Conjunto\ComplexStaff;
-use App\Models\Operacion\DomiciliaryDocument;
-use App\Models\Reviews\BusinessReview;
-use App\Models\Reviews\DomiciliaryReview;
 use App\Models\User;
-use App\Services\BusinessMediaService;
-use App\Services\ContratoService;
-use App\Services\MediaService;
-use App\Services\VinculosDelRol;
+use App\Services\AltasYCambiosDeUsuario;
 use App\Support\ListadoPaginado;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 
 class UsuariosApiController extends Controller
 {
-    public function __construct(private readonly AltasYCambiosDeUsuario $personas)
-    {
-    }
-
+    public function __construct(private readonly AltasYCambiosDeUsuario $personas) {}
 
     public function users(Request $request)
     {
@@ -59,11 +43,11 @@ class UsuariosApiController extends Controller
             $q,
             buscables: ['u.name', 'u.email', 'u.phone'],
             ordenables: [
-                'user_id'           => 'u.user_id',
-                'name'              => 'u.name',
-                'rol'               => 'u.rol',
-                'state'             => 'u.state',
-                'qualification'     => 'u.qualification',
+                'user_id' => 'u.user_id',
+                'name' => 'u.name',
+                'rol' => 'u.rol',
+                'state' => 'u.state',
+                'qualification' => 'u.qualification',
                 'email_verified_at' => 'u.email_verified_at',
             ],
             ordenPorDefecto: 'user_id',
@@ -93,7 +77,7 @@ class UsuariosApiController extends Controller
     public function verifyUserEmail(Request $request, $id)
     {
         $user = User::find($id);
-        abort_if(!$user, 404, 'El usuario no existe.');
+        abort_if(! $user, 404, 'El usuario no existe.');
 
         if ($user->email_verified_at) {
             /*
@@ -115,7 +99,7 @@ class UsuariosApiController extends Controller
 
         return response()->json([
             'message' => 'Correo verificado. Ya puede iniciar sesion.',
-            'user'    => $this->personas->showUser($id)->getData(),
+            'user' => $this->personas->showUser($id)->getData(),
         ]);
     }
 
@@ -144,5 +128,4 @@ class UsuariosApiController extends Controller
     {
         return $this->personas->showUser($id);
     }
-
 }

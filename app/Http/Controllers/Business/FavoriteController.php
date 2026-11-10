@@ -7,24 +7,22 @@ use App\Models\Business\BusinessUserFavorite;
 use App\Services\NegocioParaLaApp;
 use App\Services\TarifaPorDistancia;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class FavoriteController extends Controller
 {
     public function __construct(
         private readonly NegocioParaLaApp $presentador,
         private readonly TarifaPorDistancia $distancias,
-    ) {
-    }
+    ) {}
 
     public function toggleFavorite(Request $request)
     {
         $request->validate([
-            'user_id'    => 'required|integer|exists:user,user_id',
+            'user_id' => 'required|integer|exists:user,user_id',
             'busines_id' => 'required|integer|exists:business,busines_id',
         ]);
 
-        $userId     = $request->user_id;
+        $userId = $request->user_id;
         $businessId = $request->busines_id;
 
         $favorite = BusinessUserFavorite::where('user_id', $userId)
@@ -34,17 +32,18 @@ class FavoriteController extends Controller
         if ($favorite) {
             // ya existe, eliminarlo
             $favorite->delete();
+
             return response()->json(['message' => 'Eliminado de favoritos']);
         } else {
             // no existe, crearlo
             BusinessUserFavorite::create([
-                'user_id'    => $userId,
+                'user_id' => $userId,
                 'busines_id' => $businessId,
             ]);
+
             return response()->json(['message' => 'Agregado a favoritos']);
         }
     }
-
 
     // Listar favoritos del usuario
     public function myFavorites(Request $request)
@@ -117,30 +116,30 @@ class FavoriteController extends Controller
             );
 
             return [
-                'favorite_id'   => $favorite->id,
-                'business_id'   => $business->busines_id,
-                'latitude'      => $business->latitude !== null ? (float) $business->latitude : null,
-                'longitude'     => $business->longitude !== null ? (float) $business->longitude : null,
-                'distance_km'   => $km === null ? null : round($km, 2),
-                'delivery_fee'  => $this->distancias->paraDistancia($km),
-                'in_range'      => $this->distancias->reparteHasta($km),
-                'name'          => $business->name,
+                'favorite_id' => $favorite->id,
+                'business_id' => $business->busines_id,
+                'latitude' => $business->latitude !== null ? (float) $business->latitude : null,
+                'longitude' => $business->longitude !== null ? (float) $business->longitude : null,
+                'distance_km' => $km === null ? null : round($km, 2),
+                'delivery_fee' => $this->distancias->paraDistancia($km),
+                'in_range' => $this->distancias->reparteHasta($km),
+                'name' => $business->name,
                 // La tarjeta la pinta debajo del nombre; sin ella decía «Sin
                 // descripción» de una tienda que sí la tiene.
-                'description'   => $business->description,
-                'phone'         => $business->phone,
-                'address'       => $business->address,
+                'description' => $business->description,
+                'phone' => $business->phone,
+                'address' => $business->address,
                 'qualification' => (float) $business->qualification,
-                'razon_social'  => $business->razonSocial_DCD,
-                'NIT'           => $business->NIT,
-                'logo'          => $business->logo ?? 'https://example.com/default-logo.png',
-                'state'         => (bool) $business->state,
-                'type'          => $business->type,
-                'municipality'  => $business->municipality ? [
-                    'id'   => $business->municipality->id,
+                'razon_social' => $business->razonSocial_DCD,
+                'NIT' => $business->NIT,
+                'logo' => $business->logo ?? 'https://example.com/default-logo.png',
+                'state' => (bool) $business->state,
+                'type' => $business->type,
+                'municipality' => $business->municipality ? [
+                    'id' => $business->municipality->id,
                     'name' => $business->municipality->name,
                 ] : null,
-                'owner_count'   => $business->owners->count(),
+                'owner_count' => $business->owners->count(),
                 /*
                  * DEL PROPIETARIO SOLO SALE LO QUE HACE FALTA PARA COMPRAR.
                  *
@@ -152,24 +151,24 @@ class FavoriteController extends Controller
                  * el mismo presentador que los otros, para que no pueda volver
                  * a divergir.
                  */
-                'owners'        => $this->presentador->propietarios($business),
+                'owners' => $this->presentador->propietarios($business),
                 'products' => $ligero ? [] : $business->products->map(function ($product) {
                     return [
-                        'product_id'  => $product->products_id,
-                        'name'        => $product->name,
+                        'product_id' => $product->products_id,
+                        'name' => $product->name,
                         'description' => $product->description,
                         'category_id' => $product->category_id,
-                        'image'       => $product->image,
-                        'state'       => (bool) $product->state,
-                        'price'       => $product->pivot->price ?? null,
+                        'image' => $product->image,
+                        'state' => (bool) $product->state,
+                        'price' => $product->pivot->price ?? null,
                     ];
                 }),
                 'reviews' => $ligero ? [] : $business->reviews->map(function ($review) {
                     return [
-                        'review_id'  => $review->reviews_id ?? null,
-                        'buyer_id'   => $review->buyer_id,
-                        'rating'     => (float) $review->qualification ?? 0,
-                        'comment'    => $review->comment ?? '',
+                        'review_id' => $review->reviews_id ?? null,
+                        'buyer_id' => $review->buyer_id,
+                        'rating' => (float) $review->qualification ?? 0,
+                        'comment' => $review->comment ?? '',
                         'created_at' => $review->created_at ?? null,
                     ];
                 }),
@@ -177,7 +176,7 @@ class FavoriteController extends Controller
         });
 
         return response()->json([
-            'favorites' => $formatted
+            'favorites' => $formatted,
         ]);
     }
 }

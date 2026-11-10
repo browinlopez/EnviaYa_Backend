@@ -40,14 +40,14 @@ class PedidosEnCursoDemoSeeder extends Seeder
 
     public function run(): void
     {
-        $tarifa   = (float) (Ajustes::valor('operacion.tarifa_domicilio') ?? 5000);
-        $reparto  = (float) (Ajustes::valor('operacion.reparto_domiciliario') ?? 0.75);
+        $tarifa = (float) (Ajustes::valor('operacion.tarifa_domicilio') ?? 5000);
+        $reparto = (float) (Ajustes::valor('operacion.reparto_domiciliario') ?? 0.75);
         $comision = (float) (Ajustes::valor('operacion.comision_plataforma') ?? 0.03);
 
         $creados = [];
 
         foreach (self::PLAN as $businessId => $filas) {
-            if (!DB::table('business')->where('busines_id', $businessId)->exists()) {
+            if (! DB::table('business')->where('busines_id', $businessId)->exists()) {
                 continue;
             }
 
@@ -61,6 +61,7 @@ class PedidosEnCursoDemoSeeder extends Seeder
             // pedido sin líneas se ve roto en el panel.
             if ($productos->isEmpty()) {
                 $this->command?->warn("Negocio {$businessId}: sin productos, se omite.");
+
                 continue;
             }
 
@@ -68,6 +69,7 @@ class PedidosEnCursoDemoSeeder extends Seeder
 
             if ($compradores->isEmpty()) {
                 $this->command?->warn('No hay compradores en la base. Corre antes DemoSeeder.');
+
                 return;
             }
 
@@ -105,19 +107,19 @@ class PedidosEnCursoDemoSeeder extends Seeder
         $lineas = $productos->random(min(random_int(1, 3), $productos->count()));
 
         // `random()` devuelve el elemento suelto cuando se pide uno solo.
-        if (!$lineas instanceof Collection) {
+        if (! $lineas instanceof Collection) {
             $lineas = collect([$lineas]);
         }
 
         $subtotal = 0;
-        $detalle  = [];
+        $detalle = [];
 
         foreach ($lineas as $p) {
             $cant = random_int(1, 3);
             $subtotal += (float) $p->price * $cant;
             $detalle[] = [
                 'product_id' => $p->products_id,
-                'amount'     => $cant,
+                'amount' => $cant,
                 'unit_price' => $p->price,
             ];
         }
@@ -125,32 +127,32 @@ class PedidosEnCursoDemoSeeder extends Seeder
         $cuando = now()->subMinutes($edad);
 
         $id = DB::table('orderssales')->insertGetId([
-            'buyer_id'   => $buyerId,
+            'buyer_id' => $buyerId,
             'busines_id' => $businessId,
             // En camino se le asigna alguien, si el negocio tiene a quién.
             'domiciliary_id' => $estado === 3 && $domis->isNotEmpty() ? $domis->random() : null,
             'address_id' => null,
             'methods_id' => $efectivo ? 1 : 2,
-            'forms_id'   => $efectivo ? 1 : 2,
-            'subtotal'   => $subtotal,
-            'discount'   => 0,
-            'domicilio'  => $tarifas['tarifa'],
-            'total'      => $subtotal + $tarifas['tarifa'],
+            'forms_id' => $efectivo ? 1 : 2,
+            'subtotal' => $subtotal,
+            'discount' => 0,
+            'domicilio' => $tarifas['tarifa'],
+            'total' => $subtotal + $tarifas['tarifa'],
             // Congelados al crear, igual que en producción.
-            'domiciliary_fee'  => round($tarifas['tarifa'] * $tarifas['reparto']),
-            'platform_fee'     => round($subtotal * $tarifas['comision'], 2),
+            'domiciliary_fee' => round($tarifas['tarifa'] * $tarifas['reparto']),
+            'platform_fee' => round($subtotal * $tarifas['comision'], 2),
             'delivery_subsidy' => 0,
-            'cash_due'         => 0,
-            'sale_date'        => $cuando,
-            'state'            => $estado,
+            'cash_due' => 0,
+            'sale_date' => $cuando,
+            'state' => $estado,
             // Contra entrega nace pendiente; el pagado en línea, confirmado.
-            'payment_state'    => $efectivo ? 'pending' : 'paid',
-            'pickup'           => 0,
-            'is_scheduled'     => 0,
-            'dispatched_at'    => $estado === 3 ? $cuando->copy()->addMinutes(12) : null,
+            'payment_state' => $efectivo ? 'pending' : 'paid',
+            'pickup' => 0,
+            'is_scheduled' => 0,
+            'dispatched_at' => $estado === 3 ? $cuando->copy()->addMinutes(12) : null,
             'promised_minutes' => 45,
-            'created_at'       => $cuando,
-            'updated_at'       => $cuando,
+            'created_at' => $cuando,
+            'updated_at' => $cuando,
         ], 'orderSales_id');
 
         foreach ($detalle as $d) {
@@ -162,14 +164,15 @@ class PedidosEnCursoDemoSeeder extends Seeder
 
     private function informar(array $creados): void
     {
-        if (!$creados) {
+        if (! $creados) {
             $this->command?->warn('No se creó ningún pedido.');
+
             return;
         }
 
         $lista = implode(',', $creados);
 
-        $this->command?->info('Pedidos de ejemplo creados: ' . count($creados));
+        $this->command?->info('Pedidos de ejemplo creados: '.count($creados));
         $this->command?->line('Para borrarlos:');
         $this->command?->line("  DELETE FROM orderssales_detail WHERE orderSales_id IN ({$lista});");
         $this->command?->line("  DELETE FROM orderssales        WHERE orderSales_id IN ({$lista});");

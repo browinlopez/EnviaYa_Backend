@@ -20,7 +20,6 @@ use Illuminate\Support\Facades\DB;
  * Esta prueba fija el arreglo. No comprueba que "hoy no salga": comprueba que
  * no pueda volver a salir sin que alguien lo note.
  */
-
 beforeEach(function () {
     // `business.type` es clave foránea a `category_business`.
     CategoryBusiness::forceCreate(['name' => 'Tienda']);
@@ -30,25 +29,25 @@ test('el catálogo público no expone los datos personales del propietario', fun
     $usuario = User::factory()->create();
 
     $propietario = Owner::forceCreate([
-        'user_id'           => $usuario->user_id,
-        'document_number'   => '1043663123',
-        'birthdate'         => '1990-05-14',
+        'user_id' => $usuario->user_id,
+        'document_number' => '1043663123',
+        'birthdate' => '1990-05-14',
         'contact_secondary' => '3009998877',
-        'notes'             => 'Nota interna del equipo comercial',
-        'state'             => 1,
+        'notes' => 'Nota interna del equipo comercial',
+        'state' => 1,
     ]);
 
     $negocio = Business::forceCreate([
-        'name'          => 'Tienda Doña Marta',
-        'state'         => 1,
-        'type'          => 1,
+        'name' => 'Tienda Doña Marta',
+        'state' => 1,
+        'type' => 1,
         'qualification' => 0,
     ]);
 
     DB::table('owner_busines')->insert([
-        'owner_id'   => $propietario->owner_id,
+        'owner_id' => $propietario->owner_id,
         'busines_id' => $negocio->busines_id,
-        'state'      => 1,
+        'state' => 1,
     ]);
 
     $respuesta = $this->getJson('/v1/top-businesses-free')->assertOk();
@@ -73,20 +72,20 @@ test('el catálogo público sigue devolviendo lo que la app necesita', function 
 
     $propietario = Owner::forceCreate([
         'user_id' => $usuario->user_id,
-        'state'   => 1,
+        'state' => 1,
     ]);
 
     $negocio = Business::forceCreate([
-        'name'          => 'Tienda Doña Marta',
-        'state'         => 1,
-        'type'          => 1,
+        'name' => 'Tienda Doña Marta',
+        'state' => 1,
+        'type' => 1,
         'qualification' => 0,
     ]);
 
     DB::table('owner_busines')->insert([
-        'owner_id'   => $propietario->owner_id,
+        'owner_id' => $propietario->owner_id,
         'busines_id' => $negocio->busines_id,
-        'state'      => 1,
+        'state' => 1,
     ]);
 
     $this->getJson('/v1/top-businesses-free')

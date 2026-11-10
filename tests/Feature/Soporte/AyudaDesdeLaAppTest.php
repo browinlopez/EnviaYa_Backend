@@ -3,8 +3,10 @@
 use App\Models\Buyer\Buyer;
 use App\Models\Operacion\Pqrs;
 use App\Models\Order\OrdersSales;
+use App\Models\Rol;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Laravel\Sanctum\Sanctum;
 
 /**
  * PEDIR AYUDA DESDE LA APP.
@@ -17,9 +19,8 @@ use Illuminate\Support\Facades\DB;
  * correo salen de la cuenta, no de lo que se teclee, y un pedido ajeno no se
  * puede colgar del reclamo propio.
  */
-
 beforeEach(function () {
-    App\Models\Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
+    Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
 });
 
 function comprador(string $correo = 'vecina@ejemplo.com'): User
@@ -35,12 +36,12 @@ function pedidoDeQuienEscribe(User $user): OrdersSales
     $buyer = Buyer::where('user_id', $user->user_id)->first();
 
     $id = DB::table('orderssales')->insertGetId([
-        'total'      => 25000,
-        'subtotal'   => 23000,
-        'domicilio'  => 2000,
-        'sale_date'  => now(),
-        'state'      => 4,
-        'buyer_id'   => $buyer->buyer_id,
+        'total' => 25000,
+        'subtotal' => 23000,
+        'domicilio' => 2000,
+        'sale_date' => now(),
+        'state' => 4,
+        'buyer_id' => $buyer->buyer_id,
     ], 'orderSales_id');
 
     return OrdersSales::find($id);
@@ -50,8 +51,8 @@ test('un reclamo desde la app llega a la bandeja con su radicado', function () {
     $user = comprador();
 
     $r = $this->actingAs($user)->postJson('/v1/ayuda', [
-        'type'        => 'reclamo',
-        'subject'     => 'Llegó un producto vencido',
+        'type' => 'reclamo',
+        'subject' => 'Llegó un producto vencido',
         'description' => 'El aceite venía con fecha de julio.',
     ]);
 
@@ -76,10 +77,10 @@ test('con el pedido delante, el caso ya sabe a qué tienda mirar', function () {
     $pedido = pedidoDeQuienEscribe($user);
 
     $this->actingAs($user)->postJson('/v1/ayuda', [
-        'type'        => 'queja',
-        'subject'     => 'El domiciliario nunca llegó',
+        'type' => 'queja',
+        'subject' => 'El domiciliario nunca llegó',
         'description' => 'Esperé una hora.',
-        'order_id'    => $pedido->orderSales_id,
+        'order_id' => $pedido->orderSales_id,
     ])->assertCreated();
 
     expect(Pqrs::first()->order_id)->toBe($pedido->orderSales_id);
@@ -96,10 +97,10 @@ test('no se puede colgar el reclamo de un pedido ajeno', function () {
      * no tuvieron nada que ver.
      */
     $this->actingAs($mio)->postJson('/v1/ayuda', [
-        'type'        => 'reclamo',
-        'subject'     => 'Reclamo del pedido de otro',
+        'type' => 'reclamo',
+        'subject' => 'Reclamo del pedido de otro',
         'description' => 'A ver si cuela.',
-        'order_id'    => $pedido->orderSales_id,
+        'order_id' => $pedido->orderSales_id,
     ])->assertForbidden();
 
     expect(Pqrs::count())->toBe(0);
@@ -107,8 +108,8 @@ test('no se puede colgar el reclamo de un pedido ajeno', function () {
 
 test('sin sesión no se radica nada', function () {
     $this->postJson('/v1/ayuda', [
-        'type'        => 'peticion',
-        'subject'     => 'Hola',
+        'type' => 'peticion',
+        'subject' => 'Hola',
         'description' => 'Sin cuenta.',
     ])->assertUnauthorized();
 });
@@ -117,13 +118,13 @@ test('el tipo y el texto se validan', function () {
     $user = comprador();
 
     $this->actingAs($user)->postJson('/v1/ayuda', [
-        'type'        => 'felicitacion', // eso es una reseña, no un PQRS
-        'subject'     => 'Todo bien',
+        'type' => 'felicitacion', // eso es una reseña, no un PQRS
+        'subject' => 'Todo bien',
         'description' => 'Gracias.',
     ])->assertStatus(422);
 
     $this->actingAs($user)->postJson('/v1/ayuda', [
-        'type'    => 'queja',
+        'type' => 'queja',
         'subject' => 'Sin cuerpo',
     ])->assertStatus(422);
 
@@ -150,12 +151,12 @@ test('cada quien ve sus casos y solo los suyos', function () {
 
 test('el tendero puede relacionar un pedido de su tienda, y no uno de otra', function () {
     $t = tenderoConCatalogo();
-    \Laravel\Sanctum\Sanctum::actingAs($t['user']);
+    Sanctum::actingAs($t['user']);
 
-    $suyo = \Illuminate\Support\Facades\DB::table('orderssales')->insertGetId([
+    $suyo = DB::table('orderssales')->insertGetId([
         'busines_id' => $t['mio'], 'state' => 4, 'total' => 1000, 'sale_date' => now(),
     ], 'orderSales_id');
-    $ajeno = \Illuminate\Support\Facades\DB::table('orderssales')->insertGetId([
+    $ajeno = DB::table('orderssales')->insertGetId([
         'busines_id' => $t['vecino'], 'state' => 4, 'total' => 1000, 'sale_date' => now(),
     ], 'orderSales_id');
 

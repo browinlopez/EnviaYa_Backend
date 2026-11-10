@@ -36,7 +36,7 @@ return new class extends Migration
          * correlacionadas. El resultado es el mismo en ambos caminos.
          */
         if (in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true)) {
-            DB::statement("
+            DB::statement('
                 UPDATE orderssales o
                 LEFT JOIN (
                     SELECT orderSales_id, SUM(amount * unit_price) AS suma
@@ -45,7 +45,7 @@ return new class extends Migration
                 ) d ON d.orderSales_id = o.orderSales_id
                 SET o.subtotal  = COALESCE(d.suma, o.total),
                     o.domicilio = GREATEST(o.total - COALESCE(d.suma, o.total), 0)
-            ");
+            ');
         } else {
             $suma = '(SELECT SUM(d.amount * d.unit_price)
                       FROM orderssales_detail d

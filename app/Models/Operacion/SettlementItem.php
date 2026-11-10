@@ -30,11 +30,11 @@ class SettlementItem extends Model
 
     protected $casts = [
         'settlement_id' => 'integer',
-        'order_id'      => 'integer',
-        'gross'         => 'decimal:2',
-        'delivery_fee'  => 'decimal:2',
-        'discount'      => 'decimal:2',
-        'net'           => 'decimal:2',
+        'order_id' => 'integer',
+        'gross' => 'decimal:2',
+        'delivery_fee' => 'decimal:2',
+        'discount' => 'decimal:2',
+        'net' => 'decimal:2',
     ];
 
     public function settlement(): BelongsTo

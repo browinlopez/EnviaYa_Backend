@@ -10,19 +10,19 @@ return new class extends Migration
     {
         Schema::table('payments', function (Blueprint $table) {
 
-            if (!Schema::hasColumn('payments', 'redirect_url')) {
+            if (! Schema::hasColumn('payments', 'redirect_url')) {
                 $table->string('redirect_url')
                     ->nullable()
                     ->before('state');
             }
 
-            if (!Schema::hasColumn('payments', 'qr_payload')) {
+            if (! Schema::hasColumn('payments', 'qr_payload')) {
                 $table->text('qr_payload')
                     ->nullable()
                     ->after('redirect_url');
             }
 
-            if (!Schema::hasColumn('payments', 'qr_expires_at')) {
+            if (! Schema::hasColumn('payments', 'qr_expires_at')) {
                 $table->timestamp('qr_expires_at')
                     ->nullable()
                     ->after('qr_payload');

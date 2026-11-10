@@ -8,6 +8,7 @@ use App\Models\Operacion\DomiciliaryDocument;
 use App\Models\Order\OrdersSales;
 use App\Services\Ajustes;
 use App\Services\CustodiaDeEfectivo;
+use App\Services\PapelesDelDomiciliario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -43,17 +44,15 @@ class FichaDelDomiciliarioController extends Controller
 {
     /** Los que el tendero reconoce, con el nombre que usa al pedirlos. */
     private const ROTULOS = [
-        'cedula'        => ['Cédula', 'Las dos caras'],
-        'licencia'      => ['Licencia de conducción', 'Categoría A2 para moto'],
-        'soat'          => ['SOAT', 'Del seguro obligatorio'],
+        'cedula' => ['Cédula', 'Las dos caras'],
+        'licencia' => ['Licencia de conducción', 'Categoría A2 para moto'],
+        'soat' => ['SOAT', 'Del seguro obligatorio'],
         'tecnomecanica' => ['Tecnomecánica', 'Revisión de la moto'],
-        'arl'           => ['ARL', 'Riesgos laborales'],
-        'eps'           => ['EPS', 'Afiliación en salud'],
+        'arl' => ['ARL', 'Riesgos laborales'],
+        'eps' => ['EPS', 'Afiliación en salud'],
     ];
 
-    public function __construct(private readonly CustodiaDeEfectivo $custodia)
-    {
-    }
+    public function __construct(private readonly CustodiaDeEfectivo $custodia) {}
 
     public function show(Request $request, int $id)
     {
@@ -79,17 +78,17 @@ class FichaDelDomiciliarioController extends Controller
 
         return response()->json([
             'domiciliario' => [
-                'domiciliary_id'    => $d->domiciliary_id,
-                'name'              => $d->user?->name,
-                'email'             => $d->user?->email,
-                'phone'             => $d->user?->phone,
-                'available'         => (bool) $d->available,
-                'qualification'     => $d->qualification,
-                'active_orders'     => $encima->count(),
+                'domiciliary_id' => $d->domiciliary_id,
+                'name' => $d->user?->name,
+                'email' => $d->user?->email,
+                'phone' => $d->user?->phone,
+                'available' => (bool) $d->available,
+                'qualification' => $d->qualification,
+                'active_orders' => $encima->count(),
                 'max_active_orders' => $max,
-                'cash_on_hand'      => round($this->custodia->saldo($d->domiciliary_id), 2),
+                'cash_on_hand' => round($this->custodia->saldo($d->domiciliary_id), 2),
             ],
-            'actividad'  => $this->actividad($d->domiciliary_id, $negocioId),
+            'actividad' => $this->actividad($d->domiciliary_id, $negocioId),
             /* Lo que alimenta la vista de detalle: la semana contra la
                anterior, las entregas por dia, sus pedidos contigo, lo que le
                pagaste y el historial. Todo sale de los pedidos de ESTA tienda. */
@@ -97,36 +96,36 @@ class FichaDelDomiciliarioController extends Controller
             /* Misma forma que `/domiciliaries/contrato`, que es de donde sale
                la verdad: el panel de la tienda y el telefono del domiciliario
                no deben contar lo mismo de dos maneras. */
-            'acuerdo'    => [
-                'firmado'    => $d->contract_signed_at !== null,
+            'acuerdo' => [
+                'firmado' => $d->contract_signed_at !== null,
                 'firmado_el' => $d->contract_signed_at,
-                'ciudad'     => $d->contract_city,
+                'ciudad' => $d->contract_city,
             ],
             'documentos' => $this->documentos($d->domiciliary_id),
             /* Si puede recibir pedidos o qué le falta. Solo aplica a los que
                dio de alta una tienda (ver PapelesDelDomiciliario). */
-            'despacho'   => (function () use ($d) {
-                $papeles = app(\App\Services\PapelesDelDomiciliario::class);
+            'despacho' => (function () use ($d) {
+                $papeles = app(PapelesDelDomiciliario::class);
                 $faltan = $papeles->faltantes($d);
 
                 return [
                     'exige_papeles' => $papeles->leAplica($d),
-                    'bloqueado'     => (bool) $faltan,
-                    'faltan'        => $faltan,
-                    'texto'         => $faltan ? 'Le falta ' . $papeles->enPalabras($faltan) . '.' : null,
+                    'bloqueado' => (bool) $faltan,
+                    'faltan' => $faltan,
+                    'texto' => $faltan ? 'Le falta '.$papeles->enPalabras($faltan).'.' : null,
                 ];
             })(),
-            'negocios'   => $d->businesses->map(fn ($b) => [
+            'negocios' => $d->businesses->map(fn ($b) => [
                 'busines_id' => $b->busines_id,
-                'name'       => $b->name,
-                'es_tuyo'    => (int) $b->busines_id === $negocioId,
+                'name' => $b->name,
+                'es_tuyo' => (int) $b->busines_id === $negocioId,
             ])->values(),
             'encima' => $encima->map(fn ($o) => [
                 'orderSales_id' => $o->orderSales_id,
-                'cliente'       => $o->buyer?->user?->name,
-                'total'         => $o->total,
-                'cash_due'      => $o->cash_due,
-                'methods_id'    => $o->methods_id,
+                'cliente' => $o->buyer?->user?->name,
+                'total' => $o->total,
+                'cash_due' => $o->cash_due,
+                'methods_id' => $o->methods_id,
                 'dispatched_at' => $o->dispatched_at,
             ])->values(),
         ]);
@@ -166,8 +165,8 @@ class FichaDelDomiciliarioController extends Controller
 
             return [
                 'entregas' => $lote->count(),
-                'pagado'   => round((float) $lote->sum('domiciliary_fee'), 2),
-                'minutos'  => $min->isEmpty() ? null : round($min->avg(), 1),
+                'pagado' => round((float) $lote->sum('domiciliary_fee'), 2),
+                'minutos' => $min->isEmpty() ? null : round($min->avg(), 1),
             ];
         };
 
@@ -175,7 +174,7 @@ class FichaDelDomiciliarioController extends Controller
             $dia = now()->subDays($atras)->toDateString();
 
             return [
-                'fecha'    => $dia,
+                'fecha' => $dia,
                 'entregas' => $entregados->filter(fn ($o) => $o->delivery_date->toDateString() === $dia)->count(),
             ];
         })->values();
@@ -184,45 +183,45 @@ class FichaDelDomiciliarioController extends Controller
         foreach ($entregados as $o) {
             if ((float) $o->domiciliary_fee > 0) {
                 $movimientos->push([
-                    'tipo'     => 'domicilio',
+                    'tipo' => 'domicilio',
                     'order_id' => $o->orderSales_id,
-                    'valor'    => round((float) $o->domiciliary_fee, 2),
-                    'fecha'    => $o->delivery_date,
+                    'valor' => round((float) $o->domiciliary_fee, 2),
+                    'fecha' => $o->delivery_date,
                 ]);
             }
             if ((float) $o->cash_due > 0) {
                 $movimientos->push([
-                    'tipo'     => 'efectivo',
+                    'tipo' => 'efectivo',
                     'order_id' => $o->orderSales_id,
-                    'valor'    => round((float) $o->cash_due, 2),
-                    'fecha'    => $o->delivery_date,
+                    'valor' => round((float) $o->cash_due, 2),
+                    'fecha' => $o->delivery_date,
                 ]);
             }
         }
 
         return [
             'semana' => [
-                'actual'   => $resumirSemana($semana($lunes, now()->addMinute())),
+                'actual' => $resumirSemana($semana($lunes, now()->addMinute())),
                 'anterior' => $resumirSemana($semana($lunesPasado, $lunes)),
             ],
             'por_dia' => $porDia,
             'pedidos' => $pedidos->map(fn ($o) => [
                 'orderSales_id' => $o->orderSales_id,
-                'cliente'       => $o->buyer?->user?->name,
-                'state'         => (int) $o->state,
-                'methods_id'    => $o->methods_id,
+                'cliente' => $o->buyer?->user?->name,
+                'state' => (int) $o->state,
+                'methods_id' => $o->methods_id,
                 'payment_state' => $o->payment_state,
-                'total'         => $o->total,
-                'cash_due'      => $o->cash_due,
-                'fee'           => $o->domiciliary_fee,
-                'sale_date'     => $o->sale_date,
+                'total' => $o->total,
+                'cash_due' => $o->cash_due,
+                'fee' => $o->domiciliary_fee,
+                'sale_date' => $o->sale_date,
                 'dispatched_at' => $o->dispatched_at,
                 'delivery_date' => $o->delivery_date,
             ])->values(),
             'pagos' => [
-                'pagado'           => round((float) $entregados->sum('domiciliary_fee'), 2),
+                'pagado' => round((float) $entregados->sum('domiciliary_fee'), 2),
                 'efectivo_cobrado' => round((float) $entregados->sum('cash_due'), 2),
-                'movimientos'      => $movimientos->sortByDesc(fn ($m) => (string) $m['fecha'])->take(60)->values(),
+                'movimientos' => $movimientos->sortByDesc(fn ($m) => (string) $m['fecha'])->take(60)->values(),
             ],
             'historial' => $this->historial($d, $pedidos),
         ];
@@ -236,7 +235,7 @@ class FichaDelDomiciliarioController extends Controller
     private function historial(Domiciliary $d, $pedidos): array
     {
         $eventos = collect();
-        $plata = fn ($v) => '$' . number_format((float) $v, 0, ',', '.');
+        $plata = fn ($v) => '$'.number_format((float) $v, 0, ',', '.');
 
         foreach ($pedidos as $o) {
             $n = $o->orderSales_id;
@@ -249,12 +248,12 @@ class FichaDelDomiciliarioController extends Controller
                     'texto' => "Entregó el pedido #{$n}", 'fecha' => $o->delivery_date]);
                 if ((float) $o->domiciliary_fee > 0) {
                     $eventos->push(['tipo' => 'pagos', 'icono' => 'pago',
-                        'texto' => 'Ganó ' . $plata($o->domiciliary_fee) . " por el pedido #{$n}",
+                        'texto' => 'Ganó '.$plata($o->domiciliary_fee)." por el pedido #{$n}",
                         'fecha' => $o->delivery_date]);
                 }
                 if ((float) $o->cash_due > 0) {
                     $eventos->push(['tipo' => 'pagos', 'icono' => 'efectivo',
-                        'texto' => 'Cobró ' . $plata($o->cash_due) . " en efectivo por el pedido #{$n}",
+                        'texto' => 'Cobró '.$plata($o->cash_due)." en efectivo por el pedido #{$n}",
                         'fecha' => $o->delivery_date]);
                 }
             }
@@ -269,7 +268,7 @@ class FichaDelDomiciliarioController extends Controller
             ->each(function ($doc) use ($eventos) {
                 $rotulo = (self::ROTULOS[$doc->type] ?? [ucfirst($doc->type)])[0];
                 $eventos->push(['tipo' => 'documentos', 'icono' => 'documento',
-                    'texto' => "Se cargó {$rotulo}" . ($doc->notes ? " · {$doc->notes}" : ''),
+                    'texto' => "Se cargó {$rotulo}".($doc->notes ? " · {$doc->notes}" : ''),
                     'fecha' => $doc->created_at]);
             });
 
@@ -321,10 +320,10 @@ class FichaDelDomiciliarioController extends Controller
             ->map(fn ($o) => $o->dispatched_at->diffInMinutes($o->delivery_date));
 
         return [
-            'entregas'       => (int) $fila->entregas,
-            'ganado'         => round((float) $fila->ganado, 2),
-            'entregas_hoy'   => (int) $hoy->entregas,
-            'ganado_hoy'     => round((float) $hoy->ganado, 2),
+            'entregas' => (int) $fila->entregas,
+            'ganado' => round((float) $fila->ganado, 2),
+            'entregas_hoy' => (int) $hoy->entregas,
+            'ganado_hoy' => round((float) $hoy->ganado, 2),
             'minutos_medios' => $minutos->isEmpty() ? null : round($minutos->avg(), 1),
         ];
     }
@@ -354,16 +353,16 @@ class FichaDelDomiciliarioController extends Controller
             [$rotulo, $pista] = self::ROTULOS[$tipo] ?? [ucfirst($tipo), null];
 
             return [
-                'tipo'      => $tipo,
-                'rotulo'    => $rotulo,
-                'pista'     => $pista,
+                'tipo' => $tipo,
+                'rotulo' => $rotulo,
+                'pista' => $pista,
                 'situacion' => $doc ? $doc->situacion() : 'falta',
-                'vence_el'  => $doc?->expires_at?->toDateString(),
-                'dias'      => $doc?->diasRestantes(),
+                'vence_el' => $doc?->expires_at?->toDateString(),
+                'dias' => $doc?->diasRestantes(),
                 /* Si hay archivo que ver. El archivo en sí se pide aparte, a
                    `documentos/{tipo}/archivo`, con la sesión de la tienda. */
                 'tiene_archivo' => (bool) $doc?->media_id,
-                'es_pdf'        => $doc?->media_id
+                'es_pdf' => $doc?->media_id
                     ? DB::table('media_files')->where('id', $doc->media_id)->value('mime_type') === 'application/pdf'
                     : false,
             ];

@@ -6,9 +6,6 @@ use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
 use App\Models\Buyer\Buyer;
 use App\Models\User;
-use App\Models\User\UserAddress;
-use App\Models\Notification;
-use App\Services\MunicipioPorNombre;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
@@ -22,21 +19,21 @@ class UserController extends Controller
     {
         $users = User::with([
             'buyer.complexes.residentialComplex',
-            'addresses'
+            'addresses',
         ])
             ->where('rol', 4)
             ->get();
 
         $formatted = $users->map(function ($user) {
             return [
-                'user_id'       => $user->user_id,
-                'name'          => $user->name,
-                'email'         => $user->email,
-                'phone'         => $user->phone,
-                'address'       => $user->address,
-                'rol'           => $user->rol,
+                'user_id' => $user->user_id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'address' => $user->address,
+                'rol' => $user->rol,
                 'qualification' => $user->buyer ? $user->buyer->qualification : null,
-                'state'         => $user->state,
+                'state' => $user->state,
 
                 // Buyer directo (sin arreglo)
                 'buyer_id' => $user->buyer ? $user->buyer->buyer_id : null,
@@ -44,7 +41,7 @@ class UserController extends Controller
                 // Complexes simplificado (id y nombre del residencial)
                 'complexes' => $user->buyer && $user->buyer->complexes ? $user->buyer->complexes->map(function ($complex) {
                     return [
-                        'id'   => $complex->id,
+                        'id' => $complex->id,
                         'name' => $complex->residentialComplex ? $complex->residentialComplex->name : null,
                     ];
                 }) : [],
@@ -66,20 +63,20 @@ class UserController extends Controller
 
         $user = User::with([
             'buyer.complexes.residentialComplex',
-            'addresses'
+            'addresses',
         ])
             ->where('rol', 4)
             ->findOrFail($request->user_id);
 
         $formatted = [
-            'user_id'       => $user->user_id,
-            'name'          => $user->name,
-            'email'         => $user->email,
-            'phone'         => $user->phone,
-            'address'       => $user->address,
-            'rol'           => $user->rol,
+            'user_id' => $user->user_id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'phone' => $user->phone,
+            'address' => $user->address,
+            'rol' => $user->rol,
             'qualification' => $user->buyer ? $user->buyer->qualification : null,
-            'state'         => $user->state,
+            'state' => $user->state,
 
             // Buyer directo (sin arreglo)
             'buyer_id' => $user->buyer ? $user->buyer->buyer_id : null,
@@ -87,7 +84,7 @@ class UserController extends Controller
             // Complexes simplificado (id y nombre del residencial)
             'complexes' => $user->buyer && $user->buyer->complexes ? $user->buyer->complexes->map(function ($complex) {
                 return [
-                    'id'   => $complex->id,
+                    'id' => $complex->id,
                     'name' => $complex->residentialComplex ? $complex->residentialComplex->name : null,
                 ];
             }) : [],
@@ -114,9 +111,9 @@ class UserController extends Controller
         $user = $request->user();
 
         $request->validate([
-            'name'    => 'nullable|string|max:255',
-            'email'   => 'nullable|email|unique:user,email,' . $user->user_id . ',user_id',
-            'phone'   => 'nullable|string|max:20',
+            'name' => 'nullable|string|max:255',
+            'email' => 'nullable|email|unique:user,email,'.$user->user_id.',user_id',
+            'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string|max:225',
             'current_password' => 'nullable|string',
         ], [
@@ -139,14 +136,14 @@ class UserController extends Controller
         if ($correoNuevo) {
             $clave = (string) $request->input('current_password', '');
 
-            if ($clave === '' || !Hash::check($clave, $user->password)) {
+            if ($clave === '' || ! Hash::check($clave, $user->password)) {
                 $texto = $clave === ''
                     ? 'Para cambiar el correo escribe tu contraseña.'
                     : 'La contraseña no es correcta.';
 
                 return response()->json([
                     'message' => $texto,
-                    'errors'  => ['current_password' => [$texto]],
+                    'errors' => ['current_password' => [$texto]],
                 ], 422);
             }
         }
@@ -175,15 +172,15 @@ class UserController extends Controller
     {
         $request->validate([
             'current_password' => 'required|string',
-            'password'         => ['required', 'confirmed', Password::min(8)],
+            'password' => ['required', 'confirmed', Password::min(8)],
         ]);
 
         $user = $request->user();
 
-        if (!Hash::check($request->current_password, $user->password)) {
+        if (! Hash::check($request->current_password, $user->password)) {
             return response()->json([
                 'message' => 'La contraseña actual no es correcta',
-                'errors'  => [
+                'errors' => [
                     'current_password' => ['La contraseña actual no es correcta'],
                 ],
             ], 422);
@@ -192,7 +189,7 @@ class UserController extends Controller
         if (Hash::check($request->password, $user->password)) {
             return response()->json([
                 'message' => 'La nueva contraseña debe ser distinta a la actual',
-                'errors'  => [
+                'errors' => [
                     'password' => ['La nueva contraseña debe ser distinta a la actual'],
                 ],
             ], 422);
@@ -249,10 +246,10 @@ class UserController extends Controller
         ]);
 
         $buyer = Buyer::with([
-            'user:user_id,name,email,phone,address,rol,qualification,state'
+            'user:user_id,name,email,phone,address,rol,qualification,state',
         ])->where('user_id', $request->user_id)->first();
 
-        if (!$buyer) {
+        if (! $buyer) {
             return response()->json(['message' => 'El usuario no tiene perfil comprador'], 404);
         }
 
@@ -269,13 +266,12 @@ class UserController extends Controller
                 'address' => $buyer->user->address,
                 'rol' => $buyer->user->rol,
                 'qualification' => $buyer->user->qualification,
-                'state' => $buyer->user->state
-            ]
+                'state' => $buyer->user->state,
+            ],
         ];
 
         return response()->json($response);
     }
-
 
     // ----------------------------
     // Notificaciones del usuario

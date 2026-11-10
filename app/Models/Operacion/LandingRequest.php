@@ -18,9 +18,12 @@ class LandingRequest extends Model
 {
     protected $table = 'landing_requests';
 
-    public const NUEVA      = 0;
+    public const NUEVA = 0;
+
     public const EN_GESTION = 1;
-    public const ATENDIDA   = 2;
+
+    public const ATENDIDA = 2;
+
     public const DESCARTADA = 3;
 
     /** Los tipos que acepta el enum de la tabla. */
@@ -44,11 +47,11 @@ class LandingRequest extends Model
      * Las claves están en minúscula y sin tildes para comparar sin sorpresas.
      */
     public const MOTIVOS = [
-        'tengo un comercio'    => 'comercio',
-        'quiero repartir'      => 'domiciliario',
-        'soy vecino'           => 'vecino',
+        'tengo un comercio' => 'comercio',
+        'quiero repartir' => 'domiciliario',
+        'soy vecino' => 'vecino',
         'conjunto residencial' => 'conjunto',
-        'eliminar mi cuenta'   => 'eliminacion',
+        'eliminar mi cuenta' => 'eliminacion',
     ];
 
     /**
@@ -76,6 +79,7 @@ class LandingRequest extends Model
 
     /** Lo que se acepta como foto o comprobante de una PQRS. */
     public const ADJUNTO_TIPOS = 'jpg,jpeg,png,webp,heic,pdf';
+
     public const ADJUNTO_MAX_KB = 8192; // 8 MB, igual que el resto de subidas
 
     /** Disco privado: el comprobante de una persona no va al bucket público. */
@@ -115,11 +119,11 @@ class LandingRequest extends Model
     protected $appends = ['tiene_adjunto'];
 
     protected $casts = [
-        'payload'     => 'array',
-        'state'       => 'integer',
+        'payload' => 'array',
+        'state' => 'integer',
         'assigned_to' => 'integer',
-        'due_at'      => 'datetime',
-        'handled_at'  => 'datetime',
+        'due_at' => 'datetime',
+        'handled_at' => 'datetime',
         'accepted_at' => 'datetime',
     ];
 
@@ -179,8 +183,8 @@ class LandingRequest extends Model
     {
         return match ($tipo) {
             'eliminacion' => self::DIAS_ELIMINACION,
-            'pqrs'        => self::DIAS_PQRS,
-            default       => null,
+            'pqrs' => self::DIAS_PQRS,
+            default => null,
         };
     }
 
@@ -197,7 +201,7 @@ class LandingRequest extends Model
     /** ¿Se pasó del plazo comprometido sin atenderse? */
     public function vencida(): bool
     {
-        if (!$this->due_at || in_array($this->state, [self::ATENDIDA, self::DESCARTADA], true)) {
+        if (! $this->due_at || in_array($this->state, [self::ATENDIDA, self::DESCARTADA], true)) {
             return false;
         }
 

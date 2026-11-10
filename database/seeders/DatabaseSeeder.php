@@ -26,7 +26,7 @@ class DatabaseSeeder extends Seeder
             DocumentTypeSeeder::class,
             DomiciliarioPermissionsSeeder::class,
             CompradorPermissionsSeeder::class,
-            UsersSeeder::class
+            UsersSeeder::class,
         ]);
         /* User::factory()->create([
             'name' => 'Test User',

@@ -94,7 +94,7 @@ return new class extends Migration
                    AND COLUMN_NAME = 'invoice_id'
             ");
 
-            if ($sinAuto && !str_contains(strtolower($sinAuto->EXTRA ?? ''), 'auto_increment')) {
+            if ($sinAuto && ! str_contains(strtolower($sinAuto->EXTRA ?? ''), 'auto_increment')) {
                 DB::statement('ALTER TABLE invoices MODIFY invoice_id INT NOT NULL AUTO_INCREMENT');
             }
         }

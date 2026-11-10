@@ -6,18 +6,15 @@ use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
 use App\Models\Buyer\Buyer;
 use App\Models\Domiciliary;
-use App\Models\Order\OrdersSales;
 use App\Models\Reviews\BusinessReview;
-use App\Models\Reviews\DomiciliaryReview;
-use App\Models\Reviews\UserReview;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class ResenasDeNegocioController extends Controller
 {
-    use ComprobarPertenencia;
     use AyudasDeResenas;
+    use ComprobarPertenencia;
 
     public function listBusinessReviews()
     {
@@ -59,10 +56,10 @@ class ResenasDeNegocioController extends Controller
                  * ficha del negocio y en el listado del inicio.
                  */
                 'user' => $review->buyer?->user ? [
-                    'user_id'       => $review->buyer->user->user_id,
-                    'name'          => $review->buyer->user->name,
+                    'user_id' => $review->buyer->user->user_id,
+                    'name' => $review->buyer->user->name,
                     'qualification' => $review->buyer->user->qualification,
-                    'state'         => $review->buyer->user->state,
+                    'state' => $review->buyer->user->state,
                 ] : null,
             ];
         });
@@ -73,7 +70,7 @@ class ResenasDeNegocioController extends Controller
     public function listReviewsByBusiness(Request $request)
     {
         $request->validate([
-            'business_id' => 'required|integer|exists:business,busines_id'
+            'business_id' => 'required|integer|exists:business,busines_id',
         ]);
 
         // Las más recientes primero; las que no tienen fecha (reseñas viejas,
@@ -129,7 +126,7 @@ class ResenasDeNegocioController extends Controller
         // por compatibilidad con clientes viejos pero se normaliza antes de
         // validar e insertar (con business_id el fillable lo descartaba y el
         // INSERT reventaba con "Field 'busines_id' doesn't have a default value").
-        if ($request->filled('business_id') && !$request->filled('busines_id')) {
+        if ($request->filled('business_id') && ! $request->filled('busines_id')) {
             $request->merge(['busines_id' => $request->business_id]);
         }
 
@@ -138,7 +135,7 @@ class ResenasDeNegocioController extends Controller
             'buyer_id' => 'required|integer|exists:buyer,buyer_id',
             'qualification' => 'required|numeric|min:0|max:5',
             'comment' => 'nullable|string',
-            'state' => 'boolean'
+            'state' => 'boolean',
         ]);
 
         DB::beginTransaction();
@@ -156,13 +153,14 @@ class ResenasDeNegocioController extends Controller
             return response()->json([
                 'message' => 'Review creada y calificación actualizada',
                 'review' => $review,
-                'new_qualification' => $average
+                'new_qualification' => $average,
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'message' => 'Error al crear la reseña',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -173,14 +171,14 @@ class ResenasDeNegocioController extends Controller
             'reviews_id' => 'required|integer|exists:business_reviews,reviews_id',
             'qualification' => 'nullable|numeric|min:0|max:5',
             'comment' => 'nullable|string',
-            'state' => 'nullable|boolean'
+            'state' => 'nullable|boolean',
         ]);
 
         DB::beginTransaction();
 
         try {
             $review = BusinessReview::find($request->reviews_id);
-            if (!$review) {
+            if (! $review) {
                 throw new \Exception('Review no encontrada');
             }
 
@@ -191,7 +189,7 @@ class ResenasDeNegocioController extends Controller
              * nota a cualquiera o borrarla. Una calificacion que el calificado
              * puede borrar no es una calificacion.
              */
-            if (!$this->esSuyaLaResena($request, $review->buyer_id, 'buyer')) {
+            if (! $this->esSuyaLaResena($request, $review->buyer_id, 'buyer')) {
                 DB::rollBack();
 
                 return response()->json(['message' => 'Esa resena no es tuya.'], 403);
@@ -212,13 +210,14 @@ class ResenasDeNegocioController extends Controller
             return response()->json([
                 'message' => 'Review actualizada',
                 'review' => $review,
-                'new_qualification' => $average
+                'new_qualification' => $average,
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'message' => 'Error al actualizar la reseña',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -233,7 +232,7 @@ class ResenasDeNegocioController extends Controller
 
         try {
             $review = BusinessReview::find($request->reviews_id);
-            if (!$review) {
+            if (! $review) {
                 throw new \Exception('Review no encontrada');
             }
 
@@ -244,7 +243,7 @@ class ResenasDeNegocioController extends Controller
              * nota a cualquiera o borrarla. Una calificacion que el calificado
              * puede borrar no es una calificacion.
              */
-            if (!$this->esSuyaLaResena($request, $review->buyer_id, 'buyer')) {
+            if (! $this->esSuyaLaResena($request, $review->buyer_id, 'buyer')) {
                 DB::rollBack();
 
                 return response()->json(['message' => 'Esa resena no es tuya.'], 403);
@@ -262,13 +261,14 @@ class ResenasDeNegocioController extends Controller
 
             return response()->json([
                 'message' => 'Review eliminada',
-                'new_qualification' => $average
+                'new_qualification' => $average,
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'message' => 'Error al eliminar la reseña',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

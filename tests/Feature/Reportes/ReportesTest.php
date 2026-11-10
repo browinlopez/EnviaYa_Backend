@@ -14,14 +14,13 @@ use Laravel\Sanctum\Sanctum;
  * contra el periodo anterior de IGUAL tamaño, y que los filtros acoten de
  * verdad en vez de decorar la pantalla.
  */
-
 function adminDeReportes(): User
 {
     Rol::firstOrCreate(['rol_id' => 4], ['name' => 'admin', 'guard_name' => 'web']);
 
     $user = User::factory()->create([
-        'rol'          => 4,
-        'area_id'      => Area::where('code', 'sistema')->firstOrFail()->id,
+        'rol' => 4,
+        'area_id' => Area::where('code', 'sistema')->firstOrFail()->id,
         'access_level' => Area::NIVEL_GESTOR,
     ]);
 
@@ -34,29 +33,29 @@ function adminDeReportes(): User
 function pedidoDeReporte(int $negocio, string $fecha, int $total, int $domicilio = 5000): int
 {
     return (int) DB::table('orderssales')->insertGetId([
-        'busines_id'      => $negocio,
-        'subtotal'        => $total - $domicilio,
-        'domicilio'       => $domicilio,
+        'busines_id' => $negocio,
+        'subtotal' => $total - $domicilio,
+        'domicilio' => $domicilio,
         'domiciliary_fee' => (int) round($domicilio * 0.25),
-        'discount'        => 0,
-        'total'           => $total,
-        'currency'        => 'COP',
-        'sale_date'       => $fecha . ' 12:00:00',
-        'state'           => 4,
-        'payment_state'   => 'approved',
-        'created_at'      => $fecha . ' 12:00:00',
-        'updated_at'      => $fecha . ' 12:00:00',
+        'discount' => 0,
+        'total' => $total,
+        'currency' => 'COP',
+        'sale_date' => $fecha.' 12:00:00',
+        'state' => 4,
+        'payment_state' => 'approved',
+        'created_at' => $fecha.' 12:00:00',
+        'updated_at' => $fecha.' 12:00:00',
     ], 'orderSales_id');
 }
 
 function negocioDeReporte(string $nombre, ?int $municipio = null, ?int $tipo = null): int
 {
     return (int) DB::table('business')->insertGetId([
-        'name'            => $nombre,
+        'name' => $nombre,
         'municipality_id' => $municipio,
-        'type'            => $tipo,
-        'state'           => 1,
-        'qualification'   => 0,
+        'type' => $tipo,
+        'state' => 1,
+        'qualification' => 0,
     ], 'busines_id');
 }
 
@@ -130,20 +129,20 @@ it('el filtro por municipio alcanza a través del negocio', function () {
 
     // La base de pruebas arranca sin catálogo geográfico: se crea el mínimo.
     $departamento = DB::table('departments')->insertGetId([
-        'name'       => 'Atlántico',
+        'name' => 'Atlántico',
         'country_id' => DB::table('countries')->insertGetId([
-            'name'     => 'Colombia',
+            'name' => 'Colombia',
             'iso_code' => 'CO',
         ]),
     ]);
 
     $municipio = (int) DB::table('municipalities')->insertGetId([
-        'name'          => 'Barranquilla',
+        'name' => 'Barranquilla',
         'department_id' => $departamento,
     ]);
 
     $dentro = negocioDeReporte('En el municipio', $municipio);
-    $fuera  = negocioDeReporte('En otro lado', null);
+    $fuera = negocioDeReporte('En otro lado', null);
 
     pedidoDeReporte($dentro, now()->subDays(2)->toDateString(), 40000);
     pedidoDeReporte($fuera, now()->subDays(2)->toDateString(), 700000);
@@ -157,7 +156,7 @@ it('el reporte por negocio ordena por ingreso y calcula la concentración', func
     adminDeReportes();
 
     $grande = negocioDeReporte('El que sostiene');
-    $chico  = negocioDeReporte('El pequeño');
+    $chico = negocioDeReporte('El pequeño');
 
     pedidoDeReporte($grande, now()->subDays(2)->toDateString(), 300000);
     pedidoDeReporte($chico, now()->subDays(2)->toDateString(), 100000);
@@ -183,13 +182,13 @@ it('el reporte por negocio marca la tasa de cancelación', function () {
 
     // Un cancelado del mismo periodo.
     DB::table('orderssales')->insert([
-        'busines_id'    => $negocio,
-        'subtotal'      => 50000,
-        'domicilio'     => 5000,
-        'total'         => 55000,
-        'currency'      => 'COP',
-        'sale_date'     => now()->subDays(2)->toDateString() . ' 12:00:00',
-        'state'         => 5,
+        'busines_id' => $negocio,
+        'subtotal' => 50000,
+        'domicilio' => 5000,
+        'total' => 55000,
+        'currency' => 'COP',
+        'sale_date' => now()->subDays(2)->toDateString().' 12:00:00',
+        'state' => 5,
         'payment_state' => 'cancelled',
     ]);
 

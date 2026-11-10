@@ -7,7 +7,9 @@ use App\Models\User;
 use App\Services\CobroContraEntrega;
 use App\Services\CreditoDeTienda;
 use App\Services\LiquidacionService;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 
 /**
@@ -74,10 +76,10 @@ function credPedir(array $e, int $unidades, int $metodo = CreditoDeTienda::METOD
     Sanctum::actingAs($e['comprador']);
 
     return test()->postJson('/v1/orders/orders', [
-        'user_id'    => $e['comprador']->user_id,
+        'user_id' => $e['comprador']->user_id,
         'busines_id' => $e['negocio'],
         'address_id' => $e['direccion'],
-        'products'   => [['product_id' => $e['producto'], 'amount' => $unidades]],
+        'products' => [['product_id' => $e['producto'], 'amount' => $unidades]],
         'methods_id' => $metodo,
     ]);
 }
@@ -94,7 +96,7 @@ function credEntregado(array $e, int $metodo, float $subtotal, float $domicilio,
         'buyer_id' => $e['buyerId'], 'busines_id' => $e['negocio'], 'methods_id' => $metodo,
         'subtotal' => $subtotal, 'domicilio' => $domicilio, 'total' => $subtotal + $domicilio,
         'discount' => 0, 'platform_fee' => round($subtotal * 0.03, 2),
-        'sale_date' => $fecha . ' 10:00:00', 'state' => 4, 'payment_state' => 'paid',
+        'sale_date' => $fecha.' 10:00:00', 'state' => 4, 'payment_state' => 'paid',
     ], 'orderSales_id');
 }
 
@@ -220,12 +222,12 @@ it('el abono del cliente libera el cupo, pero no más de lo que debe', function 
 
 it('el abono puede llevar su comprobante y el libro lo enseña', function () {
     config([
-        'filesystems.disks.r2.key'      => 'prueba',
-        'filesystems.disks.r2.secret'   => 'prueba',
+        'filesystems.disks.r2.key' => 'prueba',
+        'filesystems.disks.r2.secret' => 'prueba',
         'filesystems.disks.r2.endpoint' => 'https://r2.prueba',
-        'filesystems.disks.r2.url'      => 'https://archivos.prueba',
+        'filesystems.disks.r2.url' => 'https://archivos.prueba',
     ]);
-    \Illuminate\Support\Facades\Storage::fake('r2');
+    Storage::fake('r2');
 
     $e = credEscenario();
     app(CreditoDeTienda::class)->asignar($e['negocio'], (int) $e['comprador']->user_id, 50000);
@@ -236,15 +238,15 @@ it('el abono puede llevar su comprobante y el libro lo enseña', function () {
 
     // Un archivo que no es foto ni PDF se rechaza y NO se registra el abono.
     $this->post("/v1/negocio/creditos/{$id}/abonos", [
-        'amount'      => 1000,
-        'comprobante' => \Illuminate\Http\UploadedFile::fake()->create('virus.exe', 10),
+        'amount' => 1000,
+        'comprobante' => UploadedFile::fake()->create('virus.exe', 10),
     ], ['Accept' => 'application/json'])->assertUnprocessable()->assertJsonValidationErrors('comprobante');
     expect(DB::table('store_credit_movements')->where('type', 'abono')->count())->toBe(0);
 
     $this->post("/v1/negocio/creditos/{$id}/abonos", [
-        'amount'      => 1000,
-        'notes'       => 'Nequi',
-        'comprobante' => \Illuminate\Http\UploadedFile::fake()->image('nequi.jpg'),
+        'amount' => 1000,
+        'notes' => 'Nequi',
+        'comprobante' => UploadedFile::fake()->image('nequi.jpg'),
     ], ['Accept' => 'application/json'])->assertCreated();
 
     $abono = collect($this->getJson("/v1/negocio/creditos/{$id}/movimientos")->assertOk()->json('movimientos'))
@@ -302,7 +304,7 @@ it('EL EJEMPLO: 10.000 + 2.000 a crédito se le descuentan a la tienda', functio
 it('un día solo a crédito deja la tienda en rojo y se arrastra al corte siguiente', function () {
     $e = credEscenario();
     $ayer = now()->subDay()->toDateString();
-    $hoy  = now()->toDateString();
+    $hoy = now()->toDateString();
 
     credEntregado($e, CreditoDeTienda::METODO, 10000, 2000, $ayer);
     $rojo = app(LiquidacionService::class)->generar('business', $e['negocio'], $ayer, $ayer);

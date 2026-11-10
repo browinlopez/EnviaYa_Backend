@@ -2,15 +2,12 @@
 
 namespace App\Http\Controllers\Domiciliary;
 
-use App\Services\Ajustes;
 use App\Http\Controllers\Controller;
 use App\Models\Domiciliary;
-use App\Models\Payment\Payment;
-use App\Models\User;
+use App\Services\AccesoAlConjunto;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 
 class IngresosDelDomiciliarioController extends Controller
 {
@@ -67,7 +64,7 @@ class IngresosDelDomiciliarioController extends Controller
             return collect($dias)->map(fn ($total) => (object) ['total' => $total]);
         };
 
-        $currentWeek  = $porDia(now()->startOfWeek(), now()->endOfWeek());
+        $currentWeek = $porDia(now()->startOfWeek(), now()->endOfWeek());
         $previousWeek = $porDia(now()->subWeek()->startOfWeek(), now()->subWeek()->endOfWeek());
 
         /* =========================
@@ -137,12 +134,12 @@ class IngresosDelDomiciliarioController extends Controller
     {
         $domiciliario = Domiciliary::where('user_id', $request->user()->user_id)->first();
 
-        if (!$domiciliario) {
+        if (! $domiciliario) {
             return response()->json(['message' => 'Esta cuenta no es de un domiciliario.'], 403);
         }
 
         return response()->json(
-            app(\App\Services\AccesoAlConjunto::class)->generar($domiciliario)
+            app(AccesoAlConjunto::class)->generar($domiciliario)
         );
     }
 }

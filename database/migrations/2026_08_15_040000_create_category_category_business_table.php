@@ -21,7 +21,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (!Schema::hasTable('category_category_business')) {
+        if (! Schema::hasTable('category_category_business')) {
             Schema::create('category_category_business', function (Blueprint $table) {
                 $table->id();
                 // `category.category_id` es INT UNSIGNED y `category_business.id`
@@ -49,12 +49,12 @@ return new class extends Migration
 
         foreach ($existentes as $c) {
             $valida = DB::table('category_business')->where('id', $c->business_category_id)->exists();
-            if (!$valida) {
+            if (! $valida) {
                 continue;
             }
 
             DB::table('category_category_business')->insertOrIgnore([
-                'category_id'          => $c->category_id,
+                'category_id' => $c->category_id,
                 'business_category_id' => $c->business_category_id,
             ]);
         }

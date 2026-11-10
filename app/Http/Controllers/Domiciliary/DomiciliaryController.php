@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers\Domiciliary;
 
-use App\Services\Ajustes;
 use App\Http\Controllers\Controller;
+use App\Models\Business;
 use App\Models\Domiciliary;
-use App\Models\Payment\Payment;
 use App\Models\User;
-use Carbon\Carbon;
+use App\Services\Ajustes;
+use App\Services\CustodiaDeEfectivo;
+use App\Services\PapelesDelDomiciliario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -18,6 +19,7 @@ class DomiciliaryController extends Controller
     public function listDomiciliary(Request $request)
     {
         $domiciliaries = Domiciliary::with('user', 'reviews')->get();
+
         return response()->json($domiciliaries);
     }
 
@@ -28,13 +30,13 @@ class DomiciliaryController extends Controller
             'busines_id' => 'required|integer|exists:business,busines_id',
         ]);
 
-        $business = \App\Models\Business::with(['domiciliaries.user'])
+        $business = Business::with(['domiciliaries.user'])
             ->findOrFail($request->busines_id);
 
         // Pedidos que cada domiciliario lleva encima ahora mismo, para que el
         // tendero vea a quién puede despacharle antes de intentarlo.
         $business->domiciliaries->loadCount([
-            'orders as active_orders' => fn($q) => $q->where('state', 3),
+            'orders as active_orders' => fn ($q) => $q->where('state', 3),
         ]);
 
         $maxSimultaneos = (int) Ajustes::valor('operacion.entregas_simultaneas');
@@ -47,12 +49,12 @@ class DomiciliaryController extends Controller
          * Sin este dato, el tendero lo intenta, recibe un error y no entiende
          * por qué — la lista le decía que esa persona estaba disponible.
          */
-        $custodia = app(\App\Services\CustodiaDeEfectivo::class);
+        $custodia = app(CustodiaDeEfectivo::class);
         $tope = $business->max_courier_cash !== null
             ? (float) $business->max_courier_cash
             : null;
 
-        $papeles = app(\App\Services\PapelesDelDomiciliario::class);
+        $papeles = app(PapelesDelDomiciliario::class);
 
         $domiciliaries = $business->domiciliaries->map(function ($domiciliary) use ($maxSimultaneos, $custodia, $tope, $papeles) {
             $enCurso = (int) ($domiciliary->active_orders ?? 0);
@@ -65,34 +67,34 @@ class DomiciliaryController extends Controller
                 'domiciliary_id' => $domiciliary->domiciliary_id,
                 // user_id del domiciliario: requerido para despachar una
                 // orden (transición 2 → 3 en orders/update)
-                'user_id'        => $domiciliary->user_id,
-                'name'           => $domiciliary->user ? $domiciliary->user->name : null,
-                'email'          => $domiciliary->user ? $domiciliary->user->email : null,
-                'phone'          => $domiciliary->user ? $domiciliary->user->phone : null,
-                'available'      => $domiciliary->available,
-                'qualification'  => $domiciliary->qualification,
-                'state'          => $domiciliary->state,
-                'active_orders'     => $enCurso,
+                'user_id' => $domiciliary->user_id,
+                'name' => $domiciliary->user ? $domiciliary->user->name : null,
+                'email' => $domiciliary->user ? $domiciliary->user->email : null,
+                'phone' => $domiciliary->user ? $domiciliary->user->phone : null,
+                'available' => $domiciliary->available,
+                'qualification' => $domiciliary->qualification,
+                'state' => $domiciliary->state,
+                'active_orders' => $enCurso,
                 'max_active_orders' => $maxSimultaneos,
                 // Mismas condiciones que valida orders/update al despachar.
-                'can_take'          => $disponible && $enCurso < $maxSimultaneos && !$faltan,
+                'can_take' => $disponible && $enCurso < $maxSimultaneos && ! $faltan,
                 'papeles_faltantes' => $faltan,
-                'cash_on_hand'      => $efectivo,
-                'cash_limit'        => $tope,
+                'cash_on_hand' => $efectivo,
+                'cash_limit' => $tope,
                 /*
                  * Cuánto le cabe todavía en efectivo. Se manda calculado y no
                  * se deja al cliente: la app y el panel harían la misma resta
                  * cada uno por su lado, y el día que el tope cambie de forma
                  * habría que acordarse de los dos.
                  */
-                'cash_room'         => $tope === null ? null : max(0, round($tope - $efectivo, 2)),
+                'cash_room' => $tope === null ? null : max(0, round($tope - $efectivo, 2)),
             ];
         });
 
         return response()->json([
-            'busines_id'    => $business->busines_id,
+            'busines_id' => $business->busines_id,
             'business_name' => $business->name,
-            'domiciliaries' => $domiciliaries
+            'domiciliaries' => $domiciliaries,
         ]);
     }
 
@@ -107,7 +109,7 @@ class DomiciliaryController extends Controller
             'address' => 'nullable|string|max:225',
             'available' => 'boolean',
             'qualification' => 'numeric|min:0|max:5',
-            'state' => 'boolean'
+            'state' => 'boolean',
         ]);
 
         try {
@@ -123,7 +125,7 @@ class DomiciliaryController extends Controller
                 'address' => $request->address,
                 'rol' => 3,
                 'qualification' => $request->qualification ?? 0,
-                'state' => $request->state
+                'state' => $request->state,
             ]);
 
             // Crear domiciliario asociado
@@ -132,7 +134,7 @@ class DomiciliaryController extends Controller
                 'available' => $request->available ?? false,
                 'qualification' => $user->qualification,
                 'state' => $user->state,
-                'document' => $request->document ?? null   // si tienes este campo
+                'document' => $request->document ?? null,   // si tienes este campo
             ]);
 
             // Vincularlo al negocio de quien lo está creando. Sin esto el
@@ -159,7 +161,7 @@ class DomiciliaryController extends Controller
             DB::rollBack();
 
             return response()->json([
-                'error' => 'Error al crear el domiciliario: ' . $e->getMessage()
+                'error' => 'Error al crear el domiciliario: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -175,7 +177,7 @@ class DomiciliaryController extends Controller
             // Campos del usuario
             'name' => 'string|max:255',
             // El correo es la credencial de acceso: no puede chocar con otro.
-            'email' => 'email|max:255|unique:user,email,' . $request->user_id . ',user_id',
+            'email' => 'email|max:255|unique:user,email,'.$request->user_id.',user_id',
             'phone' => 'string|max:20',
             'address' => 'string|max:255',
         ]);
@@ -186,7 +188,7 @@ class DomiciliaryController extends Controller
         // Solo puede editar el propio domiciliario o el dueño de un negocio al
         // que esté asignado. Antes cualquier sesión válida podía modificar a
         // cualquier usuario mandando su user_id.
-        if (!$this->puedeEditarDomiciliario($request->user(), $user)) {
+        if (! $this->puedeEditarDomiciliario($request->user(), $user)) {
             return response()->json([
                 'message' => 'No tienes permiso para editar este domiciliario',
             ], 403);
@@ -207,14 +209,14 @@ class DomiciliaryController extends Controller
         if ($domiciliary) {
             $domiciliary->update($request->only([
                 'available',
-                'state'
+                'state',
             ]));
         }
 
         return response()->json([
             'message' => 'Información actualizada correctamente',
             'user' => $user,
-            'domiciliary' => $domiciliary
+            'domiciliary' => $domiciliary,
         ]);
     }
 
@@ -226,7 +228,7 @@ class DomiciliaryController extends Controller
     {
         $owner = $request->user()?->owner;
 
-        if (!$owner) {
+        if (! $owner) {
             return null;
         }
 
@@ -247,7 +249,7 @@ class DomiciliaryController extends Controller
      */
     private function puedeEditarDomiciliario($autenticado, User $objetivo): bool
     {
-        if (!$autenticado) {
+        if (! $autenticado) {
             return false;
         }
 
@@ -257,7 +259,7 @@ class DomiciliaryController extends Controller
 
         $domiciliary = $objetivo->domiciliary;
 
-        if (!$domiciliary || !$autenticado->owner) {
+        if (! $domiciliary || ! $autenticado->owner) {
             return false;
         }
 

@@ -17,8 +17,8 @@ class StoreCredit extends Model
     protected $fillable = ['busines_id', 'user_id', 'credit_limit', 'created_by'];
 
     protected $casts = [
-        'busines_id'   => 'integer',
-        'user_id'      => 'integer',
+        'busines_id' => 'integer',
+        'user_id' => 'integer',
         'credit_limit' => 'decimal:2',
     ];
 

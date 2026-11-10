@@ -30,8 +30,8 @@ class ResumenDiario extends Mailable
         $urgentes = count(array_filter($this->asuntos, fn ($a) => $a['urgente']));
 
         $asunto = $urgentes > 0
-            ? "{$this->area->name} · {$urgentes} " . ($urgentes === 1 ? 'asunto urgente' : 'asuntos urgentes')
-            : "{$this->area->name} · " . count($this->asuntos) . ' pendiente(s)';
+            ? "{$this->area->name} · {$urgentes} ".($urgentes === 1 ? 'asunto urgente' : 'asuntos urgentes')
+            : "{$this->area->name} · ".count($this->asuntos).' pendiente(s)';
 
         return new Envelope(subject: $asunto);
     }

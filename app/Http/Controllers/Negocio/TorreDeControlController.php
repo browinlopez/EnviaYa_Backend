@@ -53,9 +53,7 @@ class TorreDeControlController extends Controller
     /** El estado del pedido que significa «lo lleva encima». */
     private const EN_CAMINO = 3;
 
-    public function __construct(private CustodiaDeEfectivo $custodia)
-    {
-    }
+    public function __construct(private CustodiaDeEfectivo $custodia) {}
 
     public function index(Request $request)
     {
@@ -64,27 +62,27 @@ class TorreDeControlController extends Controller
         $negocio->loadMissing('domiciliaries.user');
 
         $flota = $negocio->domiciliaries;
-        $ids   = $flota->pluck('domiciliary_id')->map(fn ($id) => (int) $id)->all();
+        $ids = $flota->pluck('domiciliary_id')->map(fn ($id) => (int) $id)->all();
 
-        $pedidos   = $this->pedidosABordo((int) $negocio->busines_id, $ids);
-        $posicion  = $this->ultimaPosicion($ids);
-        $tope      = $negocio->max_courier_cash !== null ? (float) $negocio->max_courier_cash : null;
+        $pedidos = $this->pedidosABordo((int) $negocio->busines_id, $ids);
+        $posicion = $this->ultimaPosicion($ids);
+        $tope = $negocio->max_courier_cash !== null ? (float) $negocio->max_courier_cash : null;
         $simultaneos = (int) Ajustes::valor('operacion.entregas_simultaneas');
 
         $torre = $flota->map(function ($d) use ($pedidos, $posicion, $tope) {
-            $id       = (int) $d->domiciliary_id;
-            $suyos    = $pedidos->get($id, collect());
+            $id = (int) $d->domiciliary_id;
+            $suyos = $pedidos->get($id, collect());
             $efectivo = round($this->custodia->saldo($id), 2);
 
             return [
                 'domiciliary_id' => $id,
-                'user_id'        => (int) $d->user_id,
-                'name'           => $d->user?->name,
-                'phone'          => $d->user?->phone,
-                'disponible'     => (bool) $d->available,
+                'user_id' => (int) $d->user_id,
+                'name' => $d->user?->name,
+                'phone' => $d->user?->phone,
+                'disponible' => (bool) $d->available,
 
-                'pedidos'        => $suyos->values(),
-                'a_bordo'        => $suyos->count(),
+                'pedidos' => $suyos->values(),
+                'a_bordo' => $suyos->count(),
                 /*
                  * Desde cuándo lleva repartiendo: el despacho del pedido MÁS
                  * VIEJO que carga, no el último. Es la cifra que hace saltar
@@ -92,29 +90,29 @@ class TorreDeControlController extends Controller
                  * tomando el último se escondería justamente ese caso cada
                  * vez que se le despacha uno nuevo.
                  */
-                'desde'          => $suyos->pluck('despachado_el')->filter()->sort()->first(),
+                'desde' => $suyos->pluck('despachado_el')->filter()->sort()->first(),
 
-                'efectivo'       => $efectivo,
-                'tope_efectivo'  => $tope,
-                'le_cabe'        => $tope === null ? null : max(0, round($tope - $efectivo, 2)),
-                'sobre_el_tope'  => $tope !== null && $efectivo > $tope,
+                'efectivo' => $efectivo,
+                'tope_efectivo' => $tope,
+                'le_cabe' => $tope === null ? null : max(0, round($tope - $efectivo, 2)),
+                'sobre_el_tope' => $tope !== null && $efectivo > $tope,
 
-                'posicion'       => $posicion->get($id),
+                'posicion' => $posicion->get($id),
             ];
         });
 
         return response()->json([
-            'busines_id'         => (int) $negocio->busines_id,
-            'actualizado'        => now()->toIso8601String(),
-            'tope_efectivo'      => $tope,
+            'busines_id' => (int) $negocio->busines_id,
+            'actualizado' => now()->toIso8601String(),
+            'tope_efectivo' => $tope,
             'maximo_simultaneos' => $simultaneos,
             /*
              * La pantalla no tiene que saber cuántas horas atrás se buscó: se
              * le dice, y así el texto de «sin posición» puede ser concreto en
              * vez de un «no sabemos» que no explica nada.
              */
-            'horas_de_posicion'  => self::HORAS_DE_POSICION,
-            'flota'              => $torre->values(),
+            'horas_de_posicion' => self::HORAS_DE_POSICION,
+            'flota' => $torre->values(),
         ]);
     }
 
@@ -142,34 +140,34 @@ class TorreDeControlController extends Controller
             ->get()
             ->map(fn (OrdersSales $o) => [
                 'domiciliary_id' => (int) $o->domiciliary_id,
-                'orderSales_id'  => (int) $o->orderSales_id,
-                'cliente'        => $o->buyer?->user?->name,
-                'telefono'       => $o->buyer?->user?->phone,
-                'direccion'      => $o->pickup
+                'orderSales_id' => (int) $o->orderSales_id,
+                'cliente' => $o->buyer?->user?->name,
+                'telefono' => $o->buyer?->user?->phone,
+                'direccion' => $o->pickup
                     ? null
                     : (trim(implode(', ', array_filter([
                         $o->address?->street,
                         $o->address?->address,
                     ]))) ?: null),
                 'recoge_en_tienda' => (bool) $o->pickup,
-                'total'          => (float) $o->total,
+                'total' => (float) $o->total,
                 /*
                  * Qué lleva: el tendero llama al domiciliario o al cliente
                  * con el pedido en la mano, no con un número de orden.
                  */
-                'productos'      => $o->details->map(fn ($d) => [
-                    'nombre'   => $d->product?->name ?? 'Producto',
+                'productos' => $o->details->map(fn ($d) => [
+                    'nombre' => $d->product?->name ?? 'Producto',
                     'cantidad' => (float) ($d->qty_final ?? $d->amount),
-                    'unidad'   => $d->sale_unit,
+                    'unidad' => $d->sale_unit,
                 ])->values(),
                 /*
                  * Si va contra entrega. Es lo que convierte un pedido en plata
                  * encima, y por eso el tendero necesita distinguirlo de un
                  * pedido ya pagado al mirar la fila.
                  */
-                'en_efectivo'    => (int) $o->methods_id === 1,
-                'despachado_el'  => optional($o->dispatched_at)->toIso8601String(),
-                'minutos'        => $o->dispatched_at
+                'en_efectivo' => (int) $o->methods_id === 1,
+                'despachado_el' => optional($o->dispatched_at)->toIso8601String(),
+                'minutos' => $o->dispatched_at
                     ? (int) $o->dispatched_at->diffInMinutes(now())
                     : null,
             ])
@@ -216,19 +214,19 @@ class TorreDeControlController extends Controller
                     ->orderByDesc('geolocation_id')
                     ->first();
 
-                if (!$ultimo) {
+                if (! $ultimo) {
                     return [$id => null];
                 }
 
                 return [$id => [
-                    'latitude'      => (float) $ultimo->latitude,
-                    'longitude'     => (float) $ultimo->longitude,
+                    'latitude' => (float) $ultimo->latitude,
+                    'longitude' => (float) $ultimo->longitude,
                     'orderSales_id' => (int) $ultimo->orderSales_id,
-                    'at'            => optional($ultimo->created_at)->toIso8601String(),
+                    'at' => optional($ultimo->created_at)->toIso8601String(),
                     // La edad va calculada desde acá: el reloj del navegador
                     // del tendero puede estar corrido, y «hace 14 min» tiene
                     // que significar catorce minutos de verdad.
-                    'hace_minutos'  => $ultimo->created_at
+                    'hace_minutos' => $ultimo->created_at
                         ? (int) $ultimo->created_at->diffInMinutes(now())
                         : null,
                 ]];

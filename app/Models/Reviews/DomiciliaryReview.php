@@ -5,13 +5,13 @@ namespace App\Models\Reviews;
 use App\Models\Audit\Audit;
 use App\Models\Buyer\Buyer;
 use App\Models\Domiciliary;
-use App\Models\User;
-use Illuminate\Database\Eloquent\Model;
 
 class DomiciliaryReview extends Audit
 {
     protected $table = 'domiciliary_reviews';
+
     protected $primaryKey = 'reviews_id';
+
     // Ver nota en BusinessReview: la tabla ya tenía las columnas de fecha.
     public $timestamps = true;
 
@@ -20,7 +20,7 @@ class DomiciliaryReview extends Audit
         'buyer_id',
         'qualification',
         'comment',
-        'state'
+        'state',
     ];
 
     public function domiciliary()

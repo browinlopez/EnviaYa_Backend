@@ -50,10 +50,10 @@ test('el tendero puede poner las fechas exactas que quiera', function () {
     $hasta = now('America/Bogota')->addDays(18)->toDateString();
 
     $this->postJson('/v1/negocio/promociones', [
-        'texto'      => 'Arroz al 20% el puente',
-        'desde'      => $desde,
-        'hasta'      => $hasta,
-        'tipo'       => Promotion::PORCENTAJE,
+        'texto' => 'Arroz al 20% el puente',
+        'desde' => $desde,
+        'hasta' => $hasta,
+        'tipo' => Promotion::PORCENTAJE,
         'porcentaje' => 20,
     ])->assertStatus(201);
 
@@ -87,8 +87,8 @@ test('el tope de usos se guarda y viaja a la app', function () {
     tenderoDePromociones();
 
     $r = $this->postJson('/v1/negocio/promociones', [
-        'texto'    => 'Los primeros 50 llevan el doble',
-        'hasta'    => 'semana',
+        'texto' => 'Los primeros 50 llevan el doble',
+        'hasta' => 'semana',
         'max_usos' => 50,
     ])->assertStatus(201);
 
@@ -103,7 +103,7 @@ test('un tope de cero se rechaza, porque eso no es un límite: es no mandarla', 
     tenderoDePromociones();
 
     $this->postJson('/v1/negocio/promociones', [
-        'texto'    => 'Promoción imposible',
+        'texto' => 'Promoción imposible',
         'max_usos' => 0,
     ])->assertStatus(422);
 });
@@ -141,7 +141,7 @@ test('corregir sin mandar el tope no se lo borra', function () {
     tenderoDePromociones();
 
     $this->postJson('/v1/negocio/promociones', [
-        'texto'    => 'Los primeros 20',
+        'texto' => 'Los primeros 20',
         'max_usos' => 20,
     ])->assertStatus(201);
 

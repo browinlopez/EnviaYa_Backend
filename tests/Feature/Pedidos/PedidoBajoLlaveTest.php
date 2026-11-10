@@ -29,7 +29,6 @@ use Laravel\Sanctum\Sanctum;
  * segundo intento sea rechazado. Eso es lo que un refactor podría quitar sin
  * que nadie se entere hasta producción.
  */
-
 test('leer el pedido y escribirlo ocurren dentro de la misma transaccion', function () {
     $e = escenarioDeTope(null);
 
@@ -58,8 +57,8 @@ test('leer el pedido y escribirlo ocurren dentro de la misma transaccion', funct
 
     $this->putJson('/v1/orders/update', [
         'order_id' => $e['orderId'],
-        'state'    => 3,
-        'user_id'  => $e['repartidor']->user_id,
+        'state' => 3,
+        'user_id' => $e['repartidor']->user_id,
     ])->assertOk();
 
     expect($nivelAlLeerElPedido)->toBeGreaterThan(
@@ -95,8 +94,8 @@ test('la consulta pide la fila bajo llave', function () {
 
     $this->putJson('/v1/orders/update', [
         'order_id' => $e['orderId'],
-        'state'    => 3,
-        'user_id'  => $e['repartidor']->user_id,
+        'state' => 3,
+        'user_id' => $e['repartidor']->user_id,
     ])->assertOk();
 
     $conCandado = array_filter(
@@ -114,8 +113,8 @@ test('el segundo que llega ya no puede tomarlo', function () {
 
     $cuerpo = [
         'order_id' => $e['orderId'],
-        'state'    => 3,
-        'user_id'  => $e['repartidor']->user_id,
+        'state' => 3,
+        'user_id' => $e['repartidor']->user_id,
     ];
 
     $this->putJson('/v1/orders/update', $cuerpo)->assertOk();

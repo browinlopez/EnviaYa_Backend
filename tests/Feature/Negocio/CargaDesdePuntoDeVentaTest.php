@@ -1,10 +1,7 @@
 <?php
 
-use App\Models\Product\CatalogUpload;
 use App\Models\Product\Product;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
-use Laravel\Sanctum\Sanctum;
 
 /**
  * SUBIR EL ARCHIVO QUE LA TIENDA YA TIENE.

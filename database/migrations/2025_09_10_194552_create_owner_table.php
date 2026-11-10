@@ -21,7 +21,7 @@ return new class extends Migration
             $table->string('notes', 45)->nullable();
             $table->tinyInteger('state')->nullable();
 
-           $table->string('profile_photo', 255)->nullable();    
+            $table->string('profile_photo', 255)->nullable();
 
             $table->index('user_id', 'fk_owner_user');
             $table->foreign('user_id', 'fk_owner_user')

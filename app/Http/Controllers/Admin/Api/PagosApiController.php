@@ -2,26 +2,12 @@
 
 namespace App\Http\Controllers\Admin\Api;
 
-use App\Support\Consultas\AyudasDeAdmin;
-use App\Services\Ajustes;
 use App\Http\Controllers\Controller;
-use App\Models\Area;
-use App\Models\Conjunto\ComplexStaff;
-use App\Models\Operacion\DomiciliaryDocument;
-use App\Models\Reviews\BusinessReview;
-use App\Models\Reviews\DomiciliaryReview;
-use App\Models\User;
-use App\Services\BusinessMediaService;
-use App\Services\ContratoService;
-use App\Services\MediaService;
-use App\Services\VinculosDelRol;
+use App\Support\Consultas\AyudasDeAdmin;
 use App\Support\ListadoPaginado;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 
 class PagosApiController extends Controller
 {
@@ -32,7 +18,6 @@ class PagosApiController extends Controller
 
     /** Valor de `payments.provider` para el cobro contra entrega. */
     private const EFECTIVO = 'cash';
-
 
     /** Pagos, paginados en el servidor: crecen al mismo ritmo que los pedidos. */
     public function payments(Request $request)
@@ -65,10 +50,10 @@ class PagosApiController extends Controller
             $q,
             buscables: ['bu.name', 'b.name', 'p.provider_payment_id', 'p.orderSales_id'],
             ordenables: [
-                'payments_id'   => 'p.payments_id',
-                'amount'        => 'p.amount',
-                'total'         => 'p.total',
-                'payment_date'  => 'p.payment_date',
+                'payments_id' => 'p.payments_id',
+                'amount' => 'p.amount',
+                'total' => 'p.total',
+                'payment_date' => 'p.payment_date',
                 'business_name' => 'b.name',
             ],
             ordenPorDefecto: 'payments_id',
@@ -90,7 +75,7 @@ class PagosApiController extends Controller
         // método declarado en el pedido: lo que importa para cuadrar la caja es
         // por dónde entró la plata, no por dónde se dijo que iba a entrar.
         match ($request->query('channel')) {
-            'cash'    => $q->where('p.provider', self::EFECTIVO),
+            'cash' => $q->where('p.provider', self::EFECTIVO),
             'gateway' => $q->where(fn ($sub) => $sub
                 ->where('p.provider', '!=', self::EFECTIVO)
                 ->orWhereNull('p.provider')),
@@ -98,10 +83,10 @@ class PagosApiController extends Controller
         };
 
         match ($request->query('status_group')) {
-            'aprobados'  => $q->whereIn('p.status', self::PAGO_OK),
+            'aprobados' => $q->whereIn('p.status', self::PAGO_OK),
             'pendientes' => $q->where('p.status', 'like', 'pending%'),
-            'fallidos'   => $q->whereIn('p.status', self::PAGO_FALLIDO),
-            default      => null,
+            'fallidos' => $q->whereIn('p.status', self::PAGO_FALLIDO),
+            default => null,
         };
     }
 
@@ -114,7 +99,7 @@ class PagosApiController extends Controller
      */
     private function resumenDePagos($q): array
     {
-        $ok       = "'" . implode("','", self::PAGO_OK) . "'";
+        $ok = "'".implode("','", self::PAGO_OK)."'";
         $efectivo = self::EFECTIVO;
 
         $r = ListadoPaginado::soloAgregados($q, "
@@ -130,15 +115,15 @@ class PagosApiController extends Controller
         ");
 
         return [
-            'recaudado'   => round((float) ($r->recaudado ?? 0), 2),
-            'aprobadosN'  => (int) ($r->aprobados_n ?? 0),
-            'pendiente'   => round((float) ($r->pendiente ?? 0), 2),
-            'pendienteN'  => (int) ($r->pendiente_n ?? 0),
-            'efectivo'    => round((float) ($r->efectivo ?? 0), 2),
-            'efectivoN'   => (int) ($r->efectivo_n ?? 0),
-            'pasarela'    => round((float) ($r->pasarela ?? 0), 2),
-            'pasarelaN'   => (int) ($r->pasarela_n ?? 0),
-            'comisiones'  => round((float) ($r->comisiones ?? 0), 2),
+            'recaudado' => round((float) ($r->recaudado ?? 0), 2),
+            'aprobadosN' => (int) ($r->aprobados_n ?? 0),
+            'pendiente' => round((float) ($r->pendiente ?? 0), 2),
+            'pendienteN' => (int) ($r->pendiente_n ?? 0),
+            'efectivo' => round((float) ($r->efectivo ?? 0), 2),
+            'efectivoN' => (int) ($r->efectivo_n ?? 0),
+            'pasarela' => round((float) ($r->pasarela ?? 0), 2),
+            'pasarelaN' => (int) ($r->pasarela_n ?? 0),
+            'comisiones' => round((float) ($r->comisiones ?? 0), 2),
         ];
     }
 

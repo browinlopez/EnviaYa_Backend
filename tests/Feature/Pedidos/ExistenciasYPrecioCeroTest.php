@@ -2,6 +2,7 @@
 
 use App\Models\Rol;
 use App\Models\User;
+use App\Services\PagoEnLinea;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 
@@ -80,7 +81,7 @@ function pedir(array $t, array $lineas, int $metodo = 1)
          * Un cobro EN CURSO es justo el escenario de estas pruebas: el pedido
          * queda esperando a que el webhook lo confirme.
          */
-        test()->mock(\App\Services\PagoEnLinea::class, fn ($m) => $m->shouldReceive('cobrar')->andReturn(
+        test()->mock(PagoEnLinea::class, fn ($m) => $m->shouldReceive('cobrar')->andReturn(
             (object) [
                 'intent' => null,
                 'payment' => (object) [
@@ -94,10 +95,10 @@ function pedir(array $t, array $lineas, int $metodo = 1)
     }
 
     return test()->postJson('/v1/orders/orders', [
-        'user_id'    => $t['comprador']->user_id,
+        'user_id' => $t['comprador']->user_id,
         'busines_id' => $t['negocio'],
         'address_id' => $t['direccion'],
-        'products'   => collect($lineas)->map(fn ($c, $n) => ['product_id' => $t['ids'][$n], 'amount' => $c])->values()->all(),
+        'products' => collect($lineas)->map(fn ($c, $n) => ['product_id' => $t['ids'][$n], 'amount' => $c])->values()->all(),
         'methods_id' => $metodo,
     ] + ($metodo === 2 ? ['payment_method' => ['type' => 'CARD']] : []));
 }
@@ -134,7 +135,7 @@ it('la cotización tampoco cuenta un producto a $0', function () {
 
     test()->postJson('/v1/orders/cotizar', [
         'busines_id' => $t['negocio'],
-        'products'   => [['product_id' => $t['ids']['Crema dental'], 'amount' => 1]],
+        'products' => [['product_id' => $t['ids']['Crema dental'], 'amount' => 1]],
     ])->assertStatus(422);
 });
 

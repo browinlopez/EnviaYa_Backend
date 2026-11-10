@@ -1,106 +1,107 @@
 <?php
 
-use App\Http\Controllers\Soporte\AyudaDesdeLaAppController;
-use App\Http\Controllers\Payment\BancosPseController;
-use App\Http\Controllers\Order\RutaDelPedidoController;
-
-use App\Http\Controllers\Auth\AccesoBiometricoController;
-use App\Http\Controllers\Domiciliary\PedidosDelDomiciliarioController;
 use App\Http\Controllers\Admin\Api\AdminApiController;
+use App\Http\Controllers\Admin\Api\AjustesApiController;
+use App\Http\Controllers\Admin\Api\AnunciantesApiController;
+use App\Http\Controllers\Admin\Api\AreasApiController;
 use App\Http\Controllers\Admin\Api\AuditoriaApiController;
-use App\Http\Controllers\Admin\Api\FallosDeLaAppApiController;
+use App\Http\Controllers\Admin\Api\BannersApiController;
+use App\Http\Controllers\Admin\Api\CampanasApiController;
 use App\Http\Controllers\Admin\Api\CategoriasApiController;
 use App\Http\Controllers\Admin\Api\ChatsApiController;
 use App\Http\Controllers\Admin\Api\ConjuntosApiController;
+use App\Http\Controllers\Admin\Api\CuponesApiController;
+use App\Http\Controllers\Admin\Api\DestacadosApiController;
+use App\Http\Controllers\Admin\Api\DocumentosApiController;
 use App\Http\Controllers\Admin\Api\DomiciliariosApiController;
+use App\Http\Controllers\Admin\Api\FacturasApiController;
+use App\Http\Controllers\Admin\Api\FallosDeLaAppApiController;
+use App\Http\Controllers\Admin\Api\IncidentesApiController;
+use App\Http\Controllers\Admin\Api\MarketingApiController;
 use App\Http\Controllers\Admin\Api\MediosApiController;
 use App\Http\Controllers\Admin\Api\NegociosApiController;
+use App\Http\Controllers\Admin\Api\OperacionApiController;
 use App\Http\Controllers\Admin\Api\PagosApiController;
 use App\Http\Controllers\Admin\Api\PedidosApiController;
+use App\Http\Controllers\Admin\Api\PqrsApiController;
 use App\Http\Controllers\Admin\Api\ProductosApiController;
 use App\Http\Controllers\Admin\Api\PropietariosApiController;
 use App\Http\Controllers\Admin\Api\ReportesApiController;
-use App\Http\Controllers\Admin\Api\ResenasApiController;
-use App\Http\Controllers\Admin\Api\UsuariosApiController;
-use App\Http\Controllers\Admin\Api\FacturasApiController;
-use App\Http\Controllers\Admin\Api\AjustesApiController;
-use App\Http\Controllers\Admin\Api\AreasApiController;
-use App\Http\Controllers\Admin\Api\MarketingApiController;
-use App\Http\Controllers\Admin\Api\AnunciantesApiController;
-use App\Http\Controllers\Admin\Api\BannersApiController;
-use App\Http\Controllers\Admin\Api\CampanasApiController;
-use App\Http\Controllers\Admin\Api\CuponesApiController;
-use App\Http\Controllers\Admin\Api\DestacadosApiController;
-use App\Http\Controllers\Admin\Api\OperacionApiController;
-use App\Http\Controllers\Admin\Api\DocumentosApiController;
-use App\Http\Controllers\Admin\Api\IncidentesApiController;
-use App\Http\Controllers\Admin\Api\PqrsApiController;
-use App\Http\Controllers\Admin\Api\SolicitudesApiController;
 use App\Http\Controllers\Admin\Api\ReportesExcelController;
+use App\Http\Controllers\Admin\Api\ResenasApiController;
 use App\Http\Controllers\Admin\Api\SeguridadApiController;
+use App\Http\Controllers\Admin\Api\SolicitudesApiController;
+use App\Http\Controllers\Admin\Api\UsuariosApiController;
 use App\Http\Controllers\AppConfigController;
-use App\Http\Controllers\ErroresDeLaAppController;
+use App\Http\Controllers\Auth\AccesoBiometricoController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\ClaveController;
 use App\Http\Controllers\Auth\RegistroController;
 use App\Http\Controllers\Auth\VerificacionDeCorreoController;
-use App\Http\Controllers\Buyer\ResidentialComplexController;
 use App\Http\Controllers\Business\AffiliationController;
 use App\Http\Controllers\Business\BusinessController;
-use App\Http\Controllers\Business\ConsultaDeNegociosController;
 use App\Http\Controllers\Business\CategoryBusinessController;
+use App\Http\Controllers\Business\ConsultaDeNegociosController;
 use App\Http\Controllers\Business\FavoriteController;
+use App\Http\Controllers\Buyer\MiCreditoController;
+use App\Http\Controllers\Buyer\ResidentialComplexController;
 use App\Http\Controllers\Category\CategoryController;
 use App\Http\Controllers\Chat\ChatController;
 use App\Http\Controllers\CoberturaController;
+use App\Http\Controllers\Conjunto\CeladoresController;
+use App\Http\Controllers\Conjunto\MiConjuntoController;
+use App\Http\Controllers\Conjunto\PorteriaController;
+use App\Http\Controllers\Conjunto\ResidentesController;
+use App\Http\Controllers\Conjunto\ResumenDelConjuntoController;
+use App\Http\Controllers\Conjunto\VisitantesController;
 use App\Http\Controllers\DeviceTokenController;
 use App\Http\Controllers\Domiciliary\ContratoDelDomiciliarioController;
 use App\Http\Controllers\Domiciliary\DomiciliaryController;
 use App\Http\Controllers\Domiciliary\IngresosDelDomiciliarioController;
+use App\Http\Controllers\Domiciliary\PedidosDelDomiciliarioController;
 use App\Http\Controllers\Domiciliary\VinculosDelDomiciliarioController;
-use App\Http\Controllers\Operacion\EfectivoController;
-use App\Http\Controllers\Conjunto\PorteriaController;
-use App\Http\Controllers\Conjunto\MiConjuntoController;
-use App\Http\Controllers\Conjunto\CeladoresController;
-use App\Http\Controllers\Conjunto\ResidentesController;
-use App\Http\Controllers\Conjunto\ResumenDelConjuntoController;
-use App\Http\Controllers\Conjunto\VisitantesController;
-use App\Http\Controllers\Negocio\HistorialDePedidosController;
+use App\Http\Controllers\ErroresDeLaAppController;
+use App\Http\Controllers\LandingRequestController;
+use App\Http\Controllers\Marketing\AdsController;
+use App\Http\Controllers\Negocio\AltaDeDomiciliarioController;
 use App\Http\Controllers\Negocio\CancelacionDelPedidoController;
 use App\Http\Controllers\Negocio\CargaDeCatalogoController;
 use App\Http\Controllers\Negocio\CatalogoController;
 use App\Http\Controllers\Negocio\ClientesDelNegocioController;
 use App\Http\Controllers\Negocio\CreditosDelNegocioController;
-use App\Http\Controllers\Negocio\FichaDelDomiciliarioController;
 use App\Http\Controllers\Negocio\DocumentosDelDomiciliarioController;
-use App\Http\Controllers\Negocio\AltaDeDomiciliarioController;
-use App\Http\Controllers\Buyer\MiCreditoController;
+use App\Http\Controllers\Negocio\EfectivoDeLaTiendaController;
+use App\Http\Controllers\Negocio\FichaDelDomiciliarioController;
+use App\Http\Controllers\Negocio\HistorialDePedidosController;
+use App\Http\Controllers\Negocio\MasVendidosController;
 use App\Http\Controllers\Negocio\MiNegocioController;
+use App\Http\Controllers\Negocio\PesajeDelPedidoController;
 use App\Http\Controllers\Negocio\ProductosDelNegocioController;
 use App\Http\Controllers\Negocio\PromocionesController;
 use App\Http\Controllers\Negocio\RendimientoDeDomiciliariosController;
 use App\Http\Controllers\Negocio\TorreDeControlController;
-use App\Http\Controllers\Negocio\PesajeDelPedidoController;
-use App\Http\Controllers\Order\CotizacionController;
-use App\Http\Controllers\LandingRequestController;
-use App\Http\Controllers\Marketing\AdsController;
-use App\Http\Controllers\Order\OrderController;
+use App\Http\Controllers\Operacion\EfectivoController;
 use App\Http\Controllers\Order\ComprobanteDelPedidoController;
 use App\Http\Controllers\Order\ConsultaDePedidosController;
+use App\Http\Controllers\Order\CotizacionController;
 use App\Http\Controllers\Order\GeolocalizacionDePedidoController;
 use App\Http\Controllers\Order\MediosDePagoController;
-use App\Http\Controllers\Payment\PaymentController;
+use App\Http\Controllers\Order\OrderController;
+use App\Http\Controllers\Order\RutaDelPedidoController;
+use App\Http\Controllers\Payment\BancosPseController;
 use App\Http\Controllers\Payment\BoldWebhookController;
-use App\Http\Controllers\Product\ProductController;
+use App\Http\Controllers\Payment\PaymentController;
 use App\Http\Controllers\Product\DestacadosDeProductoController;
 use App\Http\Controllers\Product\EsquemaDeProductoController;
-use App\Http\Controllers\Review\ReviewController;
+use App\Http\Controllers\Product\ProductController;
 use App\Http\Controllers\Review\ResenasDeDomiciliarioController;
 use App\Http\Controllers\Review\ResenasDeNegocioController;
 use App\Http\Controllers\Review\ResenasDeUsuarioController;
-use App\Http\Controllers\User\UserController;
+use App\Http\Controllers\Review\ReviewController;
+use App\Http\Controllers\Soporte\AyudaDesdeLaAppController;
 use App\Http\Controllers\User\DireccionesController;
 use App\Http\Controllers\User\NotificacionesController;
+use App\Http\Controllers\User\UserController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -282,7 +283,7 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
        viaje dentro de la app, donde cualquiera la saca. */
     Route::middleware('throttle:60,1')->get('/rutas', RutaDelPedidoController::class);
 
-    //Auth
+    // Auth
     Route::get('/profile', [AuthController::class, 'profile']);
     Route::post('/logout', [AuthController::class, 'logout']);
 
@@ -397,7 +398,7 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::post('/buyer', [UserController::class, 'getBuyerProfile']);
     });
 
-    //Productos tendero
+    // Productos tendero
     Route::prefix('product')->group(function () {
         // Formulario dinámico: campos y categorías según el tipo del negocio
         Route::get('schema', [EsquemaDeProductoController::class, 'schema']);
@@ -441,7 +442,7 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         });
     });
 
-    //Ordenes
+    // Ordenes
     Route::prefix('orders')->group(function () {
         Route::post('user', [ConsultaDePedidosController::class, 'ordersUser']); // Usuario comprador
         Route::post('business', [ConsultaDePedidosController::class, 'ordersBusiness']); // Tendero / negocio
@@ -479,7 +480,7 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
     Route::get('paymentMethods', [MediosDePagoController::class, 'paymentMethods']); // Listar metodos de pago
     Route::get('paymentForms', [MediosDePagoController::class, 'paymentForms']); // Listar formas de pago
 
-    //Chat
+    // Chat
     Route::prefix('chats')->group(function () {
         Route::post('/create', [ChatController::class, 'createChat']);     // crear chat
         Route::post('/user-chats', [ChatController::class, 'getUserChats']); // listar chats de un user
@@ -488,7 +489,7 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::post('/send-message', [ChatController::class, 'sendMessage']); // enviar mensaje
     });
 
-    //Negocios
+    // Negocios
     Route::prefix('businesses')->group(function () {
         Route::get('index', [ConsultaDeNegociosController::class, 'index']);
         Route::get('top-businesses', [ConsultaDeNegociosController::class, 'indexByQualification']);
@@ -623,9 +624,9 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
 
         /* El efectivo que los domiciliarios le entregan a la tienda en el
            mostrador. Ver EfectivoDeLaTiendaController. */
-        Route::get('mas-vendidos', [\App\Http\Controllers\Negocio\MasVendidosController::class, 'index']);
-        Route::get('efectivo', [\App\Http\Controllers\Negocio\EfectivoDeLaTiendaController::class, 'index']);
-        Route::post('efectivo/{id}/entregas', [\App\Http\Controllers\Negocio\EfectivoDeLaTiendaController::class, 'recibir'])
+        Route::get('mas-vendidos', [MasVendidosController::class, 'index']);
+        Route::get('efectivo', [EfectivoDeLaTiendaController::class, 'index']);
+        Route::post('efectivo/{id}/entregas', [EfectivoDeLaTiendaController::class, 'recibir'])
             ->whereNumber('id');
 
         // Pedidos. `updateStatus` ya comprobaba pertenencia por su cuenta
@@ -786,7 +787,7 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::delete('promociones/{id}', [PromocionesController::class, 'destroy']);
     });
 
-    //Domiciliario
+    // Domiciliario
     Route::prefix('domiciliaries')->group(function () {
         Route::get('/listDomiciliary', [DomiciliaryController::class, 'listDomiciliary']);      // Listar todos
         Route::get('/listDomiciliariesByBusiness', [DomiciliaryController::class, 'listDomiciliariesByBusiness']);      // Listar todos

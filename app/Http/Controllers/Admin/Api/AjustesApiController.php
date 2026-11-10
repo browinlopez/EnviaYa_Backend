@@ -32,9 +32,9 @@ class AjustesApiController extends Controller
 
         foreach (CatalogoDeAjustes::GRUPOS as $clave => $grupo) {
             $grupos[] = [
-                'key'      => $clave,
-                'title'    => $grupo['titulo'],
-                'help'     => $grupo['ayuda'],
+                'key' => $clave,
+                'title' => $grupo['titulo'],
+                'help' => $grupo['ayuda'],
                 'settings' => [],
             ];
         }
@@ -43,24 +43,24 @@ class AjustesApiController extends Controller
 
         foreach (CatalogoDeAjustes::todos() as $clave => $def) {
             $porClave[$def['grupo']]['settings'][] = [
-                'key'      => $clave,
-                'label'    => $def['etiqueta'],
-                'type'     => $def['tipo'],
-                'help'     => $def['ayuda'],
-                'suffix'   => $def['sufijo'] ?? null,
-                'value'    => $valores[$clave],
-                'default'  => $def['defecto'],
+                'key' => $clave,
+                'label' => $def['etiqueta'],
+                'type' => $def['tipo'],
+                'help' => $def['ayuda'],
+                'suffix' => $def['sufijo'] ?? null,
+                'value' => $valores[$clave],
+                'default' => $def['defecto'],
                 // Para que la pantalla pueda decir "este lo cambió alguien" y
                 // ofrecer volver al valor de fábrica. Sin esto, un ajuste con el
                 // mismo valor que su defecto no se distingue de uno intacto.
-                'custom'   => in_array($clave, $puestos, true),
+                'custom' => in_array($clave, $puestos, true),
             ];
         }
 
         return response()->json([
             'groups' => array_values($porClave),
             'values' => $valores,
-            'audit'  => $this->ultimosCambios(),
+            'audit' => $this->ultimosCambios(),
         ]);
     }
 
@@ -80,9 +80,9 @@ class AjustesApiController extends Controller
             ->limit(10)
             ->get(['s.key', 's.updated_at', 'u.name as author'])
             ->map(fn ($r) => [
-                'key'    => $r->key,
-                'label'  => CatalogoDeAjustes::definicion($r->key)['etiqueta'] ?? $r->key,
-                'at'     => $r->updated_at,
+                'key' => $r->key,
+                'label' => CatalogoDeAjustes::definicion($r->key)['etiqueta'] ?? $r->key,
+                'at' => $r->updated_at,
                 'author' => $r->author,
             ])
             ->all();
@@ -126,7 +126,7 @@ class AjustesApiController extends Controller
                 ? 'Ajuste guardado.'
                 : "{$cuantos} ajustes guardados.",
             'changes' => $cambios,
-            'values'  => Ajustes::todos(),
+            'values' => Ajustes::todos(),
         ]);
     }
 
@@ -137,13 +137,13 @@ class AjustesApiController extends Controller
             'key' => 'required|string',
         ]);
 
-        abort_if(!CatalogoDeAjustes::existe($datos['key']), 404, 'Ese ajuste no existe.');
+        abort_if(! CatalogoDeAjustes::existe($datos['key']), 404, 'Ese ajuste no existe.');
 
         Ajustes::restablecer($datos['key']);
 
         return response()->json([
             'message' => 'Ajuste devuelto a su valor por defecto.',
-            'values'  => Ajustes::todos(),
+            'values' => Ajustes::todos(),
         ]);
     }
 }

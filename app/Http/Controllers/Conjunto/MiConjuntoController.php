@@ -6,28 +6,25 @@ use App\Http\Controllers\Controller;
 use App\Models\Buyer\ResidentialComplex;
 use App\Models\Conjunto\ComplexStaff;
 use App\Models\Rol;
-use App\Models\User;
+use App\Services\MediaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use App\Services\MediaService;
-use Illuminate\Validation\Rules\Password;
 
 class MiConjuntoController extends Controller
 {
     /** Qué puede hacer cada rol. Dos roles, sin matriz configurable. */
     private const PERMISOS = [
         ComplexStaff::DUENO => [
-            'resumen'   => ['view' => true, 'manage' => false],
-            'porteria'  => ['view' => true, 'manage' => true],
-            'entradas'  => ['view' => true, 'manage' => false],
+            'resumen' => ['view' => true, 'manage' => false],
+            'porteria' => ['view' => true, 'manage' => true],
+            'entradas' => ['view' => true, 'manage' => false],
             'residentes' => ['view' => true, 'manage' => false],
             'celadores' => ['view' => true, 'manage' => true],
             // El histórico del edificio es suyo: cuánto pide cada torre, qué
             // domiciliarios entran, cómo se identifican.
-            'reportes'  => ['view' => true, 'manage' => false],
+            'reportes' => ['view' => true, 'manage' => false],
             // La ficha del conjunto y sus reglas de portería.
-            'perfil'    => ['view' => true, 'manage' => true],
+            'perfil' => ['view' => true, 'manage' => true],
         ],
         ComplexStaff::CELADOR => [
             /*
@@ -39,31 +36,31 @@ class MiConjuntoController extends Controller
              * a qué horas suele apretarse. Es lo mismo que tiene delante, en
              * cifras.
              */
-            'resumen'   => ['view' => true, 'manage' => false],
-            'porteria'  => ['view' => true, 'manage' => true],
-            'entradas'  => ['view' => true, 'manage' => false],
+            'resumen' => ['view' => true, 'manage' => false],
+            'porteria' => ['view' => true, 'manage' => true],
+            'entradas' => ['view' => true, 'manage' => false],
             /*
              * Ve la ficha del conjunto pero no la edita: las notas de portería
              * son instrucciones que tiene que tener a la vista, y el nombre y
              * el teléfono de la administración son a quién llamar cuando algo
              * pasa en la puerta. Cambiarlos es del administrador.
              */
-            'perfil'    => ['view' => true, 'manage' => false],
+            'perfil' => ['view' => true, 'manage' => false],
         ],
     ];
 
     public function mio(Request $request)
     {
         $complexId = (int) $request->attributes->get('complex_id');
-        $rol       = (string) $request->attributes->get('complex_role');
+        $rol = (string) $request->attributes->get('complex_role');
 
         $conjunto = ResidentialComplex::find($complexId);
 
         return response()->json([
             'complex' => $conjunto ? $this->ficha($conjunto) : null,
-            'role'        => $rol,
+            'role' => $rol,
             'permissions' => self::PERMISOS[$rol] ?? [],
-            'stats'       => [
+            'stats' => [
                 'residentes' => DB::table('buyer_complex')
                     ->where('complex_id', $complexId)->count(),
                 'entradas_hoy' => DB::table('complex_entries')
@@ -89,20 +86,20 @@ class MiConjuntoController extends Controller
     private function ficha($c): array
     {
         return [
-            'complex_id'           => (int) $c->complex_id,
-            'name'                 => $c->name,
-            'photo'                => $c->photo,
-            'address'              => $c->address,
-            'phone'                => $c->phone,
-            'email'                => $c->email,
-            'admin_name'           => $c->admin_name,
-            'nit'                  => $c->nit,
-            'gate_notes'           => $c->gate_notes,
+            'complex_id' => (int) $c->complex_id,
+            'name' => $c->name,
+            'photo' => $c->photo,
+            'address' => $c->address,
+            'phone' => $c->phone,
+            'email' => $c->email,
+            'admin_name' => $c->admin_name,
+            'nit' => $c->nit,
+            'gate_notes' => $c->gate_notes,
             'require_authorization' => (bool) $c->require_authorization,
-            'towers_count'         => $c->towers_count,
+            'towers_count' => $c->towers_count,
             'apartments_per_tower' => $c->apartments_per_tower,
-            'latitude'             => $c->latitude !== null ? (float) $c->latitude : null,
-            'longitude'            => $c->longitude !== null ? (float) $c->longitude : null,
+            'latitude' => $c->latitude !== null ? (float) $c->latitude : null,
+            'longitude' => $c->longitude !== null ? (float) $c->longitude : null,
         ];
     }
 
@@ -125,12 +122,12 @@ class MiConjuntoController extends Controller
         $complexId = (int) $request->attributes->get('complex_id');
 
         $datos = $request->validate([
-            'name'       => 'required|string|max:255',
-            'address'    => 'nullable|string|max:255',
-            'phone'      => 'nullable|string|max:40',
-            'email'      => 'nullable|email|max:120',
+            'name' => 'required|string|max:255',
+            'address' => 'nullable|string|max:255',
+            'phone' => 'nullable|string|max:40',
+            'email' => 'nullable|email|max:120',
             'admin_name' => 'nullable|string|max:120',
-            'nit'        => 'nullable|string|max:40',
+            'nit' => 'nullable|string|max:40',
             'gate_notes' => 'nullable|string|max:2000',
             'require_authorization' => 'nullable|boolean',
         ]);
@@ -162,9 +159,9 @@ class MiConjuntoController extends Controller
         ]);
 
         $complexId = (int) $request->attributes->get('complex_id');
-        $conjunto  = ResidentialComplex::find($complexId);
+        $conjunto = ResidentialComplex::find($complexId);
 
-        if (!$medios->configurado()) {
+        if (! $medios->configurado()) {
             return response()->json([
                 'message' => 'El almacenamiento de archivos no esta configurado en el servidor.',
             ], 503);
@@ -185,7 +182,7 @@ class MiConjuntoController extends Controller
 
         return response()->json([
             'message' => 'Foto actualizada.',
-            'photo'   => $archivo['url'],
+            'photo' => $archivo['url'],
         ]);
     }
 }

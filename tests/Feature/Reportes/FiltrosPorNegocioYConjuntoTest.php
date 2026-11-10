@@ -22,13 +22,12 @@ use Laravel\Sanctum\Sanctum;
  * el esquema — el EXISTS se queda porque sigue siendo la consulta correcta y
  * no cuesta nada.
  */
-
 function staffReportes(): User
 {
     Rol::firstOrCreate(['rol_id' => 4], ['name' => 'admin', 'guard_name' => 'web']);
 
     $u = User::factory()->create(['rol' => 4]);
-    $u->area_id      = Area::where('code', 'sistema')->first()->id;
+    $u->area_id = Area::where('code', 'sistema')->first()->id;
     $u->access_level = Area::NIVEL_GESTOR;
     $u->save();
 

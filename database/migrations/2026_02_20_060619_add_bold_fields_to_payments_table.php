@@ -23,7 +23,7 @@ return new class extends Migration
                 'provider',
                 'provider_payment_id',
                 'status',
-                'provider_snapshot'
+                'provider_snapshot',
             ]);
         });
     }

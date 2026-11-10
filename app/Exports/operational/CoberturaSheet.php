@@ -16,17 +16,17 @@ class CoberturaSheet implements FromCollection, WithHeadings, WithTitle
         return OrdersSales::with('address.municipality')
             ->whereBetween('sale_date', [$this->start, $this->end])
             ->get()
-            ->map(fn($o) => [
-                'Pedido'   => $o->orderSales_id,
-                'Latitud'  => $o->address?->latitude,
+            ->map(fn ($o) => [
+                'Pedido' => $o->orderSales_id,
+                'Latitud' => $o->address?->latitude,
                 'Longitud' => $o->address?->longitude,
-                'Municipio'=> $o->address?->municipality?->name,
+                'Municipio' => $o->address?->municipality?->name,
             ]);
     }
 
     public function headings(): array
     {
-        return ['Pedido','Latitud','Longitud','Municipio'];
+        return ['Pedido', 'Latitud', 'Longitud', 'Municipio'];
     }
 
     public function title(): string

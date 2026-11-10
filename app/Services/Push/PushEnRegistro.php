@@ -32,9 +32,9 @@ class PushEnRegistro implements TransportePush
     public function enviar(array $tokens, string $titulo, string $cuerpo, array $datos = []): array
     {
         Log::info('Notificación NO enviada: no hay transporte de push configurado.', [
-            'titulo'       => $titulo,
-            'cuerpo'       => $cuerpo,
-            'datos'        => $datos,
+            'titulo' => $titulo,
+            'cuerpo' => $cuerpo,
+            'datos' => $datos,
             'dispositivos' => count($tokens),
         ]);
 

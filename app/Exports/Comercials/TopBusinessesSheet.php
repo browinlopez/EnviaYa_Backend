@@ -5,19 +5,20 @@ namespace App\Exports\Comercials;
 use App\Models\Order\OrdersSales;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\WithTitle;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class TopBusinessesSheet implements FromCollection, WithHeadings, WithTitle, WithStyles
+class TopBusinessesSheet implements FromCollection, WithHeadings, WithStyles, WithTitle
 {
     protected $start;
+
     protected $end;
 
     public function __construct($start, $end)
     {
         $this->start = $start;
-        $this->end   = $end;
+        $this->end = $end;
     }
 
     public function collection()
@@ -29,7 +30,7 @@ class TopBusinessesSheet implements FromCollection, WithHeadings, WithTitle, Wit
             ->get()
             ->map(function ($item) {
                 return [
-                    'Negocio'       => $item->business?->name ?? 'N/A',
+                    'Negocio' => $item->business?->name ?? 'N/A',
                     'Total Pedidos' => $item->total_orders,
                     'Total Facturado' => $item->total_amount,
                 ];
@@ -50,6 +51,7 @@ class TopBusinessesSheet implements FromCollection, WithHeadings, WithTitle, Wit
     {
         $sheet->getStyle('A1:C1')->getFont()->setBold(true);
         $sheet->setAutoFilter($sheet->calculateWorksheetDimension());
+
         return [];
     }
 }

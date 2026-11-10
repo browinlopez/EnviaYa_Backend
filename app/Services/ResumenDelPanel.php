@@ -2,26 +2,12 @@
 
 namespace App\Services;
 
-use App\Support\Consultas\AyudasDeAdmin;
-use App\Services\Ajustes;
-use App\Http\Controllers\Controller;
 use App\Models\Area;
-use App\Models\Conjunto\ComplexStaff;
 use App\Models\Operacion\DomiciliaryDocument;
-use App\Models\Reviews\BusinessReview;
-use App\Models\Reviews\DomiciliaryReview;
-use App\Models\User;
-use App\Services\BusinessMediaService;
-use App\Services\ContratoService;
-use App\Services\MediaService;
-use App\Services\VinculosDelRol;
-use App\Support\ListadoPaginado;
+use App\Support\Consultas\AyudasDeAdmin;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 
 /**
  * El tablero de inicio del panel: la serie del periodo, los mejores negocios y los bloques que cada area ve segun sus modulos. Eran 380 de las 497 lineas de AdminApiController, cuyo unico trabajo era responder /admin/overview.
@@ -33,7 +19,7 @@ class ResumenDelPanel
     /** Serie por día con el periodo anterior alineado al mismo índice. */
     public function serieDiaria($entregadas, Carbon $desde, int $dias): array
     {
-        $porDia = $entregadas->groupBy(fn($o) => Carbon::parse($o->sale_date)->toDateString());
+        $porDia = $entregadas->groupBy(fn ($o) => Carbon::parse($o->sale_date)->toDateString());
         $serie = [];
 
         for ($i = 0; $i < $dias; $i++) {
@@ -41,11 +27,11 @@ class ResumenDelPanel
             $diaPrevio = (clone $dia)->subDays($dias);
 
             $serie[] = [
-                'date'         => $dia->toDateString(),
-                'label'        => $dia->format('d M'),
-                'revenue'      => round(($porDia[$dia->toDateString()] ?? collect())->sum('total'), 2),
+                'date' => $dia->toDateString(),
+                'label' => $dia->format('d M'),
+                'revenue' => round(($porDia[$dia->toDateString()] ?? collect())->sum('total'), 2),
                 'revenue_prev' => round(($porDia[$diaPrevio->toDateString()] ?? collect())->sum('total'), 2),
-                'orders'       => ($porDia[$dia->toDateString()] ?? collect())->count(),
+                'orders' => ($porDia[$dia->toDateString()] ?? collect())->count(),
             ];
         }
 
@@ -83,12 +69,12 @@ class ResumenDelPanel
         $user = $request->user();
         $area = $user && $user->area_id ? Area::find($user->area_id) : null;
 
-        if (!$area || (int) $area->state !== 1) {
+        if (! $area || (int) $area->state !== 1) {
             return ['area' => null, 'matriz' => []];
         }
 
         return [
-            'area'   => $area,
+            'area' => $area,
             'matriz' => $area->permisos($user->access_level ?? Area::NIVEL_GESTOR),
         ];
     }
@@ -101,12 +87,12 @@ class ResumenDelPanel
      * esté acá cae al orden general, que empieza por la operación.
      */
     private const ORDEN_POR_AREA = [
-        'gerencia'     => ['dinero', 'comercial', 'operacion', 'marketing', 'calidad', 'sst', 'contabilidad'],
+        'gerencia' => ['dinero', 'comercial', 'operacion', 'marketing', 'calidad', 'sst', 'contabilidad'],
         'contabilidad' => ['contabilidad', 'dinero', 'operacion'],
-        'marketing'    => ['marketing', 'dinero', 'comercial'],
-        'comercial'    => ['comercial', 'dinero', 'operacion', 'calidad'],
-        'sst'          => ['sst', 'operacion'],
-        'calidad'      => ['calidad', 'operacion', 'comercial'],
+        'marketing' => ['marketing', 'dinero', 'comercial'],
+        'comercial' => ['comercial', 'dinero', 'operacion', 'calidad'],
+        'sst' => ['sst', 'operacion'],
+        'calidad' => ['calidad', 'operacion', 'comercial'],
     ];
 
     private const ORDEN_POR_DEFECTO = [
@@ -152,8 +138,8 @@ class ResumenDelPanel
         }
 
         return [
-            'focus'  => $area?->code,
-            'order'  => self::ORDEN_POR_AREA[$area?->code] ?? self::ORDEN_POR_DEFECTO,
+            'focus' => $area?->code,
+            'order' => self::ORDEN_POR_AREA[$area?->code] ?? self::ORDEN_POR_DEFECTO,
             'blocks' => $bloques,
         ];
     }
@@ -174,10 +160,10 @@ class ResumenDelPanel
             $datos += [
                 // Un corte aprobado y sin pagar es plata que se le debe a
                 // alguien: es la cifra que Contabilidad viene a mirar.
-                'settlements_draft'    => (int) ($porEstado[0]->n ?? 0),
+                'settlements_draft' => (int) ($porEstado[0]->n ?? 0),
                 'settlements_approved' => (int) ($porEstado[1]->n ?? 0),
-                'payable'              => round((float) ($porEstado[1]->monto ?? 0), 2),
-                'paid_amount'          => round((float) ($porEstado[2]->monto ?? 0), 2),
+                'payable' => round((float) ($porEstado[1]->monto ?? 0), 2),
+                'paid_amount' => round((float) ($porEstado[2]->monto ?? 0), 2),
             ];
         }
 
@@ -203,7 +189,7 @@ class ResumenDelPanel
 
     private function bloqueSst(): array
     {
-        $hoy   = Carbon::today()->toDateString();
+        $hoy = Carbon::today()->toDateString();
         $aviso = Carbon::today()->addDays(DomiciliaryDocument::AVISO_DIAS)->toDateString();
 
         $activos = DB::table('domiciliary')->where('state', 1)->count();
@@ -227,9 +213,9 @@ class ResumenDelPanel
                 ->whereDate('expires_at', '>=', $hoy)
                 ->whereDate('expires_at', '<=', $aviso)
                 ->count(),
-            'couriers_active'     => $activos,
+            'couriers_active' => $activos,
             'couriers_incomplete' => max(0, $activos - $completos),
-            'without_contract'    => DB::table('domiciliary')
+            'without_contract' => DB::table('domiciliary')
                 ->where('state', 1)->whereNull('contract_signed_at')->count(),
             'incidents_open' => DB::table('safety_incidents')
                 ->whereIn('state', [0, 1])->count(),
@@ -283,7 +269,7 @@ class ResumenDelPanel
 
     private function bloqueMarketing(): array
     {
-        $hoy   = Carbon::today()->toDateString();
+        $hoy = Carbon::today()->toDateString();
         $desde = Carbon::today()->subDays(29)->toDateString();
 
         $eventos = DB::table('banner_events')
@@ -293,7 +279,7 @@ class ResumenDelPanel
             ->first();
 
         $impresiones = (int) ($eventos->impresiones ?? 0);
-        $clics       = (int) ($eventos->clics ?? 0);
+        $clics = (int) ($eventos->clics ?? 0);
 
         return [
             'campaigns_live' => DB::table('ad_campaigns')
@@ -316,8 +302,8 @@ class ResumenDelPanel
                     ->where('m.entity_type', 'banners'))
                 ->count(),
             'impressions_30d' => $impresiones,
-            'clicks_30d'      => $clics,
-            'ctr_30d'         => $impresiones > 0 ? round($clics / $impresiones * 100, 2) : null,
+            'clicks_30d' => $clics,
+            'ctr_30d' => $impresiones > 0 ? round($clics / $impresiones * 100, 2) : null,
             'coupons_expiring' => DB::table('coupons')
                 ->where('state', 1)
                 ->whereDate('ends_at', '>=', $hoy)
@@ -339,8 +325,8 @@ class ResumenDelPanel
 
         if ($veNegocios) {
             $datos += [
-                'businesses_total'   => DB::table('business')->count(),
-                'businesses_hidden'  => DB::table('business')->where('state', '!=', 1)->count(),
+                'businesses_total' => DB::table('business')->count(),
+                'businesses_hidden' => DB::table('business')->where('state', '!=', 1)->count(),
                 // Sin coordenadas no entra en el mapa de entregas; sin tipo no
                 // aparece en ningún carrusel de la app. Dos formas de estar
                 // dado de alta y ser invisible.
@@ -373,8 +359,8 @@ class ResumenDelPanel
 
         if ($veProductos) {
             $datos += [
-                'products_total'      => DB::table('products')->count(),
-                'products_no_image'   => DB::table('products')
+                'products_total' => DB::table('products')->count(),
+                'products_no_image' => DB::table('products')
                     ->where(fn ($q) => $q->whereNull('image')->orWhere('image', ''))
                     ->count(),
                 'products_out_of_stock' => DB::table('products_business')->where('amount', 0)->count(),
@@ -407,7 +393,6 @@ class ResumenDelPanel
           La Esquina?" ni "¿cómo va Soledad?", que es lo que pregunta
           Comercial.
        ================================================================== */
-
 
     /**
      * Rango en días, acotado para que nadie pida un año de golpe por error.

@@ -2,25 +2,9 @@
 
 namespace App\Services;
 
-use App\Services\Ajustes;
-use App\Http\Controllers\Controller;
-use App\Models\Area;
-use App\Models\Conjunto\ComplexStaff;
-use App\Models\Operacion\DomiciliaryDocument;
-use App\Models\Reviews\BusinessReview;
-use App\Models\Reviews\DomiciliaryReview;
-use App\Models\User;
-use App\Services\BusinessMediaService;
-use App\Services\ContratoService;
-use App\Services\MediaService;
-use App\Services\VinculosDelRol;
-use App\Support\ListadoPaginado;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 
 /**
  * Los cuatro reportes del panel: financiero, comercial, operacional y por negocio. Eran 475 de las 587 lineas del controlador, que solo tenia que leer la peticion y responder. Aca se pueden probar sin levantar una peticion HTTP, y el libro de Excel puede pedir las mismas cifras en vez de repetir las consultas.
@@ -57,7 +41,7 @@ class GeneradorDeReportes
                 [$desde, $hasta] = [$hasta, $desde];
             }
         } else {
-            $dias  = max(1, min((int) $request->query('range', 30), 365));
+            $dias = max(1, min((int) $request->query('range', 30), 365));
             $hasta = Carbon::today();
             $desde = $hasta->copy()->subDays($dias - 1);
         }
@@ -68,9 +52,9 @@ class GeneradorDeReportes
         $desde = $hasta->copy()->subDays($dias - 1);
 
         return [
-            'desde'       => $desde->copy()->startOfDay(),
-            'hasta'       => $hasta->copy()->endOfDay(),
-            'dias'        => $dias,
+            'desde' => $desde->copy()->startOfDay(),
+            'hasta' => $hasta->copy()->endOfDay(),
+            'dias' => $dias,
             'desde_antes' => $desde->copy()->subDays($dias)->startOfDay(),
             'hasta_antes' => $desde->copy()->subDay()->endOfDay(),
         ];
@@ -78,7 +62,7 @@ class GeneradorDeReportes
 
     private function fechaValida(?string $valor): ?Carbon
     {
-        if (!$valor) {
+        if (! $valor) {
             return null;
         }
 
@@ -97,10 +81,10 @@ class GeneradorDeReportes
         $entero = fn ($v) => ($v === null || $v === '' || (int) $v <= 0) ? null : (int) $v;
 
         return [
-            'business_id'       => $entero($request->query('business_id')),
-            'municipality_id'   => $entero($request->query('municipality_id')),
+            'business_id' => $entero($request->query('business_id')),
+            'municipality_id' => $entero($request->query('municipality_id')),
             'business_category' => $entero($request->query('business_category')),
-            'complex_id'        => $entero($request->query('complex_id')),
+            'complex_id' => $entero($request->query('complex_id')),
         ];
     }
 
@@ -113,22 +97,22 @@ class GeneradorDeReportes
     {
         return array_values(array_filter([
             $f['business_id'] ? [
-                'key'   => 'business_id',
+                'key' => 'business_id',
                 'label' => 'Negocio',
                 'value' => DB::table('business')->where('busines_id', $f['business_id'])->value('name'),
             ] : null,
             $f['municipality_id'] ? [
-                'key'   => 'municipality_id',
+                'key' => 'municipality_id',
                 'label' => 'Municipio',
                 'value' => DB::table('municipalities')->where('id', $f['municipality_id'])->value('name'),
             ] : null,
             $f['business_category'] ? [
-                'key'   => 'business_category',
+                'key' => 'business_category',
                 'label' => 'Tipo de negocio',
                 'value' => DB::table('category_business')->where('id', $f['business_category'])->value('name'),
             ] : null,
             $f['complex_id'] ? [
-                'key'   => 'complex_id',
+                'key' => 'complex_id',
                 'label' => 'Conjunto',
                 'value' => DB::table('residential_complexes')
                     ->where('complex_id', $f['complex_id'])->value('name'),
@@ -228,18 +212,18 @@ class GeneradorDeReportes
         for ($d = $v['desde']->copy(); $d->lte($v['hasta']); $d->addDay()) {
             $delDia = $porDia[$d->toDateString()] ?? collect();
             $serie[] = [
-                'date'     => $d->toDateString(),
-                'label'    => $d->format('d M'),
-                'revenue'  => round($delDia->sum('total'), 2),
+                'date' => $d->toDateString(),
+                'label' => $d->format('d M'),
+                'revenue' => round($delDia->sum('total'), 2),
                 'delivery' => round($delDia->sum('domicilio'), 2),
-                'orders'   => $delDia->count(),
+                'orders' => $delDia->count(),
             ];
         }
 
         return [
-            'totals'   => $this->cifrasFinancieras($actual),
+            'totals' => $this->cifrasFinancieras($actual),
             'previous' => $totales(true),
-            'series'   => $serie,
+            'series' => $serie,
         ];
     }
 
@@ -249,16 +233,16 @@ class GeneradorDeReportes
         $comisiones = $pedidos->sum('domiciliary_fee');
 
         return [
-            'orders'           => $pedidos->count(),
-            'revenue'          => round($pedidos->sum('total'), 2),
-            'subtotal'         => round($pedidos->sum('subtotal'), 2),
-            'delivery_fees'    => round($domicilios, 2),
+            'orders' => $pedidos->count(),
+            'revenue' => round($pedidos->sum('total'), 2),
+            'subtotal' => round($pedidos->sum('subtotal'), 2),
+            'delivery_fees' => round($domicilios, 2),
             'courier_earnings' => round($comisiones, 2),
-            'discounts'        => round($pedidos->sum('discount'), 2),
+            'discounts' => round($pedidos->sum('discount'), 2),
             // Lo que queda para la plataforma y el negocio una vez descontada
             // la comisión del domiciliario.
-            'business_net'     => round($pedidos->sum('subtotal') + ($domicilios - $comisiones), 2),
-            'avg_ticket'       => $pedidos->count()
+            'business_net' => round($pedidos->sum('subtotal') + ($domicilios - $comisiones), 2),
+            'avg_ticket' => $pedidos->count()
                 ? round($pedidos->sum('total') / $pedidos->count(), 2)
                 : 0,
         ];
@@ -306,18 +290,18 @@ class GeneradorDeReportes
             $unidades = (int) ($filas->units ?? 0);
 
             return [
-                'units'             => $unidades,
+                'units' => $unidades,
                 'distinct_products' => (int) ($filas->refs ?? 0),
-                'orders'            => $pedidos,
-                'units_per_order'   => $pedidos ? round($unidades / $pedidos, 1) : 0,
+                'orders' => $pedidos,
+                'units_per_order' => $pedidos ? round($unidades / $pedidos, 1) : 0,
             ];
         };
 
         return [
-            'totals'   => $cifras(false) + ['catalog_size' => DB::table('products')->count()],
+            'totals' => $cifras(false) + ['catalog_size' => DB::table('products')->count()],
             'previous' => $cifras(true),
             'top_products' => $productos->take(10)->values(),
-            'by_category'  => $categorias,
+            'by_category' => $categorias,
         ];
     }
 
@@ -326,10 +310,10 @@ class GeneradorDeReportes
     public function reporteOperacional(array $v, array $f): array
     {
         $columnas = ['o.orderSales_id', 'o.state', 'o.sale_date', 'o.dispatched_at',
-                     'o.delivery_date', 'o.promised_minutes'];
+            'o.delivery_date', 'o.promised_minutes'];
 
         $ordenes = $this->pedidosDelPeriodo($v, $f)->get($columnas);
-        $antes   = $this->pedidosDelPeriodo($v, $f, true)->get($columnas);
+        $antes = $this->pedidosDelPeriodo($v, $f, true)->get($columnas);
 
         $porDia = $ordenes->groupBy(fn ($o) => Carbon::parse($o->sale_date)->toDateString());
 
@@ -337,8 +321,8 @@ class GeneradorDeReportes
         for ($d = $v['desde']->copy(); $d->lte($v['hasta']); $d->addDay()) {
             $delDia = $porDia[$d->toDateString()] ?? collect();
             $serie[] = [
-                'date'      => $d->toDateString(),
-                'label'     => $d->format('d M'),
+                'date' => $d->toDateString(),
+                'label' => $d->format('d M'),
                 'delivered' => $delDia->where('state', self::ENTREGADO)->count(),
                 'cancelled' => $delDia->where('state', '!=', self::ENTREGADO)->count(),
             ];
@@ -371,18 +355,18 @@ class GeneradorDeReportes
                  * cuentan ni a favor ni en contra, así que el porcentaje sale
                  * sobre esa base y no sobre el total entregado.
                  */
-                DB::raw("SUM(CASE WHEN o.dispatched_at IS NOT NULL AND o.delivery_date IS NOT NULL
-                          AND o.promised_minutes IS NOT NULL THEN 1 ELSE 0 END) as measured"),
+                DB::raw('SUM(CASE WHEN o.dispatched_at IS NOT NULL AND o.delivery_date IS NOT NULL
+                          AND o.promised_minutes IS NOT NULL THEN 1 ELSE 0 END) as measured'),
                 DB::raw("SUM(CASE WHEN o.dispatched_at IS NOT NULL AND o.delivery_date IS NOT NULL
                           AND o.promised_minutes IS NOT NULL
                           AND {$minutos} <= o.promised_minutes THEN 1 ELSE 0 END) as on_time"),
             ]);
 
         $repartidores = $repartidores->map(function ($r) {
-            $r->avg_minutes  = $r->avg_minutes === null ? null : round((float) $r->avg_minutes, 1);
-            $r->measured     = (int) $r->measured;
-            $r->on_time      = (int) $r->on_time;
-            $r->late         = $r->measured - $r->on_time;
+            $r->avg_minutes = $r->avg_minutes === null ? null : round((float) $r->avg_minutes, 1);
+            $r->measured = (int) $r->measured;
+            $r->on_time = (int) $r->on_time;
+            $r->late = $r->measured - $r->on_time;
             // Null y no 0 cuando no hay nada medido: "0 % a tiempo" y "todavía
             // no se le puede medir" son cosas muy distintas para quien lo lee.
             $r->on_time_rate = $r->measured
@@ -393,9 +377,9 @@ class GeneradorDeReportes
         });
 
         return [
-            'totals'   => $this->cifrasOperacionales($ordenes, $repartidores->count()),
+            'totals' => $this->cifrasOperacionales($ordenes, $repartidores->count()),
             'previous' => $this->cifrasOperacionales($antes, null),
-            'series'   => $serie,
+            'series' => $serie,
             'couriers' => $repartidores,
         ];
     }
@@ -422,15 +406,15 @@ class GeneradorDeReportes
         );
 
         return [
-            'delivered'          => $entregadas->count(),
-            'total_orders'       => $ordenes->count(),
-            'avg_minutes'        => $minutos->count() ? round($minutos->avg(), 1) : null,
-            'measured'           => $medibles->count(),
-            'on_time'            => $aTiempo->count(),
-            'on_time_rate'       => $medibles->count()
+            'delivered' => $entregadas->count(),
+            'total_orders' => $ordenes->count(),
+            'avg_minutes' => $minutos->count() ? round($minutos->avg(), 1) : null,
+            'measured' => $medibles->count(),
+            'on_time' => $aTiempo->count(),
+            'on_time_rate' => $medibles->count()
                 ? round(($aTiempo->count() / $medibles->count()) * 100, 1)
                 : null,
-            'fulfillment_rate'   => $ordenes->count()
+            'fulfillment_rate' => $ordenes->count()
                 ? round(($entregadas->count() / $ordenes->count()) * 100, 1)
                 : 0,
             'orders_per_courier' => $repartidores
@@ -464,18 +448,18 @@ class GeneradorDeReportes
                 DB::raw('m.name as municipality'),
                 DB::raw('cb.name as type_name'),
                 DB::raw('COUNT(o.orderSales_id) as orders'),
-                DB::raw('SUM(CASE WHEN o.state = ' . self::ENTREGADO . ' THEN 1 ELSE 0 END) as delivered'),
+                DB::raw('SUM(CASE WHEN o.state = '.self::ENTREGADO.' THEN 1 ELSE 0 END) as delivered'),
                 DB::raw('SUM(CASE WHEN o.state = 5 THEN 1 ELSE 0 END) as cancelled'),
-                DB::raw('COALESCE(SUM(CASE WHEN o.state = ' . self::ENTREGADO . ' THEN o.total ELSE 0 END), 0) as revenue'),
-                DB::raw('COALESCE(SUM(CASE WHEN o.state = ' . self::ENTREGADO . ' THEN o.subtotal ELSE 0 END), 0) as subtotal'),
+                DB::raw('COALESCE(SUM(CASE WHEN o.state = '.self::ENTREGADO.' THEN o.total ELSE 0 END), 0) as revenue'),
+                DB::raw('COALESCE(SUM(CASE WHEN o.state = '.self::ENTREGADO.' THEN o.subtotal ELSE 0 END), 0) as subtotal'),
                 DB::raw('COUNT(DISTINCT o.buyer_id) as buyers'),
             ])
             ->map(function ($n) {
                 $entregados = (int) $n->delivered;
 
-                $n->revenue     = round((float) $n->revenue, 2);
-                $n->subtotal    = round((float) $n->subtotal, 2);
-                $n->avg_ticket  = $entregados ? round($n->revenue / $entregados, 2) : 0;
+                $n->revenue = round((float) $n->revenue, 2);
+                $n->subtotal = round((float) $n->subtotal, 2);
+                $n->avg_ticket = $entregados ? round($n->revenue / $entregados, 2) : 0;
                 $n->cancel_rate = (int) $n->orders
                     ? round(((int) $n->cancelled / (int) $n->orders) * 100, 1)
                     : 0;
@@ -493,15 +477,15 @@ class GeneradorDeReportes
 
         return [
             'totals' => [
-                'businesses'  => $filas->count(),
-                'active'      => $activos,
-                'revenue'     => round($filas->sum('revenue'), 2),
-                'orders'      => (int) $filas->sum('orders'),
-                'cancelled'   => (int) $filas->sum('cancelled'),
+                'businesses' => $filas->count(),
+                'active' => $activos,
+                'revenue' => round($filas->sum('revenue'), 2),
+                'orders' => (int) $filas->sum('orders'),
+                'cancelled' => (int) $filas->sum('cancelled'),
                 // Cuánto del total aporta la tienda que más vende. Una
                 // plataforma donde un solo negocio hace el 70 % no tiene un
                 // buen mes: tiene un riesgo.
-                'top_share'   => $filas->sum('revenue') > 0
+                'top_share' => $filas->sum('revenue') > 0
                     ? round(((float) ($filas->first()->revenue ?? 0)) / $filas->sum('revenue') * 100, 1)
                     : 0,
             ],

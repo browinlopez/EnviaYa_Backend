@@ -3,20 +3,12 @@
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Operacion\DomiciliaryDocument;
-use App\Models\Operacion\LandingRequest;
 use App\Models\Operacion\Pqrs;
-use App\Models\Operacion\PqrsNote;
 use App\Models\Operacion\SafetyIncident;
-use App\Models\Operacion\Settlement;
-use App\Services\LiquidacionService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use RuntimeException;
 
 class IncidentesApiController extends Controller
 {
-
     public function incidentes(Request $request)
     {
         $q = SafetyIncident::query()
@@ -33,11 +25,11 @@ class IncidentesApiController extends Controller
         $todos = SafetyIncident::query();
 
         return response()->json([
-            'data'    => $filas,
+            'data' => $filas,
             'summary' => [
-                'abiertos'     => (clone $todos)->where('state', SafetyIncident::ABIERTO)->count(),
+                'abiertos' => (clone $todos)->where('state', SafetyIncident::ABIERTO)->count(),
                 'investigando' => (clone $todos)->where('state', SafetyIncident::EN_INVESTIGACION)->count(),
-                'graves_anio'  => (clone $todos)->where('severity', 'grave')
+                'graves_anio' => (clone $todos)->where('severity', 'grave')
                     ->whereYear('occurred_at', now()->year)->count(),
                 // Días de incapacidad acumulados: es el número que piden la ARL
                 // y los indicadores de severidad.
@@ -89,16 +81,16 @@ class IncidentesApiController extends Controller
 
         return $request->validate([
             'domiciliary_id' => 'sometimes|nullable|integer|exists:domiciliary,domiciliary_id',
-            'order_id'       => 'sometimes|nullable|integer|exists:orderssales,orderSales_id',
-            'occurred_at'    => "{$regla}|date",
-            'type'           => "{$regla}|in:accidente_transito,caida,robo,agresion,falla_vehiculo,condicion_insegura,otro",
-            'severity'       => 'sometimes|in:leve,moderado,grave',
-            'had_injuries'   => 'sometimes|boolean',
-            'days_off'       => 'sometimes|integer|min:0|max:2000',
-            'location'       => 'sometimes|nullable|string|max:255',
-            'description'    => "{$regla}|string",
-            'actions'        => 'sometimes|nullable|string',
-            'state'          => 'sometimes|integer|in:0,1,2',
+            'order_id' => 'sometimes|nullable|integer|exists:orderssales,orderSales_id',
+            'occurred_at' => "{$regla}|date",
+            'type' => "{$regla}|in:accidente_transito,caida,robo,agresion,falla_vehiculo,condicion_insegura,otro",
+            'severity' => 'sometimes|in:leve,moderado,grave',
+            'had_injuries' => 'sometimes|boolean',
+            'days_off' => 'sometimes|integer|min:0|max:2000',
+            'location' => 'sometimes|nullable|string|max:255',
+            'description' => "{$regla}|string",
+            'actions' => 'sometimes|nullable|string',
+            'state' => 'sometimes|integer|in:0,1,2',
         ]);
     }
 

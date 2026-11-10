@@ -106,8 +106,8 @@ test('la ficha de un domiciliario que no reparte para ti no existe', function ()
 test('entregas y plata se cuentan solo sobre los pedidos de tu tienda', function () {
     $t = tiendaConDomiciliario();
 
-    pedidoDelRepartidor($t, $t['mia'],  4, 3000);
-    pedidoDelRepartidor($t, $t['mia'],  4, 3000);
+    pedidoDelRepartidor($t, $t['mia'], 4, 3000);
+    pedidoDelRepartidor($t, $t['mia'], 4, 3000);
     pedidoDelRepartidor($t, $t['otra'], 4, 9000);   // de la tienda de enfrente: no cuenta
 
     Sanctum::actingAs($t['tendero']);
@@ -120,7 +120,7 @@ test('entregas y plata se cuentan solo sobre los pedidos de tu tienda', function
 test('lo que lleva encima son tus pedidos, no los del vecino', function () {
     $t = tiendaConDomiciliario();
 
-    pedidoDelRepartidor($t, $t['mia'],  3);
+    pedidoDelRepartidor($t, $t['mia'], 3);
     pedidoDelRepartidor($t, $t['otra'], 3);   // tambien lo lleva encima, pero no es tuyo
 
     Sanctum::actingAs($t['tendero']);

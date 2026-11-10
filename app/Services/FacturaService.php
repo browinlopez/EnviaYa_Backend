@@ -2,10 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\Invoice\Invoice;
 use App\Support\ImporteDeLinea;
 use App\Support\UnidadDeVenta;
-
-use App\Models\Invoice\Invoice;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use Illuminate\Database\QueryException;
@@ -43,6 +42,7 @@ class FacturaService
     private const INTENTOS = 5;
 
     public const EMITIDA = 1;
+
     public const ANULADA = 0;
 
     /**
@@ -86,7 +86,7 @@ class FacturaService
             ]);
 
         // Solo lo entregado. Un pedido en camino puede cancelarse todavía.
-        if (!$pedido || (int) $pedido->state !== 4) {
+        if (! $pedido || (int) $pedido->state !== 4) {
             return null;
         }
 
@@ -112,17 +112,17 @@ class FacturaService
             : Carbon::parse($pedido->sale_date ?? now());
 
         return $this->insertarConConsecutivo($fecha, [
-            'orderSales_id'     => $pedidoId,
-            'busines_id'        => $pedido->busines_id,
-            'buyer_id'          => $pedido->buyer_id,
-            'payments_id'       => $pago->payments_id ?? null,
-            'payment_provider'  => $pago->provider ?? null,
+            'orderSales_id' => $pedidoId,
+            'busines_id' => $pedido->busines_id,
+            'buyer_id' => $pedido->buyer_id,
+            'payments_id' => $pago->payments_id ?? null,
+            'payment_provider' => $pago->provider ?? null,
             'payment_reference' => $pago->provider_payment_id ?? null,
-            'invoice_date'      => $fecha,
-            'subtotal'          => round((float) $pedido->subtotal, 2),
-            'descuento'         => round((float) $pedido->discount, 2),
-            'domicilio'         => round((float) $pedido->domicilio, 2),
-            'domiciliary_fee'   => round((float) $pedido->domiciliary_fee, 2),
+            'invoice_date' => $fecha,
+            'subtotal' => round((float) $pedido->subtotal, 2),
+            'descuento' => round((float) $pedido->discount, 2),
+            'domicilio' => round((float) $pedido->domicilio, 2),
+            'domiciliary_fee' => round((float) $pedido->domiciliary_fee, 2),
             /*
              * IVA en cero, a propósito y no por olvido.
              *
@@ -133,27 +133,27 @@ class FacturaService
              * un repuesto. Se deja en cero hasta que el catálogo diga la tarifa
              * de cada producto, que es lo que hará falta igualmente para la DIAN.
              */
-            'iva'      => 0,
-            'total'    => round((float) $pedido->total, 2),
+            'iva' => 0,
+            'total' => round((float) $pedido->total, 2),
             'currency' => $pedido->currency ?: 'COP',
-            'state'    => self::EMITIDA,
+            'state' => self::EMITIDA,
             'snapshot' => [
                 'negocio' => [
-                    'nombre'       => $pedido->negocio,
-                    'nit'          => $pedido->negocio_nit,
+                    'nombre' => $pedido->negocio,
+                    'nit' => $pedido->negocio_nit,
                     'razon_social' => $pedido->negocio_razon,
-                    'direccion'    => $pedido->negocio_direccion,
-                    'telefono'     => $pedido->negocio_telefono,
+                    'direccion' => $pedido->negocio_direccion,
+                    'telefono' => $pedido->negocio_telefono,
                 ],
                 'comprador' => [
-                    'nombre'   => $pedido->comprador,
+                    'nombre' => $pedido->comprador,
                     'telefono' => $pedido->comprador_telefono,
-                    'entrega'  => $pedido->entrega,
+                    'entrega' => $pedido->entrega,
                 ],
                 'entrega' => [
                     'domiciliario' => $pedido->domiciliario,
-                    'fecha'        => $fecha->toDateTimeString(),
-                    'medio_pago'   => $pedido->medio_pago,
+                    'fecha' => $fecha->toDateTimeString(),
+                    'medio_pago' => $pedido->medio_pago,
                 ],
                 /*
                  * LO QUE SE VENDIO DE VERDAD, y no `(int) amount`.
@@ -169,11 +169,11 @@ class FacturaService
                  * sea SIEMPRE despues del pesaje.
                  */
                 'renglones' => $renglones->map(fn ($r) => [
-                    'producto'    => $r->producto ?? "Producto #{$r->product_id}",
-                    'cantidad'    => ImporteDeLinea::cantidad($r),
-                    'unidad'      => $r->sale_unit ?? UnidadDeVenta::UNIDAD,
+                    'producto' => $r->producto ?? "Producto #{$r->product_id}",
+                    'cantidad' => ImporteDeLinea::cantidad($r),
+                    'unidad' => $r->sale_unit ?? UnidadDeVenta::UNIDAD,
                     'precio_unit' => round((float) $r->unit_price, 2),
-                    'importe'     => ImporteDeLinea::de($r),
+                    'importe' => ImporteDeLinea::de($r),
                 ])->all(),
             ],
         ]);
@@ -228,7 +228,7 @@ class FacturaService
         $prefijo = "FV-{$anio}-";
 
         $ultimo = DB::table('invoices')
-            ->where('invoice_number', 'like', $prefijo . '%')
+            ->where('invoice_number', 'like', $prefijo.'%')
             ->orderByDesc('invoice_number')
             ->value('invoice_number');
 
@@ -236,7 +236,7 @@ class FacturaService
             ? ((int) substr($ultimo, strlen($prefijo))) + 1
             : 1;
 
-        return $prefijo . str_pad((string) $consecutivo, 6, '0', STR_PAD_LEFT);
+        return $prefijo.str_pad((string) $consecutivo, 6, '0', STR_PAD_LEFT);
     }
 
     /**
@@ -253,10 +253,10 @@ class FacturaService
         }
 
         $factura->forceFill([
-            'state'       => self::ANULADA,
+            'state' => self::ANULADA,
             'void_reason' => trim($motivo),
-            'voided_at'   => now(),
-            'voided_by'   => $usuarioId,
+            'voided_at' => now(),
+            'voided_by' => $usuarioId,
         ])->save();
 
         return $factura->fresh();
@@ -266,16 +266,16 @@ class FacturaService
     public function pdf(Invoice $factura): string
     {
         $html = view('documentos.factura', [
-            'f'        => $factura,
+            'f' => $factura,
             'snapshot' => $factura->snapshot ?? [],
-            'empresa'  => [
-                'nombre'     => config('services.contrato.empresa'),
-                'nit'        => config('services.contrato.nit'),
+            'empresa' => [
+                'nombre' => config('services.contrato.empresa'),
+                'nit' => config('services.contrato.nit'),
                 'plataforma' => config('services.contrato.plataforma'),
             ],
         ])->render();
 
-        $opciones = new Options();
+        $opciones = new Options;
         $opciones->set('defaultFont', 'DejaVu Sans');
         // Nada externo: el documento tiene que salir igual sin red.
         $opciones->set('isRemoteEnabled', false);
@@ -292,6 +292,6 @@ class FacturaService
 
     public function nombreArchivo(Invoice $factura): string
     {
-        return 'comprobante-' . str_replace(['/', ' '], '-', $factura->invoice_number) . '.pdf';
+        return 'comprobante-'.str_replace(['/', ' '], '-', $factura->invoice_number).'.pdf';
     }
 }

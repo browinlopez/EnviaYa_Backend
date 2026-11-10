@@ -56,12 +56,12 @@ return new class extends Migration
 
         Schema::table('order_geolocation', function (Blueprint $table) use ($existentes) {
             // Para la poda: encontrar lo anterior al corte sin leer el resto.
-            if (!in_array('idx_geolocation_fecha', $existentes, true)) {
+            if (! in_array('idx_geolocation_fecha', $existentes, true)) {
                 $table->index('created_at', 'idx_geolocation_fecha');
             }
 
             // Para la última posición de cada moto, que es la pregunta caliente.
-            if (!in_array('idx_geolocation_domi_fecha', $existentes, true)) {
+            if (! in_array('idx_geolocation_domi_fecha', $existentes, true)) {
                 $table->index(['domiciliary_id', 'created_at'], 'idx_geolocation_domi_fecha');
             }
         });

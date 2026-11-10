@@ -2,7 +2,10 @@
 
 use App\Models\Order\OrdersSales;
 use App\Models\Order\OrdersSalesDetail;
+use App\Models\Rol;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
 
 /**
@@ -31,16 +34,16 @@ use Laravel\Sanctum\Sanctum;
 function productoAlPeso(array $e, string $unidad = 'kg', float $precio = 12000): int
 {
     $productId = DB::table('products')->insertGetId([
-        'name'  => 'Queso campesino',
+        'name' => 'Queso campesino',
         'state' => 1,
     ], 'products_id');
 
     DB::table('products_business')->insert([
-        'busines_id'   => $e['businessId'],
-        'products_id'  => $productId,
-        'price'        => $precio,
-        'amount'       => 0,
-        'sale_unit'    => $unidad,
+        'busines_id' => $e['businessId'],
+        'products_id' => $productId,
+        'price' => $precio,
+        'amount' => 0,
+        'sale_unit' => $unidad,
         'stock_weight' => 10,
     ]);
 
@@ -51,9 +54,9 @@ function productoAlPeso(array $e, string $unidad = 'kg', float $precio = 12000):
 function porPlata(int $productId, float $plata): array
 {
     return [
-        'product_id'      => $productId,
-        'amount'          => 1,
-        'pedido_por'      => 'valor',
+        'product_id' => $productId,
+        'amount' => 1,
+        'pedido_por' => 'valor',
         'requested_value' => $plata,
     ];
 }
@@ -62,27 +65,27 @@ function porPlata(int $productId, float $plata): array
 function porCantidad(int $productId, float $cantidad): array
 {
     return [
-        'product_id'    => $productId,
-        'amount'        => 1,
-        'pedido_por'    => 'cantidad',
+        'product_id' => $productId,
+        'amount' => 1,
+        'pedido_por' => 'cantidad',
         'requested_qty' => $cantidad,
     ];
 }
 
-function pesar(array $e, int $orderId, array $lineas): \Illuminate\Testing\TestResponse
+function pesar(array $e, int $orderId, array $lineas): TestResponse
 {
     return test()->putJson('/v1/negocio/pedidos/pesaje', [
         'order_id' => $orderId,
-        'lineas'   => $lineas,
+        'lineas' => $lineas,
     ]);
 }
 
 /** El tendero dueño de la tienda del escenario, ya dentro. */
 function tenderoDe(array $e): void
 {
-    \App\Models\Rol::firstOrCreate(['rol_id' => 2], ['name' => 'tendero', 'guard_name' => 'web']);
+    Rol::firstOrCreate(['rol_id' => 2], ['name' => 'tendero', 'guard_name' => 'web']);
 
-    $user = \App\Models\User::factory()->create(['rol' => 2]);
+    $user = User::factory()->create(['rol' => 2]);
 
     $ownerId = DB::table('owner')->insertGetId(['user_id' => $user->user_id, 'state' => 1], 'owner_id');
     DB::table('owner_busines')->insert([
@@ -184,8 +187,8 @@ test('no sale de la tienda sin pesar', function () {
 
     $r = $this->putJson('/v1/orders/update', [
         'order_id' => $orden->orderSales_id,
-        'state'    => 3,
-        'user_id'  => $e['user']->user_id,
+        'state' => 3,
+        'user_id' => $e['user']->user_id,
     ]);
 
     $r->assertStatus(422);
@@ -391,13 +394,13 @@ test('la cotización y el pedido calculan el peso igual', function () {
     $cotizacion = $this->postJson('/v1/orders/cotizar', [
         'busines_id' => $e['businessId'],
         'address_id' => $e['addressId'],
-        'products'   => [porPlata($queso, 3000)],
+        'products' => [porPlata($queso, 3000)],
     ])->assertOk();
 
     expect((float) $cotizacion->json('subtotal'))->toBe(3000.0);
 
     $this->postJson('/v1/orders/orders', cuerpoPedido($e, [
-        'products'       => [porPlata($queso, 3000)],
+        'products' => [porPlata($queso, 3000)],
         'expected_total' => $cotizacion->json('total'),
     ]))->assertSuccessful();
 });

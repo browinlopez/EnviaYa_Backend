@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Order\OrdersSales;
+use App\Services\PedidoParaLaApp;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -22,8 +23,8 @@ function metodoQueNoEsEfectivo(): int
 {
     DB::table('payment_methods')->insert([
         'methods_id' => 6,
-        'name'       => 'Pago móvil',
-        'state'      => 1,
+        'name' => 'Pago móvil',
+        'state' => 1,
     ]);
 
     return 6;
@@ -106,7 +107,7 @@ test('en un pago que no es efectivo, el dato no se guarda', function () {
     $e = escenarioPedido();
 
     $this->postJson('/v1/orders/orders', cuerpoPedido($e, [
-        'methods_id'    => metodoQueNoEsEfectivo(),
+        'methods_id' => metodoQueNoEsEfectivo(),
         'cash_tendered' => 50000,
     ]))->assertSuccessful();
 
@@ -142,7 +143,7 @@ test('el domiciliario recibe con cuánto paga y cuánto cambio llevar', function
         ->assertSuccessful();
 
     $orden = OrdersSales::latest('orderSales_id')->first();
-    $ficha = app(\App\Services\PedidoParaLaApp::class)->formatear($orden);
+    $ficha = app(PedidoParaLaApp::class)->formatear($orden);
 
     expect($ficha)->toHaveKeys(['cash_tendered', 'change_due'])
         ->and((float) $ficha['cash_tendered'])->toBe(50000.0)

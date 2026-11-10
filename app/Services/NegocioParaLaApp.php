@@ -32,10 +32,10 @@ class NegocioParaLaApp
     public function propietarios($negocio): array
     {
         return $negocio->owners->map(fn ($owner) => [
-            'owner_id'      => $owner->owner_id,
-            'user_id'       => $owner->user_id,
+            'owner_id' => $owner->owner_id,
+            'user_id' => $owner->user_id,
             'profile_photo' => $owner->profile_photo ?? 'https://example.com/default-user.png',
-            'state'         => (bool) $owner->state,
+            'state' => (bool) $owner->state,
         ])->all();
     }
 
@@ -43,10 +43,10 @@ class NegocioParaLaApp
     public function resenas($negocio): array
     {
         return $negocio->reviews->map(fn ($review) => [
-            'review_id'  => $review->reviews_id ?? null,
-            'buyer_id'   => $review->buyer_id,
-            'rating'     => (float) ($review->qualification ?? 0),
-            'comment'    => $review->comment ?? '',
+            'review_id' => $review->reviews_id ?? null,
+            'buyer_id' => $review->buyer_id,
+            'rating' => (float) ($review->qualification ?? 0),
+            'comment' => $review->comment ?? '',
             'created_at' => $review->created_at ?? null,
         ])->all();
     }
@@ -62,13 +62,13 @@ class NegocioParaLaApp
     public function producto($producto, bool $afiliado, $userId): array
     {
         return [
-            'product_id'  => $producto->products_id,
-            'name'        => $producto->name,
+            'product_id' => $producto->products_id,
+            'name' => $producto->name,
             'description' => $producto->description,
             'category_id' => $producto->category_id,
-            'image'       => $producto->image,
-            'state'       => (bool) $producto->state,
-            'price'       => $userId && $afiliado ? ($producto->pivot->price ?? 0) : 0,
+            'image' => $producto->image,
+            'state' => (bool) $producto->state,
+            'price' => $userId && $afiliado ? ($producto->pivot->price ?? 0) : 0,
         ];
     }
 
@@ -84,20 +84,20 @@ class NegocioParaLaApp
     public function base($negocio): array
     {
         return [
-            'business_id'   => $negocio->busines_id,
-            'name'          => $negocio->name,
-            'phone'         => $negocio->phone,
-            'address'       => $negocio->address,
+            'business_id' => $negocio->busines_id,
+            'name' => $negocio->name,
+            'phone' => $negocio->phone,
+            'address' => $negocio->address,
             'qualification' => (float) $negocio->qualification,
-            'razon_social'  => $negocio->razonSocial_DCD,
-            'NIT'           => $negocio->NIT,
-            'logo'          => $negocio->logo ?? 'https://example.com/default-logo.png',
-            'state'         => (bool) $negocio->state,
-            'municipality'  => $negocio->municipality ? [
-                'id'   => $negocio->municipality->id,
+            'razon_social' => $negocio->razonSocial_DCD,
+            'NIT' => $negocio->NIT,
+            'logo' => $negocio->logo ?? 'https://example.com/default-logo.png',
+            'state' => (bool) $negocio->state,
+            'municipality' => $negocio->municipality ? [
+                'id' => $negocio->municipality->id,
                 'name' => $negocio->municipality->name,
             ] : null,
-            'owner_count'   => $negocio->owners->count(),
+            'owner_count' => $negocio->owners->count(),
         ];
     }
 }

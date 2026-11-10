@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::table('user', function (Blueprint $table) {
             $table->timestamp('email_verification_expires_at')
-                  ->nullable()
-                  ->after('email_verification_token');
+                ->nullable()
+                ->after('email_verification_token');
         });
     }
 

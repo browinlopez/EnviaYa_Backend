@@ -1,13 +1,27 @@
 <?php
 
+use App\Http\Middleware\AppEnMantenimiento;
+use App\Http\Middleware\AuditApiRequest;
+use App\Http\Middleware\EnsureAdmin;
+use App\Http\Middleware\EnsureBusinessOwner;
+use App\Http\Middleware\EnsureCategoryAccess;
+use App\Http\Middleware\EnsureComplexStaff;
+use App\Http\Middleware\EnsureMediaAccess;
+use App\Http\Middleware\EnsureModuleAccess;
+use App\Http\Middleware\SetContentLengthForDevServer;
+use App\Http\Middleware\SoloParaCambiarPorSesion;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Middleware\HandleCors;
 use Illuminate\Validation\ValidationException;
+use Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful;
 use Sentry\Laravel\Integration;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -20,63 +34,63 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-    $middleware->api(prepend: [
-        \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
-        \Illuminate\Http\Middleware\HandleCors::class, // 👈 Este es el middleware de CORS
-    ]);
+        $middleware->api(prepend: [
+            EnsureFrontendRequestsAreStateful::class,
+            HandleCors::class, // 👈 Este es el middleware de CORS
+        ]);
 
-    // php artisan serve responde sin Content-Length y el cuerpo llega cortado
-    // a la app (ver comentario del middleware); en producción no hace nada.
-    $middleware->append(\App\Http\Middleware\SetContentLengthForDevServer::class);
-
-    /*
-     * Modo mantenimiento de la app móvil, encendido desde el panel.
-     *
-     * Va en el grupo `api` completo y no ruta por ruta: el objetivo es parar la
-     * operación, y una lista de rutas a proteger se queda incompleta el día que
-     * alguien agrega un endpoint. El middleware lleva su propia lista de
-     * EXENTAS —el panel, los avisos de la pasarela y el inicio de sesión—, que
-     * es la lista que sí se puede razonar.
-     */
-    $middleware->api(append: [
-        \App\Http\Middleware\AppEnMantenimiento::class,
+        // php artisan serve responde sin Content-Length y el cuerpo llega cortado
+        // a la app (ver comentario del middleware); en producción no hace nada.
+        $middleware->append(SetContentLengthForDevServer::class);
 
         /*
-         * El token que el telefono guarda tras la huella solo puede cambiarse
-         * por una sesion. Va en el grupo entero porque Sanctum NO aplica las
-         * habilidades por su cuenta: sin esto, esa credencial serviria para
-         * leer pedidos y pagar.
+         * Modo mantenimiento de la app móvil, encendido desde el panel.
+         *
+         * Va en el grupo `api` completo y no ruta por ruta: el objetivo es parar la
+         * operación, y una lista de rutas a proteger se queda incompleta el día que
+         * alguien agrega un endpoint. El middleware lleva su propia lista de
+         * EXENTAS —el panel, los avisos de la pasarela y el inicio de sesión—, que
+         * es la lista que sí se puede razonar.
          */
-        \App\Http\Middleware\SoloParaCambiarPorSesion::class,
-    ]);
+        $middleware->api(append: [
+            AppEnMantenimiento::class,
 
-    $middleware->alias([
-        'audit.api' => \App\Http\Middleware\AuditApiRequest::class,
-        // Puerta del API de superadministración (rol 4). El panel de React
-        // ya filtra en el cliente, pero eso no es una defensa.
-        'admin'     => \App\Http\Middleware\EnsureAdmin::class,
-        // Puerta por sección: `modulo:pagos` para consultar, `modulo:pagos,gestionar`
-        // para modificar. Se aplica encima de `admin`, que ya validó que la
-        // persona sea del equipo.
-        'modulo'    => \App\Http\Middleware\EnsureModuleAccess::class,
-        // Puerta del panel de aliados. Aparte de `admin` a propósito: son dos
-        // edificios distintos y compartir la puerta ampliaría en silencio
-        // quién llega a la administración de la plataforma.
-        'conjunto'  => \App\Http\Middleware\EnsureComplexStaff::class,
-        // Puerta del panel del tendero, hermana de la anterior. Deja puesto el
-        // negocio de quien pide, ya comprobado contra la cadena de propiedad,
-        // para que ningún controlador tenga que creerle un `business_id` al
-        // cuerpo de la petición.
-        'negocio'   => \App\Http\Middleware\EnsureBusinessOwner::class,
-        // Puerta de los archivos. Aparte porque el módulo que manda depende de
-        // la entidad de la URL: los de un negocio los rige `negocios` y los de
-        // un banner, `marketing.banners`.
-        'medios'    => \App\Http\Middleware\EnsureMediaAccess::class,
-        // Puerta de las categorías. Aparte por lo mismo: una sola ruta sirve
-        // las de producto y las de negocio, y son dos módulos distintos.
-        'categorias' => \App\Http\Middleware\EnsureCategoryAccess::class,
-    ]);
-})
+            /*
+             * El token que el telefono guarda tras la huella solo puede cambiarse
+             * por una sesion. Va en el grupo entero porque Sanctum NO aplica las
+             * habilidades por su cuenta: sin esto, esa credencial serviria para
+             * leer pedidos y pagar.
+             */
+            SoloParaCambiarPorSesion::class,
+        ]);
+
+        $middleware->alias([
+            'audit.api' => AuditApiRequest::class,
+            // Puerta del API de superadministración (rol 4). El panel de React
+            // ya filtra en el cliente, pero eso no es una defensa.
+            'admin' => EnsureAdmin::class,
+            // Puerta por sección: `modulo:pagos` para consultar, `modulo:pagos,gestionar`
+            // para modificar. Se aplica encima de `admin`, que ya validó que la
+            // persona sea del equipo.
+            'modulo' => EnsureModuleAccess::class,
+            // Puerta del panel de aliados. Aparte de `admin` a propósito: son dos
+            // edificios distintos y compartir la puerta ampliaría en silencio
+            // quién llega a la administración de la plataforma.
+            'conjunto' => EnsureComplexStaff::class,
+            // Puerta del panel del tendero, hermana de la anterior. Deja puesto el
+            // negocio de quien pide, ya comprobado contra la cadena de propiedad,
+            // para que ningún controlador tenga que creerle un `business_id` al
+            // cuerpo de la petición.
+            'negocio' => EnsureBusinessOwner::class,
+            // Puerta de los archivos. Aparte porque el módulo que manda depende de
+            // la entidad de la URL: los de un negocio los rige `negocios` y los de
+            // un banner, `marketing.banners`.
+            'medios' => EnsureMediaAccess::class,
+            // Puerta de las categorías. Aparte por lo mismo: una sola ruta sirve
+            // las de producto y las de negocio, y son dos módulos distintos.
+            'categorias' => EnsureCategoryAccess::class,
+        ]);
+    })
     ->withExceptions(function (Exceptions $exceptions): void {
         /*
          * Monitoreo de errores.
@@ -100,8 +114,8 @@ return Application::configure(basePath: dirname(__DIR__))
          * cambian SOLO esos textos genéricos; un `abort(403, 'Este pedido no
          * es tuyo')` escrito por nosotros llega tal cual.
          */
-        $exceptions->respond(function (\Symfony\Component\HttpFoundation\Response $respuesta) {
-            if (!$respuesta instanceof \Illuminate\Http\JsonResponse) {
+        $exceptions->respond(function (Response $respuesta) {
+            if (! $respuesta instanceof JsonResponse) {
                 return $respuesta;
             }
 

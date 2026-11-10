@@ -4,11 +4,10 @@ namespace App\Models\Payment;
 
 use App\Models\Audit\Audit;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
 class PaymentEvent extends Audit
 {
-     use HasFactory;
+    use HasFactory;
 
     protected $table = 'payment_events';
 

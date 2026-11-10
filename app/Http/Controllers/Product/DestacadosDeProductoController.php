@@ -4,15 +4,9 @@ namespace App\Http\Controllers\Product;
 
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
-use App\Models\Business;
 use App\Models\Order\OrdersSalesDetail;
-use App\Models\Product\Category;
-use App\Models\Product\Product;
 use App\Models\Product\ProductBusiness;
-use App\Support\ProductTypeSchema;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 class DestacadosDeProductoController extends Controller
 {
@@ -83,7 +77,7 @@ class DestacadosDeProductoController extends Controller
 
         return response()->json([
             'message' => 'Productos más populares del negocio',
-            'products' => $formatted
+            'products' => $formatted,
         ]);
     }
 }

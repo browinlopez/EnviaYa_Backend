@@ -79,11 +79,11 @@ class Ajustes
      */
     public static function guardar(array $valores, ?int $usuarioId): array
     {
-        $antes  = self::todos();
+        $antes = self::todos();
         $cambios = [];
 
         foreach ($valores as $clave => $valor) {
-            if (!CatalogoDeAjustes::existe($clave)) {
+            if (! CatalogoDeAjustes::existe($clave)) {
                 continue;
             }
 

@@ -22,9 +22,11 @@ class CashMovement extends Model
 {
     protected $table = 'cash_movements';
 
-    public const RECAUDO      = 'recaudo';
+    public const RECAUDO = 'recaudo';
+
     public const CONSIGNACION = 'consignacion';
-    public const AJUSTE       = 'ajuste';
+
+    public const AJUSTE = 'ajuste';
 
     protected $fillable = [
         'domiciliary_id',

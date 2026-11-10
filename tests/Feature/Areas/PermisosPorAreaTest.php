@@ -16,7 +16,6 @@ use Laravel\Sanctum\Sanctum;
  * recortado del panel es comodidad de la interfaz y cualquiera puede llamar la
  * ruta a mano con su token.
  */
-
 function comoArea(string $codigo): User
 {
     Rol::firstOrCreate(['rol_id' => 4], ['name' => 'admin', 'guard_name' => 'web']);
@@ -175,7 +174,7 @@ test('no se puede quitar el gestor a la propia área', function () {
 
     // Se crea un área con el gestor, se asigna a sí mismo y se intenta quitar.
     $id = $this->postJson('/v1/admin/areas', [
-        'name'        => 'Tecnología B',
+        'name' => 'Tecnología B',
         'permissions' => ['areas' => ['view' => true, 'manage' => true]],
     ])->assertCreated()->json('id');
 
@@ -207,7 +206,7 @@ test('gestionar implica ver al guardar la matriz', function () {
     comoArea('sistema');
 
     $id = $this->postJson('/v1/admin/areas', [
-        'name'        => 'Prueba',
+        'name' => 'Prueba',
         // Se pide gestionar sin ver: no existe esa combinación.
         'permissions' => ['pagos' => ['view' => false, 'manage' => true]],
     ])->assertCreated()->json('id');

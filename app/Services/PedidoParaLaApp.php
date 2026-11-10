@@ -82,8 +82,8 @@ class PedidoParaLaApp
             'delay_minutes' => $order->delay_minutes,
             'state' => $order->state,
             // Los datos de la persona solo viajan cuando quien pregunta ya
-        // tiene que llegar a su puerta. Ver la cabecera de la clase.
-        'buyer' => ($conDatosDelComprador && $order->buyer) ? [
+            // tiene que llegar a su puerta. Ver la cabecera de la clase.
+            'buyer' => ($conDatosDelComprador && $order->buyer) ? [
                 'buyer_id' => $order->buyer->buyer_id,
                 'qualification' => $order->buyer->qualification,
                 'state' => (bool) $order->buyer->state,
@@ -96,20 +96,20 @@ class PedidoParaLaApp
                     'rol' => $order->buyer->user->rol,
                     'qualification' => $order->buyer->user->qualification,
                     'state' => (bool) $order->buyer->user->state,
-                ]
+                ],
             ] : null,
             'business' => [
                 'business_id' => $order->business->busines_id,
                 'name' => $order->business->name,
                 'address' => $order->business->address,
-                'latitude' => $order->business->latitude !== null ? (float)$order->business->latitude : null,
-                'longitude' => $order->business->longitude !== null ? (float)$order->business->longitude : null,
+                'latitude' => $order->business->latitude !== null ? (float) $order->business->latitude : null,
+                'longitude' => $order->business->longitude !== null ? (float) $order->business->longitude : null,
                 'phone' => $order->business->phone,
                 'city' => $order->business->city,
                 'state' => $order->business->state,
                 'logo' => $order->business->logo,
             ],
-            'delivery_address' => ($conDatosDelComprador && !$order->pickup && $order->address) ? [
+            'delivery_address' => ($conDatosDelComprador && ! $order->pickup && $order->address) ? [
                 'address_id' => $order->address->address_id,
                 /*
                  * La calle va JUNTO a la dirección del mapa, no en vez de
@@ -129,8 +129,8 @@ class PedidoParaLaApp
                 'municipality' => $order->address->municipality?->name,
                 'department' => $order->address->department?->name,
                 'country' => $order->address->country?->name,
-                'latitude' => $order->address->latitude !== null ? (float)$order->address->latitude : null,
-                'longitude' => $order->address->longitude !== null ? (float)$order->address->longitude : null,
+                'latitude' => $order->address->latitude !== null ? (float) $order->address->latitude : null,
+                'longitude' => $order->address->longitude !== null ? (float) $order->address->longitude : null,
             ] : null,
             'domiciliary' => $order->domiciliary ? [
                 'name' => $order->domiciliary->user->name,
@@ -179,7 +179,7 @@ class PedidoParaLaApp
              * pago o no hay ninguno —no una lista—. Por eso el modelo escribe
              * `$this->payments ?? null` en su propia serialización.
              */
-            'payments' => $conGanancia || !$order->payments
+            'payments' => $conGanancia || ! $order->payments
                 ? $order->payments
                 : collect($order->payments->toArray())->except('domiciliary_fee')->all(),
         ];
@@ -189,16 +189,16 @@ class PedidoParaLaApp
     public function negocio($business): array
     {
         return [
-            'business_id'   => $business->busines_id,
-            'name'          => $business->name,
-            'address'       => $business->address,
-            'latitude'      => $business->latitude !== null ? (float) $business->latitude : null,
-            'longitude'     => $business->longitude !== null ? (float) $business->longitude : null,
-            'phone'         => $business->phone,
-            'city'          => $business->city,
+            'business_id' => $business->busines_id,
+            'name' => $business->name,
+            'address' => $business->address,
+            'latitude' => $business->latitude !== null ? (float) $business->latitude : null,
+            'longitude' => $business->longitude !== null ? (float) $business->longitude : null,
+            'phone' => $business->phone,
+            'city' => $business->city,
             'qualification' => $business->qualification,
-            'state'         => $business->state,
-            'logo'          => $business->logo,
+            'state' => $business->state,
+            'logo' => $business->logo,
         ];
     }
 }

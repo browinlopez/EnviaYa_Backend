@@ -18,11 +18,10 @@ use Laravel\Sanctum\Sanctum;
  * pierde la confirmación de pagos que el cliente ya hizo. Las dos cosas son
  * peores que no tener modo mantenimiento.
  */
-
 function encenderMantenimiento(string $mensaje = 'Volvemos en un rato.'): void
 {
     Ajustes::guardar([
-        'app.mantenimiento'         => true,
+        'app.mantenimiento' => true,
         'app.mantenimiento_mensaje' => $mensaje,
     ], null);
 }
@@ -32,8 +31,8 @@ function comoPersonal(): User
     Rol::firstOrCreate(['rol_id' => 4], ['name' => 'admin', 'guard_name' => 'web']);
 
     $user = User::factory()->create([
-        'rol'          => 4,
-        'area_id'      => Area::where('code', 'sistema')->firstOrFail()->id,
+        'rol' => 4,
+        'area_id' => Area::where('code', 'sistema')->firstOrFail()->id,
         'access_level' => Area::NIVEL_GESTOR,
     ]);
 
@@ -130,7 +129,7 @@ it('iniciar sesión sigue disponible', function () {
 it('la app pregunta por su plataforma y le contestan de la suya', function () {
     Ajustes::guardar([
         'app.version_minima_android' => '2.4.0',
-        'app.version_minima_ios'     => '2.5.1',
+        'app.version_minima_ios' => '2.5.1',
     ], null);
 
     $this->getJson('/v1/app/config?platform=android')

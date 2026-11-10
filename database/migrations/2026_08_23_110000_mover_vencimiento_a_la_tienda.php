@@ -36,7 +36,7 @@ return new class extends Migration
         });
 
         foreach (['grocery_products', 'pharmacy_products'] as $tabla) {
-            if (!Schema::hasTable($tabla) || !Schema::hasColumn($tabla, 'expiration_date')) {
+            if (! Schema::hasTable($tabla) || ! Schema::hasColumn($tabla, 'expiration_date')) {
                 continue;
             }
 
@@ -51,15 +51,15 @@ return new class extends Migration
              */
             $fecha = DB::table($tabla)
                 ->select('expiration_date')
-                ->whereColumn($tabla . '.products_id', 'products_business.products_id')
+                ->whereColumn($tabla.'.products_id', 'products_business.products_id')
                 ->whereNotNull('expiration_date')
                 ->limit(1);
 
             DB::table('products_business')
                 ->whereExists(fn ($q) => $q->selectRaw(1)->from($tabla)
-                    ->whereColumn($tabla . '.products_id', 'products_business.products_id')
-                    ->whereNotNull($tabla . '.expiration_date'))
-                ->update(['expiration_date' => DB::raw('(' . $fecha->toSql() . ')')]);
+                    ->whereColumn($tabla.'.products_id', 'products_business.products_id')
+                    ->whereNotNull($tabla.'.expiration_date'))
+                ->update(['expiration_date' => DB::raw('('.$fecha->toSql().')')]);
         }
     }
 

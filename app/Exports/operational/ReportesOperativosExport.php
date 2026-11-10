@@ -15,7 +15,7 @@ class ReportesOperativosExport implements WithMultipleSheets
             new CoberturaSheet($this->start, $this->end),
             new CancelacionesSheet($this->start, $this->end),
             new SatisfaccionSheet($this->start, $this->end),
-             new DisponibilidadDomiciliariosSheet($this->start, $this->end),
+            new DisponibilidadDomiciliariosSheet($this->start, $this->end),
         ];
     }
 }

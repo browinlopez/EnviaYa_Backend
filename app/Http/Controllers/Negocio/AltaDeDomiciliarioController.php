@@ -43,7 +43,7 @@ class AltaDeDomiciliarioController extends Controller
 
         $d = $this->encontrar($q);
 
-        if (!$d) {
+        if (! $d) {
             return response()->json(['data' => null]);
         }
 
@@ -55,9 +55,9 @@ class AltaDeDomiciliarioController extends Controller
 
         return response()->json(['data' => [
             'domiciliary_id' => (int) $d->domiciliary_id,
-            'name'           => $d->user?->name,
-            'phone'          => $d->user?->phone,
-            'ya_es_tuyo'     => $yaEsTuyo,
+            'name' => $d->user?->name,
+            'phone' => $d->user?->phone,
+            'ya_es_tuyo' => $yaEsTuyo,
         ]]);
     }
 
@@ -71,7 +71,7 @@ class AltaDeDomiciliarioController extends Controller
         if ($request->filled('domiciliary_id')) {
             $request->validate([
                 'domiciliary_id' => 'integer|exists:domiciliary,domiciliary_id',
-                'q'              => 'required|string|min:6|max:255',
+                'q' => 'required|string|min:6|max:255',
             ], [
                 'q.required' => 'Búscalo primero por su cédula, teléfono o correo.',
             ]);
@@ -85,7 +85,7 @@ class AltaDeDomiciliarioController extends Controller
              */
             $hallado = $this->encontrar(trim((string) $request->input('q')));
 
-            if (!$hallado || (int) $hallado->domiciliary_id !== $id) {
+            if (! $hallado || (int) $hallado->domiciliary_id !== $id) {
                 return response()->json([
                     'message' => 'Ese dato no corresponde a ese domiciliario. Búscalo de nuevo por su cédula, teléfono o correo.',
                 ], 422);
@@ -97,14 +97,14 @@ class AltaDeDomiciliarioController extends Controller
         }
 
         $datos = $request->validate([
-            'name'     => 'required|string|max:255',
+            'name' => 'required|string|max:255',
             'document' => 'required|string|max:20',
-            'phone'    => 'required|string|max:20',
-            'email'    => 'required|email|max:255|unique:user,email',
+            'phone' => 'required|string|max:20',
+            'email' => 'required|email|max:255|unique:user,email',
             'password' => 'required|string|min:8|max:100',
         ], [
-            'email.unique'    => 'Ese correo ya tiene una cuenta. Si es un domiciliario, búscalo para vincularlo.',
-            'password.min'    => 'La contraseña inicial debe tener al menos 8 caracteres.',
+            'email.unique' => 'Ese correo ya tiene una cuenta. Si es un domiciliario, búscalo para vincularlo.',
+            'password.min' => 'La contraseña inicial debe tener al menos 8 caracteres.',
             'document.required' => 'Falta el número de cédula.',
         ]);
 
@@ -114,32 +114,32 @@ class AltaDeDomiciliarioController extends Controller
         if (Domiciliary::where('document', $documento)->exists()) {
             return response()->json([
                 'message' => 'Ya hay un domiciliario con esa cédula. Búscalo para vincularlo a tu tienda.',
-                'errors'  => ['document' => ['Ya hay un domiciliario con esa cédula.']],
+                'errors' => ['document' => ['Ya hay un domiciliario con esa cédula.']],
             ], 422);
         }
 
         $id = DB::transaction(function () use ($datos, $documento, $telefono, $negocioId) {
             $userId = DB::table('user')->insertGetId([
-                'name'              => trim($datos['name']),
-                'email'             => mb_strtolower(trim($datos['email'])),
-                'password'          => Hash::make($datos['password']),
-                'phone'             => $telefono,
-                'rol'               => 3,
-                'state'             => 1,
-                'qualification'     => 0,
+                'name' => trim($datos['name']),
+                'email' => mb_strtolower(trim($datos['email'])),
+                'password' => Hash::make($datos['password']),
+                'phone' => $telefono,
+                'rol' => 3,
+                'state' => 1,
+                'qualification' => 0,
                 // Verificado: lo da de alta una tienda que lo conoce, y sin esto
                 // el login lo rechaza y no hay bandeja donde confirmar nada.
                 'email_verified_at' => now(),
-                'created_at'        => now(),
-                'updated_at'        => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
 
             $domiId = DB::table('domiciliary')->insertGetId([
-                'user_id'                => $userId,
-                'document'               => $documento,
-                'available'              => 0,
-                'qualification'          => 0,
-                'state'                  => 1,
+                'user_id' => $userId,
+                'document' => $documento,
+                'available' => 0,
+                'qualification' => 0,
+                'state' => 1,
                 'registrado_por_negocio' => $negocioId,
             ], 'domiciliary_id');
 
@@ -149,7 +149,7 @@ class AltaDeDomiciliarioController extends Controller
         });
 
         return response()->json([
-            'message'        => 'Domiciliario creado. Ahora falta el acuerdo y sus papeles.',
+            'message' => 'Domiciliario creado. Ahora falta el acuerdo y sus papeles.',
             'domiciliary_id' => $id,
         ], 201);
     }
@@ -181,13 +181,14 @@ class AltaDeDomiciliarioController extends Controller
 
         if ($existe->exists()) {
             $existe->update(['state' => 1]);
+
             return;
         }
 
         DB::table('business_domiciliary')->insert([
-            'busines_id'     => $negocioId,
+            'busines_id' => $negocioId,
             'domiciliary_id' => $domiciliarioId,
-            'state'          => 1,
+            'state' => 1,
         ]);
     }
 }

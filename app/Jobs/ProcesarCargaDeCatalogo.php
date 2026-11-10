@@ -28,17 +28,16 @@ class ProcesarCargaDeCatalogo implements ShouldQueue
     use Queueable;
 
     public int $tries = 1;
+
     public int $timeout = 600;
 
-    public function __construct(public int $cargaId)
-    {
-    }
+    public function __construct(public int $cargaId) {}
 
     public function handle(ImportadorDeCatalogo $importador): void
     {
         $carga = CatalogUpload::find($this->cargaId);
 
-        if (!$carga) {
+        if (! $carga) {
             return;
         }
 
@@ -48,7 +47,7 @@ class ProcesarCargaDeCatalogo implements ShouldQueue
     public function failed(\Throwable $e): void
     {
         CatalogUpload::where('catalog_upload_id', $this->cargaId)->update([
-            'estado'  => 'fallida',
+            'estado' => 'fallida',
             'resumen' => json_encode(['error' => $e->getMessage()]),
         ]);
     }

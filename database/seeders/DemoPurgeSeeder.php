@@ -31,13 +31,13 @@ class DemoPurgeSeeder extends Seeder
             $usuarios = DB::table('user')
                 ->where(function ($q) {
                     foreach (DemoSeeder::DOMINIOS_HISTORICOS as $dominio) {
-                        $q->orWhere('email', 'like', '%@' . $dominio);
+                        $q->orWhere('email', 'like', '%@'.$dominio);
                     }
                 })
                 ->pluck('user_id');
 
             $negocios = DB::table('business')
-                ->where('NIT', 'like', DemoSeeder::NIT . '%')
+                ->where('NIT', 'like', DemoSeeder::NIT.'%')
                 ->pluck('busines_id');
 
             $domiciliarios = DB::table('domiciliary')
@@ -45,7 +45,7 @@ class DemoPurgeSeeder extends Seeder
                 ->pluck('domiciliary_id');
 
             $propietarios = DB::table('owner')->whereIn('user_id', $usuarios)->pluck('owner_id');
-            $compradores  = DB::table('buyer')->whereIn('user_id', $usuarios)->pluck('buyer_id');
+            $compradores = DB::table('buyer')->whereIn('user_id', $usuarios)->pluck('buyer_id');
 
             /* --- Lo que cuelga de los pedidos, antes que los pedidos --- */
             $pedidos = DB::table('orderssales')
@@ -92,7 +92,7 @@ class DemoPurgeSeeder extends Seeder
                 ->whereIn('business_id', $negocios)
                 ->orWhere(function ($q) {
                     foreach (DemoSeeder::DOMINIOS_HISTORICOS as $dominio) {
-                        $q->orWhere('contact_email', 'like', '%@' . $dominio);
+                        $q->orWhere('contact_email', 'like', '%@'.$dominio);
                     }
 
                     $q->orWhere('contact_email', 'like', '%.demo');

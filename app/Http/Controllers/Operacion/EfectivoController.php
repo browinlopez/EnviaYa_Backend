@@ -22,9 +22,7 @@ use RuntimeException;
  */
 class EfectivoController extends Controller
 {
-    public function __construct(private CustodiaDeEfectivo $custodia)
-    {
-    }
+    public function __construct(private CustodiaDeEfectivo $custodia) {}
 
     /* ------------------------- LADO DOMICILIARIO ------------------------- */
 
@@ -39,7 +37,7 @@ class EfectivoController extends Controller
     {
         $domiciliario = $this->domiciliarioDe($request);
 
-        if (!$domiciliario) {
+        if (! $domiciliario) {
             return response()->json(['message' => 'Esta cuenta no es de un domiciliario.'], 403);
         }
 
@@ -65,11 +63,11 @@ class EfectivoController extends Controller
         $saldo = $this->custodia->saldo($domiciliario->domiciliary_id);
 
         return response()->json([
-            'balance'     => $saldo,
-            'cash_limit'  => $tope !== null ? (float) $tope : null,
-            'cash_room'   => $tope !== null ? max(0, round((float) $tope - $saldo, 2)) : null,
-            'movements'   => $movimientos,
-            'deposits'    => CashDeposit::where('domiciliary_id', $domiciliario->domiciliary_id)
+            'balance' => $saldo,
+            'cash_limit' => $tope !== null ? (float) $tope : null,
+            'cash_room' => $tope !== null ? max(0, round((float) $tope - $saldo, 2)) : null,
+            'movements' => $movimientos,
+            'deposits' => CashDeposit::where('domiciliary_id', $domiciliario->domiciliary_id)
                 ->latest('created_at')->limit(20)->get(),
         ]);
     }
@@ -85,15 +83,15 @@ class EfectivoController extends Controller
     {
         $domiciliario = $this->domiciliarioDe($request);
 
-        if (!$domiciliario) {
+        if (! $domiciliario) {
             return response()->json(['message' => 'Esta cuenta no es de un domiciliario.'], 403);
         }
 
         $datos = $request->validate([
-            'amount'       => 'required|numeric|min:1',
-            'reference'    => 'nullable|string|max:100',
+            'amount' => 'required|numeric|min:1',
+            'reference' => 'nullable|string|max:100',
             'deposited_at' => 'nullable|date',
-            'notes'        => 'nullable|string|max:500',
+            'notes' => 'nullable|string|max:500',
         ]);
 
         $deposito = $this->custodia->declararDeposito($domiciliario->domiciliary_id, $datos);
@@ -143,11 +141,11 @@ class EfectivoController extends Controller
             ->get([
                 'cash_movements.domiciliary_id',
                 'u.name',
-                \Illuminate\Support\Facades\DB::raw('SUM(cash_movements.amount) as balance'),
+                DB::raw('SUM(cash_movements.amount) as balance'),
             ]);
 
         return response()->json([
-            'data'  => $saldos,
+            'data' => $saldos,
             'total' => round((float) $saldos->sum('balance'), 2),
         ]);
     }
@@ -162,7 +160,7 @@ class EfectivoController extends Controller
 
         $deposito = CashDeposit::find($id);
 
-        if (!$deposito) {
+        if (! $deposito) {
             return response()->json(['message' => 'Depósito no encontrado.'], 404);
         }
 

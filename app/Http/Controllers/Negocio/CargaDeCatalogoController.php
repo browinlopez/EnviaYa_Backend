@@ -57,19 +57,19 @@ class CargaDeCatalogoController extends Controller
         $ruta = $request->file('archivo')->store('cargas-de-catalogo');
 
         $carga = CatalogUpload::create([
-            'busines_id'      => $businessId,
-            'user_id'         => $request->user()?->user_id,
-            'archivo'         => $ruta,
+            'busines_id' => $businessId,
+            'user_id' => $request->user()?->user_id,
+            'archivo' => $ruta,
             'nombre_original' => $request->file('archivo')->getClientOriginalName(),
-            'category_id'     => $request->input('categoria_id'),
-            'estado'          => 'pendiente',
+            'category_id' => $request->input('categoria_id'),
+            'estado' => 'pendiente',
         ]);
 
         ProcesarCargaDeCatalogo::dispatch((int) $carga->catalog_upload_id);
 
         return response()->json([
             'message' => 'Recibimos tu archivo. Te avisamos cuando termine.',
-            'data'    => $this->comoFicha($carga),
+            'data' => $this->comoFicha($carga),
         ], 202);
     }
 
@@ -82,7 +82,7 @@ class CargaDeCatalogoController extends Controller
             ->where('busines_id', $businessId)
             ->first();
 
-        if (!$carga) {
+        if (! $carga) {
             return response()->json(['message' => 'Esa carga no es de tu negocio.'], 404);
         }
 
@@ -144,13 +144,13 @@ class CargaDeCatalogoController extends Controller
     {
         $ficha = [
             'catalog_upload_id' => (int) $c->catalog_upload_id,
-            'nombre_original'   => $c->nombre_original,
-            'estado'            => $c->estado,
-            'filas'             => (int) $c->filas,
-            'creados'           => (int) $c->creados,
-            'actualizados'      => (int) $c->actualizados,
-            'rechazados'        => (int) $c->rechazados,
-            'created_at'        => $c->created_at,
+            'nombre_original' => $c->nombre_original,
+            'estado' => $c->estado,
+            'filas' => (int) $c->filas,
+            'creados' => (int) $c->creados,
+            'actualizados' => (int) $c->actualizados,
+            'rechazados' => (int) $c->rechazados,
+            'created_at' => $c->created_at,
         ];
 
         if ($conErrores) {

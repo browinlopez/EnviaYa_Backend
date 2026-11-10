@@ -4,14 +4,8 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
-use App\Models\Buyer\Buyer;
-use App\Models\User;
-use App\Models\User\UserAddress;
 use App\Models\Notification;
-use App\Services\MunicipioPorNombre;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules\Password;
 
 class NotificacionesController extends Controller
 {
@@ -56,7 +50,7 @@ class NotificacionesController extends Controller
 
         // Un aviso ajeno se responde igual que uno inexistente: no hay por qué
         // confirmarle a nadie que el número acertó.
-        if (!$aviso) {
+        if (! $aviso) {
             return response()->json(['message' => 'Aviso no encontrado'], 404);
         }
 
