@@ -31,7 +31,7 @@ de cumplimiento hoy, es que **la cifra solo pueda bajar**.
 | | |
 |---|---|
 | **Regla** | `04-capas-http.md`: validar con `FormRequest`, trabajar con `validated()` |
-| **Realidad** | Eran **173 llamadas a `->validate(`** contra **2** `FormRequest`. Al 10 de noviembre de 2026: **101 y 73** |
+| **Realidad** | Eran **173 llamadas a `->validate(`** contra **2** `FormRequest`. Al 10 de noviembre de 2026, medido: **69 `$request->validate(` y 107 `FormRequest`** (más 3 `Validator::make(` y 2 `validateWithBag(`, que son otra cosa: salida con bolsa y validación armada a mano) |
 | **Motivo** | Convertir 173 validaciones de una vez es exactamente el PR gigante que el estándar desaconseja, y cada una es una regla de negocio que hay que releer, no mover |
 | **Riesgo aceptado** | La regla vive pegada al flujo: no se reusa, no se prueba aparte y la misma entidad se valida distinto en dos endpoints |
 | **Alternativa adoptada** | **Trinquete**: todo endpoint nuevo o tocado estrena su `FormRequest`. El contador de `->validate(` es la métrica y solo baja |
@@ -45,6 +45,43 @@ nuevo. Un `FormRequest` valida una sola vez, antes de entrar al controlador, y
 forzarlo con reglas condicionales cambia **cuál** 422 recibe el tendero. §20 lo
 permite expresamente —«excepción permitida cuando separar empeora lectura,
 coste o testabilidad»—. Se queda en línea.
+
+#### Las dos que buscan ANTES de validar: decisión, no deuda
+
+Un detector sobre `app/Http/Controllers` busca métodos donde un
+`findOrFail` / `firstOrFail` / `sole` corre antes de la validación. Al 10 de
+noviembre de 2026 quedan **dos**, y las dos son el mismo caso:
+
+| Dónde | Qué busca primero |
+|---|---|
+| `Negocio/DocumentosDelDomiciliarioController::subir()` | el domiciliario, acotado a la tienda de la sesión |
+| `Negocio/EfectivoDeLaTiendaController::recibir()` | el mismo vínculo, para recibir efectivo en el mostrador |
+
+```php
+// El vínculo con ESTA tienda es la autorización.
+$d = Domiciliary::whereHas('businesses', fn ($q) => $q
+        ->where('business.busines_id', $negocioId)
+        ->where('business_domiciliary.state', 1))
+    ->findOrFail($id);
+
+$datos = $request->validate([...]);
+```
+
+**Ese `findOrFail` no es una consulta: es la autorización.** Resuelve al
+domiciliario *acotado a la tienda que sale de la sesión*, y si no hay vínculo
+devuelve 404. Sin él, cualquier tendero podría escribir en los papeles —o
+apuntar entregas de efectivo— de alguien que no reparte para él.
+
+Moverlo a un `FormRequest` invierte el orden: la validación correría primero
+y un tendero probando ids ajenos recibiría un **422 hablándole de la forma
+del cuerpo** sobre un recurso que no tiene derecho a ver, en vez de un 404.
+Hacerlo en `authorize()` del propio `FormRequest` arregla el orden pero
+obliga a repetir la consulta o a dejar el modelo pegado al `Request`, que es
+peor de leer que las cinco líneas de arriba.
+
+§20 cubre esto —«excepción permitida cuando separar empeora lectura, coste o
+testabilidad»—. **Se quedan, y el contador no las cuenta como pendientes.**
+Si aparece una tercera, que aparezca con su motivo escrito acá.
 
 ### La salida se arma a mano, no con `JsonResource`
 
@@ -224,10 +261,39 @@ respuesta y 5 s de conexión, configurables por `BOLD_TIMEOUT` y
 desplegar. Fallar con un error que el comprador ve es peor que no fallar, y
 muchísimo mejor que colgar la tienda entera.
 
-### 2 · Veinte avisos de seguridad en las dependencias — PENDIENTE
+### 2 · Veinte avisos de seguridad en las dependencias — ARREGLADO
 
-`composer audit` —que §46 pide y el CI no corre— devuelve **20 avisos que
-afectan a 10 paquetes**, entre ellos:
+**Cerrado el 10 de noviembre de 2026, en la rama
+`seguridad/dependencias-al-dia`.** `composer audit` dice ahora «No security
+vulnerability advisories found»: de 20 avisos a cero.
+
+`composer.json` **no cambió**. Las restricciones ya permitían estas
+versiones, así que lo único que se movió es el lock —60 filas— y revertirlo
+es revertir un archivo. **Cero saltos de versión mayor:**
+
+| Paquete | De | A |
+|---|---|---|
+| `laravel/framework` | v12.66.0 | v12.72.0 |
+| `league/commonmark` | 2.10.0 | 2.10.7 |
+| `league/flysystem` | 3.35.2 | 3.36.0 |
+| `phpoffice/phpspreadsheet` | 1.30.6 | 1.30.8 |
+| `symfony/filesystem` | v7.4.15 | v7.4.23 |
+| `symfony/http-foundation` | v7.4.16 | v7.4.23 |
+| `symfony/http-kernel` | v7.4.16 | v7.4.23 |
+| `symfony/mime` | v7.4.16 | v7.4.22 |
+| `symfony/routing` | v7.4.15 | v7.4.23 |
+| `symfony/yaml` | v7.4.22 | v7.4.23 |
+
+Verificado **después** de actualizar, no antes: 1127 pruebas pasando (4
+omitidas), PHPStan sin un solo aviso nuevo contra la línea base, Pint limpio.
+
+> **Un susto por el camino que conviene saber.** PHPStan dio 493 errores
+> justo después. No era la actualización: la **línea base estaba vacía** en
+> el árbol de trabajo (33 bytes, `ignoreErrors: []`), pisada en algún momento
+> del día. Restaurada la versión comiteada —258 entradas—, cero avisos. Que
+> el número coincidiera exactamente con el total congelado fue la pista.
+
+Lo que decía antes este apartado, y por qué pesaba:
 
 | Paquete | Gravedad |
 |---|---|
@@ -237,14 +303,13 @@ afectan a 10 paquetes**, entre ellos:
 | `symfony/mime`, `league/commonmark` | media |
 | `symfony/routing`, `symfony/http-kernel`, `symfony/filesystem`, `league/flysystem` | sin clasificar / baja |
 
-`phpoffice/phpspreadsheet` pesa aquí más que en otro proyecto: es lo que
-procesa **los Excel que suben los tenderos**, o sea entrada de fuera.
+`phpoffice/phpspreadsheet` pesaba aquí más que en otro proyecto: es lo que
+procesa **los Excel que suben los tenderos**, o sea entrada de fuera pasando
+por un lector con CVE conocido. Esa era la razón de no dejarlo para después.
 
-**No se actualiza en este cambio a propósito.** Subir diez paquetes es un
-cambio con su propio riesgo y merece su propio PR, con la suite delante y
-sabiendo qué rompe cada salto de versión. Lo que sí entra ya es la medida: el
-número está escrito y `composer audit` tiene que correr en el CI para que no
-vuelva a crecer en silencio.
+Y se hizo en su propia rama, aparte de todo lo demás del día, justamente para
+que se pudiera revertir solo. `composer audit` ya corre en el CI, así que el
+número no puede volver a crecer en silencio.
 
 ### Lo que ya se cumple
 
