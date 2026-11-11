@@ -82,6 +82,22 @@ return [
             'path' => storage_path('logs/rendimiento.log'),
             'level' => 'warning',
             'days' => 14,
+
+         * UNA LINEA POR PETICION, y por eso en su propio fichero.
+         *
+         * No va en `rendimiento`, que esta en nivel `warning` y guarda los
+         * avisos de quien se pasa del presupuesto: son dos cosas distintas
+         * —una excepcion y un censo— y mezclarlas obligaria al informe de
+         * percentiles a descartar lineas mientras lee.
+         *
+         * Siete dias y no catorce: es el canal que mas escribe de todos, y
+         * una semana ya contiene un ciclo completo con sus fines de semana.
+         */
+        'latencia' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/latencia.log'),
+            'level' => 'info',
+            'days' => 7,
             'replace_placeholders' => true,
         ],
 

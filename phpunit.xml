@@ -53,6 +53,10 @@
         -->
         <env name="DB_PRESUPUESTO_MS" value="0"/>
         <env name="MAIL_MAILER" value="array"/>
+        <!-- Una linea de latencia por peticion de la suite no mide nada: la
+             base es SQLite en memoria y no hay red. Las pruebas de la medida
+             la encienden ellas mismas. -->
+        <env name="MEDIR_PETICIONES" value="false"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>

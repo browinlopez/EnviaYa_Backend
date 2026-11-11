@@ -8,6 +8,8 @@ use App\Services\Push\PushFirebase;
 use App\Services\Push\PushSegunPlataforma;
 use App\Services\Push\TransportePush;
 use App\Support\PresupuestoDeConsultas;
+
+use App\Support\ContadorDeConsultas;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
@@ -81,6 +83,14 @@ class AppServiceProvider extends ServiceProvider
          * doler es el CI y la máquina de quien lo escribe.
          */
         Model::preventLazyLoading(! app()->isProduction());
+
+        /*
+         * El contador de consultas por peticion: UNA vez por trabajador, no
+         * una por peticion. Registrarlo en el middleware acumularia un oyente
+         * por cada peticion bajo Octane, y a la milesima cada consulta
+         * llamaria a mil closures. Ver `ContadorDeConsultas`.
+         */
+        ContadorDeConsultas::registrar();
 
         if (app()->environment('production')) {
             URL::forceScheme('https');
