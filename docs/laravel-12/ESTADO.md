@@ -1,6 +1,6 @@
 # Estado del backend frente al estándar
 
-**Medido el 11 de noviembre de 2026.** Laravel 12.72 · 1238 pruebas en verde ·
+**Medido el 11 de noviembre de 2026.** Laravel 12.72 · 1258 pruebas en verde ·
 PHPStan y Pint limpios · 428 clases cargan · `composer audit` en cero.
 
 Doce ramas de trabajo fusionadas, y el backend **arrancado y recorrido entero**:
@@ -107,14 +107,14 @@ y sin un solo error. Ahora lo vigila `colas:comprobar --avisar`, a diario.
 
 | Regla | Antes | Hoy | Estado |
 |---|---:|---:|---|
-| Validación en `FormRequest` | 2 | **110** | 66 en línea quedan, 0 convertibles |
+| Validación en `FormRequest` | 2 | **120** | 39 en línea quedan, y ninguna convertible: las que quedan cambiarían el contrato |
 | Formato (Pint) | sin correr | **limpio** | en el CI |
 | `env()` fuera de `config/` | 2 | **0** | hecho |
 | Clases que no cargan | sin comprobar | **0 de 428** | comprobador nuevo en el CI |
 | Análisis estático | no había | **PHPStan nivel 5** | línea base de 385; el CI exige código nuevo limpio |
 | Superficie de la API | sin congelar | **294 rutas** | prueba que falla si cambia verbo, URI, nombre o middleware. Eran 325: las 31 sin llamante se retiraron el 11 de noviembre |
 | Duración de la suite | 630 s | **48 s** | las pruebas ya no llaman a un Reverb real |
-| Pruebas | 1026 | **1238** | |
+| Pruebas | 1026 | **1258** | |
 | Procesos recorridos de punta a punta | 0 | **33** | `scripts/arnes/`, contra el servidor en marcha |
 | Avisos de `composer audit` | 20 | **0** | bloqueante en el CI |
 
@@ -334,8 +334,41 @@ dos ficheros distintos.
 |---|---|
 | ~~§24 índices con `EXPLAIN`~~ | **Hecho el 10 de noviembre de 2026.** Ver «Los índices, medidos» más abajo |
 | §25 presupuestos de rendimiento | **Ya se mide**: `MedidaDeLaPeticion` escribe una línea por petición y `scripts/percentiles_de_latencia.php` las resume. Lo que falta es TRÁFICO: con 1223 peticiones de un recorrido salen p50 61 ms, p95 212 ms y p99 370 ms en conjunto, pero casi ninguna ruta llega a las 20 muestras que hacen falta para un percentil honesto. Poner el número por endpoint pide unos días de uso real, no otra herramienta |
-| §34 OpenAPI | Es construir y mantener un contrato nuevo: un proyecto, no un ajuste |
-| §41 `declare(strict_types=1)` | 0 de 430 archivos. §12 dice que se adopta gradualmente y que **no** se reescriben todos para ponerlo |
+> **11 de noviembre de 2026 — tres divergencias del catalogo, medidas y SIN
+> arreglar.** Salieron de mover las formas del negocio a Resources: ponerlas
+> una al lado de la otra es lo que las hizo visibles.
+>
+> 1. **La vitrina y los destacados no mandan los mismos campos.** Solo
+>    `/top-businesses` trae `category`, `group`, `variante`, `sale_unit`,
+>    `min_qty` y `step_qty`; solo `/businesses/index` trae `category_id`.
+>    Comprobado contra las respuestas reales. Los tres del peso son con los
+>    que la app decide si ofrece el +/- o los botones de plata y porcion, y
+>    `variante`/`group` los que pintan ocho presentaciones como UNA tarjeta.
+>
+> 2. **`/favorites/index` manda el precio sin comprobar la afiliacion.** El
+>    catalogo tapa el precio a quien no esta afiliado; favoritos no, y
+>    marcar una tienda como favorita no exige afiliacion. En esa misma
+>    respuesta ya se cerro la fuga de los datos del propietario y esta se
+>    quedo.
+>
+> 3. **Y LOS CAMPOS DEL PESO NO LLEGAN NUNCA, por ningun endpoint.**
+>    `Business::products()` declara `withPivot(['price','amount','qualification'])`
+>    y no incluye `sale_unit`, `min_qty` ni `step_qty`. El controlador las lee
+>    con `?? 'unidad'`, asi que el respaldo se dispara siempre. Medido dos
+>    veces: una prueba que siembra un producto en `kg` y recibe `unidad`, y a
+>    mano contra la base de desarrollo. Un tendero puede configurar su queso
+>    en kilos y el comprador seguira viendo unidades.
+>
+> Las tres cambian lo que reciben dos apps publicadas, asi que las tres son
+> decision de producto. La tercera ademas tiene filo: encenderla es una
+> linea, pero si la pantalla del comprador no sabe pintar otra unidad, rompe
+> la compra en vez de arreglarla.
+>
+> Fijadas en `tests/Feature/Contrato/ElProductoSeVeDistintoSegunLaPuertaTest.php`
+> con la lista exacta de campos, para que el arreglo sea deliberado.
+
+| ~~§34 OpenAPI~~ | **Hecho el 11 de noviembre de 2026**: `docs/laravel-12/openapi.json`, 294 operaciones, GENERADO del router por `scripts/openapi.php` y comprobado en el CI con `--revisar`. Un fichero escrito a mano deja de ser verdad con el primer cambio de ruta |
+| ~~§41 `declare(strict_types=1)`~~ | **Hecho el 11 de noviembre de 2026**: 433 de 433. Se puso de golpe en una rama y se midio con la suite, el arnes, Pint y PHPStan antes de darlo por bueno |
 | §51 límites de archivo | 113 por encima del objetivo. §03 los llama «umbrales orientativos, no bloqueos», y §00 pone el tamaño en el ÚLTIMO lugar de las prioridades |
 
 ### Los índices, medidos — §24
