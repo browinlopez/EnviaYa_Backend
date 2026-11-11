@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Exports\Comercials;
 
 use App\Models\Product\Category;

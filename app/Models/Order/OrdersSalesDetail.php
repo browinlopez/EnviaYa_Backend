@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models\Order;
 
 use App\Models\Audit\Audit;
