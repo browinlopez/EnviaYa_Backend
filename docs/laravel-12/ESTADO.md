@@ -176,6 +176,60 @@ flujo de verdad use MySQL también está comprobado: `phpunit.xml` fija
 que ya viene del entorno — medido, no supuesto, porque si lo pisara el flujo
 entero llevaría meses corriendo en SQLite sin que nadie lo notara.
 
+### El presupuesto de tiempo en base de datos — §25
+
+**Aquí no había NINGUNA observabilidad de consultas.** Pulse, Telescope y
+Nightwatch no están instalados —ni aparecen en `composer.json`—, así que de
+un endpoint lento en producción no quedaba ni rastro: lo único que se sabía
+era lo que alguien notara a ojo.
+
+`App\Support\PresupuestoDeConsultas` registra el
+`DB::whenQueryingForLongerThan` que §25 propone: cuando una petición pasa de
+**400 ms de suma de consultas**, queda anotada en el canal `rendimiento`
+(propio, 14 días). El número está en `config/database.php` y se apaga con
+`DB_PRESUPUESTO_MS=0`, sin desplegar.
+
+**No es un detector de consulta lenta**, y §25 pide no confundirlos: veinte
+consultas de 30 ms no disparan ninguna alarma de consulta lenta y son 600 ms
+de espera para el tendero. Es justo lo que dejan los N+1.
+
+**Lo que se escribe, y lo que no.** Va el patrón de la ruta
+—`v1/negocio/domiciliarios/{id}`, con el marcador y no el número—, el verbo y
+dos tiempos. **No van la SQL ni los parámetros.** §25 pide enmascarar los
+parámetros sensibles, y la forma segura de enmascararlos es no escribirlos:
+en esta API un `binding` es el correo de un tendero, el teléfono de un
+comprador o el token de una sesión, en un fichero que nadie vigila. Hay una
+prueba de ausencia para eso, y es la que importa: probada rota, escribir la
+SQL la pone roja.
+
+**Lo que esto NO puede decir, dicho antes de que alguien lea el log
+esperándolo:** cuánto tardó la petición en total. El manejador salta en el
+instante en que la suma cruza el presupuesto, no al final, así que el
+acumulado en ese momento vale ≈ el presupuesto siempre. Por eso el campo se
+llama `ms_al_cruzar` y no «total»: un número que siempre dice 400 no informa
+de nada. Contesta **qué rutas se pasan y cuántas veces**, que es con lo que se
+decide dónde mirar; para el «cuánto» haría falta medir al terminar la
+petición, y eso es otra pieza que no se añade sin que nadie la necesite.
+
+El segundo tiempo, `cruzo_con_ms`, es el que separa los dos casos: si se
+parece al presupuesto, fue **una** consulta lenta y falta un índice; si es
+mucho menor, fue la suma de muchas rápidas, o sea un N+1.
+
+**Apagado en las pruebas** (`DB_PRESUPUESTO_MS=0` en `phpunit.xml`), y no por
+ruido: «por petición» no significa nada en un proceso de pruebas. El contador
+no se reinicia entre una prueba y la siguiente —eso lo hace Octane, y en la
+suite no hay Octane—, así que la suma crece durante todo el archivo y el aviso
+acabaría saltando por el montaje de la prueba número cuarenta, apuntando a una
+ruta que no tiene nada que ver. Medido: una sola prueba llega a 248 ms de
+acumulado. Las cinco pruebas que lo ejercitan lo encienden ellas, con su
+presupuesto y reiniciando el contador antes.
+
+Y queda comprobado que bajo Octane funciona por petición y no una vez por
+trabajador: `Octane\Listeners\RefreshQueryDurationHandling` reinicia el
+contador **y rearma el manejador** en cada petición. Sin eso el aviso se
+dispararía una vez al arrancar el trabajador y nunca más, que es peor que no
+tenerlo.
+
 ---
 
 ## 4 · Sobre PHPStan, para que nadie persiga 503 avisos

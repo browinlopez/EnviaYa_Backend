@@ -68,6 +68,23 @@ return [
             'replace_placeholders' => true,
         ],
 
+        /*
+         * Peticiones que pasan del presupuesto de tiempo en base de datos
+         * (App\Support\PresupuestoDeConsultas). Canal propio para que no se
+         * pierdan entre los avisos de `laravel.log`: lo que se mira aqui es
+         * una lista corta de rutas, y mezclada con todo lo demas no se mira.
+         *
+         * 14 dias: es para enterarse de que algo se degrado, no un archivo
+         * historico. Si una ruta aparece, aparece todos los dias.
+         */
+        'rendimiento' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/rendimiento.log'),
+            'level' => 'warning',
+            'days' => 14,
+            'replace_placeholders' => true,
+        ],
+
         'single' => [
             'driver' => 'single',
             'path' => storage_path('logs/laravel.log'),

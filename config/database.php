@@ -242,4 +242,23 @@ return [
 
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Presupuesto de tiempo en base de datos, por peticion
+    |--------------------------------------------------------------------------
+    |
+    | Milisegundos de SUMA de consultas a partir de los cuales la peticion
+    | queda anotada en el canal `rendimiento`. No es un limite: no corta
+    | nada, solo avisa.
+    |
+    | 400 ms de base de datos en una peticion es mucho para esta API: la mas
+    | pesada que hay es un informe, y el resto son lecturas de pantalla. El
+    | numero se afina con lo que aparezca en el log, no antes.
+    |
+    | Con 0 se apaga, sin tocar codigo.
+    |
+    */
+
+    'presupuesto_ms' => (float) env('DB_PRESUPUESTO_MS', 400),
+
 ];
