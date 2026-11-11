@@ -8,6 +8,7 @@ use App\Http\Middleware\EnsureCategoryAccess;
 use App\Http\Middleware\EnsureComplexStaff;
 use App\Http\Middleware\EnsureMediaAccess;
 use App\Http\Middleware\EnsureModuleAccess;
+use App\Http\Middleware\MedidaDeLaPeticion;
 use App\Http\Middleware\SetContentLengthForDevServer;
 use App\Http\Middleware\SoloParaCambiarPorSesion;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -42,6 +43,21 @@ return Application::configure(basePath: dirname(__DIR__))
         // php artisan serve responde sin Content-Length y el cuerpo llega cortado
         // a la app (ver comentario del middleware); en producción no hace nada.
         $middleware->append(SetContentLengthForDevServer::class);
+
+        /*
+         * Cuánto tarda cada petición, una línea por petición.
+         *
+         * GLOBAL y no por ruta, por dos motivos. Una lista de rutas a medir
+         * se queda incompleta el día que alguien añade un endpoint —y las que
+         * faltan son justo las nuevas, que son las que nadie ha medido—. Y el
+         * stack global es invisible para `gatherMiddleware()`, así que medir
+         * no toca el congelado de las 325 rutas: comprobado, el fichero
+         * `superficie-api.json` no menciona `SetContentLengthForDevServer`,
+         * que lleva ahí arriba desde antes.
+         *
+         * Se apaga con `MEDIR_PETICIONES=false`, sin desplegar.
+         */
+        $middleware->append(MedidaDeLaPeticion::class);
 
         /*
          * Modo mantenimiento de la app móvil, encendido desde el panel.

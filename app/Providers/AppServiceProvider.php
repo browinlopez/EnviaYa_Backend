@@ -7,6 +7,7 @@ use App\Services\Push\PushEnRegistro;
 use App\Services\Push\PushFirebase;
 use App\Services\Push\PushSegunPlataforma;
 use App\Services\Push\TransportePush;
+use App\Support\ContadorDeConsultas;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -54,6 +55,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        /*
+         * El contador de consultas por peticion: UNA vez por trabajador, no
+         * una por peticion. Registrarlo en el middleware acumularia un oyente
+         * por cada peticion bajo Octane, y a la milesima cada consulta
+         * llamaria a mil closures. Ver `ContadorDeConsultas`.
+         */
+        ContadorDeConsultas::registrar();
+
         if (app()->environment('production')) {
             URL::forceScheme('https');
             URL::forceRootUrl(config('app.url'));
