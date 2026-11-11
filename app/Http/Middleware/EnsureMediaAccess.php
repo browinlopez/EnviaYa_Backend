@@ -38,7 +38,8 @@ class EnsureMediaAccess
         }
 
         $user = $request->user();
-        $area = $user?->area_id ? Area::find($user->area_id) : null;
+        // La relacion, no `Area::find`: ver `User::area()`.
+        $area = $user?->area;
 
         if (! $area || (int) $area->state !== 1) {
             return response()->json([

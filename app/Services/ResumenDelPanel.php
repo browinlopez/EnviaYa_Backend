@@ -17,6 +17,78 @@ class ResumenDelPanel
 {
     use AyudasDeAdmin;
 
+    /**
+     * Los conteos que esta pantalla pide DOS VECES, contados una.
+     *
+     * No es un invento: medido con la sonda de consultas, `/admin/overview`
+     * hacia 48 consultas y cuatro salian repetidas. Tres eran el mismo
+     * agregado preguntado por dos partes de la misma pantalla —el bloque de
+     * cifras generales de arriba y los bloques por area de abajo—:
+     *
+     *   select count(*) from `business`     x2
+     *   select count(*) from `products`     x2
+     *   los pedidos activos sin pago aprobado        x2
+     *
+     * Y daban el MISMO numero, comprobado contra la respuesta real: 7, 586 y
+     * 22. O sea que no eran dos preguntas parecidas, eran la misma pregunta
+     * cobrada dos veces.
+     *
+     * POR QUE UN CAMPO DE LA INSTANCIA Y NO UNA CACHE. Porque la vida de esta
+     * memoria tiene que ser exactamente la de la peticion, y eso es lo que
+     * dura la instancia: el contenedor crea una por cada `ResumenDelPanel`
+     * que inyecta y no la comparte. Una `Cache::remember` de treinta segundos
+     * haria que el panel enseñara un conteo viejo —el sintoma seria «cree un
+     * negocio y el tablero sigue diciendo 7»— y habria que decidir cuanto
+     * vive y quien lo invalida. Aqui no hay nada que invalidar.
+     *
+     * Eso de que el contenedor no la comparte es la condicion que lo hace
+     * seguro, asi que **esta fijado por una prueba**: si alguien la registrara
+     * como `singleton` —o Octane la mantuviera viva—, estos numeros se
+     * quedarian congelados entre peticiones distintas y nadie lo notaria.
+     *
+     * @var array<string, int>
+     */
+    private array $yaContado = [];
+
+    /** @param  callable(): int  $contar */
+    private function unaVez(string $llave, callable $contar): int
+    {
+        return $this->yaContado[$llave] ??= $contar();
+    }
+
+    /** Cuantas tiendas hay dadas de alta, contando las ocultas. */
+    public function negociosEnTotal(): int
+    {
+        return $this->unaVez('business', fn () => DB::table('business')->count());
+    }
+
+    /** Cuantas referencias hay en el catalogo general. */
+    public function productosEnTotal(): int
+    {
+        return $this->unaVez('products', fn () => DB::table('products')->count());
+    }
+
+    /**
+     * Pedidos vivos que todavia no tienen un pago aprobado.
+     *
+     * Se resuelve contra `payments`, que es el registro real del dinero
+     * recibido, y no contra `orderssales.payment_state`, que es una copia
+     * denormalizada que puede quedar desincronizada. Usar la bandera hacia
+     * que el panel contara como pendientes pedidos que la pantalla de Pagos
+     * mostraba aprobados: dos pantallas, dos respuestas.
+     *
+     * Sale en el tablero como `pending_payment` y en el bloque de
+     * Contabilidad como `unpaid_orders`. Son dos nombres de la misma cifra y
+     * los dos se quedan —la respuesta no cambia—, pero la consulta es una.
+     */
+    public function pedidosSinPagoAprobado(): int
+    {
+        return $this->unaVez('sin_pago', fn () => DB::table('orderssales as o')
+            ->whereIn('o.state', self::ACTIVOS)
+            ->whereNotExists(fn ($q) => $this->pagoAprobado($q))
+            ->count());
+    }
+
     /** Serie por día con el periodo anterior alineado al mismo índice. */
     public function serieDiaria($entregadas, Carbon $desde, int $dias): array
     {
@@ -68,7 +140,10 @@ class ResumenDelPanel
     private function permisosDe(Request $request): array
     {
         $user = $request->user();
-        $area = $user && $user->area_id ? Area::find($user->area_id) : null;
+        // La relacion y no `Area::find`: el middleware `modulo` ya la resolvio
+        // en esta misma instancia de usuario, asi que aqui no cuesta una
+        // consulta. Ver `User::area()`.
+        $area = $user?->area;
 
         if (! $area || (int) $area->state !== 1) {
             return ['area' => null, 'matriz' => []];
@@ -174,12 +249,9 @@ class ResumenDelPanel
                     ->whereIn('status', ['rejected', 'failed'])
                     ->where('payment_date', '>=', Carbon::now()->subDays(30))
                     ->count(),
-                // Contra `payments` y no contra la bandera denormalizada del
-                // pedido, por lo mismo que el resto del panel.
-                'unpaid_orders' => DB::table('orderssales as o')
-                    ->whereIn('o.state', self::ACTIVOS)
-                    ->whereNotExists(fn ($q) => $this->pagoAprobado($q))
-                    ->count(),
+                // La misma cifra que `pending_payment` del tablero, contada
+                // una sola vez. Ver `pedidosSinPagoAprobado()`.
+                'unpaid_orders' => $this->pedidosSinPagoAprobado(),
             ];
         }
 
@@ -337,7 +409,8 @@ class ResumenDelPanel
 
         if ($veNegocios) {
             $datos += [
-                'businesses_total' => DB::table('business')->count(),
+                // Ya contado para el tablero. Ver `negociosEnTotal()`.
+                'businesses_total' => $this->negociosEnTotal(),
                 'businesses_hidden' => DB::table('business')->where('state', '!=', 1)->count(),
                 // Sin coordenadas no entra en el mapa de entregas; sin tipo no
                 // aparece en ningún carrusel de la app. Dos formas de estar
@@ -371,7 +444,8 @@ class ResumenDelPanel
 
         if ($veProductos) {
             $datos += [
-                'products_total' => DB::table('products')->count(),
+                // Ya contado para el tablero. Ver `productosEnTotal()`.
+                'products_total' => $this->productosEnTotal(),
                 'products_no_image' => DB::table('products')
                     ->where(fn ($q) => $q->whereNull('image')->orWhere('image', ''))
                     ->count(),

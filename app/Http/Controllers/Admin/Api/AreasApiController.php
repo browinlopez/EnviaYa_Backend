@@ -39,7 +39,8 @@ class AreasApiController extends Controller
     public function mios(Request $request)
     {
         $user = $request->user();
-        $area = $user->area_id ? Area::find($user->area_id) : null;
+        // La relacion, no `Area::find`: ver `User::area()`.
+        $area = $user->area;
         $nivel = $user->access_level ?? Area::NIVEL_GESTOR;
 
         return response()->json([

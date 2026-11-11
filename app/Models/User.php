@@ -9,6 +9,7 @@ use App\Models\Reviews\UserReview;
 use App\Models\User\UserAddress;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -72,6 +73,22 @@ class User extends Authenticatable implements Auditable, MustVerifyEmail
         'remember_token',
         'two_factor_secret',
         'two_factor_recovery_codes',
+        /*
+         * `area` NO ES UN SECRETO: está oculto para que la respuesta no cambie
+         * sola.
+         *
+         * Eloquent serializa las relaciones que estén cargadas, y `area` la
+         * carga el middleware de permisos sobre `$request->user()`. Hoy
+         * ninguna ruta hace las dos cosas —pasar por ese middleware y devolver
+         * el usuario entero—, así que comprobado: nada cambia. Pero el día que
+         * alguien ponga `modulo:` sobre una ruta que devuelva el usuario, le
+         * aparecería una clave `area` en el JSON sin haberla pedido, y eso es
+         * justo lo que este trabajo prometió no hacer.
+         *
+         * Quien la necesite la pide por su nombre: `AreasApiController::mios`
+         * construye su respuesta campo por campo y `$hidden` no le afecta.
+         */
+        'area',
     ];
 
     protected $casts = [
@@ -106,6 +123,47 @@ class User extends Authenticatable implements Auditable, MustVerifyEmail
     public function rolRelation()
     {
         return $this->belongsTo(Rol::class, 'rol', 'rol_id');
+    }
+
+    /**
+     * El área del panel a la que pertenece, si es personal de la empresa.
+     *
+     * EXISTE PARA QUE SE CONSULTE UNA SOLA VEZ. Medido con la sonda de
+     * consultas: `areas` salía DOS veces en `/admin/overview`, porque el
+     * middleware `modulo` hacía su `Area::find($user->area_id)` y
+     * `ResumenDelPanel::permisosDe()` hacía otro igual unos milisegundos
+     * después, sobre la misma fila.
+     *
+     * Dos, no más: lo comprobé antes de escribirlo así. Los cinco sitios que
+     * buscaban el área —tres middlewares de permisos, el resumen del panel y
+     * «mis permisos»— nunca se apilan en una misma ruta, así que ninguna
+     * petición pagaba tres. Los cinco usan ahora la relación de todos modos,
+     * porque el día que `medios` o `categorias` se junten con `modulo` el
+     * costo ya no aparece.
+     *
+     * Eloquent guarda una relación ya cargada en la instancia del modelo, y
+     * `$request->user()` devuelve **la misma instancia** a todo el que
+     * pregunte durante la petición: el primero que toque `$user->area` paga
+     * la consulta y los demás leen lo que él dejó. No hay caché que invalidar
+     * ni nada que vaciar entre peticiones, porque la instancia muere con la
+     * petición.
+     *
+     * Con `area_id` nulo —cualquier comprador, tendero o domiciliario—
+     * `BelongsTo` devuelve `null` **sin consultar**, así que esto no le cuesta
+     * nada a quien no es del panel.
+     */
+    /**
+     * El tipo de retorno esta puesto a proposito, y no por adorno: sin el,
+     * Larastan no deduce la propiedad y los cinco sitios que usan `$user->area`
+     * salen como «acceso a una propiedad que no existe». Las relaciones
+     * vecinas de este modelo no lo llevan porque nadie las lee como
+     * propiedad.
+     *
+     * @return BelongsTo<Area, $this>
+     */
+    public function area(): BelongsTo
+    {
+        return $this->belongsTo(Area::class, 'area_id');
     }
 
     public function domiciliary()

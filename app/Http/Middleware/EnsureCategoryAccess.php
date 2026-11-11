@@ -50,7 +50,9 @@ class EnsureCategoryAccess
         }
 
         $user = $request->user();
-        $area = $user?->area_id ? Area::find($user->area_id) : null;
+        // La relacion, no `Area::find`: se consulta una vez por peticion
+        // aunque pasen varios middlewares de permisos. Ver `User::area()`.
+        $area = $user?->area;
 
         if (! $area || (int) $area->state !== 1) {
             return response()->json([

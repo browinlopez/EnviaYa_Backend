@@ -43,22 +43,21 @@ class AdminApiController extends Controller
             'courier_earnings' => round($actual->sum('domiciliary_fee'), 2),
         ];
 
-        // Conteos globales: no dependen del rango, describen el estado actual.
+        /*
+         * Conteos globales: no dependen del rango, describen el estado actual.
+         *
+         * Tres de estos los VUELVE A PEDIR un bloque de abajo con otro nombre
+         * —`businesses_total`, `products_total`, `unpaid_orders`—, así que los
+         * cuenta `ResumenDelPanel` y los dos lados leen el mismo número. La
+         * respuesta no cambia: eran la misma cifra con dos etiquetas, y la
+         * sonda de consultas las veía salir dos veces cada una.
+         */
         $totales += [
             'users' => DB::table('user')->count(),
-            'businesses' => DB::table('business')->count(),
-            'products' => DB::table('products')->count(),
+            'businesses' => $resumen->negociosEnTotal(),
+            'products' => $resumen->productosEnTotal(),
             'active_orders' => DB::table('orderssales')->whereIn('state', self::ACTIVOS)->count(),
-            // "Pendiente de pago" se resuelve contra la tabla `payments`, que
-            // es el registro real del dinero recibido, y no contra
-            // `orderssales.payment_state`, que es una copia denormalizada que
-            // puede quedar desincronizada. Usar la bandera hacía que el panel
-            // contara como pendientes pedidos que la pantalla de Pagos
-            // mostraba aprobados: dos pantallas, dos respuestas.
-            'pending_payment' => DB::table('orderssales as o')
-                ->whereIn('o.state', self::ACTIVOS)
-                ->whereNotExists(fn ($q) => $this->pagoAprobado($q))
-                ->count(),
+            'pending_payment' => $resumen->pedidosSinPagoAprobado(),
             // Pedidos que llevan más de un día sin llegar a entregado: la
             // señal más barata de que algo se atascó.
             'stalled_orders' => DB::table('orderssales')
