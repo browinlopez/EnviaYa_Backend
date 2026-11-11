@@ -56,6 +56,22 @@ Este detector los separa, y lo que dice de cada uno:
 
     python scripts/validaciones_en_linea.py
     python scripts/validaciones_en_linea.py --convertibles
+    python scripts/validaciones_en_linea.py --trinquete   # para el CI
+
+EL TRINQUETE, que es lo que convierte la regla en algo que se cumple. El
+acuerdo escrito era «todo endpoint nuevo o tocado estrena su `FormRequest`; el
+contador solo baja; si sube, el PR no entra», y nada lo impedia: era una
+promesa. Con `--trinquete` el CI falla si:
+
+  - aparece una validacion CONVERTIBLE. Es la regla, literal: una validacion
+    en linea con nada por delante es una que no tiene motivo para estar ahi.
+    Esto caza el endpoint nuevo escrito a la antigua el mismo dia.
+
+  - el total pasa de TOPE. Caza el caso raro de una validacion nueva que SI
+    tiene motivo pero que nadie penso si hacia falta.
+
+Si el total baja, no falla: avisa de que hay que bajar TOPE en el mismo cambio
+que convierte, para que el trinquete no se quede flojo.
 
 NO CUENTA `Validator::make(` NI `validateWithBag(`: son otra cosa —validacion
 armada a mano y salida con bolsa para una vista— y mezclarlas inflaria el
@@ -89,6 +105,16 @@ AQUI = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(AQUI)
 
 LLAMADA = '$request->validate('
+
+# EL TOPE DEL TRINQUETE: cuantas validaciones en linea se admiten.
+#
+# Este numero SOLO BAJA, y se baja a mano en el mismo cambio que convierte
+# una: que haya que tocarlo es lo que hace que alguien se entere de que el
+# contador se movio. Al 10 de noviembre de 2026: 66, de las 173 que habia.
+#
+# Subirlo es una decision, no un arreglo del CI. Si hace falta subirlo, el
+# motivo va en `docs/laravel-12/EXCEPCIONES.md` junto a los demas.
+TOPE = 66
 
 BARRA = chr(92)
 PREFIJO = 'App' + BARRA + 'Http' + BARRA + 'Controllers' + BARRA
@@ -310,7 +336,8 @@ def clasificar(v, estado):
 
 
 def main():
-    solo_convertibles = '--convertibles' in sys.argv[1:]
+    trinquete = '--trinquete' in sys.argv[1:]
+    solo_convertibles = '--convertibles' in sys.argv[1:] or trinquete
     estados, hay_lista = estado_por_metodo()
 
     # Del ARBOL DE TRABAJO y no de `HEAD`: quien corre esto quiere saber
@@ -383,6 +410,72 @@ def main():
     print('deja de aplicar el dia que la app vieja no este en ningun telefono.')
     print('Pero hasta entonces mover la regla CAMBIA lo que recibe un cliente')
     print('publicado, y eso no es refactorizar.')
+    print()
+
+    if not trinquete:
+        return 0
+
+    # ------------------------------------------------------------------ #
+    # EL TRINQUETE                                                       #
+    # ------------------------------------------------------------------ #
+    fallos = []
+
+    # LAS DOS PRIMERAS COMPUERTAS SON SOBRE EL PROPIO DETECTOR.
+    #
+    # Las dos tienen la misma forma de fallo y es la peor: el detector sigue
+    # funcionando, imprime numeros con buena cara, y no ha medido nada. Sin
+    # `route:list` todo cae en «fuera de una ruta» y los convertibles son cero
+    # —la compuerta pasaria en verde sin comprobar una sola validacion—.
+    if not estados:
+        fallos.append(
+            '`php artisan route:list --json` no devolvio nada, asi que TODAS\n'
+            '   cayeron en «fuera de una ruta» y el detector no midio nada.\n'
+            '   Sin esto la compuerta pasaria en verde sin haber comprobado\n'
+            '   una sola validacion, que es peor que no tenerla.'
+        )
+
+    if not hay_lista:
+        fallos.append(
+            'falta scripts/rutas-candidatas.json, asi que las validaciones\n'
+            '   sobre rutas que nadie llama salen como vivas y convertibles.\n'
+            '   Medido: los convertibles pasan de 0 a 22. La compuerta\n'
+            '   fallaria por 22 motivos falsos.'
+        )
+
+    if convertibles:
+        fallos.append(
+            '%d validacion(es) en linea sin NINGUN motivo para estarlo.\n'
+            '   El acuerdo es que todo endpoint nuevo o tocado estrena su\n'
+            '   `FormRequest`. Si esta es nueva, extraela; si estaba y el\n'
+            '   detector acaba de dejar de ver su motivo, escribe el motivo\n'
+            '   en EXCEPCIONES.md y dilo en el PR.' % convertibles
+        )
+
+    if total > TOPE:
+        fallos.append(
+            'el contador subio: %d, y el tope es %d.\n'
+            '   El contador solo baja. Subirlo es una decision que va\n'
+            '   argumentada en docs/laravel-12/EXCEPCIONES.md, no un numero\n'
+            '   que se cambia para que pase el CI.' % (total, TOPE)
+        )
+
+    if fallos:
+        print('EL TRINQUETE NO PASA')
+        print('=' * 80)
+
+        for f in fallos:
+            print(' - ' + f)
+
+        print()
+
+        return 1
+
+    if total < TOPE:
+        print('El contador bajo de %d a %d: baja TOPE en este mismo cambio.' % (TOPE, total))
+        print('Que haya que tocarlo a mano es lo que hace que alguien se entere.')
+        print()
+
+    print('Trinquete: %d validaciones, 0 convertibles, tope %d. Pasa.' % (total, TOPE))
     print()
 
     return 0

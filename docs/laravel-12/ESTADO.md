@@ -104,6 +104,28 @@ código: las tres validaciones de `MediosApiController` salían convertibles y
 Buscando patrones conocidos eso no se caza nunca, porque cualquier llamada
 puede abortar.
 
+**Y el trinquete ya no es una promesa.** El acuerdo escrito era «todo endpoint
+nuevo o tocado estrena su `FormRequest`; el contador solo baja; si sube, el PR
+no entra», y nada lo impedía. Ahora el CI corre
+`python3 scripts/validaciones_en_linea.py --trinquete`, que falla si:
+
+- aparece una validación **CONVERTIBLE** —la regla, literal: una validación en
+  línea con nada por delante es una que no tiene motivo para estar ahí—.
+  Probado: escribiendo un endpoint nuevo a la antigua, el CI se pone rojo y
+  dice qué hacer;
+- el total pasa del tope escrito en el script. Ese número **solo baja**, y se
+  baja a mano en el mismo cambio que convierte una: que haya que tocarlo es lo
+  que hace que alguien se entere;
+- **el propio detector no pudo medir.** Sin `route:list` todo cae en «fuera de
+  una ruta», los convertibles son cero y la compuerta pasaría en verde sin
+  haber comprobado una sola validación. Las dos autocomprobaciones están
+  probadas rompiéndolas.
+
+Los otros dos scripts que trajo el estándar siguen **fuera** del CI a
+propósito: `check_file_sizes.py` señala 112 archivos y §03 llama a esos
+umbrales «orientativos, no bloqueos»; `check_module_boundaries.py` mide una
+estructura modular que este backend decidió no tener.
+
 **El detector depende de `scripts/rutas-candidatas.json`** y lo dice si falta:
 sin esa lista, los convertibles pasan de 0 a 22, porque las que están sobre
 rutas que nadie llama parecen perfectamente convertibles. Son 22
