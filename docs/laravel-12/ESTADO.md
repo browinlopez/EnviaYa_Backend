@@ -1,7 +1,12 @@
 # Estado del backend frente al estándar
 
-**Medido el 10 de noviembre de 2026.** Laravel 12.66 · 1074 pruebas en verde ·
-14 commits de esta jornada.
+**Medido el 11 de noviembre de 2026.** Laravel 12.72 · 1190 pruebas en verde ·
+PHPStan y Pint limpios · 428 clases cargan · `composer audit` en cero.
+
+Doce ramas de trabajo fusionadas, y el backend **arrancado y recorrido entero**:
+33 procesos, 1223 peticiones contra MySQL de verdad y la pasarela de verdad.
+Los tres hallazgos de ese recorrido están arreglados, con su prueba cada uno.
+El recorrido se repite con `python scripts/arnes/correr.py`.
 
 Este archivo responde una sola pregunta: **qué falta y por qué**. Las
 decisiones razonadas viven en [`EXCEPCIONES.md`](EXCEPCIONES.md); aquí está el
@@ -48,20 +53,70 @@ está en `EXCEPCIONES.md` §6.2.
 
 ---
 
+### Lo que encontró ARRANCARLO, que ninguna prueba veía — ARREGLADO
+
+Las tres salieron de levantar el backend y recorrer los 33 procesos contra
+MySQL de verdad y la pasarela de verdad. **Ninguna es un fallo de lógica**, y
+por eso 1176 pruebas en verde no veían ni una: son respuestas equivocadas y
+una ausencia.
+
+**Bold no cobraba nada.** `BoldService::peticion()` se llamaba a sí misma
+—recursión infinita, `Allowed memory size exhausted`, un error FATAL que ni el
+`try/catch` de los controladores atrapa—. Las siete llamadas mataban el
+proceso: tarjeta, PSE y QR, imposibles. Lo dejó así el commit que puso los
+topes de tiempo, sustituyendo a ciegas los siete
+`Http::withHeaders($this->headers())` **incluido el de dentro del método**. No
+llegó a producción porque estaba entre los commits sin subir. Lo encontró el
+CONTROL de un detector: el guardia de llamadas HTTP sin tope exige encontrar
+lo que ya se sabe que está, devolvió cinco llamadas y ninguna de Bold —que
+tiene siete—, porque en el fichero ya no quedaba un solo `Http::`. **La
+ausencia era el síntoma.**
+
+**El cliente de R2 esperaba para siempre.** El SDK de AWS arranca en modo
+`legacy` y ahí no pone ningún tope: el disco `r2` se resolvía sin una sola
+opción de `http`, con los valores de Guzzle —esperar indefinidamente—. Y las
+subidas ocurren dentro de la petición, cuando el tendero sube su logo. Medido:
+63,6 s contra una dirección no enrutable, y **sin fin** contra un servidor que
+acepta y se calla. Ese contraejemplo no se puede escribir como prueba, y eso
+mismo mide la gravedad.
+
+**Pedir el enlace de contraseña decía qué cuentas existen.** 200 con un correo
+registrado, 500 con uno que no: la enumeración de cuentas de §35, preguntable
+en bucle. Y `RESET_THROTTLED` caía en la misma rama, así que el usuario que
+pulsaba dos veces recibía un 500 estando todo bien.
+
+**Consultar un pago inexistente devolvía 500 con el cuerpo de Bold dentro.** Un
+500 le dice al teléfono «reintenta» y esa pantalla sondea cada pocos segundos;
+y el código interno de la pasarela acababa en la pantalla del comprador.
+
+**Noventa y cuatro trabajos llevaban dos meses en la cola**, con cero intentos.
+Se drenaron y pasaron los noventa y cuatro sin un fallo: el código estaba bien,
+lo que no existía era manera de enterarse. Encolar siempre funciona, así que la
+petición acaba en 201; lo que deja de pasar es lo de después, en tres pantallas
+y sin un solo error. Ahora lo vigila `colas:comprobar --avisar`, a diario.
+
+> **La lección, que vale más que las cinco juntas:** una suite comprueba lo
+> que alguien se acordó de comprobar. Arrancar el sistema y recorrerlo
+> comprueba lo que contesta. Son dos preguntas distintas y hacen falta las
+> dos — `scripts/arnes/` es la segunda, y sale en 0 solo si los 33 procesos
+> pasan **y** no hay hallazgos.
+
+---
+
 ## 2 · El marcador
 
 | Regla | Antes | Hoy | Estado |
 |---|---:|---:|---|
 | Validación en `FormRequest` | 2 | **110** | 66 en línea quedan, 0 convertibles |
-
-| Validación en `FormRequest` | 2 | **107** | 69 en línea quedan |
 | Formato (Pint) | sin correr | **limpio** | en el CI |
 | `env()` fuera de `config/` | 2 | **0** | hecho |
-| Clases que no cargan | sin comprobar | **0 de 389** | comprobador nuevo en el CI |
+| Clases que no cargan | sin comprobar | **0 de 428** | comprobador nuevo en el CI |
 | Análisis estático | no había | **PHPStan nivel 5** | línea base de 493; el CI exige código nuevo limpio |
 | Superficie de la API | sin congelar | **325 rutas** | prueba que falla si cambia verbo, URI, nombre o middleware |
 | Duración de la suite | 630 s | **48 s** | las pruebas ya no llaman a un Reverb real |
-| Pruebas | 1026 | **1074** | |
+| Pruebas | 1026 | **1190** | |
+| Procesos recorridos de punta a punta | 0 | **33** | `scripts/arnes/`, contra el servidor en marcha |
+| Avisos de `composer audit` | 20 | **0** | bloqueante en el CI |
 
 ---
 
@@ -137,35 +192,12 @@ rutas que nadie llama parecen perfectamente convertibles. Son 22
 extracciones, con sus pruebas, sobre código que la siguiente decisión de
 producto puede borrar.
 
-### 69 validaciones en línea
+#### Las 25 que están sobre rutas que nadie llama
 
-Medidas el 10 de noviembre de 2026: **69** `$request->validate(`, más 3
-`Validator::make(` y 2 `validateWithBag(`, que son otra cosa.
-
-El desglose en cuatro grupos que estaba acá —48 sin prueba, 25 sobre rutas
-muertas, 16 no mecánicas, 10 en ayudantes— se midió **antes** de las
-conversiones de hoy y ya no suma. No se reescribe a ojo: lo que vale es el
-contador, y el detector dice caso por caso por qué cada uno sigue en línea.
-
-Dos de las 69 ya están **decididas** y no son pendientes:
+Dos de las 66 además están **decididas** y no son pendientes:
 `DocumentosDelDomiciliarioController::subir()` y
 `EfectivoDeLaTiendaController::recibir()` buscan antes de validar porque esa
-búsqueda **es la autorización**. El motivo está escrito en `EXCEPCIONES.md`.
-
-**Las que están sobre rutas muertas: ya hay con qué decidir.** El
-repositorio las documentó en `Documentacion/SUPERFICIE-DE-API-SIN-USO.md`,
-al lado de este proyecto: el CRUD completo de reseñas, `categories-business`
-y varias más. Escribir pruebas para convertirlas es invertir en código
-pendiente de retirarse — pero hasta hoy «pendiente de retirarse» era una
-sospecha.
-
-Ahora se mide. `php scripts/rutas_sin_uso.php` en el servidor cruza las 31
-contra el registro de auditoría y dice, de cada una, cuántas llamadas hubo,
-con qué códigos y cuándo fue la última. Las nueve GET —sobre las que el
-registro antes no decía nada, porque filtraba por verbo— se registran desde
-hoy. **Las 31 están cubiertas: ninguna de la que el informe no pueda
-hablar.** Retirarlas o conservarlas sigue siendo decisión de producto, pero
-ya es una decisión con números delante.
+búsqueda **es la autorización**. El motivo está en `EXCEPCIONES.md`.
 
 > **10 de noviembre de 2026 — y «muertas» ya no es una sospecha.** El motivo
 > por el que no se podía decidir era «la app publicada es un binario que no
@@ -200,7 +232,7 @@ Es la regla más grande que queda, y la más peligrosa. La forma de la respuesta
 paneles y las versiones que no se pueden actualizar. Reescribirla a ciegas
 rompe clientes.
 
-Hoy la sostienen 1074 pruebas y el congelado de rutas. Hacerlo bien exige
+Hoy la sostienen 1190 pruebas, el congelado de rutas y los 33 procesos del arnés. Hacerlo bien exige
 endpoint por endpoint, con una prueba que fije la respuesta **antes** de
 tocarla — el mismo método que con las validaciones, multiplicado por 325.
 
@@ -209,11 +241,9 @@ tocarla — el mismo método que con las validaciones, multiplicado por 325.
 | Regla | Por qué |
 |---|---|
 | ~~§24 índices con `EXPLAIN`~~ | **Hecho el 10 de noviembre de 2026.** Ver «Los índices, medidos» más abajo |
-| §25 presupuestos de rendimiento | Ya se puede —el motor está—, pero sigue sin hacerse: un presupuesto es un número por endpoint («este responde en menos de X»), y ponerlo sin medir latencias de verdad sería inventarlo. Hace falta la medición en el servidor primero |
-
-| §24 índices con `EXPLAIN` · §25 presupuestos de rendimiento | **El propio §25 avisa de que SQLite no sirve para juzgar un plan de ejecución**, y la suite corre en SQLite en memoria. Cualquier medida mentiría. Hace falta un entorno con MySQL. Ya mordió una vez: `incomeBusiness` usaba `DAYOFWEEK()`, inexistente en SQLite, y esa pantalla no se pudo probar hasta portarla. **Lo de las consultas por petición, que es la otra mitad de §25, sí se podía: ver abajo** |
+| §25 presupuestos de rendimiento | **Ya se mide**: `MedidaDeLaPeticion` escribe una línea por petición y `scripts/percentiles_de_latencia.php` las resume. Lo que falta es TRÁFICO: con 1223 peticiones de un recorrido salen p50 61 ms, p95 212 ms y p99 370 ms en conjunto, pero casi ninguna ruta llega a las 20 muestras que hacen falta para un percentil honesto. Poner el número por endpoint pide unos días de uso real, no otra herramienta |
 | §34 OpenAPI | Es construir y mantener un contrato nuevo: un proyecto, no un ajuste |
-| §41 `declare(strict_types=1)` | 0 de 363 archivos. §12 dice que se adopta gradualmente y que **no** se reescriben todos para ponerlo |
+| §41 `declare(strict_types=1)` | 0 de 430 archivos. §12 dice que se adopta gradualmente y que **no** se reescriben todos para ponerlo |
 | §51 límites de archivo | 113 por encima del objetivo. §03 los llama «umbrales orientativos, no bloqueos», y §00 pone el tamaño en el ÚLTIMO lugar de las prioridades |
 
 ### Los índices, medidos — §24
