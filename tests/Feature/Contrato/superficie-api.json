@@ -1766,16 +1766,6 @@
     },
     {
         "verbo": "GET",
-        "uri": "v1/businesses/affiliations/usersBusinesses",
-        "nombre": null,
-        "middleware": [
-            "api",
-            "audit.api",
-            "auth:sanctum"
-        ]
-    },
-    {
-        "verbo": "GET",
         "uri": "v1/businesses/index",
         "nombre": null,
         "middleware": [
@@ -1826,17 +1816,6 @@
         ]
     },
     {
-        "verbo": "POST",
-        "uri": "v1/categories-business/destroy",
-        "nombre": null,
-        "middleware": [
-            "admin",
-            "api",
-            "audit.api",
-            "auth:sanctum"
-        ]
-    },
-    {
         "verbo": "GET",
         "uri": "v1/categories-business/index",
         "nombre": null,
@@ -1853,38 +1832,6 @@
         "middleware": [
             "api",
             "throttle:300,1"
-        ]
-    },
-    {
-        "verbo": "POST",
-        "uri": "v1/categories-business/show",
-        "nombre": null,
-        "middleware": [
-            "api",
-            "audit.api",
-            "auth:sanctum"
-        ]
-    },
-    {
-        "verbo": "POST",
-        "uri": "v1/categories-business/store",
-        "nombre": null,
-        "middleware": [
-            "admin",
-            "api",
-            "audit.api",
-            "auth:sanctum"
-        ]
-    },
-    {
-        "verbo": "POST",
-        "uri": "v1/categories-business/update",
-        "nombre": null,
-        "middleware": [
-            "admin",
-            "api",
-            "audit.api",
-            "auth:sanctum"
         ]
     },
     {
@@ -1919,31 +1866,11 @@
         ]
     },
     {
-        "verbo": "GET",
-        "uri": "v1/categories/show",
-        "nombre": null,
-        "middleware": [
-            "api",
-            "audit.api",
-            "auth:sanctum"
-        ]
-    },
-    {
         "verbo": "PUT",
         "uri": "v1/categories/update",
         "nombre": null,
         "middleware": [
             "admin",
-            "api",
-            "audit.api",
-            "auth:sanctum"
-        ]
-    },
-    {
-        "verbo": "POST",
-        "uri": "v1/chats/create",
-        "nombre": null,
-        "middleware": [
             "api",
             "audit.api",
             "auth:sanctum"
@@ -2254,16 +2181,6 @@
         ]
     },
     {
-        "verbo": "POST",
-        "uri": "v1/domiciliaries/assignToBusiness",
-        "nombre": null,
-        "middleware": [
-            "api",
-            "audit.api",
-            "auth:sanctum"
-        ]
-    },
-    {
         "verbo": "GET",
         "uri": "v1/domiciliaries/cash-balance",
         "nombre": null,
@@ -2306,16 +2223,6 @@
     },
     {
         "verbo": "POST",
-        "uri": "v1/domiciliaries/deleteDomiciliary",
-        "nombre": null,
-        "middleware": [
-            "api",
-            "audit.api",
-            "auth:sanctum"
-        ]
-    },
-    {
-        "verbo": "POST",
         "uri": "v1/domiciliaries/deposits",
         "nombre": null,
         "middleware": [
@@ -2337,26 +2244,6 @@
     {
         "verbo": "GET",
         "uri": "v1/domiciliaries/listDomiciliariesByBusiness",
-        "nombre": null,
-        "middleware": [
-            "api",
-            "audit.api",
-            "auth:sanctum"
-        ]
-    },
-    {
-        "verbo": "GET",
-        "uri": "v1/domiciliaries/listDomiciliary",
-        "nombre": null,
-        "middleware": [
-            "api",
-            "audit.api",
-            "auth:sanctum"
-        ]
-    },
-    {
-        "verbo": "POST",
-        "uri": "v1/domiciliaries/listbussiness",
         "nombre": null,
         "middleware": [
             "api",
@@ -3064,16 +2951,6 @@
         ]
     },
     {
-        "verbo": "GET",
-        "uri": "v1/orders/pending-review",
-        "nombre": null,
-        "middleware": [
-            "api",
-            "audit.api",
-            "auth:sanctum"
-        ]
-    },
-    {
         "verbo": "PUT",
         "uri": "v1/orders/update",
         "nombre": null,
@@ -3125,16 +3002,6 @@
     },
     {
         "verbo": "GET",
-        "uri": "v1/paymentForms",
-        "nombre": null,
-        "middleware": [
-            "api",
-            "audit.api",
-            "auth:sanctum"
-        ]
-    },
-    {
-        "verbo": "GET",
         "uri": "v1/paymentMethods",
         "nombre": null,
         "middleware": [
@@ -3175,37 +3042,7 @@
     },
     {
         "verbo": "POST",
-        "uri": "v1/product/show",
-        "nombre": null,
-        "middleware": [
-            "api",
-            "audit.api",
-            "auth:sanctum"
-        ]
-    },
-    {
-        "verbo": "POST",
-        "uri": "v1/product/top-products",
-        "nombre": null,
-        "middleware": [
-            "api",
-            "audit.api",
-            "auth:sanctum"
-        ]
-    },
-    {
-        "verbo": "POST",
         "uri": "v1/product/topProductsBusiness",
-        "nombre": null,
-        "middleware": [
-            "api",
-            "audit.api",
-            "auth:sanctum"
-        ]
-    },
-    {
-        "verbo": "PUT",
-        "uri": "v1/product/update",
         "nombre": null,
         "middleware": [
             "api",
@@ -3261,62 +3098,12 @@
         ]
     },
     {
-        "verbo": "GET",
-        "uri": "v1/reviews/business/all",
-        "nombre": null,
-        "middleware": [
-            "api",
-            "audit.api",
-            "auth:sanctum"
-        ]
-    },
-    {
         "verbo": "POST",
         "uri": "v1/reviews/business/by",
         "nombre": null,
         "middleware": [
             "api",
             "throttle:300,1"
-        ]
-    },
-    {
-        "verbo": "POST",
-        "uri": "v1/reviews/business/create",
-        "nombre": null,
-        "middleware": [
-            "api",
-            "audit.api",
-            "auth:sanctum"
-        ]
-    },
-    {
-        "verbo": "DELETE",
-        "uri": "v1/reviews/business/delete",
-        "nombre": null,
-        "middleware": [
-            "api",
-            "audit.api",
-            "auth:sanctum"
-        ]
-    },
-    {
-        "verbo": "PUT",
-        "uri": "v1/reviews/business/update",
-        "nombre": null,
-        "middleware": [
-            "api",
-            "audit.api",
-            "auth:sanctum"
-        ]
-    },
-    {
-        "verbo": "GET",
-        "uri": "v1/reviews/domiciliaries/all",
-        "nombre": null,
-        "middleware": [
-            "api",
-            "audit.api",
-            "auth:sanctum"
         ]
     },
     {
@@ -3331,87 +3118,7 @@
     },
     {
         "verbo": "POST",
-        "uri": "v1/reviews/domiciliary/create",
-        "nombre": null,
-        "middleware": [
-            "api",
-            "audit.api",
-            "auth:sanctum"
-        ]
-    },
-    {
-        "verbo": "DELETE",
-        "uri": "v1/reviews/domiciliary/delete",
-        "nombre": null,
-        "middleware": [
-            "api",
-            "audit.api",
-            "auth:sanctum"
-        ]
-    },
-    {
-        "verbo": "PUT",
-        "uri": "v1/reviews/domiciliary/update",
-        "nombre": null,
-        "middleware": [
-            "api",
-            "audit.api",
-            "auth:sanctum"
-        ]
-    },
-    {
-        "verbo": "POST",
         "uri": "v1/reviews/store",
-        "nombre": null,
-        "middleware": [
-            "api",
-            "audit.api",
-            "auth:sanctum"
-        ]
-    },
-    {
-        "verbo": "GET",
-        "uri": "v1/reviews/user/by",
-        "nombre": null,
-        "middleware": [
-            "api",
-            "audit.api",
-            "auth:sanctum"
-        ]
-    },
-    {
-        "verbo": "POST",
-        "uri": "v1/reviews/user/create",
-        "nombre": null,
-        "middleware": [
-            "api",
-            "audit.api",
-            "auth:sanctum"
-        ]
-    },
-    {
-        "verbo": "DELETE",
-        "uri": "v1/reviews/user/delete",
-        "nombre": null,
-        "middleware": [
-            "api",
-            "audit.api",
-            "auth:sanctum"
-        ]
-    },
-    {
-        "verbo": "PUT",
-        "uri": "v1/reviews/user/update",
-        "nombre": null,
-        "middleware": [
-            "api",
-            "audit.api",
-            "auth:sanctum"
-        ]
-    },
-    {
-        "verbo": "GET",
-        "uri": "v1/reviews/users/all",
         "nombre": null,
         "middleware": [
             "api",
@@ -3489,16 +3196,6 @@
         ]
     },
     {
-        "verbo": "POST",
-        "uri": "v1/users/buyer",
-        "nombre": null,
-        "middleware": [
-            "api",
-            "audit.api",
-            "auth:sanctum"
-        ]
-    },
-    {
         "verbo": "DELETE",
         "uri": "v1/users/delete",
         "nombre": null,
@@ -3547,16 +3244,6 @@
             "audit.api",
             "auth:sanctum",
             "throttle:5,1"
-        ]
-    },
-    {
-        "verbo": "POST",
-        "uri": "v1/users/show",
-        "nombre": null,
-        "middleware": [
-            "api",
-            "audit.api",
-            "auth:sanctum"
         ]
     },
     {

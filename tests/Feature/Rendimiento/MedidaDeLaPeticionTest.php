@@ -54,12 +54,12 @@ it('anota una linea por peticion con la ruta, el verbo y el estado', function ()
     Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
     Sanctum::actingAs(User::factory()->create(['rol' => 1]));
 
-    $this->getJson('/v1/paymentForms')->assertOk();
+    $this->getJson('/v1/paymentMethods')->assertOk();
 
     $lineas = lineasDeLatencia($log);
 
     expect($lineas)->toHaveCount(1);
-    expect($lineas[0]['ruta'])->toBe('v1/paymentForms');
+    expect($lineas[0]['ruta'])->toBe('v1/paymentMethods');
     expect($lineas[0]['verbo'])->toBe('GET');
     expect($lineas[0]['estado'])->toBe(200);
     expect($lineas[0]['ms'])->toBeGreaterThan(0);
@@ -153,8 +153,8 @@ it('cuenta las consultas de ESTA peticion, y cuenta alguna', function () {
      * No se afirma un número concreto de consultas: eso cambiaría con
      * cualquier precarga y haría roja una mejora.
      */
-    $this->getJson('/v1/paymentForms')->assertOk();
-    $this->getJson('/v1/paymentForms')->assertOk();
+    $this->getJson('/v1/paymentMethods')->assertOk();
+    $this->getJson('/v1/paymentMethods')->assertOk();
 
     $lineas = lineasDeLatencia($log);
 
@@ -174,13 +174,13 @@ it('no anota nada con la medida apagada ni con el muestreo en cero', function ()
     $log = registroDeLatencia();
     config(['rendimiento.medir_peticiones' => false]);
 
-    $this->getJson('/v1/paymentForms');
+    $this->getJson('/v1/paymentMethods');
 
     expect(lineasDeLatencia($log))->toBe([]);
 
     config(['rendimiento.medir_peticiones' => true, 'rendimiento.muestreo' => 0.0]);
 
-    $this->getJson('/v1/paymentForms');
+    $this->getJson('/v1/paymentMethods');
 
     expect(lineasDeLatencia($log))->toBe([]);
 

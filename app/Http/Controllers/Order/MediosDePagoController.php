@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Order;
 
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
-use App\Models\Payment\PaymentForms;
 use App\Models\Payment\PaymentMethods;
 use App\Services\PagoEnLinea;
 
@@ -36,15 +35,5 @@ class MediosDePagoController extends Controller
             ->get();
 
         return response()->json($methods);
-    }
-
-    // Obtener formas de pago
-    public function paymentForms()
-    {
-        $forms = PaymentForms::with('methods')
-            ->where('state', 1)
-            ->get();
-
-        return response()->json($forms);
     }
 }

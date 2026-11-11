@@ -529,48 +529,6 @@ class ConsultaDePedidosController extends Controller
             ->exists();
     }
 
-    public function ordersPendingReview(Request $request)
-    {
-        /*
-         * Solo los pedidos de quien pregunta. La consulta no filtraba por
-         * comprador, así que devolvía TODOS los pedidos entregados del
-         * sistema: a cualquiera se le pedía calificar compras ajenas (y de
-         * paso se le exponía la dirección de entrega de otras personas).
-         */
-        $buyer = Buyer::where('user_id', $request->user()->user_id)->first();
-
-        if (! $buyer) {
-            return response()->json([
-                'message' => 'Órdenes pendientes de review',
-                'orders' => [],
-            ]);
-        }
-
-        $orders = OrdersSales::where('buyer_id', $buyer->buyer_id)
-            ->where('state', 4)
-            ->where('has_review', false) // o 0
-            ->where('pickup', false)     // o 0
-            ->with([
-                'details.product.category',
-                'business',
-                'promotions',
-                'payments',
-                'address.municipality.department.country',
-                'address.alias',
-                'domiciliary.user',
-            ])
-            ->get();
-
-        $formattedOrders = $orders->map(function ($order) {
-            return $order->toApi(); // usando tu método toApi para mantener consistencia
-        });
-
-        return response()->json([
-            'message' => 'Órdenes pendientes de review',
-            'orders' => $formattedOrders,
-        ]);
-    }
-
     /**
      * «Se cerró hoy», mirando esa columna y cayendo a `sale_date` si está vacía.
      *

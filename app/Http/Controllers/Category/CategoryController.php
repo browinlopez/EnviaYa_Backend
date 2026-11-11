@@ -8,7 +8,6 @@ use App\Http\Requests\Category\BorrarCategoriaDeProductoRequest;
 use App\Http\Requests\Category\CategoriasDeUnTipoRequest;
 use App\Http\Requests\Category\CrearCategoriaDeProductoRequest;
 use App\Models\Product\Category;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class CategoryController extends Controller
@@ -48,18 +47,6 @@ class CategoryController extends Controller
             'message' => 'Categoría creada correctamente',
             'category' => $category,
         ], 201);
-    }
-
-    // Mostrar categoría específica
-    public function show(Request $request)
-    {
-        $validated = $request->validate([
-            'category_id' => 'required|integer|exists:category,category_id',
-        ]);
-
-        $category = Category::findOrFail($validated['category_id']);
-
-        return response()->json($category);
     }
 
     // Actualizar categoría

@@ -134,10 +134,15 @@ def catalogo(paso):
     c, d, _ = pedir('GET', 'v1/categories-business/index', rol='comprador', espera=200)
     paso('tipos de negocio -> %s' % c)
 
-    cat = uno("select category_id from category limit 1", 'category_id')
-    c, d, _ = pedir('GET', 'v1/categories/show?category_id=%s' % cat, rol='comprador',
+    # `v1/categories/show` se retiro el 11 de noviembre de 2026: ningun
+    # cliente pedia nunca UNA categoria, porque la app se trae la lista
+    # entera para pintar el formulario de un producto. Esa lista es la que
+    # hay que comprobar, y es la que de verdad se llama.
+    tipo = uno("select type from business where busines_id = 1", 'type')
+    c, d, _ = pedir('GET', 'v1/categories-free?type=%s' % tipo, rol='comprador',
                     espera=200)
-    paso('categoria %s -> %s' % (cat, c))
+    n = len(d if isinstance(d, list) else (d.get('data') or d.get('categories') or []))
+    paso('categorias del tipo %s -> %s, %d categorias' % (tipo, c, n))
 
 
 @proceso('Favoritos: anadir, listar, quitar')

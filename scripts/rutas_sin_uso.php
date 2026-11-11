@@ -154,7 +154,6 @@ foreach ($ficheros as $f) {
 /* 2 · EL ROUTER: ¿sigue existiendo, y puede verla el registro? */
 /* ------------------------------------------------------------------ */
 
-$vigiladas = AuditApiRequest::lecturasVigiladas();
 $enElRouter = [];
 
 foreach (Route::getRoutes() as $r) {
@@ -178,7 +177,7 @@ foreach (Route::getRoutes() as $r) {
  * contrario que `route:list`, que sí lo resuelve. Buscando solo la clase,
  * este detector daba las 31 por ciegas: estaba ciego él.
  */
-function cegueraDe(string $verbo, string $ruta, array $enElRouter, array $vigiladas): string
+function cegueraDe(string $verbo, string $ruta, array $enElRouter): string
 {
     $mw = $enElRouter[$verbo.' '.$ruta] ?? null;
 
@@ -192,8 +191,17 @@ function cegueraDe(string $verbo, string $ruta, array $enElRouter, array $vigila
         return 'SIN el middleware de auditoría: un cero aquí no significa nada';
     }
 
-    if ($verbo === 'GET' && ! in_array($ruta, $vigiladas, true)) {
-        return 'es GET y no está en WATCHED_READS: el filtro de verbo la descarta';
+    /*
+     * EL REGISTRO NO VE NINGÚN GET, y ya no hay excepciones.
+     *
+     * Las hubo: nueve lecturas estaban en `WATCHED_READS` mientras se decidía
+     * sobre ellas, porque sin eso el informe las habría dado por muertas con
+     * un cero que solo significaba «nadie las mira». Las nueve se retiraron
+     * el 11 de noviembre de 2026 con las otras 22, así que la lista temporal
+     * se fue con la decisión y el filtro de verbo vuelve a ser absoluto.
+     */
+    if ($verbo === 'GET') {
+        return 'es GET: el registro filtra por verbo y no las ve';
     }
 
     return '';
@@ -240,7 +248,7 @@ foreach ($CANDIDATAS as $grupo => $rutas) {
     echo str_repeat('-', 74).PHP_EOL;
 
     foreach ($rutas as [$verbo, $ruta]) {
-        $ceguera = cegueraDe($verbo, $ruta, $enElRouter, $vigiladas);
+        $ceguera = cegueraDe($verbo, $ruta, $enElRouter);
         $d = $porRuta[$verbo.' '.$ruta] ?? null;
         $n = $d['total'] ?? 0;
 

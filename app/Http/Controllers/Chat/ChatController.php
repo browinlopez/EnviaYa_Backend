@@ -22,36 +22,6 @@ class ChatController extends Controller
 {
     use ComprobarPertenencia;
 
-    /**
-     * Crear un nuevo chat
-     */
-    public function createChat(Request $request)
-    {
-        $request->validate([
-            'type' => 'required|in:private,group',
-            'participants' => 'required|array|min:2',
-            'participants.*.user_id' => 'required|exists:user,user_id',
-            'participants.*.role_id' => 'required|exists:rol,rol_id',
-        ]);
-
-        return DB::transaction(function () use ($request) {
-            $chat = Chat::create(['type' => $request->type]);
-
-            foreach ($request->participants as $participant) {
-                ChatParticipant::create([
-                    'chat_id' => $chat->chat_id,
-                    'user_id' => $participant['user_id'],
-                    'role_id' => $participant['role_id'],
-                ]);
-            }
-
-            return response()->json([
-                'message' => 'Chat creado con éxito',
-                'chat' => $chat->load('participants.user'),
-            ], 201);
-        });
-    }
-
     public function sendMessage(MandarMensajeRequest $request)
     {
         // Escribir EN NOMBRE DE OTRO: `user_id` venia del cuerpo, asi que
