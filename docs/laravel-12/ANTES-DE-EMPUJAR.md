@@ -154,7 +154,69 @@ El cambio de CSS de esta tanda se verificó sin construir: llaves balanceadas,
 
 ---
 
-## 6 · Lo que sigue abierto y es decisión, no tarea
+## 6 · Protección de rama — §50, y la trampa
+
+Lo que §50 pide está hecho **menos la parte que vive en la consola de
+GitHub**, que no toco sin pedírtelo:
+
+- `.github/CODEOWNERS` escrito, con las dieciocho zonas de riesgo
+  —autenticación, pasarela, efectivo, liquidaciones, migraciones, el contrato
+  de la API, el pipeline y la configuración que decide dónde acaban los
+  datos—. Comprobado que las dieciocho rutas existen: una regla que apunta a
+  una carpeta que no está no protege nada y no avisa.
+- Las tres acciones externas **fijadas por SHA** de commit, que es lo que §50
+  pide para repositorios sensibles. Los SHA se resolvieron contra GitHub, no
+  se escribieron de memoria: `actions/checkout@11d5960…`,
+  `shivammathur/setup-php@eb7c497…`, `actions/cache@0057852…`, cada uno con
+  su etiqueta al lado en un comentario para saber de qué versión viene.
+
+### La trampa: NO actives «Require review from Code Owners»
+
+Hoy bloquearía todos los merges. GitHub no permite aprobar tu propio pull
+request, y en este repositorio hay 473 commits de una persona y 18 de otra.
+Exigir la revisión de un propietario de código con un solo desarrollador
+activo es cerrar la puerta por dentro.
+
+`CODEOWNERS` queda igualmente, porque sirve de registro de qué zonas son las
+delicadas, y se vuelve una compuerta de verdad el día que haya una segunda
+persona con permiso de escritura: ese día basta con marcar la casilla.
+
+### Lo que sí conviene activar, que protege sin bloquear
+
+```bash
+gh api -X PUT repos/browinlopez/EnviaYa_Backend/branches/main/protection   --input - <<'JSON'
+{
+  "required_status_checks": {
+    "strict": true,
+    "contexts": ["pruebas", "pruebas-mysql"]
+  },
+  "enforce_admins": true,
+  "required_pull_request_reviews": null,
+  "restrictions": null,
+  "allow_force_pushes": false,
+  "allow_deletions": false
+}
+JSON
+```
+
+Tres cosas de ese cuerpo:
+
+- **`enforce_admins: true`** hace que la regla valga también para quien la
+  puso. Sin eso, protege de todo el mundo menos de quien más empuja.
+- **`required_pull_request_reviews: null`** es deliberado, por lo de arriba.
+- **Los nombres de los checks** son los de los flujos
+  (`.github/workflows/pruebas.yml` y `pruebas-mysql.yml`). Si no coinciden
+  exactamente, GitHub espera para siempre un check que nunca llega y la rama
+  queda sin poder fusionar: conviene comprobarlos con
+  `gh api repos/browinlopez/EnviaYa_Backend/commits/main/check-runs --jq '.check_runs[].name'`
+  **después** del primer empuje, cuando el CI ya haya corrido una vez.
+
+Y por eso esto va **después** de empujar: hasta que el CI corra una vez, los
+nombres de los checks no existen y la regla se escribiría a ciegas.
+
+---
+
+## 7 · Lo que sigue abierto y es decisión, no tarea
 
 - **`JsonResource`: quedan ~288 endpoints.** La primera tanda está hecha y el
   método está escrito en `ESTADO.md`. No se migra lo que no se pueda comparar
