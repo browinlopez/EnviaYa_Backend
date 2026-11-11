@@ -225,14 +225,10 @@ class ConsultaDePedidosController extends Controller
                    * entregado tiene su fecha; el cancelado, la de su último
                    * cambio.
                    */
-                    ->orWhere(function ($q2) {
-                        $q2->where('state', 4)
-                            ->whereDate(DB::raw('COALESCE(delivery_date, sale_date)'), now()->toDateString());
-                    })
-                    ->orWhere(function ($q2) {
-                        $q2->where('state', 5)
-                            ->whereDate(DB::raw('COALESCE(updated_at, sale_date)'), now()->toDateString());
-                    });
+                    ->orWhere(fn ($q2) => $q2->where('state', 4)
+                        ->where($this->cerradoHoy('delivery_date')))
+                    ->orWhere(fn ($q2) => $q2->where('state', 5)
+                        ->where($this->cerradoHoy('updated_at')));
             })
             // La lista la declara el presentador, que es quien las lee: esta
             // copia se habia quedado sin `domiciliary.user` y cargaba el
@@ -573,5 +569,49 @@ class ConsultaDePedidosController extends Controller
             'message' => 'Órdenes pendientes de review',
             'orders' => $formattedOrders,
         ]);
+    }
+
+    /**
+     * «Se cerró hoy», mirando esa columna y cayendo a `sale_date` si está vacía.
+     *
+     * SUSTITUYE A `whereDate(DB::raw('COALESCE($columna, sale_date)'), hoy)`,
+     * que es lo que había, y la reescritura importa tanto como los índices que
+     * la acompañan. Esta es la secuencia de medidas sobre la base de
+     * desarrollo, y las dos primeras conclusiones fueron equivocadas:
+     *
+     *   1. como estaba                       type=ref    504 filas
+     *   2. sargable, SIN los índices nuevos  type=ref    504 filas  <-- nada
+     *   3. con los índices, SIN reescribir   type=ref    504 filas  <-- nada
+     *   4. las dos cosas juntas              type=range   69 filas
+     *
+     * O sea que el tablero del tendero —la pantalla que se queda puesta y se
+     * refresca sola— abría las 504 filas del histórico del negocio en CADA
+     * refresco, y seguiría haciéndolo con cualquiera de los dos arreglos por
+     * separado. Con los dos, abre las de hoy.
+     *
+     * LA EQUIVALENCIA NO SE DEDUJO, SE COMPROBÓ: 280 combinaciones de negocio
+     * y día contra la base de desarrollo, las dos formas dan el mismo número
+     * en las 280.
+     *
+     * Medio abierto —`>=` la medianoche y `<` la siguiente— y no `between`
+     * hasta `endOfDay()`: el final del día son las 23:59:59.999999 y perder el
+     * borde por microsegundos es la clase de fallo que aparece una vez al año.
+     *
+     * La rama del `IS NULL` conserva el `COALESCE`: un pedido entregado sin
+     * `delivery_date` cuenta por su `sale_date`, igual que antes. Va dentro de
+     * su propio grupo para que el `OR` no se escape del `AND state = 4`.
+     */
+    private function cerradoHoy(string $columna): callable
+    {
+        $desde = now()->startOfDay();
+        $hasta = now()->addDay()->startOfDay();
+
+        return function ($q) use ($columna, $desde, $hasta) {
+            $q->where(fn ($r) => $r->where($columna, '>=', $desde)
+                ->where($columna, '<', $hasta))
+                ->orWhere(fn ($r) => $r->whereNull($columna)
+                    ->where('sale_date', '>=', $desde)
+                    ->where('sale_date', '<', $hasta));
+        };
     }
 }
