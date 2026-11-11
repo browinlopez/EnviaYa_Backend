@@ -78,14 +78,49 @@ class PulsoDelConjunto
         ];
     }
 
+    /**
+     * UN DÍA COMO RANGO, NUNCA COMO `whereDate`.
+     *
+     * `whereDate('e.created_at', $dia)` genera `date(e.created_at) = ?`, y una
+     * función sobre la columna filtrada deja el índice inservible para esa
+     * parte: MySQL puede usarlo para `complex_id` y después tiene que abrir
+     * TODAS las filas de ese conjunto para calcular `date()` de cada una.
+     *
+     * Medido sobre `complex_entries` en la base de desarrollo, con el índice
+     * `(complex_id, created_at)` puesto:
+     *
+     *   con `date(...)`  ->  type=ref    filas examinadas: 1388
+     *   como rango       ->  type=range  filas examinadas: 1
+     *
+     * Mil trescientas ochenta y ocho contra una, y esa tabla crece con cada
+     * visitante y cada domiciliario que entra: el coste empeora para siempre.
+     *
+     * Medio abierto —`>= medianoche` y `< la medianoche siguiente`— y no
+     * `between` con `endOfDay()`: el final del día son las 23:59:59.999999 y
+     * dejar el borde fuera por microsegundos es la clase de detalle que
+     * aparece una vez al año y nadie reproduce.
+     *
+     * La zona horaria cuadra: la aplicación va en `America/Bogota` y la base
+     * en `-05:00`, que es el mismo instante, así que la medianoche que calcula
+     * PHP es la misma que veía `date()`.
+     */
+    private function eseDia(mixed $consulta, string $columna, CarbonImmutable $dia): mixed
+    {
+        return $consulta
+            ->where($columna, '>=', $dia->startOfDay())
+            ->where($columna, '<', $dia->addDay()->startOfDay());
+    }
+
     private function deHoy(int $complexId, CarbonImmutable $hoy): array
     {
-        $entradasHoy = (clone $this->entradas($complexId))
-            ->whereDate('e.created_at', $hoy->toDateString());
+        $entradasHoy = $this->eseDia(
+            clone $this->entradas($complexId), 'e.created_at', $hoy
+        );
 
         return [
-            'pedidos' => (int) (clone $this->pedidos($complexId))
-                ->whereDate('o.sale_date', $hoy->toDateString())->count(),
+            'pedidos' => (int) $this->eseDia(
+                clone $this->pedidos($complexId), 'o.sale_date', $hoy
+            )->count(),
             'entradas' => (int) (clone $entradasHoy)->count(),
             // Cuántas personas distintas, no cuántas veces. Un domiciliario que
             // entra tres veces es una sola persona en la portería.

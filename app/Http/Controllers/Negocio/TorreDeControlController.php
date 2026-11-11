@@ -69,10 +69,28 @@ class TorreDeControlController extends Controller
         $tope = $negocio->max_courier_cash !== null ? (float) $negocio->max_courier_cash : null;
         $simultaneos = (int) Ajustes::valor('operacion.entregas_simultaneas');
 
-        $torre = $flota->map(function ($d) use ($pedidos, $posicion, $tope) {
+        /*
+         * EL EFECTIVO DE TODA LA FLOTA, EN UNA CONSULTA.
+         *
+         * Aquí se llamaba a `saldo()` dentro del recorrido: una consulta por
+         * moto. Medido, esta ruta hacía 33 consultas para una flota de diez y
+         * diez eran esta misma línea. La torre se recarga cada quince segundos
+         * mientras el panel está abierto, así que no es una vez: es diez
+         * consultas cada quince segundos por cada tendero con la pantalla
+         * puesta.
+         *
+         * NO SE TOCA la consulta de posición de más abajo, que también es una
+         * por moto: esa es deliberada y su docblock explica por qué —la
+         * alternativa traía cuarenta mil filas para leer veinte—. Un número
+         * alto de consultas no es un N+1 que haya que arreglar; lo que hay que
+         * mirar es si crece y si lo que lo sustituye es mejor.
+         */
+        $saldos = $this->custodia->saldosDe($ids);
+
+        $torre = $flota->map(function ($d) use ($pedidos, $posicion, $tope, $saldos) {
             $id = (int) $d->domiciliary_id;
             $suyos = $pedidos->get($id, collect());
-            $efectivo = round($this->custodia->saldo($id), 2);
+            $efectivo = round($saldos[$id] ?? 0.0, 2);
 
             return [
                 'domiciliary_id' => $id,
