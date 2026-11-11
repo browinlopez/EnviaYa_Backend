@@ -279,13 +279,13 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Models\\Business\:\:\$owners\.$#'
 			identifier: property.notFound
-			count: 2
+			count: 4
 			path: app/Http/Controllers/Business/ConsultaDeNegociosController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\Business\:\:\$products\.$#'
+			message: '#^Access to an undefined property App\\Models\\Business\:\:\$reviews\.$#'
 			identifier: property.notFound
-			count: 1
+			count: 2
 			path: app/Http/Controllers/Business/ConsultaDeNegociosController.php
 
 		-
@@ -297,11 +297,17 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Models\\Business\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Business\>\:\:\$owners\.$#'
 			identifier: property.notFound
-			count: 1
+			count: 2
 			path: app/Http/Controllers/Business/ConsultaDeNegociosController.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\Business\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Business\>\:\:\$products\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Business/ConsultaDeNegociosController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Business\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Business\>\:\:\$reviews\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Http/Controllers/Business/ConsultaDeNegociosController.php
@@ -357,12 +363,6 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Models\\Business\\BusinessUserFavorite\:\:\$business\.$#'
 			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Business/FavoriteController.php
-
-		-
-			message: '#^Expression on left side of \?\? is not nullable\.$#'
-			identifier: nullCoalesce.expr
 			count: 1
 			path: app/Http/Controllers/Business/FavoriteController.php
 

@@ -7,19 +7,26 @@ namespace App\Http\Controllers\Business;
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Business\VerNegocioRequest;
+use App\Http\Resources\Negocio\PropietarioResource;
+use App\Http\Resources\Negocio\ResenaDelNegocioResource;
+use App\Http\Resources\Producto\ProductoDelNegocioResource;
+use App\Http\Resources\Producto\ProductoDestacadoResource;
 use App\Models\Business;
 use App\Models\Promotion;
 use App\Models\User;
-use App\Services\NegocioParaLaApp;
 use App\Services\PlazoPorDistancia;
 use App\Services\TarifaPorDistancia;
 use Illuminate\Http\Request;
 
 class ConsultaDeNegociosController extends Controller
 {
+    /*
+     * Sin el presentador: la forma de cada pieza vive en su Resource. Las dos
+     * del producto —la de la vitrina y la de los destacados— son DISTINTAS, y
+     * la diferencia esta medida en la cabecera de `ProductoDestacadoResource`.
+     */
     public function __construct(private readonly TarifaPorDistancia $distancias,
-        private readonly PlazoPorDistancia $plazos,
-        private readonly NegocioParaLaApp $presentador) {}
+        private readonly PlazoPorDistancia $plazos) {}
 
     use ComprobarPertenencia;
 
@@ -198,7 +205,7 @@ class ConsultaDeNegociosController extends Controller
                  * Si algún día el panel necesita esos campos, van por la API de
                  * administración, que ya exige rol 4 y módulo.
                  */
-                'owners' => $this->presentador->propietarios($business),
+                'owners' => PropietarioResource::collection($business->owners)->resolve(),
                 /*
                  * Las claves siguen viajando, vacias: la app las lee sin
                  * comprobar si existen, y quitarlas del todo la obligaria a
@@ -206,8 +213,8 @@ class ConsultaDeNegociosController extends Controller
                  */
                 'products' => $ligero
                     ? []
-                    : $this->presentador->productos($business, $isAffiliated, $userId),
-                'reviews' => $ligero ? [] : $this->presentador->resenas($business),
+                    : ProductoDelNegocioResource::deLaTienda($business, $isAffiliated, $userId),
+                'reviews' => $ligero ? [] : ResenaDelNegocioResource::collection($business->reviews)->resolve(),
                 'is_affiliated' => $isAffiliated,
             ];
         });
@@ -368,52 +375,19 @@ class ConsultaDeNegociosController extends Controller
                  * Si algún día el panel necesita esos campos, van por la API de
                  * administración, que ya exige rol 4 y módulo.
                  */
-                'owners' => $this->presentador->propietarios($business),
+                'owners' => PropietarioResource::collection($business->owners)->resolve(),
                 // productos del negocio
-                'products' => $ligero ? [] : $business->products->map(function ($product) use ($isAffiliated, $userId) {
-                    return [
-                        'product_id' => $product->products_id,
-                        'name' => $product->name,
-                        'description' => $product->description,
-                        'category' => $product->category ? $product->category->name : null,
-                        'image' => $product->image,
-                        'state' => (bool) $product->state,
-                        /*
-                         * EL GRUPO DE VARIANTES, PARA QUE LA APP PINTE UNA
-                         * TARJETA Y NO OCHO.
-                         *
-                         * Va junto al producto y no en una lista aparte porque
-                         * lo que se vende sigue siendo ESTE producto: el grupo
-                         * solo dice de qué tarjeta cuelga y qué pone el chip.
-                         * Así una app vieja ignora los dos campos y sigue
-                         * funcionando igual que ayer.
-                         *
-                         * `variante` llega aunque no haya grupo: es el texto
-                         * de la presentación y sirve para mostrarlo bajo el
-                         * nombre aunque el producto sea único.
-                         */
-                        'variante' => $product->variante,
-                        'group' => $product->group ? [
-                            'group_id' => (int) $product->group->group_id,
-                            'name' => $product->group->name,
-                            'image' => $product->group->image,
-                        ] : null,
-                        // Si no hay user_id → precio 0
-                        // Si hay user_id → mostrar precio solo si está afiliado
-                        'price' => $userId ? ($isAffiliated ? ($product->pivot->price ?? 0) : 0) : 0,
-                        /*
-                         * COMO SE VENDE: por unidad o al peso. Con una unidad
-                         * de peso, `price` es el precio por esa medida y la
-                         * pantalla ofrece botones de plata --«3.000 de
-                         * queso»-- y de porcion en vez del +/- de siempre.
-                         */
-                        'sale_unit' => $product->pivot->sale_unit ?? 'unidad',
-                        'min_qty' => $product->pivot->min_qty !== null ? (float) $product->pivot->min_qty : null,
-                        'step_qty' => $product->pivot->step_qty !== null ? (float) $product->pivot->step_qty : null,
-                    ];
-                }),
+                'products' => $ligero
+                    ? []
+                    /*
+                     * OJO: NO ES LA MISMA FORMA que la vitrina. Doce campos
+                     * aqui y siete alli; la diferencia esta medida y escrita
+                     * en la cabecera de `ProductoDestacadoResource`, y es un
+                     * asunto de producto sin decidir.
+                     */
+                    : ProductoDestacadoResource::deLaTienda($business, $isAffiliated, $userId),
                 // reviews del negocio
-                'reviews' => $ligero ? [] : $this->presentador->resenas($business),
+                'reviews' => $ligero ? [] : ResenaDelNegocioResource::collection($business->reviews)->resolve(),
                 'is_affiliated' => $isAffiliated,
             ];
         });
@@ -546,7 +520,7 @@ class ConsultaDeNegociosController extends Controller
              * Si algún día el panel necesita esos campos, van por la API de
              * administración, que ya exige rol 4 y módulo.
              */
-            'owners' => $this->presentador->propietarios($business),
+            'owners' => PropietarioResource::collection($business->owners)->resolve(),
             'is_affiliated' => $estaAfiliado,
             /*
              * SIN PRECIO NO SE OFRECE.
@@ -611,7 +585,7 @@ class ConsultaDeNegociosController extends Controller
                     'regla' => $p->reglaEnPalabras(),
                     'hasta_texto' => $p->hastaEnPalabras(),
                 ])->values(),
-            'reviews' => $this->presentador->resenas($business),
+            'reviews' => ResenaDelNegocioResource::collection($business->reviews)->resolve(),
         ]);
     }
 }

@@ -7,14 +7,20 @@ namespace App\Http\Controllers\Business;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Business\AlternarFavoritoRequest;
 use App\Http\Requests\Business\MisFavoritosRequest;
+use App\Http\Resources\Negocio\PropietarioResource;
+use App\Http\Resources\Negocio\ResenaDelNegocioResource;
+use App\Http\Resources\Producto\ProductoFavoritoResource;
 use App\Models\Business\BusinessUserFavorite;
-use App\Services\NegocioParaLaApp;
 use App\Services\TarifaPorDistancia;
 
 class FavoriteController extends Controller
 {
+    /*
+     * Sin el presentador: la forma de cada pieza vive en su Resource. Ver
+     * `PropietarioResource`, `ProductoFavoritoResource` y
+     * `ResenaDelNegocioResource`.
+     */
     public function __construct(
-        private readonly NegocioParaLaApp $presentador,
         private readonly TarifaPorDistancia $distancias,
     ) {}
 
@@ -147,27 +153,19 @@ class FavoriteController extends Controller
                  * el mismo presentador que los otros, para que no pueda volver
                  * a divergir.
                  */
-                'owners' => $this->presentador->propietarios($business),
-                'products' => $ligero ? [] : $business->products->map(function ($product) {
-                    return [
-                        'product_id' => $product->products_id,
-                        'name' => $product->name,
-                        'description' => $product->description,
-                        'category_id' => $product->category_id,
-                        'image' => $product->image,
-                        'state' => (bool) $product->state,
-                        'price' => $product->pivot->price ?? null,
-                    ];
-                }),
-                'reviews' => $ligero ? [] : $business->reviews->map(function ($review) {
-                    return [
-                        'review_id' => $review->reviews_id ?? null,
-                        'buyer_id' => $review->buyer_id,
-                        'rating' => (float) $review->qualification ?? 0,
-                        'comment' => $review->comment ?? '',
-                        'created_at' => $review->created_at ?? null,
-                    ];
-                }),
+                'owners' => PropietarioResource::collection($business->owners)->resolve(),
+                /*
+                 * OJO CON EL PRECIO: esta forma NO comprueba la afiliacion y
+                 * cae a `null`, al contrario que la del catalogo. Esta medido
+                 * y escrito en la cabecera de `ProductoFavoritoResource`, y es
+                 * un asunto sin decidir.
+                 */
+                'products' => $ligero
+                    ? []
+                    : ProductoFavoritoResource::collection($business->products)->resolve(),
+                'reviews' => $ligero
+                    ? []
+                    : ResenaDelNegocioResource::collection($business->reviews)->resolve(),
             ];
         });
 
