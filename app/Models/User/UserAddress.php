@@ -75,6 +75,33 @@ class UserAddress extends Audit
         );
     }
 
+    /**
+     * EL PAÍS DE UNA DIRECCIÓN. NO FUNCIONA, Y SE DEJA ESCRITO.
+     *
+     * Su clave local es `department_id` y **`user_address` no tiene esa
+     * columna**: solo tiene `municipality_id`. Así que esta relación devuelve
+     * `null` siempre, y lo ha hecho desde que se escribió. Comprobado contra
+     * los datos de desarrollo: direcciones cuyo municipio es «Barranquilla» y
+     * cuyo departamento es «Atlántico» resuelven bien las dos y dan país
+     * `null`, habiendo 27 países en la tabla.
+     *
+     * POR QUÉ NO SE ARREGLA AQUÍ. `PedidoParaLaApp` lleva ese `null` al
+     * campo `country` de cada dirección de cada pedido, y lo llevan las dos
+     * apps publicadas en las tiendas. Hacerlo resolver cambiaría un valor que
+     * los clientes reciben como nulo desde siempre, y eso es una decisión de
+     * producto, no una corrección de código: no se sabe qué hace la app con
+     * un país que de repente llega lleno.
+     *
+     * Arreglarla es un salto más: `municipality_id → municipalities →
+     * department_id → departments → country_id`. Son tres niveles, y
+     * `hasOneThrough` solo cubre dos.
+     *
+     * MIENTRAS TANTO NO SE PRECARGA. Precargarla ejecutaba una consulta por
+     * petición que no podía devolver nada, y el campo se rellena con `null`
+     * escrito a mano, que es lo mismo que devolvía y se lee como lo que es.
+     *
+     * @deprecated Devuelve null siempre: ver arriba antes de usarla.
+     */
     public function country()
     {
         return $this->hasOneThrough(
@@ -82,7 +109,7 @@ class UserAddress extends Audit
             Department::class,
             'id',         // FK de department en municipality
             'id',         // FK de country en department
-            'department_id', // Local key en department
+            'department_id', // Local key en department — NO EXISTE en user_address
             'country_id'     // Local key en country
         );
     }

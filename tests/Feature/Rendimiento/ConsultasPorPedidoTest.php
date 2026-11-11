@@ -179,3 +179,47 @@ test('el tablero devuelve los ocho pedidos, con su repartidor dentro', function 
         expect($pedido['domiciliary']['name'])->not->toBeEmpty();
     }
 });
+
+test('el pais de la direccion sigue viajando, y sigue siendo null', function () {
+    /*
+     * UNA PRUEBA DE QUE NADA CAMBIÓ, que es justo lo que hay que fijar aquí.
+     *
+     * `UserAddress::country()` está roto: su clave local es `department_id` y
+     * `user_address` no tiene esa columna, así que devuelve `null` siempre y
+     * lo ha hecho desde que se escribió. Se quitó de la precarga —era una
+     * consulta por petición que no podía devolver nada— y el campo se rellena
+     * con `null` escrito a mano.
+     *
+     * Esta prueba fija las DOS mitades:
+     *
+     *   - la clave `country` SIGUE presente. Quitarla del todo obligaría a las
+     *     dos apps publicadas a defenderse de un `undefined` en cada pantalla
+     *     de dirección, y no se pueden actualizar a la vez.
+     *   - y sigue valiendo `null`. Si alguien arregla la relación de verdad,
+     *     esta prueba se pone roja — y tiene que ponerse: es un valor que los
+     *     clientes publicados reciben nulo desde siempre, así que llenarlo es
+     *     una decisión de producto y no un arreglo que se cuela en un
+     *     refactor.
+     *
+     * El municipio y el departamento SÍ resuelven, y se comprueba al lado:
+     * así se distingue «el país es null porque la relación está rota» de «la
+     * dirección no tiene geografía».
+     */
+    $t = tiendaConPedidos(1);
+
+    DB::table('countries')->insertOrIgnore(['id' => 1, 'name' => 'Colombia', 'iso_code' => 'CO']);
+    DB::table('departments')->insertOrIgnore(['id' => 1, 'name' => 'Atlántico', 'country_id' => 1]);
+    DB::table('municipalities')->insertOrIgnore(['id' => 1, 'name' => 'Barranquilla', 'department_id' => 1]);
+    DB::table('user_address')->where('address_id', '>', 0)->update(['municipality_id' => 1]);
+
+    $pedido = test()->postJson('/v1/orders/business', ['business_id' => $t['negocio']])
+        ->assertOk()
+        ->json('orders.0');
+
+    expect($pedido['delivery_address'])->toHaveKey('country');
+    expect($pedido['delivery_address']['country'])->toBeNull();
+
+    // La contraparte: la geografía que SÍ funciona, funciona.
+    expect($pedido['delivery_address']['municipality'])->toBe('Barranquilla');
+    expect($pedido['delivery_address']['department'])->toBe('Atlántico');
+});

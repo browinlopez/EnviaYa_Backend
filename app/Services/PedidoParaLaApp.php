@@ -79,7 +79,14 @@ class PedidoParaLaApp
              */
             'address.municipality',
             'address.department',
-            'address.country',
+            /*
+             * `address.country` NO va: la relacion esta rota —su clave local
+             * es `department_id` y `user_address` no tiene esa columna— asi
+             * que devuelve null siempre, y precargarla era una consulta por
+             * peticion que no podia devolver nada. El campo se rellena con
+             * null escrito a mano, que es lo mismo que devolvia. El porque
+             * completo esta en `UserAddress::country()`.
+             */
             'address.alias',
         ];
     }
@@ -186,7 +193,9 @@ class PedidoParaLaApp
                 'alias' => $order->address->alias?->name,
                 'municipality' => $order->address->municipality?->name,
                 'department' => $order->address->department?->name,
-                'country' => $order->address->country?->name,
+                // Siempre null, y a proposito: ver `UserAddress::country()`.
+                // Sigue viajando porque las apps publicadas leen la clave.
+                'country' => null,
                 'latitude' => $order->address->latitude !== null ? (float) $order->address->latitude : null,
                 'longitude' => $order->address->longitude !== null ? (float) $order->address->longitude : null,
             ] : null,
