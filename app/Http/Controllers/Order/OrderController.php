@@ -6,6 +6,7 @@ use App\Events\OrderStatusUpdated;
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Order\MoverPedidoRequest;
+use App\Http\Resources\Pedido\PedidoResource;
 use App\Jobs\TrazarLaRutaDelPedido;
 use App\Models\Business;
 use App\Models\Buyer\Buyer;
@@ -463,7 +464,7 @@ class OrderController extends Controller
                  * hacer lo mismo: ahi el modelo se serializa entero y cualquier
                  * relacion cargada de mas SI saldria en la respuesta.
                  */
-                'order' => $order->loadMissing('details.product.category', 'business', 'address', 'promotions', 'payments')->toApi(),
+                'order' => new PedidoResource($order->loadMissing('details.product.category', 'business', 'address', 'promotions', 'payments')),
                 'bold_reference_id' => $intent->bold_reference_id ?? null,
                 /*
                  * La app lee el QR / redirect de acá para el pago online.
@@ -603,7 +604,7 @@ class OrderController extends Controller
         return response()->json([
             'message' => 'Pedido cancelado.'
                 .($hecho['aviso'] ? ' '.$hecho['aviso'] : ''),
-            'order' => $order->fresh()->toApi(),
+            'order' => new PedidoResource($order->fresh()),
             /* Para que la app pueda decirlo en pantalla y no solo en la
                campana: lo del dinero es lo primero que se pregunta. */
             'devolucion' => $hecho['devolucion'],

@@ -111,50 +111,6 @@ class Promotion extends Audit
         );
     }
 
-    /**
-     * Lo que ve el cliente y lo que ve el tendero en su lista.
-     *
-     * Se arma acá y no en el controlador para que la promoción se vea igual en
-     * los tres sitios donde aparece: la lista del tendero, la respuesta al
-     * crearla y el aviso que le llega al comprador.
-     */
-    public function toApi(): array
-    {
-        return [
-            'promotion_id' => $this->promotion_id,
-            'busines_id' => $this->busines_id,
-            'texto' => $this->description,
-            'productos' => $this->relationLoaded('products')
-                ? $this->products->map(fn ($p) => [
-                    'products_id' => $p->products_id,
-                    'name' => $p->name,
-                    'image' => $p->image ?? null,
-                ])->values()
-                : [],
-            'enviada_el' => $this->sent_at?->toIso8601String(),
-            'destinatarios' => (int) $this->recipients_count,
-            'state' => (int) $this->state,
-            'desde' => $this->start_date?->toIso8601String(),
-            'hasta' => $this->end_date?->toIso8601String(),
-            'hasta_texto' => $this->hastaEnPalabras(),
-            'vencida' => $this->vencida(),
-            'empezada' => $this->empezada(),
-            // `max_usos` viaja como null —y no como 0— cuando no hay tope: la
-            // app distingue «sin límite» de «agotada» por ese null.
-            'max_usos' => $this->max_usos === null ? null : (int) $this->max_usos,
-            'usos' => (int) $this->usos,
-            'agotada' => $this->agotada(),
-            'retirada' => (int) $this->state === self::RETIRADA,
-            'tipo' => $this->tipo ?? self::SIN_DESCUENTO,
-            'porcentaje' => $this->tipo === self::PORCENTAJE
-                ? round(((float) $this->percentage_discount) * 100)
-                : null,
-            'lleva' => $this->lleva,
-            'paga' => $this->paga,
-            'regla_texto' => $this->reglaEnPalabras(),
-        ];
-    }
-
     /** Ya pasó su fecha. Sin fecha, no vence nunca. */
     public function vencida(): bool
     {

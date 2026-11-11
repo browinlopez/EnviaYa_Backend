@@ -22,7 +22,7 @@
  * EL N+1 QUE EXISTÍA DE VERDAD, y por el que esta prueba está escrita:
  * `GET /orders/business` precargaba su propia lista de relaciones, copiada
  * del otro controlador que usa el mismo presentador, y le faltaba
- * `domiciliary.user`. `PedidoParaLaApp` lee
+ * `domiciliary.user`. `PedidoDeLaAppResource` lee
  * `$order->domiciliary->user->name`, así que cada pedido con repartidor
  * costaba DOS consultas de más. A cincuenta pedidos en el tablero, cien
  * consultas que nadie veía porque la respuesta era correcta.

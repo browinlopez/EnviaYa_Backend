@@ -8,20 +8,19 @@ use App\Http\Requests\Order\IngresosDelNegocioRequest;
 use App\Http\Requests\Order\PedidosDelNegocioRequest;
 use App\Http\Requests\Order\PedidosDelUsuarioRequest;
 use App\Http\Requests\Order\UltimosPedidosRequest;
+use App\Http\Resources\Negocio\NegocioDelPedidoResource;
+use App\Http\Resources\Pedido\PedidoDeLaAppResource;
 use App\Models\Business;
 use App\Models\Buyer\Buyer;
 use App\Models\Order\OrderGeolocation;
 use App\Models\Order\OrdersSales;
 use App\Models\User;
 use App\Services\CreditoDeTienda;
-use App\Services\PedidoParaLaApp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class ConsultaDePedidosController extends Controller
 {
-    public function __construct(private readonly PedidoParaLaApp $presentador) {}
-
     use ComprobarPertenencia;
 
     // Función para obtener todas las órdenes de un usuario
@@ -233,14 +232,14 @@ class ConsultaDePedidosController extends Controller
             // La lista la declara el presentador, que es quien las lee: esta
             // copia se habia quedado sin `domiciliary.user` y cargaba el
             // repartidor de uno en uno.
-            ->with(PedidoParaLaApp::relaciones())
+            ->with(PedidoDeLaAppResource::relaciones())
             ->get();
 
         // Datos del business, solo una vez
-        $businessData = $this->presentador->negocio($business);
+        $businessData = (new NegocioDelPedidoResource($business))->resolve();
 
         $formattedOrders = $orders->map(
-            fn ($order) => $this->presentador->formatear($order)
+            fn ($order) => (new PedidoDeLaAppResource($order))->resolve()
         );
 
         return response()->json([
