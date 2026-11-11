@@ -33,30 +33,33 @@ class SoloParaCambiarPorSesion
     public function handle(Request $request, Closure $next): Response
     {
         /*
-         * El token se busca A MANO, no por `$request->user()`.
+         * EL TOKEN YA RESUELTO SI LO HAY, Y SI NO, A MANO.
          *
-         * Este middleware va en el grupo `api`, que corre ANTES que el
-         * `auth:sanctum` de cada ruta: ahí todavía no hay usuario resuelto y
-         * `$request->user()` es null. Confiar en él dejaba pasar todo, que es
-         * lo que descubrió la prueba «esa credencial no sirve para nada más».
+         * Medido en el log de latencia: `personal_access_tokens` salía DOS
+         * veces en toda ruta con sesión —la búsqueda de Sanctum y la de aquí—.
+         * Este middleware va en el grupo `api`, que corría ANTES del
+         * `auth:sanctum` de cada ruta, así que no tenía usuario que mirar y no
+         * le quedaba otra que buscarlo él.
          *
-         * Buscarlo por el encabezado funciona en cualquier orden.
+         * Y NO HACE FALTA MOVER NADA DE SITIO, que es lo que yo creía. Dije
+         * que quitar la consulta pedía reordenar este middleware detrás de
+         * `auth:sanctum` con `appendToPriorityList`, y que mover el orden de
+         * un middleware de seguridad en 325 endpoints no lo pagaba una
+         * consulta. Lo implementé así, lo probé rompiéndolo, y al quitar la
+         * prioridad para ver si la red avisaba **la consulta seguía sin
+         * duplicarse**: `$request->user()` resuelve el guard de Sanctum por su
+         * cuenta, sin esperar al middleware de autenticación, y `auth:sanctum`
+         * reutiliza después lo ya resuelto. El reordenamiento se deshizo.
          *
-         * CUESTA UNA CONSULTA POR PETICIÓN AUTENTICADA, y está medido: en el
-         * log de latencia, `personal_access_tokens` sale dos veces en toda
-         * ruta con sesión —esta búsqueda y la de Sanctum—. Se queda así a
-         * propósito.
+         * LA BÚSQUEDA A MANO SE QUEDA COMO RESPALDO, y es lo que impide ceder
+         * nada: en las 21 rutas de `/v1` que no piden sesión no hay nadie que
+         * resuelva un token, y sin el respaldo la credencial biométrica
+         * dejaría de estar acotada en ellas. No ganaría privilegio —en una
+         * ruta pública tener este token es igual que no tener ninguno— pero
+         * una propiedad se cumple o no se cumple. Hay una prueba.
          *
-         * Quitarla pedía que este middleware corriera DESPUÉS de
-         * `auth:sanctum`, para leer `currentAccessToken()` gratis. Eso se hace
-         * con `$middleware->priority()`, y significa mover el orden de un
-         * middleware de seguridad en los 325 endpoints a la vez; además, en
-         * una ruta pública no hay autenticación que lo deje después de nada,
-         * así que la credencial biométrica dejaría de estar acotada ahí
-         * —no gana privilegio, pero la propiedad escrita es «no sirve para
-         * nada más», no «para nada más que requiera sesión»—.
-         *
-         * Una consulta de clave primaria por petición no paga ese riesgo.
+         * Resultado: una consulta menos en toda petición donde el token se
+         * pueda identificar, y exactamente lo de antes donde no.
          */
         $bearer = $request->bearerToken();
 
@@ -64,7 +67,8 @@ class SoloParaCambiarPorSesion
             return $next($request);
         }
 
-        $token = PersonalAccessToken::findToken($bearer);
+        $token = $this->tokenYaResuelto($request, $bearer)
+            ?? PersonalAccessToken::findToken($bearer);
 
         // Sin token de por medio —sesión de navegador, ruta pública— no aplica.
         if (! $token || $token->name !== AccesoBiometricoController::NOMBRE_TOKEN) {
@@ -79,5 +83,50 @@ class SoloParaCambiarPorSesion
             'message' => 'Esta credencial solo sirve para volver a entrar con tu huella.',
             'reason' => 'biometric_token_scope',
         ], 403);
+    }
+
+    /**
+     * El token que ya resolvio la autenticacion, SOLO si es el del encabezado.
+     *
+     * Aqui esta todo el cuidado del cambio, y la comprobacion de identidad no
+     * es paranoia: se escribio despues de que la prueba «esa credencial no
+     * sirve para nada mas» se pusiera roja.
+     *
+     * `currentAccessToken()` y el encabezado PUEDEN discrepar:
+     *
+     *  · con sesion de navegador —`EnsureFrontendRequestsAreStateful` y una
+     *    cookie— devuelve un `TransientToken`, que no es un token de verdad y
+     *    no tiene nombre;
+     *  · y bajo `Sanctum::actingAs` devuelve un doble de Mockery, tambien sin
+     *    nombre. Eso es de pruebas, pero fue lo que lo delato: el middleware
+     *    dejaba pasar la credencial biometrica porque el token resuelto no se
+     *    llamaba como ella.
+     *
+     * Confiar en el resuelto a secas convierte «no tiene nombre» en «no es
+     * biometrico», que es justo lo contrario de lo que hay que concluir. Asi
+     * que se usa unicamente cuando su clave coincide con el id que viene en el
+     * encabezado —un token de Sanctum es `<id>|<secreto>`— y en cualquier otro
+     * caso se busca a mano, como antes.
+     *
+     * En produccion con token Bearer los dos son el mismo objeto, asi que la
+     * consulta de mas desaparece en las 304 rutas con sesion. Donde no se puede
+     * probar que lo son, se paga la consulta: es mas barata que una credencial
+     * sin acotar.
+     */
+    private function tokenYaResuelto(Request $request, string $bearer): ?PersonalAccessToken
+    {
+        $token = $request->user()?->currentAccessToken();
+
+        if (! $token instanceof PersonalAccessToken) {
+            return null;
+        }
+
+        $idDelEncabezado = explode('|', $bearer, 2)[0];
+
+        if ((string) $token->getKey() !== $idDelEncabezado || $idDelEncabezado === '') {
+            return null;
+        }
+
+        return $token;
     }
 }
