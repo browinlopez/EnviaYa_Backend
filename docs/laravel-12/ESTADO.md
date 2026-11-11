@@ -79,6 +79,32 @@ el CRUD completo de reseñas, `categories-business` y varias más. Escribir
 pruebas para convertirlas es invertir en código pendiente de retirarse.
 **Retirarlas o conservarlas es una decisión de producto, no técnica.**
 
+> **10 de noviembre de 2026 — y «muertas» ya no es una sospecha.** El motivo
+> por el que no se podía decidir era «la app publicada es un binario que no
+> podemos leer», y eso miraba al sitio equivocado: **el código fuente de ese
+> binario está en el repositorio**, en el commit que se publicó.
+>
+> `python scripts/rutas_sin_llamante.py` busca cada ruta en el código de cada
+> cliente —la app en los commits de 1.0.0 a 1.0.12, los tres paneles, el
+> propio backend— y después recorre los 202 commits de toda la historia de la
+> app con `git log -S`. Resultado: **31 de 31 sin un solo llamante, y 31 de 31
+> que nunca aparecieron en esa historia.** No son restos de la capa de datos
+> vieja, como se suponía: la app nunca las llamó.
+>
+> Se le cree porque se comprueba a sí mismo: antes de contestar busca tres
+> rutas que **sí** se llaman y, si no las encuentra, sale con código 2 en vez
+> de dar las 31 por muertas. Probado apuntándolo a una raíz que no existe.
+>
+> Para lo que el código no puede ver —una integración de un aliado, un script
+> interno— queda `php scripts/rutas_sin_uso.php`, que las cruza contra el
+> registro de auditoría. Las nueve GET, sobre las que ese registro no decía
+> nada porque filtraba por verbo, se registran desde hoy. Y el informe enseña
+> la IP, que es lo que dejó ver que las seis «llamadas reales» de la máquina
+> de desarrollo eran pruebas a mano desde `127.0.0.1`.
+>
+> Sigue siendo decisión de producto. Pero ya no es a ciegas, y el argumento
+> para conservar una tiene que nombrar a un llamante concreto.
+
 ### `JsonResource` — la carpeta no existe
 
 Es la regla más grande que queda, y la más peligrosa. La forma de la respuesta
