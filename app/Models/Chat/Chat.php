@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models\Chat;
 
 use App\Models\Audit\Audit;

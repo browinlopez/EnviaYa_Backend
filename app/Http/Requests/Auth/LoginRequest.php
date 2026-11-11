@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Requests\Auth;
 
 use Illuminate\Auth\Events\Lockout;
@@ -81,6 +83,34 @@ class LoginRequest extends FormRequest
      */
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->string('email')).'|'.$this->ip());
+        /*
+         * `(string)` Y NO `$this->string(...)` A SECAS.
+         *
+         * `$this->string('email')` devuelve un `Stringable`, no una cadena, y
+         * `Str::lower()` documenta `@param string`. Lo encontró PHPStan al
+         * poner `declare(strict_types=1)` en los 433 ficheros de `app/`.
+         *
+         * Y AQUÍ VA LA PARTE HONESTA, porque la primera versión de este
+         * comentario decía que sin el `(string)` la llamada **lanzaba** un
+         * TypeError, y eso es falso. Fui a comprobarlo devolviendo el fallo:
+         * no lanza. El motivo es que `Str::lower($value)` **no declara tipo
+         * nativo** —solo lo dice en su docblock—, así que PHP no tiene nada
+         * que comprobar y `mb_strtolower()` convierte el objeto por su
+         * `__toString()`. Con una función que SÍ declarara `string` el modo
+         * estricto sí lanzaría: comprobado aparte, `strict_types` rechaza un
+         * `Stringable` donde se declara `string`.
+         *
+         * O sea que esto era un desajuste ESTÁTICO, no un fallo en
+         * producción. Se arregla igual —pasar el tipo que la función dice
+         * esperar cuesta un molde y deja de depender de que su firma siga sin
+         * tipar— pero no se vende como un fallo evitado.
+         *
+         * Lo que sí es un hallazgo: no lo vio ninguna de las 1247 pruebas ni
+         * los 33 procesos del arnés, y no por casualidad. Esta clase sirve a
+         * `POST /login`, la sesión web que trae Breeze; lo que la plataforma
+         * usa es `POST /v1/login`, que atiende `AuthController@login` y no
+         * pasa por aquí. El camino existe, está enrutado y nadie lo prueba.
+         */
+        return Str::transliterate(Str::lower((string) $this->string('email')).'|'.$this->ip());
     }
 }
