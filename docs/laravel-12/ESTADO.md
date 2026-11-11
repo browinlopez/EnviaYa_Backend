@@ -458,6 +458,57 @@ modo ligero sigue devolviendo `[]` y el completo sigue trayendo contenido —
 ahorrar dejando de cargar algo solo vale si eso no se estaba enseñando.
 Probada rota: devolviendo el `with` a incondicional, se pone roja.
 
+#### El tablero del panel: 48 consultas que NO eran un N+1
+
+`GET /admin/overview` es, de largo, la ruta que más consultas hace de todo el
+backend, y por eso se miró con la sonda: **48**. El resultado útil es el
+negativo. Cuarenta de esas 48 salen **una sola vez cada una** y son cuarenta
+agregados distintos —una pantalla que enseña cuarenta cifras cuesta cuarenta
+cifras—, así que no hay nada que precargar: no es un N+1 y reducir el número
+pedía reducir la pantalla, que no es una decisión técnica.
+
+Lo que sí había eran **cuatro consultas repetidas**, y de dos clases
+distintas:
+
+| Repetida | Por qué |
+|---|---|
+| `count(*) business`, `count(*) products`, los pedidos activos sin pago aprobado | la misma cifra con dos nombres: arriba `businesses` / `products` / `pending_payment`, abajo `businesses_total` / `products_total` / `unpaid_orders` |
+| la fila de `areas` del usuario | el middleware de permisos y `ResumenDelPanel` la buscaban cada uno por su cuenta |
+
+Las tres primeras se cuentan ahora en `ResumenDelPanel` y los dos lados leen
+el conteo; **comprobado antes de tocar nada que los dos nombres daban el mismo
+número** (7, 586 y 22), que es lo que autoriza a compartirlo. La cuarta se
+resuelve con una relación en el modelo (`User::area()`), porque Eloquent
+guarda la relación cargada en la instancia y `$request->user()` devuelve la
+misma instancia a todo el que pregunte durante la petición.
+
+**48 → 44, y la respuesta idéntica byte a byte** —18 686 bytes antes y
+después—, medido con un guion hermano de la sonda que guarda el cuerpo. Eso es
+lo que exige el encargo: cumplir el estándar sin tocar lo que las apps
+reciben.
+
+Dos cosas que el cambio obligó a cuidar, y las dos valen como aviso general:
+
+- **`area` entró en el `$hidden` del usuario, y no por secreto.** Eloquent
+  serializa las relaciones que estén cargadas, así que el día que alguien
+  ponga `modulo:` sobre una ruta que devuelva el usuario entero, le aparecería
+  una clave nueva en el JSON sin haberla pedido. Hoy ninguna ruta hace las dos
+  cosas —comprobado—, pero una promesa de no cambiar la API se sostiene mejor
+  con una línea que con una comprobación de hoy.
+- **La memoria de conteos vive en la instancia del servicio**, y eso solo es
+  seguro mientras el contenedor no la comparta. Hay prueba de que no la
+  comparte: registrado como `singleton` —probado— el panel enseñaría cifras
+  congeladas de otra petición y el síntoma sería «creé un negocio y el tablero
+  sigue diciendo 7», sin error en ningún log.
+
+**Y un fallo de la propia prueba que conviene recordar**, porque es fácil de
+repetir: contar los duplicados con
+`str_contains('count(*) as aggregate from "business"')` daba **cinco**, porque
+esa cadena es el prefijo de otras cuatro consultas del mismo bloque —las
+ocultas, las sin ubicación, las sin tipo, las sin propietario—. Un filtro por
+prefijo en una comprobación de duplicados cuenta de más, y la prueba se habría
+creído sola.
+
 ---
 
 ## 4 · Sobre PHPStan, para que nadie persiga 503 avisos
