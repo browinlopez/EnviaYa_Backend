@@ -177,7 +177,89 @@ it('ANTES DE no incluye el dia, que es como se pregunta si algo vencio', functio
     );
 });
 
-it('en app/ no queda ni un whereDate, y este guardia lo mantiene', function () {
+/*
+ * LOS ANIOS DE ESTAS PRUEBAS NO SON EL ACTUAL, Y ESO ES DELIBERADO.
+ *
+ * La primera version usaba 2026, que es el anio en curso. Al probar la red
+ * rompiendola —cambiando `$anio` por `now()->year` dentro de `elMes()`— NO se
+ * puso roja ninguna: el parametro y el valor por omision coincidian por
+ * casualidad del calendario, asi que la prueba no estaba comprobando que el
+ * parametro se usara. Habria empezado a fallar sola el 1 de enero.
+ *
+ * Con 2031 y 2030, usar el anio actual en vez del parametro da cero filas y
+ * la prueba lo dice.
+ */
+it('EL ANIO va del 1 de enero al 1 de enero siguiente', function () {
+    $t = conFechas([
+        '2030-12-31 23:59:59',  // el ultimo instante del anterior: fuera
+        '2031-01-01 00:00:00',  // el primero del bueno: dentro
+        '2031-07-15 12:00:00',  // en medio: dentro
+        '2031-12-31 23:59:59',  // el ultimo del bueno: dentro
+        '2032-01-01 00:00:00',  // el primero del siguiente: fuera
+    ]);
+
+    expect(FiltroDeFechas::elAnio(DB::table($t), 'cuando', 2031)->count())->toBe(3);
+
+    // Y da LO MISMO que la forma vieja, que es lo que autoriza el cambio: no
+    // se esta arreglando un numero, se esta quitando una funcion de encima de
+    // la columna.
+    expect(FiltroDeFechas::elAnio(DB::table($t), 'cuando', 2031)->count())
+        ->toBe(DB::table($t)->whereYear('cuando', 2031)->count());
+});
+
+it('EL MES exige el anio, y ahi esta la trampa que tenia el codigo viejo', function () {
+    /*
+     * LA PRUEBA QUE JUSTIFICA LA FIRMA DEL METODO.
+     *
+     * `whereMonth($col, 11)` a secas no es «noviembre de este anio»: es
+     * noviembre de TODOS los anios. Los cuatro controladores que se
+     * convirtieron lo sabian y escribian `whereMonth(...)` y `whereYear(...)`
+     * en dos lineas seguidas — dos lineas que hay que acordarse de poner
+     * juntas, y la que falta no da error: da un numero mas grande, y crece un
+     * anio cada enero.
+     *
+     * `elMes()` pide el anio como parametro para que no se pueda olvidar.
+     */
+    $t = conFechas([
+        '2030-11-10 10:00:00',  // noviembre, pero de otro anio
+        '2031-10-31 23:59:59',  // el ultimo instante de octubre: fuera
+        '2031-11-01 00:00:00',  // dentro
+        '2031-11-30 23:59:59',  // dentro
+        '2031-12-01 00:00:00',  // el primero de diciembre: fuera
+    ]);
+
+    expect(FiltroDeFechas::elMes(DB::table($t), 'cuando', 2031, 11)->count())->toBe(2);
+
+    // La forma vieja HECHA BIEN —mes y anio— da lo mismo.
+    expect(FiltroDeFechas::elMes(DB::table($t), 'cuando', 2031, 11)->count())
+        ->toBe(DB::table($t)->whereMonth('cuando', 11)->whereYear('cuando', 2031)->count());
+
+    /*
+     * Y la forma vieja HECHA MAL —solo el mes— da DOS de un anio que no es el
+     * pedido mas el del pedido: tres. Esto no prueba `elMes`; prueba por que
+     * `elMes` no acepta un mes sin su anio. Si alguien le pusiera un valor por
+     * omision, este numero seria el que acabaria en el panel.
+     */
+    expect(DB::table($t)->whereMonth('cuando', 11)->count())->toBe(3);
+});
+
+it('diciembre no se sale del anio al sumar un mes', function () {
+    /*
+     * El borde que un `addMonth()` mal escrito se come: el mes 12 tiene que
+     * acabar el 1 de enero del anio SIGUIENTE, no volver al 1 de enero del
+     * mismo.
+     */
+    $t = conFechas([
+        '2031-11-30 23:59:59',
+        '2031-12-01 00:00:00',
+        '2031-12-31 23:59:59',
+        '2032-01-01 00:00:00',
+    ]);
+
+    expect(FiltroDeFechas::elMes(DB::table($t), 'cuando', 2031, 12)->count())->toBe(2);
+});
+
+it('en app/ no queda NINGUNA de las funciones de fecha, y este guardia lo mantiene', function () {
     /*
      * EL PATRON SIN EXCEPCIONES, y es el motivo de haber convertido tambien
      * los sitios donde hoy no se nota.
@@ -192,7 +274,19 @@ it('en app/ no queda ni un whereDate, y este guardia lo mantiene', function () {
      * esta prueba citandola arriba— y un detector que confunde la prosa con el
      * codigo castiga el haberlo dejado dicho. Es la misma leccion que el
      * guardia de las direcciones de correo de pega.
+     *
+     * VIGILA LA FAMILIA ENTERA, y no solo `whereDate`. Al principio solo
+     * miraba `whereDate` y por eso una auditoria posterior encontro SIETE
+     * `whereYear`/`whereMonth` vivos en cuatro controladores del panel: el
+     * mismo `año(columna) = ?` sobre la columna filtrada, el mismo indice
+     * inservible, y pasando en verde porque el guardia miraba el nombre de
+     * una de las cuatro funciones en vez del patron.
+     *
+     * Un guardia que cubre una variante de un patron da la sensacion de
+     * cubrirlo entero. `whereMonth` es ademas la mas peligrosa de las cuatro:
+     * a secas significa «ese mes de TODOS los años».
      */
+    $prohibidas = ['whereDate(', 'whereYear(', 'whereMonth(', 'whereDay(', 'whereTime('];
     $conWhereDate = [];
 
     $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(app_path()));
@@ -212,8 +306,11 @@ it('en app/ no queda ni un whereDate, y este guardia lo mantiene', function () {
             $codigo .= is_array($pieza) ? $pieza[1] : $pieza;
         }
 
-        if (str_contains($codigo, 'whereDate(')) {
-            $conWhereDate[] = str_replace(app_path().DIRECTORY_SEPARATOR, '', $fichero->getPathname());
+        foreach ($prohibidas as $prohibida) {
+            if (str_contains($codigo, $prohibida)) {
+                $conWhereDate[] = str_replace(app_path().DIRECTORY_SEPARATOR, '', $fichero->getPathname())
+                    .' -> '.$prohibida;
+            }
         }
     }
 

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ActualizarSolicitudRequest;
 use App\Models\Operacion\LandingRequest;
 use App\Models\Operacion\Pqrs;
+use App\Support\FiltroDeFechas;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -49,9 +50,10 @@ class SolicitudesApiController extends Controller
                     ->whereNotNull('due_at')
                     ->where('due_at', '<', now())
                     ->count(),
-                'mes' => LandingRequest::whereMonth('created_at', now()->month)
-                    ->whereYear('created_at', now()->year)
-                    ->count(),
+                'mes' => FiltroDeFechas::elMes(
+                    LandingRequest::query(),
+                    'created_at', (int) now()->year, (int) now()->month,
+                )->count(),
                 // Cuántas hay de cada tipo, para el tablero del panel.
                 'por_tipo' => LandingRequest::selectRaw('type, count(*) as total')
                     ->groupBy('type')

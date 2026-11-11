@@ -126,6 +126,70 @@ class FiltroDeFechas
     }
 
     /**
+     * Ese año entero: del 1 de enero al 1 de enero siguiente, sin incluirlo.
+     *
+     * Sustituye a `whereYear($columna, $anio)`, que tiene exactamente el mismo
+     * problema que `whereDate`: `year(columna) = ?` envuelve la columna en una
+     * función y deja el índice inservible para esa parte.
+     *
+     * MEDIDO, Y CON HONESTIDAD: hoy esto NO se nota. Las tablas donde estaba
+     * —`safety_incidents` con 6 filas, `settlements` con 10, `pqrs` con 13,
+     * `landing_requests` con 0— son tan pequeñas que `EXPLAIN` da el mismo
+     * plan con la función y sin ella: `type=ref`, una fila leída. Así que esto
+     * no arregla una lentitud; quita una mina.
+     *
+     * La mina es real porque ya explotó al lado: `complex_entries` tenía el
+     * mismo patrón y a 1388 filas el `whereDate` costaba leerlas todas. Un
+     * incidente de seguridad al mes son 120 filas en diez años; las PQRS de
+     * una plataforma que funcione crecen bastante más rápido. El día que
+     * duela, nadie se va a acordar de mirar aquí.
+     *
+     * @template TConsulta
+     *
+     * @param  TConsulta  $consulta
+     * @return TConsulta
+     */
+    public static function elAnio(mixed $consulta, string $columna, int $anio): mixed
+    {
+        $desde = Carbon::create($anio, 1, 1)->startOfDay();
+
+        return $consulta
+            ->where($columna, '>=', $desde)
+            ->where($columna, '<', $desde->copy()->addYear());
+    }
+
+    /**
+     * Ese mes de ese año, entero.
+     *
+     * AQUÍ ESTÁ LA SEGUNDA TRAMPA de esta clase, y es peor que la de `hasta`
+     * porque el código que la tiene parece correcto.
+     *
+     * `whereMonth($columna, 11)` **a secas** no significa «noviembre de este
+     * año»: significa noviembre de TODOS los años. Los cuatro sitios que se
+     * convirtieron lo sabían y lo escribían en dos líneas —`whereMonth(...)`
+     * y `whereYear(...)` seguidas—, pero son dos líneas que hay que recordar
+     * poner juntas, y la que falta no da error: da un número más grande, y
+     * crece un año cada enero.
+     *
+     * Por eso este método **exige el año como parámetro** en vez de usar el
+     * actual por omisión. Un parámetro que no se puede olvidar es mejor que
+     * un comentario que avisa de no olvidarlo.
+     *
+     * @template TConsulta
+     *
+     * @param  TConsulta  $consulta
+     * @return TConsulta
+     */
+    public static function elMes(mixed $consulta, string $columna, int $anio, int $mes): mixed
+    {
+        $desde = Carbon::create($anio, $mes, 1)->startOfDay();
+
+        return $consulta
+            ->where($columna, '>=', $desde)
+            ->where($columna, '<', $desde->copy()->addMonth());
+    }
+
+    /**
      * La medianoche de ese día, venga como texto, como fecha o como Carbon.
      *
      * Se normaliza en un solo sitio porque los filtros de las pantallas llegan

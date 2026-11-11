@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Operacion\Pqrs;
 use App\Models\Operacion\SafetyIncident;
+use App\Support\FiltroDeFechas;
 use Illuminate\Http\Request;
 
 class IncidentesApiController extends Controller
@@ -29,12 +30,15 @@ class IncidentesApiController extends Controller
             'summary' => [
                 'abiertos' => (clone $todos)->where('state', SafetyIncident::ABIERTO)->count(),
                 'investigando' => (clone $todos)->where('state', SafetyIncident::EN_INVESTIGACION)->count(),
-                'graves_anio' => (clone $todos)->where('severity', 'grave')
-                    ->whereYear('occurred_at', now()->year)->count(),
+                'graves_anio' => FiltroDeFechas::elAnio(
+                    (clone $todos)->where('severity', 'grave'),
+                    'occurred_at', (int) now()->year,
+                )->count(),
                 // Días de incapacidad acumulados: es el número que piden la ARL
                 // y los indicadores de severidad.
-                'dias_incapacidad_anio' => (int) (clone $todos)
-                    ->whereYear('occurred_at', now()->year)->sum('days_off'),
+                'dias_incapacidad_anio' => (int) FiltroDeFechas::elAnio(
+                    (clone $todos), 'occurred_at', (int) now()->year,
+                )->sum('days_off'),
             ],
         ]);
     }

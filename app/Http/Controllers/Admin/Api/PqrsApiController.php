@@ -8,6 +8,7 @@ use App\Http\Requests\Admin\AnotarEnPqrsRequest;
 use App\Http\Requests\Admin\CrearPqrsRequest;
 use App\Models\Operacion\Pqrs;
 use App\Models\Operacion\PqrsNote;
+use App\Support\FiltroDeFechas;
 use Illuminate\Http\Request;
 
 class PqrsApiController extends Controller
@@ -49,10 +50,10 @@ class PqrsApiController extends Controller
                     ->whereNotNull('due_at')
                     ->where('due_at', '<', now())
                     ->count(),
-                'resueltos_mes' => Pqrs::where('state', '>=', Pqrs::RESUELTO)
-                    ->whereMonth('resolved_at', now()->month)
-                    ->whereYear('resolved_at', now()->year)
-                    ->count(),
+                'resueltos_mes' => FiltroDeFechas::elMes(
+                    Pqrs::where('state', '>=', Pqrs::RESUELTO),
+                    'resolved_at', (int) now()->year, (int) now()->month,
+                )->count(),
                 'plazos' => Pqrs::PLAZOS,
             ],
         ]);

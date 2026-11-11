@@ -6,8 +6,26 @@ use App\Models\Business;
 use App\Models\Product\Product;
 use App\Models\Product\ProductBusiness;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Concerns\ToCollection;
 
+/**
+ * Siembra la relacion producto-negocio desde un Excel.
+ *
+ * Lo usa `database/seeders/ProductFromExcelSeeder.php`, o sea que corre por
+ * consola y no en una peticion. La carga de catalogo que usa el tendero desde
+ * la aplicacion es otra cosa: `ImportadorDeCatalogo`, que pide el codigo del
+ * producto y no su `products_id` numerico.
+ *
+ * ESTO LLEVABA CUATRO `dump()`, y los cuatro se cambiaron por `Log::info()`.
+ * No era un riesgo de produccion —un seeder no corre en una peticion— pero
+ * `dump()` esta en la lista de prohibiciones de AGENTS.md por un motivo que
+ * aqui aplica a medias y que vale la pena no probar: si alguien llama esta
+ * clase desde una ruta, `dump()` escribe su salida ENCIMA de la respuesta y
+ * el JSON deja de ser JSON. Con `Log::info()` el mensaje se conserva, se
+ * puede leer despues de que la siembra acabe, y no depende de que alguien
+ * estuviera mirando la terminal en ese momento.
+ */
 class ProductBusinessImport implements ToCollection
 {
     public function collection(Collection $rows)
@@ -26,7 +44,7 @@ class ProductBusinessImport implements ToCollection
             $product = Product::find($productId);
 
             if (! $product) {
-                dump('❌ Producto no existe: '.$productId);
+                Log::info('❌ Producto no existe: '.$productId);
 
                 continue;
             }
@@ -35,7 +53,7 @@ class ProductBusinessImport implements ToCollection
             $business = Business::find($businessId);
 
             if (! $business) {
-                dump('❌ Business no existe: '.$businessId);
+                Log::info('❌ Business no existe: '.$businessId);
 
                 continue;
             }
@@ -46,7 +64,7 @@ class ProductBusinessImport implements ToCollection
                 ->exists();
 
             if ($exists) {
-                dump("⚠️ Ya existe relación: P={$productId} B={$businessId}");
+                Log::info("⚠️ Ya existe relación: P={$productId} B={$businessId}");
 
                 continue;
             }
@@ -59,7 +77,7 @@ class ProductBusinessImport implements ToCollection
                 'qualification' => 0,
             ]);
 
-            dump("✅ Relación creada P={$productId} B={$businessId}");
+            Log::info("✅ Relación creada P={$productId} B={$businessId}");
         }
     }
 }
