@@ -83,7 +83,7 @@ function loQueSeRegistro(string $verbo, string $ruta, int $estado = 200): string
 /* ------------------------------------------------------------------ */
 
 test('una escritura queda registrada', function () {
-    expect(loQueSeRegistro('PUT', 'v1/product/update'))->toContain('v1/product/update');
+    expect(loQueSeRegistro('PUT', 'v1/businesses/update'))->toContain('v1/businesses/update');
 });
 
 test('una lectura cualquiera NO queda registrada', function () {
@@ -92,11 +92,30 @@ test('una lectura cualquiera NO queda registrada', function () {
     expect(loQueSeRegistro('GET', 'v1/negocio/pedidos'))->toBe('');
 });
 
-test('las nueve lecturas vigiladas si quedan registradas', function () {
-    foreach (AuditApiRequest::lecturasVigiladas() as $ruta) {
-        expect(loQueSeRegistro('GET', $ruta))
-            ->toContain('"method":"GET"')
-            ->toContain('"path":"'.$ruta.'"');
+test('NINGUNA lectura queda registrada: ya no hay excepciones', function () {
+    /*
+     * ESTA PRUEBA SUSTITUYE A «las nueve lecturas vigiladas sí quedan
+     * registradas», y el cambio es el final de una historia.
+     *
+     * `WATCHED_READS` eran nueve GET con pase, puestos para poder decidir si
+     * se retiraban: sin registro, un cero en el informe solo significaba
+     * «nadie las mira». Las nueve se retiraron el 11 de noviembre de 2026
+     * con las otras 22 rutas sin llamante, así que la excepción se fue con
+     * la decisión que la justificaba.
+     *
+     * Lo que hay que fijar ahora es lo contrario de antes: que el filtro de
+     * verbo volvió a ser absoluto. Se prueba con varias lecturas y de áreas
+     * distintas, porque una sola no distingue «no hay excepciones» de «esta
+     * no era una de ellas».
+     */
+    foreach ([
+        'v1/negocio/pedidos',
+        'v1/admin/overview',
+        'v1/businesses/index',
+        'v1/domiciliaries/pedidos',
+        'v1/conjunto/resumen',
+    ] as $ruta) {
+        expect(loQueSeRegistro('GET', $ruta))->toBe('');
     }
 });
 
@@ -111,13 +130,13 @@ test('la ruta de alto volumen sigue fuera', function () {
 /* ------------------------------------------------------------------ */
 
 test('la linea tiene la forma que el informe espera', function () {
-    $linea = loQueSeRegistro('POST', 'v1/users/show', 404);
+    $linea = loQueSeRegistro('POST', 'v1/businesses/show', 404);
 
     // Los tres `preg_match` son los de scripts/rutas_sin_uso.php.
     expect($linea)->toMatch('~^\[[\d-]+ [\d:]+\] \w+\.~');
 
     preg_match('~"path":"([^"]+)"~', $linea, $p);
-    expect($p[1] ?? null)->toBe('v1/users/show');
+    expect($p[1] ?? null)->toBe('v1/businesses/show');
 
     preg_match('~"method":"(\w+)"~', $linea, $v);
     expect($v[1] ?? null)->toBe('POST');
@@ -132,33 +151,27 @@ test('el estado de la respuesta queda tal cual, no solo los exitos', function ()
      * cliente confundido, no un consumidor vivo. Sin el estado, las dos
      * cosas se cuentan igual.
      */
-    expect(loQueSeRegistro('POST', 'v1/chats/create', 422))->toContain('"status":422');
+    expect(loQueSeRegistro('POST', 'v1/ayuda', 422))->toContain('"status":422');
 });
 
 /* ------------------------------------------------------------------ */
-/* LA LISTA, CLAVADA */
+/* LA LISTA CLAVADA, Y POR QUE YA NO ESTA */
 /* ------------------------------------------------------------------ */
 
-test('las lecturas vigiladas son exactamente las nueve del documento', function () {
-    /*
-     * Prueba de clavo, no de comportamiento. `WATCHED_READS` es temporal: se
-     * puso para poder decidir sobre nueve GET y se va con la decisión. Que
-     * desaparezca una por descuido —y con ella la medición de esa ruta— es
-     * justo el error que no se nota, porque el informe la seguiría contando
-     * en cero.
-     *
-     * Cuando se retire alguna de verdad, esta lista se actualiza a mano y
-     * ahí está el punto: se actualiza A SABIENDAS.
-     */
-    expect(AuditApiRequest::lecturasVigiladas())->toBe([
-        'v1/reviews/business/all',
-        'v1/reviews/domiciliaries/all',
-        'v1/reviews/users/all',
-        'v1/reviews/user/by',
-        'v1/categories/show',
-        'v1/domiciliaries/listDomiciliary',
-        'v1/businesses/affiliations/usersBusinesses',
-        'v1/orders/pending-review',
-        'v1/paymentForms',
-    ]);
-});
+/*
+ * Aqui habia una prueba de clavo: «las lecturas vigiladas son exactamente las
+ * nueve del documento», que comparaba `WATCHED_READS` con una lista escrita a
+ * mano para que no desapareciera una por descuido y con ella la medicion de
+ * esa ruta.
+ *
+ * Decia, con estas palabras: «cuando se retire alguna de verdad, esta lista
+ * se actualiza a mano y ahi esta el punto: se actualiza A SABIENDAS». Se
+ * retiraron las nueve, el 11 de noviembre de 2026, con las otras 22 rutas sin
+ * llamante. La lista no se actualizo: se fue entera, porque la constante que
+ * vigilaba tambien se fue.
+ *
+ * Queda escrito en vez de borrado sin mas porque el mecanismo funciono: se
+ * puso con fecha de caducidad y caduco. Si mañana hace falta vigilar otra
+ * lectura, se vuelve a poner una lista temporal y otra prueba de clavo igual
+ * a esa.
+ */

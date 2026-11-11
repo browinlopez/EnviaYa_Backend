@@ -12,32 +12,6 @@ class DestacadosDeProductoController extends Controller
 {
     use ComprobarPertenencia;
 
-    // Top 10 productos mejor calificados
-    public function topRated()
-    {
-        $products = ProductBusiness::with('product')
-            ->orderBy('qualification', 'desc')
-            ->take(10)
-            ->get();
-
-        $formatted = $products->map(function ($item) {
-            return [
-                'product_id' => $item->product->products_id,
-                'name' => $item->product->name,
-                'description' => $item->product->description,
-                'category_id' => $item->product->category_id,
-                'image' => $item->product->image,
-                'state' => $item->product->state,
-                'price' => $item->price,
-                'amount' => $item->amount,
-                'qualification' => $item->qualification,
-                'business_id' => $item->busines_id,
-            ];
-        });
-
-        return response()->json($formatted);
-    }
-
     public function mostPopularProducts(MasVendidosDelNegocioRequest $request)
     {
 

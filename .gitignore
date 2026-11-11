@@ -46,3 +46,9 @@ Homestead.yaml
 Thumbs.db
 build/
 service-account*.json
+
+# Cache de Python: lo deja el arnes de scripts/arnes al importar sus modulos.
+# Estaba versionado por descuido y cambiaba en cada corrida, asi que cada
+# ejecucion ensuciaba el estado del repositorio con binarios regenerables.
+__pycache__/
+*.pyc

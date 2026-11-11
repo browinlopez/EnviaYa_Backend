@@ -19,14 +19,6 @@ use Illuminate\Support\Facades\Hash;
 
 class DomiciliaryController extends Controller
 {
-    // Listar todos los domiciliarios
-    public function listDomiciliary(Request $request)
-    {
-        $domiciliaries = Domiciliary::with('user', 'reviews')->get();
-
-        return response()->json($domiciliaries);
-    }
-
     // Listar todos los domiciliarios de un negocio
     public function listDomiciliariesByBusiness(DomiciliariosDeUnNegocioRequest $request)
     {
@@ -247,19 +239,6 @@ class DomiciliaryController extends Controller
         return $domiciliary->businesses()
             ->whereIn('business.busines_id', $negociosPropios)
             ->exists();
-    }
-
-    // Eliminar un domiciliario
-    public function deleteDomiciliary(Request $request)
-    {
-        $request->validate([
-            'domiciliary_id' => 'required|integer|exists:domiciliary,domiciliary_id',
-        ]);
-
-        $domiciliary = Domiciliary::find($request->domiciliary_id);
-        $domiciliary->delete();
-
-        return response()->json(['message' => 'Domiciliario eliminado']);
     }
 
     // Obtener un domiciliario específico

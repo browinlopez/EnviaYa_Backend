@@ -1,6 +1,6 @@
 # Estado del backend frente al estándar
 
-**Medido el 11 de noviembre de 2026.** Laravel 12.72 · 1190 pruebas en verde ·
+**Medido el 11 de noviembre de 2026.** Laravel 12.72 · 1234 pruebas en verde ·
 PHPStan y Pint limpios · 428 clases cargan · `composer audit` en cero.
 
 Doce ramas de trabajo fusionadas, y el backend **arrancado y recorrido entero**:
@@ -111,10 +111,10 @@ y sin un solo error. Ahora lo vigila `colas:comprobar --avisar`, a diario.
 | Formato (Pint) | sin correr | **limpio** | en el CI |
 | `env()` fuera de `config/` | 2 | **0** | hecho |
 | Clases que no cargan | sin comprobar | **0 de 428** | comprobador nuevo en el CI |
-| Análisis estático | no había | **PHPStan nivel 5** | línea base de 493; el CI exige código nuevo limpio |
-| Superficie de la API | sin congelar | **325 rutas** | prueba que falla si cambia verbo, URI, nombre o middleware |
+| Análisis estático | no había | **PHPStan nivel 5** | línea base de 385; el CI exige código nuevo limpio |
+| Superficie de la API | sin congelar | **294 rutas** | prueba que falla si cambia verbo, URI, nombre o middleware. Eran 325: las 31 sin llamante se retiraron el 11 de noviembre |
 | Duración de la suite | 630 s | **48 s** | las pruebas ya no llaman a un Reverb real |
-| Pruebas | 1026 | **1190** | |
+| Pruebas | 1026 | **1234** | |
 | Procesos recorridos de punta a punta | 0 | **33** | `scripts/arnes/`, contra el servidor en marcha |
 | Avisos de `composer audit` | 20 | **0** | bloqueante en el CI |
 
@@ -225,6 +225,39 @@ búsqueda **es la autorización**. El motivo está en `EXCEPCIONES.md`.
 > Sigue siendo decisión de producto. Pero ya no es a ciegas, y el argumento
 > para conservar una tiene que nombrar a un llamante concreto.
 
+> **11 de noviembre de 2026 — retiradas las 31.** `/v1` pasó de **325 a 294
+> rutas**. Nadie nombró un llamante, que era la condición.
+>
+> Con ellas se fueron los 31 métodos que las atendían —comprobado antes de
+> tocar nada que ninguno servía a otra ruta viva—, dos controladores que se
+> quedaron sin un solo método, el grupo `admin` de `categories-business` que
+> quedó vacío, y `AuditApiRequest::WATCHED_READS`, que era instrumentación
+> para esta misma decisión y caducó con ella.
+>
+> **Un falso sobresalto que conviene recordar**, porque es la trampa de
+> `route:list`: el primer informe decía que nueve de las 31 compartían su
+> método con otra ruta, lo que habría obligado a dejar nueve métodos
+> huérfanos. Eran las nueve GET, contadas dos veces porque `route:list`
+> devuelve `GET|HEAD`. Sin HEAD, los 31 métodos servían solo a rutas muertas.
+>
+> **Y una que sí tenía algo detrás:** `POST /v1/chats/create` parecía la única
+> puerta de entrada al chat. No lo era —`send-message` crea la conversación si
+> no existe, con bloqueo de filas para que dos mensajes simultáneos no abran
+> dos—, y eso explica por qué ningún cliente la llamaba. No estaba fijado por
+> ninguna prueba: el día que alguien «simplificara» `send-message` exigiendo
+> un `chat_id`, el chat se quedaba sin forma de empezar y nada se ponía rojo.
+> Ahora hay prueba, y probada rompiéndola.
+>
+> El congelado de superficie se regeneró con `CONGELAR_SUPERFICIE=1`: 313
+> líneas menos, **31 URIs fuera y ninguna añadida ni cambiada**. La línea base
+> de PHPStan encogió de 256 a 235 entradas, también sin un patrón nuevo —las
+> 42 que protestaban apuntaban a código borrado—. El arnés llamaba a cuatro de
+> las retiradas y se corrigió; sus 33 procesos siguen con salida 0.
+>
+> De paso: los `__pycache__` del arnés estaban versionados por descuido y
+> cambiaban en cada corrida, así que ensuciaban el estado del repositorio con
+> binarios regenerables. Fuera del índice y en `.gitignore`.
+
 ### `JsonResource` — la carpeta no existe
 
 Es la regla más grande que queda, y la más peligrosa. La forma de la respuesta
@@ -232,7 +265,7 @@ Es la regla más grande que queda, y la más peligrosa. La forma de la respuesta
 paneles y las versiones que no se pueden actualizar. Reescribirla a ciegas
 rompe clientes.
 
-Hoy la sostienen 1190 pruebas, el congelado de rutas y los 33 procesos del arnés. Hacerlo bien exige
+Hoy la sostienen 1234 pruebas, el congelado de rutas y los 33 procesos del arnés. Hacerlo bien exige
 endpoint por endpoint, con una prueba que fije la respuesta **antes** de
 tocarla — el mismo método que con las validaciones, multiplicado por 325.
 

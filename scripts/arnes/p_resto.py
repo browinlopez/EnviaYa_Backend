@@ -59,7 +59,7 @@ def porteria(paso):
 
 # ------------------------------------------------------------------ chat
 
-@proceso('Chat: crear, mandar, leer y el tope de mensajes')
+@proceso('Chat: el primer mensaje abre la conversacion, leer y el tope')
 def chat(paso):
     c, d, _ = pedir('POST', 'v1/chats/user-chats', rol='comprador',
                     cuerpo={'user_id': 2}, espera=200)
@@ -68,21 +68,20 @@ def chat(paso):
     tendero_uid = uno("select o.user_id from owner o join owner_busines ob "
                       "on ob.owner_id = o.owner_id where ob.busines_id = 1 limit 1",
                       'user_id')
-    c, d, _ = pedir('POST', 'v1/chats/create', rol='comprador', cuerpo={
-        'type': 'private',
-        'participants': [{'user_id': 2, 'role_id': 1},
-                         {'user_id': tendero_uid, 'role_id': 2}],
-    }, espera=[200, 201])
-    chat_id = ((d.get('chat') or d.get('data') or d) or {}).get('chat_id')
-    paso('crear/recuperar conversacion -> %s (id %s)' % (c, chat_id))
-    if not chat_id:
-        raise Fallo('no devolvio chat_id: ' + str(d)[:150])
 
+    # NO SE CREA EL CHAT APARTE, y eso es el cambio del 11 de noviembre de
+    # 2026: `v1/chats/create` se retiro con las otras 30 rutas sin llamante, y
+    # no se pierde nada porque `send-message` ya buscaba el chat privado entre
+    # los dos y lo creaba si no existia. Era justo por eso que ningun cliente
+    # llamaba nunca a `create`: sobraba desde el principio.
     c, d, _ = pedir('POST', 'v1/chats/send-message', rol='comprador', cuerpo={
-        'chat_id': chat_id, 'user_id': 2, 'recipient_id': tendero_uid,
+        'user_id': 2, 'recipient_id': tendero_uid,
         'content': 'mensaje del arnes ' + SELLO,
     }, espera=[200, 201])
-    paso('mandar mensaje -> %s' % c)
+    chat_id = (d or {}).get('chat_id')
+    paso('mandar mensaje -> %s (abre la conversacion %s)' % (c, chat_id))
+    if not chat_id:
+        raise Fallo('send-message no devolvio chat_id: ' + str(d)[:150])
 
     c, d, _ = pedir('POST', 'v1/chats/messages', rol='comprador',
                     cuerpo={'chat_id': chat_id}, espera=200)
@@ -91,7 +90,7 @@ def chat(paso):
 
     largo = 'x' * 4000
     c, d, _ = pedir('POST', 'v1/chats/send-message', rol='comprador', cuerpo={
-        'chat_id': chat_id, 'user_id': 2, 'recipient_id': tendero_uid,
+        'user_id': 2, 'recipient_id': tendero_uid,
         'content': largo,
     })
     if c == 422:
@@ -125,9 +124,6 @@ def avisos(paso):
 
 @proceso('Resenas de negocio')
 def resenas(paso):
-    c, d, _ = pedir('GET', 'v1/reviews/business/all', rol='comprador', espera=200)
-    paso('todas -> %s' % c)
-
     c, d, _ = pedir('POST', 'v1/reviews/business/by', rol='comprador',
                     cuerpo={'busines_id': 1}, espera=[200, 422])
     paso('las del negocio 1 -> %s' % c)
@@ -235,9 +231,6 @@ def bold(paso):
         raise Fallo('bancos PSE -> %s: %s' % (c, json.dumps(d)[:200]))
     n = len(d if isinstance(d, list) else (d.get('data') or d.get('banks') or []))
     paso('bancos PSE -> %s, %s bancos, %.0f ms' % (c, n, ms))
-
-    c, d, ms = pedir('GET', 'v1/paymentForms', rol='comprador', espera=200)
-    paso('formas de pago -> %s en %.0f ms' % (c, ms))
 
     c, d, ms = pedir('GET', 'v1/paymentMethods', rol='comprador', espera=200)
     paso('metodos de pago -> %s en %.0f ms' % (c, ms))

@@ -237,18 +237,12 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Models\\Business\\BusinessUserAffiliation\:\:\$user\.$#'
 			identifier: property.notFound
-			count: 28
+			count: 17
 			path: app/Http/Controllers/Business/AffiliationController.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\User\:\:\$buyer\.$#'
 			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Business/AffiliationController.php
-
-		-
-			message: '#^Relation ''business'' is not found in App\\Models\\Business\\BusinessUserAffiliation model\.$#'
-			identifier: larastan.relationExistence
 			count: 1
 			path: app/Http/Controllers/Business/AffiliationController.php
 
@@ -261,7 +255,7 @@ parameters:
 		-
 			message: '#^Relation ''user'' is not found in App\\Models\\Business\\BusinessUserAffiliation model\.$#'
 			identifier: larastan.relationExistence
-			count: 2
+			count: 1
 			path: app/Http/Controllers/Business/AffiliationController.php
 
 		-
@@ -399,7 +393,7 @@ parameters:
 		-
 			message: '#^Relation ''participants'' is not found in App\\Models\\Chat\\Chat model\.$#'
 			identifier: larastan.relationExistence
-			count: 9
+			count: 8
 			path: app/Http/Controllers/Chat/ChatController.php
 
 		-
@@ -465,13 +459,13 @@ parameters:
 		-
 			message: '#^Relation ''reviews'' is not found in App\\Models\\Domiciliary model\.$#'
 			identifier: larastan.relationExistence
-			count: 2
+			count: 1
 			path: app/Http/Controllers/Domiciliary/DomiciliaryController.php
 
 		-
 			message: '#^Relation ''user'' is not found in App\\Models\\Domiciliary model\.$#'
 			identifier: larastan.relationExistence
-			count: 2
+			count: 1
 			path: app/Http/Controllers/Domiciliary/DomiciliaryController.php
 
 		-
@@ -485,30 +479,6 @@ parameters:
 			identifier: larastan.relationExistence
 			count: 1
 			path: app/Http/Controllers/Domiciliary/PedidosDelDomiciliarioController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Domiciliary\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Domiciliary\>\:\:\$businesses\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Domiciliary/VinculosDelDomiciliarioController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Domiciliary\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Domiciliary\>\:\:\$user\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Domiciliary/VinculosDelDomiciliarioController.php
-
-		-
-			message: '#^Relation ''businesses'' is not found in App\\Models\\Domiciliary model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/Domiciliary/VinculosDelDomiciliarioController.php
-
-		-
-			message: '#^Relation ''user'' is not found in App\\Models\\Domiciliary model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/Domiciliary/VinculosDelDomiciliarioController.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\Domiciliary\:\:\$user\.$#'
@@ -807,37 +777,37 @@ parameters:
 		-
 			message: '#^Relation ''address'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
 			identifier: larastan.relationExistence
-			count: 3
+			count: 2
 			path: app/Http/Controllers/Order/ConsultaDePedidosController.php
 
 		-
 			message: '#^Relation ''business'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
 			identifier: larastan.relationExistence
-			count: 2
+			count: 1
 			path: app/Http/Controllers/Order/ConsultaDePedidosController.php
 
 		-
 			message: '#^Relation ''details'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
 			identifier: larastan.relationExistence
-			count: 2
+			count: 1
 			path: app/Http/Controllers/Order/ConsultaDePedidosController.php
 
 		-
 			message: '#^Relation ''domiciliary'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
 			identifier: larastan.relationExistence
-			count: 2
+			count: 1
 			path: app/Http/Controllers/Order/ConsultaDePedidosController.php
 
 		-
 			message: '#^Relation ''payments'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
 			identifier: larastan.relationExistence
-			count: 2
+			count: 1
 			path: app/Http/Controllers/Order/ConsultaDePedidosController.php
 
 		-
 			message: '#^Relation ''promotions'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
 			identifier: larastan.relationExistence
-			count: 2
+			count: 1
 			path: app/Http/Controllers/Order/ConsultaDePedidosController.php
 
 		-
@@ -848,12 +818,6 @@ parameters:
 
 		-
 			message: '#^Relation ''forms'' is not found in App\\Models\\Payment\\PaymentMethods model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/Order/MediosDePagoController.php
-
-		-
-			message: '#^Relation ''methods'' is not found in App\\Models\\Payment\\PaymentForms model\.$#'
 			identifier: larastan.relationExistence
 			count: 1
 			path: app/Http/Controllers/Order/MediosDePagoController.php
@@ -979,12 +943,6 @@ parameters:
 			path: app/Http/Controllers/Product/DestacadosDeProductoController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\Product\\ProductBusiness\:\:\$product\.$#'
-			identifier: property.notFound
-			count: 6
-			path: app/Http/Controllers/Product/DestacadosDeProductoController.php
-
-		-
 			message: '#^Relation ''order'' is not found in App\\Models\\Order\\OrdersSalesDetail model\.$#'
 			identifier: larastan.relationExistence
 			count: 1
@@ -997,44 +955,8 @@ parameters:
 			path: app/Http/Controllers/Product/DestacadosDeProductoController.php
 
 		-
-			message: '#^Relation ''product'' is not found in App\\Models\\Product\\ProductBusiness model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/Product/DestacadosDeProductoController.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\Business\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Business\>\:\:\$products\.$#'
 			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Product/ProductController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Product\\ProductBusiness\:\:\$business\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Product/ProductController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Product\\Product\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Product\\Product\>\:\:\$businesses\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Http/Controllers/Product/ProductController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Product\\Product\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Product\\Product\>\:\:\$category\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Product/ProductController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$owner\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Product/ProductController.php
-
-		-
-			message: '#^Relation ''business'' is not found in App\\Models\\Product\\ProductBusiness model\.$#'
-			identifier: larastan.relationExistence
 			count: 1
 			path: app/Http/Controllers/Product/ProductController.php
 
@@ -1047,74 +969,50 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Models\\Reviews\\DomiciliaryReview\:\:\$buyer\.$#'
 			identifier: property.notFound
-			count: 4
+			count: 1
 			path: app/Http/Controllers/Review/ResenasDeDomiciliarioController.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\Reviews\\DomiciliaryReview\:\:\$domiciliary\.$#'
 			identifier: property.notFound
-			count: 16
+			count: 8
 			path: app/Http/Controllers/Review/ResenasDeDomiciliarioController.php
 
 		-
 			message: '#^Relation ''buyer'' is not found in App\\Models\\Reviews\\DomiciliaryReview model\.$#'
 			identifier: larastan.relationExistence
-			count: 2
+			count: 1
 			path: app/Http/Controllers/Review/ResenasDeDomiciliarioController.php
 
 		-
 			message: '#^Relation ''domiciliary'' is not found in App\\Models\\Reviews\\DomiciliaryReview model\.$#'
 			identifier: larastan.relationExistence
-			count: 2
+			count: 1
 			path: app/Http/Controllers/Review/ResenasDeDomiciliarioController.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\Reviews\\BusinessReview\:\:\$business\.$#'
 			identifier: property.notFound
-			count: 11
+			count: 1
 			path: app/Http/Controllers/Review/ResenasDeNegocioController.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\Reviews\\BusinessReview\:\:\$buyer\.$#'
 			identifier: property.notFound
-			count: 2
+			count: 1
 			path: app/Http/Controllers/Review/ResenasDeNegocioController.php
 
 		-
 			message: '#^Relation ''business'' is not found in App\\Models\\Reviews\\BusinessReview model\.$#'
 			identifier: larastan.relationExistence
-			count: 2
+			count: 1
 			path: app/Http/Controllers/Review/ResenasDeNegocioController.php
 
 		-
 			message: '#^Relation ''buyer'' is not found in App\\Models\\Reviews\\BusinessReview model\.$#'
 			identifier: larastan.relationExistence
-			count: 2
+			count: 1
 			path: app/Http/Controllers/Review/ResenasDeNegocioController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Reviews\\UserReview\:\:\$domiciliary\.$#'
-			identifier: property.notFound
-			count: 10
-			path: app/Http/Controllers/Review/ResenasDeUsuarioController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Reviews\\UserReview\:\:\$user\.$#'
-			identifier: property.notFound
-			count: 8
-			path: app/Http/Controllers/Review/ResenasDeUsuarioController.php
-
-		-
-			message: '#^Relation ''domiciliary'' is not found in App\\Models\\Reviews\\UserReview model\.$#'
-			identifier: larastan.relationExistence
-			count: 2
-			path: app/Http/Controllers/Review/ResenasDeUsuarioController.php
-
-		-
-			message: '#^Relation ''user'' is not found in App\\Models\\Reviews\\UserReview model\.$#'
-			identifier: larastan.relationExistence
-			count: 2
-			path: app/Http/Controllers/Review/ResenasDeUsuarioController.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\User\:\:\$buyer\.$#'
@@ -1165,12 +1063,6 @@ parameters:
 			path: app/Http/Controllers/User/DireccionesController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\Buyer\\Buyer\:\:\$user\.$#'
-			identifier: property.notFound
-			count: 8
-			path: app/Http/Controllers/User/UserController.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\User\:\:\$addresses\.$#'
 			identifier: property.notFound
 			count: 1
@@ -1178,18 +1070,6 @@ parameters:
 
 		-
 			message: '#^Access to an undefined property App\\Models\\User\:\:\$buyer\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/User/UserController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\User\>\:\:\$addresses\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/User/UserController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\User\>\:\:\$buyer\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Http/Controllers/User/UserController.php
@@ -1203,17 +1083,11 @@ parameters:
 		-
 			message: '#^Relation ''addresses'' is not found in App\\Models\\User model\.$#'
 			identifier: larastan.relationExistence
-			count: 2
+			count: 1
 			path: app/Http/Controllers/User/UserController.php
 
 		-
 			message: '#^Relation ''buyer'' is not found in App\\Models\\User model\.$#'
-			identifier: larastan.relationExistence
-			count: 2
-			path: app/Http/Controllers/User/UserController.php
-
-		-
-			message: '#^Relation ''user'' is not found in App\\Models\\Buyer\\Buyer model\.$#'
 			identifier: larastan.relationExistence
 			count: 1
 			path: app/Http/Controllers/User/UserController.php

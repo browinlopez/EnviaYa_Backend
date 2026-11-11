@@ -9,7 +9,6 @@ use App\Http\Requests\User\CambiarContrasenaRequest;
 use App\Http\Requests\User\DesactivarCuentaRequest;
 use App\Models\Buyer\Buyer;
 use App\Models\User;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
@@ -52,48 +51,6 @@ class UserController extends Controller
                 'addresses' => $user->addresses,
             ];
         });
-
-        return response()->json($formatted);
-    }
-
-    // Detalle de un usuario
-    public function show(Request $request)
-    {
-        $request->validate([
-            'user_id' => 'required|integer|exists:user,user_id',
-        ]);
-
-        $user = User::with([
-            'buyer.complexes.residentialComplex',
-            'addresses',
-        ])
-            ->where('rol', 4)
-            ->findOrFail($request->user_id);
-
-        $formatted = [
-            'user_id' => $user->user_id,
-            'name' => $user->name,
-            'email' => $user->email,
-            'phone' => $user->phone,
-            'address' => $user->address,
-            'rol' => $user->rol,
-            'qualification' => $user->buyer ? $user->buyer->qualification : null,
-            'state' => $user->state,
-
-            // Buyer directo (sin arreglo)
-            'buyer_id' => $user->buyer ? $user->buyer->buyer_id : null,
-
-            // Complexes simplificado (id y nombre del residencial)
-            'complexes' => $user->buyer && $user->buyer->complexes ? $user->buyer->complexes->map(function ($complex) {
-                return [
-                    'id' => $complex->id,
-                    'name' => $complex->residentialComplex ? $complex->residentialComplex->name : null,
-                ];
-            }) : [],
-
-            // Addresses completo
-            'addresses' => $user->addresses,
-        ];
 
         return response()->json($formatted);
     }
@@ -221,41 +178,6 @@ class UserController extends Controller
         }
 
         return response()->json(['message' => 'El usuario ya está desactivado'], 200);
-    }
-
-    // Obtener perfil buyer del usuario
-    public function getBuyerProfile(Request $request)
-    {
-        $request->validate([
-            'user_id' => 'required|integer|exists:user,user_id',
-        ]);
-
-        $buyer = Buyer::with([
-            'user:user_id,name,email,phone,address,rol,qualification,state',
-        ])->where('user_id', $request->user_id)->first();
-
-        if (! $buyer) {
-            return response()->json(['message' => 'El usuario no tiene perfil comprador'], 404);
-        }
-
-        $response = [
-            'buyer_id' => $buyer->buyer_id,
-            'user_id' => $buyer->user_id,
-            'qualification' => $buyer->qualification,
-            'state' => $buyer->state,
-            'user' => [
-                'user_id' => $buyer->user->user_id,
-                'name' => $buyer->user->name,
-                'email' => $buyer->user->email,
-                'phone' => $buyer->user->phone,
-                'address' => $buyer->user->address,
-                'rol' => $buyer->user->rol,
-                'qualification' => $buyer->user->qualification,
-                'state' => $buyer->user->state,
-            ],
-        ];
-
-        return response()->json($response);
     }
 
     // ----------------------------

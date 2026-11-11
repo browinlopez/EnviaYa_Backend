@@ -59,7 +59,6 @@ use App\Http\Controllers\Domiciliary\ContratoDelDomiciliarioController;
 use App\Http\Controllers\Domiciliary\DomiciliaryController;
 use App\Http\Controllers\Domiciliary\IngresosDelDomiciliarioController;
 use App\Http\Controllers\Domiciliary\PedidosDelDomiciliarioController;
-use App\Http\Controllers\Domiciliary\VinculosDelDomiciliarioController;
 use App\Http\Controllers\ErroresDeLaAppController;
 use App\Http\Controllers\LandingRequestController;
 use App\Http\Controllers\Marketing\AdsController;
@@ -96,7 +95,6 @@ use App\Http\Controllers\Product\EsquemaDeProductoController;
 use App\Http\Controllers\Product\ProductController;
 use App\Http\Controllers\Review\ResenasDeDomiciliarioController;
 use App\Http\Controllers\Review\ResenasDeNegocioController;
-use App\Http\Controllers\Review\ResenasDeUsuarioController;
 use App\Http\Controllers\Review\ReviewController;
 use App\Http\Controllers\Soporte\AyudaDesdeLaAppController;
 use App\Http\Controllers\User\DireccionesController;
@@ -380,7 +378,6 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         // Listar usuarios
         Route::get('/', [UserController::class, 'index']);
         // Detalle usuario
-        Route::post('/show', [UserController::class, 'show']);
         // Actualizar el perfil propio (solo datos de contacto)
         Route::put('/update', [UserController::class, 'update']);
         // Cambiar la contraseña propia (exige la actual)
@@ -395,7 +392,6 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         // controlador: el identificador solo no basta para autorizar.
         Route::delete('/addresses/{id}', [DireccionesController::class, 'deleteAddress']);
         // Perfil buyer
-        Route::post('/buyer', [UserController::class, 'getBuyerProfile']);
     });
 
     // Productos tendero
@@ -404,9 +400,6 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::get('schema', [EsquemaDeProductoController::class, 'schema']);
         Route::post('index', [ProductController::class, 'index']);
         Route::post('create', [ProductController::class, 'store']);
-        Route::post('show', [ProductController::class, 'show']);
-        Route::put('update', [ProductController::class, 'update']);
-        Route::post('top-products', [DestacadosDeProductoController::class, 'topRated']);
         Route::post('topProductsBusiness', [DestacadosDeProductoController::class, 'mostPopularProducts']);
     });
 
@@ -422,8 +415,6 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
      * formulario de un producto, y no dicen nada de nadie.
      */
     Route::prefix('categories')->group(function () {
-        Route::get('/show', [CategoryController::class, 'show']);
-
         Route::middleware('admin')->group(function () {
             Route::post('/create', [CategoryController::class, 'store']);
             Route::put('/update', [CategoryController::class, 'update']);
@@ -431,15 +422,17 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         });
     });
 
+    /*
+     * De `categories-business` solo queda la lectura.
+     *
+     * Las cuatro escrituras —crear, renombrar, borrar y ver una— se
+     * retiraron el 11 de noviembre de 2026: ningun cliente las llamaba, ni
+     * en su codigo de hoy ni en los 202 commits de la historia de la app.
+     * El grupo `admin` que las envolvia se fue con ellas, porque un grupo de
+     * middleware sin rutas dentro no protege nada.
+     */
     Route::prefix('categories-business')->group(function () {
         Route::get('index', [CategoryBusinessController::class, 'index']);
-        Route::post('show', [CategoryBusinessController::class, 'show']);
-
-        Route::middleware('admin')->group(function () {
-            Route::post('store', [CategoryBusinessController::class, 'store']);
-            Route::post('update', [CategoryBusinessController::class, 'update']);
-            Route::post('destroy', [CategoryBusinessController::class, 'destroy']);
-        });
     });
 
     // Ordenes
@@ -464,7 +457,6 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::put('{id}/cancel', [OrderController::class, 'cancel']);
         Route::post('geolocation', [GeolocalizacionDePedidoController::class, 'storeGeolocation']);
         Route::get('geolocation/latest', [ConsultaDePedidosController::class, 'latest']);
-        Route::get('/pending-review', [ConsultaDePedidosController::class, 'ordersPendingReview']);
 
         /*
          * EL COMPROBANTE DE MI PEDIDO.
@@ -478,11 +470,9 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
     });
 
     Route::get('paymentMethods', [MediosDePagoController::class, 'paymentMethods']); // Listar metodos de pago
-    Route::get('paymentForms', [MediosDePagoController::class, 'paymentForms']); // Listar formas de pago
 
     // Chat
     Route::prefix('chats')->group(function () {
-        Route::post('/create', [ChatController::class, 'createChat']);     // crear chat
         Route::post('/user-chats', [ChatController::class, 'getUserChats']); // listar chats de un user
         Route::post('/messages', [ChatController::class, 'getMessages']);   // listar mensajes
         Route::post('/updateMessage', [ChatController::class, 'updateMessage']); // Actualizar mensaje estado
@@ -503,7 +493,6 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
             Route::post('/getAffiliatedUsers', [AffiliationController::class, 'getAffiliatedUsers']);
             Route::post('/DesafiliationUser', [AffiliationController::class, 'DesafiliationUser']);
             Route::post('toggleBusinesses', [AffiliationController::class, 'toggle']);
-            Route::get('usersBusinesses', [AffiliationController::class, 'listUsers']);
             /*
              * Buscar a una persona por su telefono es cosa de quien puede
              * afiliarla: el tendero. Estaba abierto a cualquier cuenta
@@ -789,7 +778,6 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
 
     // Domiciliario
     Route::prefix('domiciliaries')->group(function () {
-        Route::get('/listDomiciliary', [DomiciliaryController::class, 'listDomiciliary']);      // Listar todos
         Route::get('/listDomiciliariesByBusiness', [DomiciliaryController::class, 'listDomiciliariesByBusiness']);      // Listar todos
         // Dar de alta a un domiciliario ata una persona a la plataforma
         // —contrato, documentos, cuenta para cobrar—: lo hace el equipo.
@@ -797,9 +785,6 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
             ->middleware('admin');
         Route::post('/showDomiciliary', [DomiciliaryController::class, 'showDomiciliary']);      // Obtener uno
         Route::post('/updateDomiciliary', [DomiciliaryController::class, 'updateDomiciliary']);  // Actualizar
-        Route::post('/deleteDomiciliary', [DomiciliaryController::class, 'deleteDomiciliary']);  // Eliminar
-        Route::post('/assignToBusiness', [VinculosDelDomiciliarioController::class, 'assignToBusiness']);
-        Route::post('/listbussiness', [VinculosDelDomiciliarioController::class, 'listBusinessesByDomiciliary']);
         Route::post('/incomeDomiciliary', [IngresosDelDomiciliarioController::class, 'incomeDomiciliary']);
 
         /*
@@ -868,24 +853,11 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
 
         // Negocios
         // (business/by es público, está arriba en la zona de catálogo)
-        Route::get('business/all', [ResenasDeNegocioController::class, 'listBusinessReviews']);
-        Route::post('business/create', [ResenasDeNegocioController::class, 'createBusinessReview']);
-        Route::put('business/update', [ResenasDeNegocioController::class, 'updateBusinessReview']);
-        Route::delete('business/delete', [ResenasDeNegocioController::class, 'deleteBusinessReview']);
 
         // Domiciliarios
-        Route::get('domiciliaries/all', [ResenasDeDomiciliarioController::class, 'listDomiciliaryReviews']);
         Route::post('domiciliary/by', [ResenasDeDomiciliarioController::class, 'listReviewsByDomiciliary']);
-        Route::post('domiciliary/create', [ResenasDeDomiciliarioController::class, 'createDomiciliaryReview']);
-        Route::put('domiciliary/update', [ResenasDeDomiciliarioController::class, 'updateDomiciliaryReview']);
-        Route::delete('domiciliary/delete', [ResenasDeDomiciliarioController::class, 'deleteDomiciliaryReview']);
 
         // Usuarios
-        Route::get('users/all', [ResenasDeUsuarioController::class, 'listAllUserReviews']);
-        Route::get('user/by', [ResenasDeUsuarioController::class, 'listUserReviewsByUser']);
-        Route::post('user/create', [ResenasDeUsuarioController::class, 'createUserReview']);
-        Route::put('user/update', [ResenasDeUsuarioController::class, 'updateUserReview']);
-        Route::delete('user/delete', [ResenasDeUsuarioController::class, 'deleteUserReview']);
     });
 
     /*
