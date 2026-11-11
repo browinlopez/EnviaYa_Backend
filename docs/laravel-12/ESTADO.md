@@ -181,10 +181,31 @@ prueba de más — añadir un campo que venga de una relación sin añadirla al
 `with` es un cambio de una línea, y es exactamente lo que había pasado en el
 tablero. Probada rota: quitando `municipality` del `with`, se pone roja.
 
-De paso: el parámetro `ligero` cuesta **las mismas 5 consultas** que la
-respuesta completa. No ahorra base de datos, ahorra serialización y tamaño de
-respuesta. Si alguna vez hace falta que ahorre consultas, hay que hacer
+De paso salió que el parámetro `light` costaba **las mismas 5 consultas** que
+la respuesta completa, y ahí se quedó anotado que el remedio era hacer
 condicional el `with` y no solo la salida.
+
+**Hecho.** `index()` precargaba `reviews` y `products` siempre, así que con
+`light=1` —que es lo que pide la app al arrancar— el servidor cargaba todos
+los productos activos y todas las reseñas de cada tienda del catálogo, los
+recorría, y los tiraba al serializar, porque la respuesta ligera ya devuelve
+`[]` en los dos campos. Medido con seis tiendas: **5 consultas antes, 3
+después**; la completa sigue en 5.
+
+Lo que cuesta no son las dos consultas —son dos, no dos por tienda— sino lo
+que traen: con cien tiendas de cien productos, `light` hidrataba diez mil
+modelos de Eloquent para no enseñar ninguno. Y es la llamada de más tráfico
+de la plataforma.
+
+**`indexByQualification()` ya lo hacía así**, y ahí estaba la pista: el mismo
+parámetro ahorraba trabajo en un endpoint y no en el otro.
+
+La prueba **no fija el número**, fija la desigualdad: 3 puede subir a 4 el día
+que la vitrina necesite otra relación, y eso está bien; lo que no puede volver
+es que pedir menos cueste lo mismo. Con su contraparte, que comprueba que el
+modo ligero sigue devolviendo `[]` y el completo sigue trayendo contenido —
+ahorrar dejando de cargar algo solo vale si eso no se estaba enseñando.
+Probada rota: devolviendo el `with` a incondicional, se pone roja.
 
 ---
 

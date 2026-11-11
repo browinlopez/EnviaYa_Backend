@@ -65,10 +65,34 @@ class ConsultaDeNegociosController extends Controller
          * app. Se filtra al cargar la relación y no al mapear, para no traerlos
          * siquiera.
          */
-        $businesses = Business::with([
-            'owners', 'municipality', 'reviews',
-            'products' => fn ($q) => $q->where('products.state', 1),
-        ])
+        /*
+         * EN MODO LIGERO NO SE CARGAN LAS RESEÑAS NI LOS PRODUCTOS.
+         *
+         * `light=1` es lo que pide la app al arrancar, y su respuesta ya
+         * devuelve `'products' => []` y `'reviews' => []`. Pero el `with` era
+         * incondicional: el servidor cargaba TODOS los productos activos y
+         * TODAS las reseñas de cada tienda del catálogo, los recorría, y los
+         * tiraba al serializar.
+         *
+         * Medido con seis tiendas: 5 consultas en los dos modos. Lo que cuesta
+         * no son las dos consultas de más —son dos, no dos por tienda— sino lo
+         * que traen: con cien tiendas de cien productos, `light` hidrataba
+         * diez mil modelos de Eloquent para no enseñar ninguno. Y es la
+         * llamada de más tráfico de la plataforma.
+         *
+         * `indexByQualification()` ya lo hacía así. Esto era la asimetría: el
+         * mismo parámetro ahorraba trabajo en un endpoint y no en el otro.
+         */
+        $ligero = $request->boolean('light');
+
+        $relaciones = ['owners', 'municipality'];
+
+        if (! $ligero) {
+            $relaciones['reviews'] = fn ($q) => $q;
+            $relaciones['products'] = fn ($q) => $q->where('products.state', 1);
+        }
+
+        $businesses = Business::with($relaciones)
             ->where('state', 1)
             /*
              * Y tampoco la que está en pausa.
@@ -109,9 +133,10 @@ class ConsultaDeNegociosController extends Controller
          * nadie la volvio a poner bien. Va OPCIONAL, como alli: las versiones
          * de la app ya instaladas siguen recibiendo el catalogo y no se quedan
          * con la ficha vacia.
+         *
+         * Se lee arriba, antes de armar la consulta, porque ahora tambien
+         * decide QUE SE CARGA y no solo que se serializa.
          */
-        $ligero = $request->boolean('light');
-
         $formatted = $businesses->map(function ($business) use ($affiliatedIds, $userId, $lat, $lon, $ligero) {
             $isAffiliated = in_array($business->busines_id, $affiliatedIds);
 

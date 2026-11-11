@@ -126,7 +126,7 @@ function vitrinaCon(int $cuantas): void
  */
 function consultasDeLaVitrina(bool $ligero): int
 {
-    $parametros = $ligero ? ['ligero' => 1] : [];
+    $parametros = $ligero ? ['light' => 1] : [];
 
     test()->getJson('/v1/businesses/index?'.http_build_query($parametros))->assertOk();
 
@@ -184,5 +184,56 @@ test('la vitrina devuelve las seis tiendas con su municipio y su dueño', functi
         expect($t['municipality'])->not->toBeNull();
         expect($t['municipality']['name'])->not->toBeEmpty();
         expect($t['owner_count'])->toBe(1);
+    }
+});
+
+test('el modo ligero cuesta MENOS consultas que la respuesta completa', function () {
+    /*
+     * Y no lo costaba. El `with` de `index()` era incondicional: con
+     * `light=1` el servidor cargaba todos los productos activos y todas las
+     * reseñas de cada tienda del catálogo, los recorría, y los tiraba al
+     * serializar — porque la respuesta ligera ya devuelve `[]` en los dos
+     * campos.
+     *
+     * Medido con seis tiendas: 5 consultas en los dos modos. Después: 3 y 5.
+     *
+     * NO SE FIJA EL NÚMERO, se fija la DESIGUALDAD. Tres puede subir a cuatro
+     * el día que la vitrina necesite otra relación, y eso está bien; lo que no
+     * puede volver es que pedir menos cueste lo mismo.
+     *
+     * `indexByQualification()` ya lo hacía así, y ahí estaba la pista: el
+     * mismo parámetro ahorraba trabajo en un endpoint y no en el otro.
+     */
+    vitrinaCon(6);
+
+    expect(consultasDeLaVitrina(true))->toBeLessThan(consultasDeLaVitrina(false));
+});
+
+test('y el modo ligero sigue devolviendo lo mismo que antes: nada de catalogo', function () {
+    /*
+     * LA CONTRAPARTE DE LA DE ARRIBA, y la que hace que el ahorro sea seguro.
+     *
+     * Ahorrar consultas dejando de cargar algo solo vale si eso no se estaba
+     * enseñando. Así que: con `light=1`, productos y reseñas vacíos —como
+     * siempre—; sin él, con contenido. Si alguien «optimiza» el modo completo
+     * quitándole el `with`, esta se pone roja.
+     */
+    vitrinaCon(2);
+
+    // La respuesta va envuelta: `{user_authenticated, hay_cercanos, businesses}`.
+    $ligera = test()->getJson('/v1/businesses/index?light=1')->assertOk()->json('businesses');
+    $completa = test()->getJson('/v1/businesses/index')->assertOk()->json('businesses');
+
+    expect($ligera)->toHaveCount(2);
+    expect($completa)->toHaveCount(2);
+
+    foreach ($ligera as $t) {
+        expect($t['products'])->toBe([]);
+        expect($t['reviews'])->toBe([]);
+    }
+
+    foreach ($completa as $t) {
+        expect($t['products'])->not->toBe([]);
+        expect($t['reviews'])->not->toBe([]);
     }
 });
