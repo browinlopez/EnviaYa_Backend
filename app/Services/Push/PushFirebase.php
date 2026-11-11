@@ -139,6 +139,7 @@ class PushFirebase implements TransportePush
     ): ResultadoPush {
         try {
             $r = Http::withToken($acceso)
+                ->connectTimeout(5)
                 ->timeout(15)
                 ->post($url, [
                     'message' => [
@@ -219,7 +220,7 @@ class PushFirebase implements TransportePush
                 return null;
             }
 
-            $r = Http::asForm()->timeout(15)->post('https://oauth2.googleapis.com/token', [
+            $r = Http::asForm()->connectTimeout(5)->timeout(15)->post('https://oauth2.googleapis.com/token', [
                 'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
                 'assertion' => $jwt,
             ]);

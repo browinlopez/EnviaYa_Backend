@@ -145,6 +145,7 @@ class PushApns implements TransportePush
                 'apns-push-type' => 'alert',
                 'apns-priority' => '10',
             ])
+                ->connectTimeout(5)
                 ->timeout(15)
                 /*
                  * APNs SOLO habla HTTP/2 y rechaza la conexión sin decir por

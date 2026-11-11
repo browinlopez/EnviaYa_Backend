@@ -67,7 +67,8 @@ class FuenteExternaDeProductos
     private function consultar(string $barcode): ?array
     {
         try {
-            $r = Http::timeout(4)
+            $r = Http::connectTimeout(2)
+                ->timeout(4)
                 ->withHeaders([
                     // La fuente pide identificarse; sin esto limitan por abuso.
                     'User-Agent' => 'VeciPaYa/1.0 (gerencia@vecipaya.com)',
