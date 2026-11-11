@@ -109,7 +109,17 @@ function pedidoCompletoParaLaForma(): array
     return ['escenario' => $e, 'order_id' => $id, 'respuesta' => $r];
 }
 
-function formaCongelada(string $clave, array $viva): array
+/**
+ * La forma congelada de una respuesta, y su CODIGO DE ESTADO.
+ *
+ * El estado se guarda junto a la forma, y no se deduce del verbo, porque
+ * deducirlo sale mal: `POST /v1/orders/business` es un POST y devuelve 200,
+ * porque es una LECTURA que manda el filtro en el cuerpo. El generador de
+ * OpenAPI daba por hecho que todo POST contesta 201 y por eso el contrato
+ * afirmaba un codigo que nadie habia medido. Lo encontro la prueba de punta a
+ * punta de `ContratoOpenApiTest`.
+ */
+function formaCongelada(string $clave, array $viva, ?int $estado = null): array
 {
     $ruta = __DIR__.'/forma-de-las-respuestas.json';
 
@@ -118,7 +128,7 @@ function formaCongelada(string $clave, array $viva): array
         : [];
 
     if (env('CONGELAR_FORMA')) {
-        $todo[$clave] = $viva;
+        $todo[$clave] = ['estado' => $estado, 'forma' => $viva];
         ksort($todo);
         file_put_contents(
             $ruta,
@@ -138,7 +148,13 @@ function formaCongelada(string $clave, array $viva): array
         "No hay forma congelada para «{$clave}». Si es nueva: CONGELAR_FORMA=1",
     );
 
-    return (array) $todo[$clave];
+    // El estado tambien se comprueba: una respuesta con la misma forma y otro
+    // codigo es otro contrato.
+    if ($estado !== null) {
+        expect((int) ($todo[$clave]['estado'] ?? 0))->toBe($estado);
+    }
+
+    return (array) ($todo[$clave]['forma'] ?? []);
 }
 
 it('crear un pedido devuelve la forma congelada', function () {
@@ -147,7 +163,7 @@ it('crear un pedido devuelve la forma congelada', function () {
 
     $viva = formaDe($x['respuesta']->json());
 
-    expect($viva)->toBe(formaCongelada('POST /v1/orders/orders', $viva));
+    expect($viva)->toBe(formaCongelada('POST /v1/orders/orders', $viva, 201));
 });
 
 it('la lista del tendero devuelve la forma congelada', function () {
@@ -183,7 +199,7 @@ it('la lista del tendero devuelve la forma congelada', function () {
 
     $viva = formaDe($r->json());
 
-    expect($viva)->toBe(formaCongelada('POST /v1/orders/business', $viva));
+    expect($viva)->toBe(formaCongelada('POST /v1/orders/business', $viva, 200));
 });
 
 it('cancelar un pedido devuelve la forma congelada', function () {
@@ -200,7 +216,7 @@ it('cancelar un pedido devuelve la forma congelada', function () {
 
     $viva = formaDe($r->json());
 
-    expect($viva)->toBe(formaCongelada('PUT /v1/orders/{id}/cancel', $viva));
+    expect($viva)->toBe(formaCongelada('PUT /v1/orders/{id}/cancel', $viva, 200));
 });
 
 it('la forma congelada cubre los campos que mas duelen', function () {
@@ -229,7 +245,7 @@ it('la forma congelada cubre los campos que mas duelen', function () {
         }
     };
 
-    $exigir((array) ($todo['POST /v1/orders/business'] ?? []), [
+    $exigir((array) ($todo['POST /v1/orders/business']['forma'] ?? []), [
         'orders[].domiciliary.domiciliary_id',
         'orders[].delivery_address.address',
         'orders[].delivery_address.country',
@@ -240,7 +256,7 @@ it('la forma congelada cubre los campos que mas duelen', function () {
         'business.qualification',
     ], 'la lista del tendero');
 
-    $exigir((array) ($todo['POST /v1/orders/orders'] ?? []), [
+    $exigir((array) ($todo['POST /v1/orders/orders']['forma'] ?? []), [
         'order.weighing_state',
         'order.promised_minutes',
         'order.business.logo',

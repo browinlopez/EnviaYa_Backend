@@ -88,6 +88,15 @@ jobs:
       - name: Validaciones en linea (trinquete)
         run: python3 scripts/validaciones_en_linea.py --trinquete
 
+      # EL CONTRATO OpenAPI, AL DIA. §34 pide mantenerlo, y un fichero
+      # OpenAPI escrito a mano empieza siendo verdad y deja de serlo con el
+      # primer cambio de ruta que nadie refleja: a partir de ahi es peor que
+      # no tenerlo, porque alguien lo lee y le cree. Se genera del router y
+      # esto comprueba que el fichero del repositorio es el que saldria hoy.
+      # Probado anadiendo una ruta y sin regenerar: sale con 1.
+      - name: Contrato OpenAPI al dia
+        run: php scripts/openapi.php --revisar
+
       - name: Pruebas
         run: php artisan test
 

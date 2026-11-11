@@ -20,6 +20,23 @@
  *     php scripts/anotar_modelos.php             # dice qué haría
  *     php scripts/anotar_modelos.php --escribir
  */
+/*
+ * LOS `use` VAN ANTES DEL ARRANQUE. Estaban debajo, y por eso este guion
+ * llevaba roto: `Kernel::class` se resolvia como clase global y reventaba con
+ * «Class "Kernel" does not exist». `php -l` pasa, porque la sintaxis esta
+ * bien, y nada lo llamaba, asi que no se noto.
+ *
+ * Es la tercera vez con el mismo fallo en el mismo sitio —ya paso en
+ * `percentiles_de_latencia.php` y en `openapi.php`, los dos porque Pint
+ * acorta el nombre apoyandose en un `use` que esta mas abajo—. Lo vigila
+ * ahora `tests/Feature/Contrato/LosGuionesArrancanTest.php`.
+ */
+
+use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schema;
+
 require __DIR__.'/../vendor/autoload.php';
 
 $app = require __DIR__.'/../bootstrap/app.php';
@@ -27,11 +44,6 @@ $app->make(Kernel::class)->bootstrap();
 
 config(['database.default' => 'sqlite', 'database.connections.sqlite.database' => ':memory:']);
 Artisan::call('migrate', ['--force' => true]);
-
-use Illuminate\Contracts\Console\Kernel;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Schema;
 
 $escribir = in_array('--escribir', $argv, true);
 
