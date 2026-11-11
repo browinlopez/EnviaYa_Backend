@@ -54,6 +54,26 @@ Schedule::command('backup:monitor')
     ->timezone('America/Bogota');
 
 /*
+| Que los trabajos en cola se esten procesando.
+|
+| LO QUE ESTO CIERRA: noventa y cuatro trabajos llevaban en la cola desde el 8
+| de septiembre con cero intentos --ochenta avisos push, siete trazados de ruta
+| y siete cargas de catalogo-- y no habia forma de enterarse. Encolar siempre
+| funciona, asi que la peticion del comprador acaba bien; lo que deja de pasar
+| es lo de despues, en tres pantallas distintas y sin un solo error.
+|
+| A las 07:45, justo despues del resumen de las 07:00: si alguien va a abrir el
+| correo de la operacion por la maniana, los dos avisos llegan juntos.
+|
+| `--avisar` manda correo cuando algo esta mal. Sin eso la salida se va a
+| /dev/null y el comando no vigila nada.
+*/
+Schedule::command('colas:comprobar --avisar')
+    ->dailyAt('07:45')
+    ->timezone('America/Bogota')
+    ->withoutOverlapping();
+
+/*
 | Liquidaciones del día anterior, en borrador.
 |
 | A las 3 de la mañana: después de la copia de seguridad —para que el respaldo

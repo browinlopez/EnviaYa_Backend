@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\FalloDeLaPasarela;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 
@@ -77,7 +78,7 @@ class BoldService
             ->post("{$this->apiUrl}/v1/payment-intent", $body);
 
         if ($response->failed()) {
-            throw new \Exception($response->body());
+            throw FalloDeLaPasarela::desde($response);
         }
 
         return $response->json();
@@ -89,7 +90,10 @@ class BoldService
             ->post("{$this->apiUrl}/v1/payment", $body);
 
         if ($response->failed()) {
-            throw new \Exception(json_encode($response->json()));
+            // `desdeJson` y no `desde`: este sitio construia su mensaje con
+            // `json_encode($response->json())` y no con `body()`. Se conserva
+            // la diferencia, ver `FalloDeLaPasarela`.
+            throw FalloDeLaPasarela::desdeJson($response);
         }
 
         return $response->json()['payload'] ?? $response->json();
@@ -113,7 +117,7 @@ class BoldService
             ]);
 
         if ($response->failed()) {
-            throw new \Exception($response->body());
+            throw FalloDeLaPasarela::desde($response);
         }
 
         return $response->json() ?? [];
@@ -138,7 +142,7 @@ class BoldService
             ]);
 
         if ($response->failed()) {
-            throw new \Exception($response->body());
+            throw FalloDeLaPasarela::desde($response);
         }
 
         return $response->json() ?? [];
@@ -151,7 +155,7 @@ class BoldService
             ->get("{$this->apiUrl}/v1/payment/refund/{$transactionId}");
 
         if ($response->failed()) {
-            throw new \Exception($response->body());
+            throw FalloDeLaPasarela::desde($response);
         }
 
         return $response->json()['payload'] ?? $response->json();
@@ -171,7 +175,7 @@ class BoldService
             ->get("{$this->apiUrl}/v1/payment/pse/banks");
 
         if ($response->failed()) {
-            throw new \Exception($response->body());
+            throw FalloDeLaPasarela::desde($response);
         }
 
         return $response->json()['payload'] ?? $response->json();
@@ -183,7 +187,7 @@ class BoldService
             ->get("{$this->apiUrl}/v1/payment/{$reference}");
 
         if ($response->failed()) {
-            throw new \Exception($response->body());
+            throw FalloDeLaPasarela::desde($response);
         }
 
         return $response->json()['payload'] ?? $response->json();

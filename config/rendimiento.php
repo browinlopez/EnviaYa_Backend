@@ -35,4 +35,26 @@ return [
     */
     'minimo_para_percentil' => (int) env('MEDIR_PETICIONES_MINIMO', 20),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Salud de las colas
+    |--------------------------------------------------------------------------
+    |
+    | Lo comprueba `colas:comprobar`, que corre a diario.
+    |
+    | `minutos_de_espera` es el que de verdad importa y por eso es bajo: lo que
+    | se vigila no es que la cola este llena sino que AVANCE. Si el primero de
+    | la fila lleva quince minutos sin que nadie lo atienda, no hay nadie
+    | atendiendo la fila. Los trabajos de esta plataforma son avisos push y
+    | trazados de ruta: se despachan en milisegundos.
+    |
+    | `maximo_esperando` es mas tolerante porque un numero alto si puede ser un
+    | rato de trafico de verdad.
+    |
+    */
+    'colas' => [
+        'minutos_de_espera' => (int) env('COLAS_MINUTOS_DE_ESPERA', 15),
+        'maximo_esperando' => (int) env('COLAS_MAXIMO_ESPERANDO', 500),
+    ],
+
 ];
