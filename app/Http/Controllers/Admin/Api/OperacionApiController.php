@@ -7,6 +7,7 @@ use App\Http\Requests\Admin\ActualizarLiquidacionRequest;
 use App\Http\Requests\Admin\GenerarLiquidacionRequest;
 use App\Models\Operacion\Settlement;
 use App\Services\LiquidacionService;
+use App\Support\FiltroDeFechas;
 use Illuminate\Http\Request;
 use RuntimeException;
 
@@ -43,10 +44,10 @@ class OperacionApiController extends Controller
             'summary' => [
                 'por_pagar' => (float) Settlement::whereIn('state', [Settlement::BORRADOR, Settlement::APROBADA])
                     ->sum('net_payable'),
-                'pagado_mes' => (float) Settlement::where('state', Settlement::PAGADA)
-                    ->whereMonth('paid_at', now()->month)
-                    ->whereYear('paid_at', now()->year)
-                    ->sum('net_payable'),
+                'pagado_mes' => (float) FiltroDeFechas::elMes(
+                    Settlement::where('state', Settlement::PAGADA),
+                    'paid_at', (int) now()->year, (int) now()->month,
+                )->sum('net_payable'),
                 'borradores' => Settlement::where('state', Settlement::BORRADOR)->count(),
             ],
         ]);
