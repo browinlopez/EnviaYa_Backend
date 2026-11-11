@@ -82,7 +82,10 @@ return [
             'path' => storage_path('logs/rendimiento.log'),
             'level' => 'warning',
             'days' => 14,
+            'replace_placeholders' => true,
+        ],
 
+        /*
          * UNA LINEA POR PETICION, y por eso en su propio fichero.
          *
          * No va en `rendimiento`, que esta en nivel `warning` y guarda los
