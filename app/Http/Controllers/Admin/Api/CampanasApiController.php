@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\CampanaRequest;
 use App\Models\Marketing\AdCampaign;
 use App\Models\Marketing\Banner;
 use Illuminate\Http\Request;
@@ -51,9 +52,9 @@ class CampanasApiController extends Controller
         );
     }
 
-    public function storeCampaign(Request $request)
+    public function storeCampaign(CampanaRequest $request)
     {
-        $c = AdCampaign::create($this->validarCampana($request));
+        $c = AdCampaign::create($request->validated());
 
         return response()->json(['message' => 'Campaña creada.', 'id' => $c->id], 201);
     }
@@ -62,7 +63,13 @@ class CampanasApiController extends Controller
     {
         $c = AdCampaign::findOr($id, fn () => abort(404, 'La campaña no existe.'));
 
-        $c->update($this->validarCampana($request, true));
+        /*
+         * EN LINEA Y NO EN UN FormRequest, a proposito: la busqueda de arriba
+         * contesta 404 cuando el registro no existe, y eso tiene que ir ANTES
+         * que un error de validacion. Las reglas no se repiten: se piden a
+         * `CampanaRequest` en modo parcial.
+         */
+        $c->update($request->validate(CampanaRequest::reglas(parcial: true)));
 
         return response()->json(['message' => 'Campaña actualizada.']);
     }
@@ -81,27 +88,6 @@ class CampanasApiController extends Controller
         $c->delete();
 
         return response()->json(['message' => 'Campaña eliminada.']);
-    }
-
-    private function validarCampana(Request $request, bool $parcial = false): array
-    {
-        $regla = $parcial ? 'sometimes' : 'required';
-
-        $datos = $request->validate([
-            'advertiser_id' => "{$regla}|integer|exists:advertisers,id",
-            'name' => "{$regla}|string|max:150",
-            'description' => 'sometimes|nullable|string',
-            'objective' => 'sometimes|in:awareness,traffic,conversion',
-            'starts_at' => "{$regla}|date",
-            // La fecha final nunca antes de la inicial: una campaña invertida
-            // no falla al guardarse, simplemente no entrega nada, y eso se
-            // descubre tarde y sin mensaje.
-            'ends_at' => "{$regla}|date|after_or_equal:starts_at",
-            'budget' => 'sometimes|numeric|min:0',
-            'state' => 'sometimes|integer|in:0,1,2,3',
-        ]);
-
-        return $datos;
     }
 
     /* ==================================================================

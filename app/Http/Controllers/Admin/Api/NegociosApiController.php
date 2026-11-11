@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\NegocioRequest;
 use App\Services\BusinessMediaService;
 use App\Services\MediaService;
 use App\Support\Consultas\AyudasDeAdmin;
@@ -133,44 +134,9 @@ class NegociosApiController extends Controller
     }
 
     /** Campos editables de un negocio, compartidos por crear y actualizar. */
-    private function reglasNegocio(bool $creando): array
+    public function storeBusiness(NegocioRequest $request)
     {
-        $req = $creando ? 'required' : 'sometimes';
-
-        return [
-            'name' => "{$req}|string|max:255",
-            'phone' => 'sometimes|nullable|string|max:30',
-            'address' => 'sometimes|nullable|string|max:255',
-            'description' => 'sometimes|nullable|string',
-            'razonSocial_DCD' => 'sometimes|nullable|string|max:255',
-            'NIT' => 'sometimes|nullable|string|max:50',
-            'logo' => 'sometimes|nullable|string',
-            // Es el ID de una categoría de negocio: si se aceptara cualquier
-            // valor, la tienda quedaría fuera de todos los carruseles y sus
-            // productos no podrían clasificarse en ninguna categoría.
-            'type' => 'sometimes|nullable|integer|exists:category_business,id',
-            'state' => 'sometimes|boolean',
-            // El municipio acota la búsqueda de direcciones: sin él, "calle 18
-            // carrera 37b" aparece en cualquier ciudad del país.
-            'municipality_id' => 'sometimes|nullable|integer|exists:municipalities,id',
-            // Coordenadas: el panel las obtiene de un mapa, así que llegan como
-            // decimales. Se acotan al rango válido para que un error de captura
-            // no deje un punto en mitad del océano.
-            'latitude' => 'sometimes|nullable|numeric|between:-90,90',
-            'longitude' => 'sometimes|nullable|numeric|between:-180,180',
-            /*
-             * Tope de crédito: lo que la tienda puede fiar entre todos sus
-             * clientes y la deuda que puede arrastrar con la plataforma. Solo
-             * lo pone el equipo; el panel del tendero no lo recibe. Vacío: la
-             * tienda no vende a crédito.
-             */
-            'credit_debt_cap' => 'sometimes|nullable|numeric|min:0|max:999999999',
-        ];
-    }
-
-    public function storeBusiness(Request $request)
-    {
-        $datos = $request->validate($this->reglasNegocio(true));
+        $datos = $request->validated();
 
         $datos['state'] = $datos['state'] ?? 1;
         $datos['qualification'] = 0;
@@ -191,7 +157,12 @@ class NegociosApiController extends Controller
     {
         abort_if(! DB::table('business')->where('busines_id', $id)->exists(), 404, 'El negocio no existe.');
 
-        $datos = $request->validate($this->reglasNegocio(false));
+        /*
+         * EN LINEA Y NO EN UN FormRequest: el `abort_if` de arriba contesta
+         * 404 cuando el negocio no existe, y eso va ANTES que un error de
+         * validacion. Las reglas no se repiten: se piden a `NegocioRequest`.
+         */
+        $datos = $request->validate(NegocioRequest::reglas(creando: false));
 
         if ($datos) {
             DB::table('business')->where('busines_id', $id)->update($datos);

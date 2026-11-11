@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\DestacadoRequest;
 use App\Models\Marketing\FeaturedBusiness;
 use App\Support\FiltroDeFechas;
 use Illuminate\Http\Request;
@@ -27,9 +28,9 @@ class DestacadosApiController extends Controller
         );
     }
 
-    public function storeFeatured(Request $request)
+    public function storeFeatured(DestacadoRequest $request)
     {
-        $datos = $this->validarDestacado($request);
+        $datos = $request->validated();
 
         /*
          * Un negocio no puede estar destacado dos veces en el mismo sitio con
@@ -50,8 +51,13 @@ class DestacadosApiController extends Controller
     public function updateFeatured(Request $request, $id)
     {
         $f = FeaturedBusiness::findOr($id, fn () => abort(404, 'El destaque no existe.'));
-
-        $datos = $this->validarDestacado($request, true);
+        /*
+         * EN LINEA Y NO EN UN FormRequest, a proposito: la busqueda de arriba
+         * contesta 404 cuando el registro no existe, y eso tiene que ir ANTES
+         * que un error de validacion. Las reglas no se repiten: se piden a
+         * `DestacadoRequest` en modo parcial.
+         */
+        $datos = $request->validate(DestacadoRequest::reglas(parcial: true));
 
         $solapa = $this->destaqueSolapado(
             $datos['business_id'] ?? $f->business_id,
@@ -98,21 +104,6 @@ class DestacadosApiController extends Controller
             ->tap(fn ($q) => FiltroDeFechas::hasta($q, 'starts_at', $hasta))
             ->tap(fn ($q) => FiltroDeFechas::desde($q, 'ends_at', $desde))
             ->exists();
-    }
-
-    private function validarDestacado(Request $request, bool $parcial = false): array
-    {
-        $regla = $parcial ? 'sometimes' : 'required';
-
-        return $request->validate([
-            'business_id' => "{$regla}|integer|exists:business,busines_id",
-            'placement' => 'sometimes|in:home_top,category_top,search_top',
-            'priority' => 'sometimes|integer|min:0|max:999',
-            'starts_at' => "{$regla}|date",
-            'ends_at' => "{$regla}|date|after_or_equal:starts_at",
-            'paid_amount' => 'sometimes|numeric|min:0',
-            'state' => 'sometimes|boolean',
-        ]);
     }
 
     /* ==================================================================

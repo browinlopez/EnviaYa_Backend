@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\AnuncianteRequest;
 use App\Models\Marketing\AdCampaign;
 use App\Models\Marketing\Advertiser;
 use Illuminate\Http\Request;
@@ -41,9 +42,9 @@ class AnunciantesApiController extends Controller
         );
     }
 
-    public function storeAdvertiser(Request $request)
+    public function storeAdvertiser(AnuncianteRequest $request)
     {
-        $datos = $this->validarAnunciante($request);
+        $datos = $request->validated();
 
         $a = Advertiser::create($datos);
 
@@ -54,7 +55,13 @@ class AnunciantesApiController extends Controller
     {
         $a = Advertiser::findOr($id, fn () => abort(404, 'El anunciante no existe.'));
 
-        $a->update($this->validarAnunciante($request, true));
+        /*
+         * EN LINEA Y NO EN UN FormRequest, a proposito: el `findOr` de arriba
+         * contesta 404 cuando el anunciante no existe, y eso tiene que ir
+         * ANTES que un error de validacion. Las reglas no se repiten: se
+         * piden a `AnuncianteRequest` en modo parcial.
+         */
+        $a->update($request->validate(AnuncianteRequest::reglas(parcial: true)));
 
         return response()->json(['message' => 'Anunciante actualizado.']);
     }
@@ -75,22 +82,6 @@ class AnunciantesApiController extends Controller
         $a->delete();
 
         return response()->json(['message' => 'Anunciante eliminado.']);
-    }
-
-    private function validarAnunciante(Request $request, bool $parcial = false): array
-    {
-        $regla = $parcial ? 'sometimes' : 'required';
-
-        return $request->validate([
-            'name' => "{$regla}|string|max:150",
-            'business_id' => 'sometimes|nullable|integer|exists:business,busines_id',
-            'contact_name' => 'sometimes|nullable|string|max:150',
-            'contact_email' => 'sometimes|nullable|email|max:150',
-            'contact_phone' => 'sometimes|nullable|string|max:30',
-            'tax_id' => 'sometimes|nullable|string|max:40',
-            'notes' => 'sometimes|nullable|string',
-            'state' => 'sometimes|boolean',
-        ]);
     }
 
     /* ==================================================================

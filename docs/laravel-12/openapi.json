@@ -403,7 +403,61 @@
                         "description": "Validacion fallida."
                     }
                 },
-                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "phone": {
+                                        "type": "string"
+                                    },
+                                    "address": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    },
+                                    "razonSocial_DCD": {
+                                        "type": "string"
+                                    },
+                                    "NIT": {
+                                        "type": "string"
+                                    },
+                                    "logo": {
+                                        "type": "string"
+                                    },
+                                    "type": {
+                                        "type": "integer"
+                                    },
+                                    "state": {
+                                        "type": "boolean"
+                                    },
+                                    "municipality_id": {
+                                        "type": "integer"
+                                    },
+                                    "latitude": {
+                                        "type": "number"
+                                    },
+                                    "longitude": {
+                                        "type": "number"
+                                    },
+                                    "credit_debt_cap": {
+                                        "type": "number"
+                                    }
+                                },
+                                "required": [
+                                    "name"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Admin\\NegocioRequest"
             }
         },
         "/v1/admin/businesses/{id}": {
@@ -2138,7 +2192,47 @@
                         "description": "Validacion fallida."
                     }
                 },
-                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "business_id": {
+                                        "type": "integer"
+                                    },
+                                    "contact_name": {
+                                        "type": "string"
+                                    },
+                                    "contact_email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "contact_phone": {
+                                        "type": "string"
+                                    },
+                                    "tax_id": {
+                                        "type": "string"
+                                    },
+                                    "notes": {
+                                        "type": "string"
+                                    },
+                                    "state": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "required": [
+                                    "name"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Admin\\AnuncianteRequest"
             }
         },
         "/v1/admin/marketing/advertisers/{id}": {
@@ -2294,7 +2388,101 @@
                         "description": "Validacion fallida."
                     }
                 },
-                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "campaign_id": {
+                                        "type": "integer"
+                                    },
+                                    "title": {
+                                        "type": "string"
+                                    },
+                                    "subtitle": {
+                                        "type": "string"
+                                    },
+                                    "placement": {
+                                        "type": "string",
+                                        "enum": [
+                                            "home_hero",
+                                            "home_strip",
+                                            "listing_inline",
+                                            "splash",
+                                            "web_home"
+                                        ]
+                                    },
+                                    "platform": {
+                                        "type": "string",
+                                        "enum": [
+                                            "app",
+                                            "web",
+                                            "both"
+                                        ]
+                                    },
+                                    "link_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "none",
+                                            "url",
+                                            "business",
+                                            "product",
+                                            "category"
+                                        ]
+                                    },
+                                    "link_value": {
+                                        "type": "string"
+                                    },
+                                    "priority": {
+                                        "type": "integer"
+                                    },
+                                    "starts_at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "ends_at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "target_municipalities": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "target_complexes": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "target_business_categories": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "target_roles": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "state": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "required": [
+                                    "campaign_id",
+                                    "title"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Admin\\BannerRequest"
             }
         },
         "/v1/admin/marketing/banners/{id}": {
@@ -2532,7 +2720,56 @@
                         "description": "Validacion fallida."
                     }
                 },
-                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "advertiser_id": {
+                                        "type": "integer"
+                                    },
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    },
+                                    "objective": {
+                                        "type": "string",
+                                        "enum": [
+                                            "awareness",
+                                            "traffic",
+                                            "conversion"
+                                        ]
+                                    },
+                                    "starts_at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "ends_at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "budget": {
+                                        "type": "number"
+                                    },
+                                    "state": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "required": [
+                                    "advertiser_id",
+                                    "name",
+                                    "starts_at",
+                                    "ends_at"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Admin\\CampanaRequest"
             }
         },
         "/v1/admin/marketing/campaigns/{id}": {
@@ -2688,7 +2925,74 @@
                         "description": "Validacion fallida."
                     }
                 },
-                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "code": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "percent",
+                                            "fixed",
+                                            "free_shipping"
+                                        ]
+                                    },
+                                    "value": {
+                                        "type": "number"
+                                    },
+                                    "max_discount": {
+                                        "type": "number"
+                                    },
+                                    "min_order": {
+                                        "type": "number"
+                                    },
+                                    "max_uses": {
+                                        "type": "integer"
+                                    },
+                                    "max_uses_per_user": {
+                                        "type": "integer"
+                                    },
+                                    "business_id": {
+                                        "type": "integer"
+                                    },
+                                    "category_id": {
+                                        "type": "integer"
+                                    },
+                                    "advertiser_id": {
+                                        "type": "integer"
+                                    },
+                                    "starts_at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "ends_at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "state": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "required": [
+                                    "code",
+                                    "value",
+                                    "starts_at",
+                                    "ends_at"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Admin\\CuponRequest"
             }
         },
         "/v1/admin/marketing/coupons/{id}": {
@@ -2886,7 +3190,52 @@
                         "description": "Validacion fallida."
                     }
                 },
-                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "business_id": {
+                                        "type": "integer"
+                                    },
+                                    "placement": {
+                                        "type": "string",
+                                        "enum": [
+                                            "home_top",
+                                            "category_top",
+                                            "search_top"
+                                        ]
+                                    },
+                                    "priority": {
+                                        "type": "integer"
+                                    },
+                                    "starts_at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "ends_at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "paid_amount": {
+                                        "type": "number"
+                                    },
+                                    "state": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "required": [
+                                    "business_id",
+                                    "starts_at",
+                                    "ends_at"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Admin\\DestacadoRequest"
             }
         },
         "/v1/admin/marketing/featured/{id}": {
@@ -3074,7 +3423,55 @@
                         "description": "Validacion fallida."
                     }
                 },
-                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "title": {
+                                        "type": "string"
+                                    },
+                                    "body": {
+                                        "type": "string"
+                                    },
+                                    "link_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "none",
+                                            "url",
+                                            "business",
+                                            "product",
+                                            "category"
+                                        ]
+                                    },
+                                    "link_value": {
+                                        "type": "string"
+                                    },
+                                    "segment": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "scheduled_at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "state": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "required": [
+                                    "title",
+                                    "body"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Admin\\CampanaPushRequest"
             }
         },
         "/v1/admin/marketing/push/preview": {
@@ -5572,7 +5969,59 @@
                         "description": "Validacion fallida."
                     }
                 },
-                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "domiciliary_id": {
+                                        "type": "integer"
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "licencia",
+                                            "soat",
+                                            "tecnomecanica",
+                                            "arl",
+                                            "eps",
+                                            "examen_medico",
+                                            "cedula",
+                                            "otro"
+                                        ]
+                                    },
+                                    "number": {
+                                        "type": "string"
+                                    },
+                                    "issued_at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "expires_at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "media_id": {
+                                        "type": "integer"
+                                    },
+                                    "notes": {
+                                        "type": "string"
+                                    },
+                                    "state": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "required": [
+                                    "domiciliary_id",
+                                    "type"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Admin\\DocumentoRequest"
             }
         },
         "/v1/admin/sst/documentos/{id}": {
@@ -5728,7 +6177,72 @@
                         "description": "Validacion fallida."
                     }
                 },
-                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "domiciliary_id": {
+                                        "type": "integer"
+                                    },
+                                    "order_id": {
+                                        "type": "integer"
+                                    },
+                                    "occurred_at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "accidente_transito",
+                                            "caida",
+                                            "robo",
+                                            "agresion",
+                                            "falla_vehiculo",
+                                            "condicion_insegura",
+                                            "otro"
+                                        ]
+                                    },
+                                    "severity": {
+                                        "type": "string",
+                                        "enum": [
+                                            "leve",
+                                            "moderado",
+                                            "grave"
+                                        ]
+                                    },
+                                    "had_injuries": {
+                                        "type": "boolean"
+                                    },
+                                    "days_off": {
+                                        "type": "integer"
+                                    },
+                                    "location": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    },
+                                    "actions": {
+                                        "type": "string"
+                                    },
+                                    "state": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "required": [
+                                    "occurred_at",
+                                    "type",
+                                    "description"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Admin\\IncidenteRequest"
             }
         },
         "/v1/admin/sst/incidentes/{id}": {
@@ -7944,7 +8458,58 @@
                         "description": "Validacion fallida."
                     }
                 },
-                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                            "visitante",
+                                            "servicio",
+                                            "domicilio_externo"
+                                        ]
+                                    },
+                                    "visitor_name": {
+                                        "type": "string"
+                                    },
+                                    "visitor_document": {
+                                        "type": "string"
+                                    },
+                                    "visitor_phone": {
+                                        "type": "string"
+                                    },
+                                    "visitor_company": {
+                                        "type": "string"
+                                    },
+                                    "vehicle_plate": {
+                                        "type": "string"
+                                    },
+                                    "tower": {
+                                        "type": "string"
+                                    },
+                                    "apartment": {
+                                        "type": "string"
+                                    },
+                                    "authorized_by": {
+                                        "type": "string"
+                                    },
+                                    "notes": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "kind",
+                                    "visitor_name"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Conjunto\\RegistrarVisitanteRequest"
             }
         },
         "/v1/conjunto/reportes": {

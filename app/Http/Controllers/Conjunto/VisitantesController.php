@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Conjunto;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Conjunto\RegistrarVisitanteRequest;
 use App\Services\PulsoDelConjunto;
 use App\Support\FiltroDeFechas;
 use Illuminate\Http\Request;
@@ -30,24 +31,24 @@ use Illuminate\Support\Facades\DB;
  */
 class VisitantesController extends Controller
 {
-    private const CLASES = ['visitante', 'servicio', 'domicilio_externo'];
+    /*
+     * PUBLICA porque la lee `RegistrarVisitanteRequest`, que es quien valida
+     * el campo. El vocabulario es de este controlador; la regla que lo aplica
+     * vive en el FormRequest y lo lee de aqui en vez de repetirlo.
+     */
+    public const CLASES = ['visitante', 'servicio', 'domicilio_externo'];
 
-    public function registrar(Request $request)
+    public function registrar(RegistrarVisitanteRequest $request)
     {
         $complexId = (int) $request->attributes->get('complex_id');
 
-        $datos = $request->validate([
-            'kind' => 'required|string|in:'.implode(',', self::CLASES),
-            'visitor_name' => 'required|string|max:120',
-            'visitor_document' => 'nullable|string|max:40',
-            'visitor_phone' => 'nullable|string|max:40',
-            'visitor_company' => 'nullable|string|max:120',
-            'vehicle_plate' => 'nullable|string|max:20',
-            'tower' => 'nullable|string|max:30',
-            'apartment' => 'nullable|string|max:30',
-            'authorized_by' => 'nullable|string|max:120',
-            'notes' => 'nullable|string|max:1000',
-        ]);
+        /*
+         * Las reglas de campo viven en `RegistrarVisitanteRequest` —§04— y lo
+         * que sigue aqui abajo NO se movio con ellas: pregunta a la base si
+         * este conjunto exige constancia, y traerlo al FormRequest cambiaria
+         * el texto de los dos mensajes. Esta explicado en esa clase.
+         */
+        $datos = $request->validated();
 
         /*
          * El conjunto puede exigir que quede CONSTANCIA de quién dio permiso.

@@ -110,11 +110,22 @@ LLAMADA = '$request->validate('
 #
 # Este numero SOLO BAJA, y se baja a mano en el mismo cambio que convierte
 # una: que haya que tocarlo es lo que hace que alguien se entere de que el
-# contador se movio. Al 10 de noviembre de 2026: 66, de las 173 que habia.
+# contador se movio.
+#
+#   173  de donde se partio
+#    66  al 10 de noviembre de 2026
+#    39  al 11 de noviembre de 2026, y ya no queda ninguna convertible:
+#        se fueron las dos de VisitantesController y storeBusiness, y los
+#        ocho `validar*($parcial)` del panel pasaron a FormRequest en su
+#        mitad `store`. La mitad `update` de esos ocho sigue en linea y por
+#        eso el total solo baja de 41 a 39: hacen una busqueda con 404 ANTES
+#        de validar, asi que un FormRequest invertiria las dos respuestas.
+#        Lo que cambio es que esas ocho ya no dicen «se puede convertir»:
+#        las reglas viven en el FormRequest y lo que queda es estructural.
 #
 # Subirlo es una decision, no un arreglo del CI. Si hace falta subirlo, el
 # motivo va en `docs/laravel-12/EXCEPCIONES.md` junto a los demas.
-TOPE = 66
+TOPE = 39
 
 BARRA = chr(92)
 PREFIJO = 'App' + BARRA + 'Http' + BARRA + 'Controllers' + BARRA
@@ -130,7 +141,16 @@ METODO = re.compile(
 ESTORBOS = [
     ('EL CUERPO SE TOCA', re.compile(r'\$request->(merge|replace)\(')),
     ('ORDEN DE LA RESPUESTA', re.compile(
-        r'(findOrFail|firstOrFail|->sole\(|findOr\(|abort_if|abort_unless)')),
+        r'(findOrFail|firstOrFail|->sole\(|findOr\(|abort_if|abort_unless'
+        # UN AYUDANTE QUE ABORTA CUENTA IGUAL que un `abort_if` escrito a la
+        # vista. `MediosApiController` llama a `nombreDeEntidad()`, que hace
+        # dos `abort_unless` con 404 dentro, y sus tres metodos salian en
+        # «HAY CODIGO ANTES: MIRARLO» como si la decision estuviera
+        # pendiente — teniendo el motivo escrito en un comentario justo
+        # encima de la validacion. Un inventario que pide mirar lo ya mirado
+        # gasta la atencion que hace falta para lo que de verdad falta por
+        # decidir.
+        r'|nombreDeEntidad\()')),
     ('SALIDA TEMPRANA', re.compile(r'^\s*return\s', re.M)),
 ]
 
