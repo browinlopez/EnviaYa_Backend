@@ -6,6 +6,7 @@ use App\Models\Operacion\CashDeposit;
 use App\Models\Operacion\Settlement;
 use App\Models\Operacion\SettlementItem;
 use App\Models\Order\OrdersSales;
+use App\Support\FiltroDeFechas;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -56,8 +57,14 @@ class LiquidacionService
                  * sistema para saber si un pedido está pagado.
                  */
                 ->whereNotIn('o.payment_state', OrdersSales::SIN_PAGO)
-                ->whereDate('o.sale_date', '>=', $desde)
-                ->whereDate('o.sale_date', '<=', $hasta)
+                /*
+                 * Como rangos y no `whereDate`: ver `FiltroDeFechas`. El
+                 * `hasta` incluye el dia entero, que es lo que decia el
+                 * `whereDate(..., '<=', ...)` — traducirlo a un `<=` a secas
+                 * se habria comido el ultimo dia de cada corte.
+                 */
+                ->tap(fn ($q) => FiltroDeFechas::desde($q, 'o.sale_date', $desde))
+                ->tap(fn ($q) => FiltroDeFechas::hasta($q, 'o.sale_date', $hasta))
                 // Ya liquidados en otro corte vivo del mismo tipo.
                 ->whereNotExists(function ($sub) use ($tipo) {
                     $sub->from('settlement_items as si')

@@ -3,6 +3,7 @@
 namespace App\Models\Marketing;
 
 use App\Models\Business;
+use App\Support\FiltroDeFechas;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -53,8 +54,11 @@ class FeaturedBusiness extends Model
     {
         $hoy = now()->toDateString();
 
-        return $q->where($q->qualifyColumn('state'), 1)
-            ->whereDate($q->qualifyColumn('starts_at'), '<=', $hoy)
-            ->whereDate($q->qualifyColumn('ends_at'), '>=', $hoy);
+        $q = $q->where($q->qualifyColumn('state'), 1);
+
+        // Como rangos: ver `FiltroDeFechas`.
+        $q = FiltroDeFechas::hasta($q, $q->qualifyColumn('starts_at'), $hoy);
+
+        return FiltroDeFechas::desde($q, $q->qualifyColumn('ends_at'), $hoy);
     }
 }

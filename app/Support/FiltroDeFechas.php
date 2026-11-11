@@ -49,6 +49,11 @@ class FiltroDeFechas
      * Ese día entero: de su medianoche a la siguiente, sin incluirla.
      *
      * Sustituye a `whereDate($columna, $dia)`.
+     *
+     * @template TConsulta
+     *
+     * @param  TConsulta  $consulta
+     * @return TConsulta
      */
     public static function unDia(mixed $consulta, string $columna, mixed $dia): mixed
     {
@@ -64,6 +69,11 @@ class FiltroDeFechas
      *
      * Sustituye a `whereDate($columna, '>=', $dia)`. Es la traducción directa:
      * `date(col) >= '2026-11-01'` es lo mismo que `col >= '2026-11-01 00:00'`.
+     *
+     * @template TConsulta
+     *
+     * @param  TConsulta  $consulta
+     * @return TConsulta
      */
     public static function desde(mixed $consulta, string $columna, mixed $dia): mixed
     {
@@ -83,12 +93,36 @@ class FiltroDeFechas
      * Un filtro de fechas que calla un día de movimientos de portería o de
      * ventas no da error: da un número más pequeño. Por eso va aquí, con su
      * prueba, y no repetido en cada controlador.
+     *
+     * @template TConsulta
+     *
+     * @param  TConsulta  $consulta
+     * @return TConsulta
      */
     public static function hasta(mixed $consulta, string $columna, mixed $dia): mixed
     {
         return $consulta->where(
             $columna, '<', self::medianoche($dia)->addDay()
         );
+    }
+
+    /**
+     * Estrictamente antes de ese día: no incluye el día.
+     *
+     * Sustituye a `whereDate($columna, '<', $dia)`, que es como se pregunta
+     * «esto ya venció» o «esto es de antes de hoy». La traducción sí es
+     * directa aquí —`date(col) < '2026-11-05'` es `col < '2026-11-05 00:00'`—
+     * pero existe como método para que nadie tenga que volver a decidir cuál
+     * de los cuatro casos es el suyo, que es donde se cuela el de `hasta`.
+     *
+     * @template TConsulta
+     *
+     * @param  TConsulta  $consulta
+     * @return TConsulta
+     */
+    public static function antesDe(mixed $consulta, string $columna, mixed $dia): mixed
+    {
+        return $consulta->where($columna, '<', self::medianoche($dia));
     }
 
     /**

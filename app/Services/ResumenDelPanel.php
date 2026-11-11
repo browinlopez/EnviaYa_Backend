@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Area;
 use App\Models\Operacion\DomiciliaryDocument;
 use App\Support\Consultas\AyudasDeAdmin;
+use App\Support\FiltroDeFechas;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -199,7 +200,8 @@ class ResumenDelPanel
         $completos = DB::table('domiciliary_documents')
             ->where('state', 1)
             ->whereIn('type', DomiciliaryDocument::OBLIGATORIOS)
-            ->whereDate('expires_at', '>=', $hoy)
+            // Como rango: ver `FiltroDeFechas`.
+            ->tap(fn ($q) => FiltroDeFechas::desde($q, 'expires_at', $hoy))
             ->groupBy('domiciliary_id')
             ->havingRaw('COUNT(DISTINCT type) = ?', [count(DomiciliaryDocument::OBLIGATORIOS)])
             ->pluck('domiciliary_id')
@@ -207,11 +209,15 @@ class ResumenDelPanel
 
         return [
             'expired' => DB::table('domiciliary_documents')
-                ->where('state', 1)->whereDate('expires_at', '<', $hoy)->count(),
+                ->where('state', 1)
+                // `antesDe` no incluye hoy; `hasta` si incluye el dia del
+                // limite. Ver `FiltroDeFechas`.
+                ->tap(fn ($q) => FiltroDeFechas::antesDe($q, 'expires_at', $hoy))
+                ->count(),
             'expiring' => DB::table('domiciliary_documents')
                 ->where('state', 1)
-                ->whereDate('expires_at', '>=', $hoy)
-                ->whereDate('expires_at', '<=', $aviso)
+                ->tap(fn ($q) => FiltroDeFechas::desde($q, 'expires_at', $hoy))
+                ->tap(fn ($q) => FiltroDeFechas::hasta($q, 'expires_at', $aviso))
                 ->count(),
             'couriers_active' => $activos,
             'couriers_incomplete' => max(0, $activos - $completos),
@@ -282,16 +288,18 @@ class ResumenDelPanel
         $clics = (int) ($eventos->clics ?? 0);
 
         return [
+            // «Vivo hoy» es empezo hoy o antes Y termina hoy o despues. Como
+            // rangos: ver `FiltroDeFechas`.
             'campaigns_live' => DB::table('ad_campaigns')
                 ->where('state', 1)
-                ->whereDate('starts_at', '<=', $hoy)
-                ->whereDate('ends_at', '>=', $hoy)
+                ->tap(fn ($q) => FiltroDeFechas::hasta($q, 'starts_at', $hoy))
+                ->tap(fn ($q) => FiltroDeFechas::desde($q, 'ends_at', $hoy))
                 ->count(),
             'banners_live' => DB::table('banners as b')
                 ->join('ad_campaigns as c', 'c.id', '=', 'b.campaign_id')
                 ->where('b.state', 1)->where('c.state', 1)
-                ->whereDate('c.starts_at', '<=', $hoy)
-                ->whereDate('c.ends_at', '>=', $hoy)
+                ->tap(fn ($q) => FiltroDeFechas::hasta($q, 'c.starts_at', $hoy))
+                ->tap(fn ($q) => FiltroDeFechas::desde($q, 'c.ends_at', $hoy))
                 ->count(),
             // Una pieza sin imagen se guarda bien y no se muestra: el fallo
             // más fácil de cometer y el más difícil de notar.
@@ -306,13 +314,17 @@ class ResumenDelPanel
             'ctr_30d' => $impresiones > 0 ? round($clics / $impresiones * 100, 2) : null,
             'coupons_expiring' => DB::table('coupons')
                 ->where('state', 1)
-                ->whereDate('ends_at', '>=', $hoy)
-                ->whereDate('ends_at', '<=', Carbon::today()->addDays(7)->toDateString())
+                ->tap(fn ($q) => FiltroDeFechas::desde($q, 'ends_at', $hoy))
+                ->tap(fn ($q) => FiltroDeFechas::hasta(
+                    $q, 'ends_at', Carbon::today()->addDays(7)
+                ))
                 ->count(),
             'featured_expiring' => DB::table('featured_businesses')
                 ->where('state', 1)
-                ->whereDate('ends_at', '>=', $hoy)
-                ->whereDate('ends_at', '<=', Carbon::today()->addDays(7)->toDateString())
+                ->tap(fn ($q) => FiltroDeFechas::desde($q, 'ends_at', $hoy))
+                ->tap(fn ($q) => FiltroDeFechas::hasta(
+                    $q, 'ends_at', Carbon::today()->addDays(7)
+                ))
                 ->count(),
         ];
     }

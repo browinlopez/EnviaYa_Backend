@@ -6,6 +6,7 @@ use App\Models\Business;
 use App\Models\DeviceToken;
 use App\Models\Promotion;
 use App\Services\Push\TransportePush;
+use App\Support\FiltroDeFechas;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -164,10 +165,11 @@ class PromocionesDeLaTienda
     /** Cuántas ha mandado hoy esta tienda, para el tope diario. */
     public function enviadasHoy(int $businessId): int
     {
-        return Promotion::where('busines_id', $businessId)
-            ->whereNotNull('sent_at')
-            ->whereDate('sent_at', now()->toDateString())
-            ->count();
+        $q = Promotion::where('busines_id', $businessId)
+            ->whereNotNull('sent_at');
+
+        // Como rango: ver `FiltroDeFechas`.
+        return FiltroDeFechas::unDia($q, 'sent_at', now())->count();
     }
 
     /** Lo que le queda por enviar hoy. Cero significa que ya no puede. */

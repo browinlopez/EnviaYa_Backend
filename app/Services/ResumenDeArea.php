@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Area;
 use App\Models\Operacion\DomiciliaryDocument;
+use App\Support\FiltroDeFechas;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -163,10 +164,12 @@ class ResumenDeArea
                 'titulo' => 'Documentación vencida',
                 'urgente' => true,
                 'ruta' => '/sst/documentos',
-                'contar' => fn () => DB::table('domiciliary_documents')
-                    ->where('state', 1)
-                    ->whereDate('expires_at', '<', $hoy)
-                    ->count(),
+                // Como rango: ver `FiltroDeFechas`. `antesDe` no incluye
+                // hoy, que es lo que decia `whereDate(..., '<', ...)`.
+                'contar' => fn () => FiltroDeFechas::antesDe(
+                    DB::table('domiciliary_documents')->where('state', 1),
+                    'expires_at', $hoy
+                )->count(),
                 'detalle' => fn ($n) => $n === 1
                     ? 'Un domiciliario está rodando con un documento vencido.'
                     : "{$n} documentos vencidos: esos domiciliarios están rodando sin respaldo.",
@@ -178,11 +181,19 @@ class ResumenDeArea
                 'titulo' => 'Documentación por vencer',
                 'urgente' => false,
                 'ruta' => '/sst/documentos',
-                'contar' => fn () => DB::table('domiciliary_documents')
-                    ->where('state', 1)
-                    ->whereDate('expires_at', '>=', $hoy)
-                    ->whereDate('expires_at', '<=', $hoy->copy()->addDays(DomiciliaryDocument::AVISO_DIAS))
-                    ->count(),
+                'contar' => function () use ($hoy) {
+                    $q = DB::table('domiciliary_documents')->where('state', 1);
+
+                    // `hasta` incluye el dia entero del limite, igual que
+                    // hacia el `whereDate(..., '<=', ...)`.
+                    FiltroDeFechas::desde($q, 'expires_at', $hoy);
+                    FiltroDeFechas::hasta(
+                        $q, 'expires_at',
+                        $hoy->copy()->addDays(DomiciliaryDocument::AVISO_DIAS)
+                    );
+
+                    return $q->count();
+                },
                 'detalle' => fn ($n) => "{$n} vencen en los próximos "
                     .DomiciliaryDocument::AVISO_DIAS.' días. Renovarlos ahora evita parar a alguien.',
             ],
@@ -355,16 +366,18 @@ class ResumenDeArea
                 'contar' => function () use ($hoy) {
                     $limite = $hoy->copy()->addDays(3)->toDateString();
 
-                    return DB::table('coupons')
-                        ->where('state', 1)
-                        ->whereDate('ends_at', '>=', $hoy)
-                        ->whereDate('ends_at', '<=', $limite)
-                        ->count()
-                        + DB::table('featured_businesses')
-                            ->where('state', 1)
-                            ->whereDate('ends_at', '>=', $hoy)
-                            ->whereDate('ends_at', '<=', $limite)
-                            ->count();
+                    // Como rangos en las dos: ver `FiltroDeFechas`.
+                    $entreHoyYElLimite = function (string $tabla) use ($hoy, $limite) {
+                        $q = DB::table($tabla)->where('state', 1);
+
+                        FiltroDeFechas::desde($q, 'ends_at', $hoy);
+                        FiltroDeFechas::hasta($q, 'ends_at', $limite);
+
+                        return $q->count();
+                    };
+
+                    return $entreHoyYElLimite('coupons')
+                        + $entreHoyYElLimite('featured_businesses');
                 },
                 'detalle' => fn ($n) => "{$n} vencen en los próximos tres días. Renovarlos antes evita el hueco.",
             ],

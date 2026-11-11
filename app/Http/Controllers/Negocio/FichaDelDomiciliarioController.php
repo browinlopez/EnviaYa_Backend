@@ -9,6 +9,7 @@ use App\Models\Order\OrdersSales;
 use App\Services\Ajustes;
 use App\Services\CustodiaDeEfectivo;
 use App\Services\PapelesDelDomiciliario;
+use App\Support\FiltroDeFechas;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -301,7 +302,14 @@ class FichaDelDomiciliarioController extends Controller
             DB::raw('COALESCE(SUM(domiciliary_fee), 0) as ganado'),
         ]);
 
-        $hoy = $base()->whereDate('delivery_date', now()->toDateString())->first([
+        /*
+         * Como rango y no `whereDate`: ver `FiltroDeFechas`. Y aqui no hizo
+         * falta indice nuevo —lo medi esperando que si—: el
+         * `(busines_id, state, delivery_date)` del tablero del tendero sirve
+         * para esta igual, porque filtra por lo mismo y la fecha queda al
+         * final. 445 filas abiertas contra 10.
+         */
+        $hoy = FiltroDeFechas::unDia($base(), 'delivery_date', now())->first([
             DB::raw('COUNT(orderSales_id) as entregas'),
             DB::raw('COALESCE(SUM(domiciliary_fee), 0) as ganado'),
         ]);

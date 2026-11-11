@@ -12,6 +12,7 @@ use App\Models\Marketing\Coupon;
 use App\Models\Marketing\FeaturedBusiness;
 use App\Models\Marketing\PushCampaign;
 use App\Services\Push\Notificador;
+use App\Support\FiltroDeFechas;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -45,8 +46,9 @@ class MarketingApiController extends Controller
         $comprometido = (float) AdCampaign::where('state', AdCampaign::ACTIVA)->sum('budget')
             + (float) FeaturedBusiness::vigente()->sum('paid_amount');
 
-        $canjes = DB::table('coupon_redemptions')
-            ->whereDate('created_at', '>=', $desde)
+        $canjes = FiltroDeFechas::desde(
+            DB::table('coupon_redemptions'), 'created_at', $desde
+        )
             ->selectRaw('COUNT(*) as total, COALESCE(SUM(discount), 0) as descontado')
             ->first();
 

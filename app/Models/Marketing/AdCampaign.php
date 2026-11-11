@@ -2,6 +2,7 @@
 
 namespace App\Models\Marketing;
 
+use App\Support\FiltroDeFechas;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -61,8 +62,13 @@ class AdCampaign extends Model
      */
     public function scopeVigente(Builder $q): Builder
     {
-        return $q->where($q->qualifyColumn('state'), self::ACTIVA)
-            ->whereDate($q->qualifyColumn('starts_at'), '<=', now()->toDateString())
-            ->whereDate($q->qualifyColumn('ends_at'), '>=', now()->toDateString());
+        $q = $q->where($q->qualifyColumn('state'), self::ACTIVA);
+
+        // Como rangos y no `whereDate`: ver `FiltroDeFechas`. Aqui la tabla es
+        // pequenia y la diferencia no se nota hoy; se convierte para que el
+        // patron no tenga excepciones que haya que volver a decidir.
+        $q = FiltroDeFechas::hasta($q, $q->qualifyColumn('starts_at'), now());
+
+        return FiltroDeFechas::desde($q, $q->qualifyColumn('ends_at'), now());
     }
 }

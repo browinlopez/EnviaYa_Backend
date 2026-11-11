@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Marketing\FeaturedBusiness;
+use App\Support\FiltroDeFechas;
 use Illuminate\Http\Request;
 
 class DestacadosApiController extends Controller
@@ -90,8 +91,10 @@ class DestacadosApiController extends Controller
             ->when($ignorar, fn ($q) => $q->where('id', '!=', $ignorar))
             // Dos periodos se pisan si cada uno empieza antes de que el otro
             // termine. Es más corto y más seguro que enumerar los casos.
-            ->whereDate('starts_at', '<=', $hasta)
-            ->whereDate('ends_at', '>=', $desde)
+            // Como rangos: ver `FiltroDeFechas`. `hasta` incluye el dia
+            // entero, que es lo que hacia `whereDate(..., '<=', ...)`.
+            ->tap(fn ($q) => FiltroDeFechas::hasta($q, 'starts_at', $hasta))
+            ->tap(fn ($q) => FiltroDeFechas::desde($q, 'ends_at', $desde))
             ->exists();
     }
 

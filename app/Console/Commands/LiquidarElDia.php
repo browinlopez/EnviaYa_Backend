@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Services\LiquidacionService;
+use App\Support\FiltroDeFechas;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -65,8 +66,9 @@ class LiquidarElDia extends Command
         foreach ($tipos as $tipo) {
             $columna = $tipo === 'business' ? 'busines_id' : 'domiciliary_id';
 
-            $destinatarios = DB::table('orderssales')
-                ->whereDate('sale_date', $fecha)
+            $destinatarios = FiltroDeFechas::unDia(
+                DB::table('orderssales'), 'sale_date', $fecha
+            )
                 ->where('state', 4)
                 ->whereNotNull($columna)
                 ->distinct()

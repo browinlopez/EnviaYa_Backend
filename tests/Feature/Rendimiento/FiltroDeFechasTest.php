@@ -158,3 +158,101 @@ it('la hora del dia no se cuela en el filtro', function () {
     expect(FiltroDeFechas::unDia(DB::table($t), 'cuando', $mediaTarde)->count())
         ->toBe(2);
 });
+
+it('ANTES DE no incluye el dia, que es como se pregunta si algo vencio', function () {
+    $dia = CarbonImmutable::parse('2026-11-05');
+
+    $t = conFechas([
+        $dia->subDay()->addHours(10),   // el 4           -> entra
+        $dia->subSecond(),              // el 4 al final  -> entra
+        $dia,                           // el 5 a las 00  -> NO
+        $dia->addHours(15),             // el 5           -> no
+    ]);
+
+    $n = FiltroDeFechas::antesDe(DB::table($t), 'cuando', '2026-11-05')->count();
+
+    expect($n)->toBe(2);
+    expect($n)->toBe(
+        DB::table($t)->whereDate('cuando', '<', '2026-11-05')->count()
+    );
+});
+
+it('en app/ no queda ni un whereDate, y este guardia lo mantiene', function () {
+    /*
+     * EL PATRON SIN EXCEPCIONES, y es el motivo de haber convertido tambien
+     * los sitios donde hoy no se nota.
+     *
+     * Mientras quedara un `whereDate` «de los que dan igual», cada vez que
+     * alguien escribiera uno nuevo habria que decidir si el suyo es de los que
+     * importan — y esa decision se toma mal, porque el coste no se ve hasta
+     * que la tabla crece. Con cero, la regla es una: los dias se filtran con
+     * `FiltroDeFechas`.
+     *
+     * Se descartan los comentarios: varios EXPLICAN la forma vieja —incluida
+     * esta prueba citandola arriba— y un detector que confunde la prosa con el
+     * codigo castiga el haberlo dejado dicho. Es la misma leccion que el
+     * guardia de las direcciones de correo de pega.
+     */
+    $conWhereDate = [];
+
+    $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(app_path()));
+
+    foreach ($it as $fichero) {
+        if ($fichero->getExtension() !== 'php') {
+            continue;
+        }
+
+        $codigo = '';
+
+        foreach (token_get_all(file_get_contents($fichero->getPathname())) as $pieza) {
+            if (is_array($pieza) && in_array($pieza[0], [T_COMMENT, T_DOC_COMMENT], true)) {
+                continue;
+            }
+
+            $codigo .= is_array($pieza) ? $pieza[1] : $pieza;
+        }
+
+        if (str_contains($codigo, 'whereDate(')) {
+            $conWhereDate[] = str_replace(app_path().DIRECTORY_SEPARATOR, '', $fichero->getPathname());
+        }
+    }
+
+    expect($conWhereDate)->toBe([]);
+});
+
+it('el guardia encuentra un whereDate cuando lo hay', function () {
+    /*
+     * LA PASADA DE CONTROL del guardia de arriba. Sin esto, el dia que el
+     * recorrido deje de funcionar —una ruta mal construida, una extension
+     * distinta— pasaria en verde sobre una lista vacia y diria que todo esta
+     * bien. Un detector que no encuentra nada no es una prueba de que no haya
+     * nada.
+     */
+    $falso = sys_get_temp_dir().'/guardia_'.uniqid().'.php';
+    file_put_contents($falso, "<?php\n\$q->whereDate('x', now());\n");
+
+    $codigo = '';
+    foreach (token_get_all(file_get_contents($falso)) as $pieza) {
+        if (is_array($pieza) && in_array($pieza[0], [T_COMMENT, T_DOC_COMMENT], true)) {
+            continue;
+        }
+        $codigo .= is_array($pieza) ? $pieza[1] : $pieza;
+    }
+
+    expect(str_contains($codigo, 'whereDate('))->toBeTrue();
+
+    // Y que SI descarte los comentarios, que es la otra mitad del criterio.
+    file_put_contents($falso, "<?php\n// esto decia \$q->whereDate('x', now());\n");
+
+    $soloComentario = '';
+    foreach (token_get_all(file_get_contents($falso)) as $pieza) {
+        if (is_array($pieza) && in_array($pieza[0], [T_COMMENT, T_DOC_COMMENT], true)) {
+            continue;
+        }
+        $soloComentario .= is_array($pieza) ? $pieza[1] : $pieza;
+    }
+
+    expect(str_contains($soloComentario, 'whereDate('))->toBeFalse();
+
+    @unlink($falso);
+});
