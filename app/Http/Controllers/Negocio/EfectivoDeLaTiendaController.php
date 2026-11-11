@@ -45,13 +45,30 @@ class EfectivoDeLaTiendaController extends Controller
             ->groupBy('domiciliary_id')
             ->pluck('ultima', 'domiciliary_id');
 
+        /*
+         * LOS DOS NÚMEROS DE TODA LA FLOTA, ANTES DEL RECORRIDO.
+         *
+         * Aquí se llamaba a `saldo()` y a `pendienteConLaTienda()` DENTRO del
+         * `map`, y el segundo hace dos consultas más y vuelve a llamar al
+         * primero: cuatro por domiciliario. Medido contra la base de
+         * desarrollo, esta ruta hacía **50 consultas** para una tienda con
+         * diez, y 42 eran tres líneas repitiéndose. Una tienda con cuarenta
+         * domiciliarios haría ciento ochenta.
+         *
+         * Las versiones en plural traen lo mismo en tres consultas para todos,
+         * y el reparto cronológico es el mismo código: no hay dos cuentas que
+         * puedan dar números distintos.
+         */
+        $saldos = $this->custodia->saldosDe($ids);
+        $pendientes = $this->custodia->pendientesConLaTienda($negocioId, $ids);
+
         $domiciliarios = $flota->map(fn ($d) => [
             'domiciliary_id' => (int) $d->domiciliary_id,
             'name' => $d->user?->name,
             'phone' => $d->user?->phone,
             // Lo que lleva encima de todas las tiendas, y lo que es de esta.
-            'saldo' => round($this->custodia->saldo((int) $d->domiciliary_id), 2),
-            'pendiente' => $this->custodia->pendienteConLaTienda($negocioId, (int) $d->domiciliary_id),
+            'saldo' => round($saldos[(int) $d->domiciliary_id] ?? 0.0, 2),
+            'pendiente' => $pendientes[(int) $d->domiciliary_id] ?? 0.0,
             'ultima_entrega' => $ultimas[$d->domiciliary_id] ?? null,
         ])->sortByDesc('pendiente')->values();
 

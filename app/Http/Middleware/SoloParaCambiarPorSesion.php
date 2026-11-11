@@ -41,6 +41,22 @@ class SoloParaCambiarPorSesion
          * lo que descubrió la prueba «esa credencial no sirve para nada más».
          *
          * Buscarlo por el encabezado funciona en cualquier orden.
+         *
+         * CUESTA UNA CONSULTA POR PETICIÓN AUTENTICADA, y está medido: en el
+         * log de latencia, `personal_access_tokens` sale dos veces en toda
+         * ruta con sesión —esta búsqueda y la de Sanctum—. Se queda así a
+         * propósito.
+         *
+         * Quitarla pedía que este middleware corriera DESPUÉS de
+         * `auth:sanctum`, para leer `currentAccessToken()` gratis. Eso se hace
+         * con `$middleware->priority()`, y significa mover el orden de un
+         * middleware de seguridad en los 325 endpoints a la vez; además, en
+         * una ruta pública no hay autenticación que lo deje después de nada,
+         * así que la credencial biométrica dejaría de estar acotada ahí
+         * —no gana privilegio, pero la propiedad escrita es «no sirve para
+         * nada más», no «para nada más que requiera sesión»—.
+         *
+         * Una consulta de clave primaria por petición no paga ese riesgo.
          */
         $bearer = $request->bearerToken();
 

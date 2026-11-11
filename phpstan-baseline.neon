@@ -1363,12 +1363,6 @@ parameters:
 			path: app/Services/CatalogoDeProductos.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\Operacion\\CashMovement\:\:\$busines_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/CustodiaDeEfectivo.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\Promotion\:\:\$products\.$#'
 			identifier: property.notFound
 			count: 3

@@ -91,6 +91,38 @@ class PedidoParaLaApp
         ];
     }
 
+    /**
+     * Las mismas, sin lo que solo se enseña a quien ya tiene el pedido.
+     *
+     * POR QUÉ EXISTE. `formatear($order, false, ...)` devuelve `buyer => null`
+     * y `delivery_address => null` —así se le muestra al domiciliario un
+     * pedido que todavía no ha tomado: ve de qué tienda es y cuánto suma, no
+     * a quién ni dónde—. Pero la precarga era la misma lista en los dos casos,
+     * así que esas relaciones se traían de la base para tirarlas al
+     * serializar.
+     *
+     * Medido contra la base de desarrollo: `GET /v1/domiciliaries/pedidos`
+     * hacía 34 consultas, y seis eran estas sobre la mitad «por tomar»
+     * —`buyer`, `user`, `address` y sus tres hermanas—. No cambia la
+     * respuesta: esos campos ya salían nulos.
+     *
+     * SE DERIVA DE `relaciones()`, no se escribe a mano: así una relación
+     * nueva entra en las dos listas sola. Una copia literal se queda vieja el
+     * día que alguien añada algo arriba, y el síntoma sería una carga perezosa
+     * en producción —donde `preventLazyLoading` está apagado— o media pantalla
+     * vacía.
+     *
+     * @return list<string>
+     */
+    public static function relacionesSinComprador(): array
+    {
+        return array_values(array_filter(
+            self::relaciones(),
+            fn (string $r) => ! str_starts_with($r, 'buyer')
+                && ! str_starts_with($r, 'address'),
+        ));
+    }
+
     public function formatear(
         OrdersSales $order,
         bool $conDatosDelComprador = true,

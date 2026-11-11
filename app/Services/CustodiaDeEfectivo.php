@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Operacion\CashDeposit;
 use App\Models\Operacion\CashMovement;
 use App\Models\Order\OrdersSales;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -59,7 +60,39 @@ class CustodiaDeEfectivo
     /** Lo que un domiciliario tiene encima ahora mismo. */
     public function saldo(int $domiciliaryId): float
     {
-        return round((float) CashMovement::where('domiciliary_id', $domiciliaryId)->sum('amount'), 2);
+        return $this->saldosDe([$domiciliaryId])[$domiciliaryId] ?? 0.0;
+    }
+
+    /**
+     * Lo mismo, para varios a la vez y en UNA consulta.
+     *
+     * POR QUE EXISTE: `GET /v1/negocio/efectivo` llamaba a `saldo()` dentro de
+     * un recorrido de la flota, y a `pendienteConLaTienda()` —que llama a
+     * `saldo()` otra vez al final— tambien. Medido contra la base de
+     * desarrollo: **cuatro consultas por domiciliario**, 50 en total para una
+     * tienda con diez. Una con cuarenta haria ciento ochenta.
+     *
+     * Y `saldo()` pasa a delegar aqui en vez de tener su propia consulta: con
+     * dos implementaciones del mismo numero, basta que alguien cambie un
+     * `where` en una para que la pantalla del tendero y la del domiciliario
+     * dejen de coincidir. Que es exactamente lo que el comentario de esta
+     * clase dice que no debe pasar.
+     *
+     * @param  list<int>  $ids
+     * @return array<int, float>
+     */
+    public function saldosDe(array $ids): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+
+        return CashMovement::whereIn('domiciliary_id', $ids)
+            ->groupBy('domiciliary_id')
+            ->selectRaw('domiciliary_id, SUM(amount) as total')
+            ->pluck('total', 'domiciliary_id')
+            ->map(fn ($t) => round((float) $t, 2))
+            ->all();
     }
 
     /**
@@ -144,26 +177,100 @@ class CustodiaDeEfectivo
      */
     public function pendienteConLaTienda(int $negocioId, int $domiciliaryId): float
     {
-        $eventos = collect();
+        return $this->pendientesConLaTienda($negocioId, [$domiciliaryId])[$domiciliaryId] ?? 0.0;
+    }
 
-        CashMovement::where('cash_movements.domiciliary_id', $domiciliaryId)
+    /**
+     * Lo mismo, para toda una flota y en TRES consultas en vez de cuatro por
+     * cabeza.
+     *
+     * POR QUÉ EXISTE. `GET /v1/negocio/efectivo` recorría la flota llamando a
+     * `saldo()` y a `pendienteConLaTienda()` por cada domiciliario, y este
+     * último hace dos consultas más y vuelve a llamar a `saldo()` al final.
+     * Medido contra la base de desarrollo: **50 consultas para una tienda con
+     * diez domiciliarios**, y 42 de ellas eran tres líneas repetidas. Cuatro
+     * por cabeza, así que una tienda con cuarenta haría ciento ochenta.
+     *
+     * EL REPARTO NO CAMBIA NI UNA LÍNEA. Lo único que se mueve es de dónde
+     * salen los datos: antes dos consultas por domiciliario, ahora dos para
+     * todos y un `groupBy` en memoria. El recorrido cronológico vive en
+     * `repartirEntreTiendas()` y lo usan los dos caminos, así que no hay dos
+     * copias del algoritmo que puedan separarse — que es justo lo que acaba
+     * con dos pantallas dando números distintos.
+     *
+     * @param  list<int>  $ids
+     * @return array<int, float>
+     */
+    public function pendientesConLaTienda(int $negocioId, array $ids): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+
+        $cobros = CashMovement::whereIn('cash_movements.domiciliary_id', $ids)
             ->where('cash_movements.type', CashMovement::RECAUDO)
             ->leftJoin('orderssales as o', 'o.orderSales_id', '=', 'cash_movements.order_id')
-            ->get(['cash_movements.id', 'cash_movements.amount', 'cash_movements.created_at', 'o.busines_id'])
-            ->each(fn ($m) => $eventos->push([
-                'cuando' => (string) $m->created_at, 'orden' => 0, 'id' => $m->id,
-                'tipo' => 'cobro', 'tienda' => (int) $m->busines_id, 'monto' => (float) $m->amount,
-            ]));
+            ->get([
+                'cash_movements.id', 'cash_movements.amount', 'cash_movements.created_at',
+                'cash_movements.domiciliary_id', 'o.busines_id',
+            ])
+            ->groupBy(fn ($m) => (int) $m->domiciliary_id);
 
-        CashDeposit::where('domiciliary_id', $domiciliaryId)
+        $depositos = CashDeposit::whereIn('domiciliary_id', $ids)
             ->where('state', CashDeposit::CONFIRMADA)
-            ->get(['id', 'amount', 'canal', 'busines_id', 'confirmed_at', 'created_at'])
-            ->each(fn ($d) => $eventos->push([
-                'cuando' => (string) ($d->confirmed_at ?? $d->created_at), 'orden' => 1, 'id' => $d->id,
-                'tipo' => $d->canal === CashDeposit::MOSTRADOR ? 'mostrador' : 'plataforma',
-                'tienda' => (int) $d->busines_id, 'monto' => (float) $d->amount,
-            ]));
+            ->get([
+                'id', 'amount', 'canal', 'busines_id', 'confirmed_at', 'created_at',
+                'domiciliary_id',
+            ])
+            ->groupBy(fn ($d) => (int) $d->domiciliary_id);
 
+        // El tope: nunca más de lo que lleva encima. Una consulta para todos.
+        $saldos = $this->saldosDe($ids);
+
+        $salida = [];
+
+        foreach ($ids as $id) {
+            $id = (int) $id;
+            $eventos = collect();
+
+            foreach ($cobros->get($id, collect()) as $m) {
+                $eventos->push([
+                    'cuando' => (string) $m->created_at, 'orden' => 0, 'id' => $m->id,
+                    'tipo' => 'cobro', 'tienda' => (int) $m->busines_id,
+                    'monto' => (float) $m->amount,
+                ]);
+            }
+
+            foreach ($depositos->get($id, collect()) as $d) {
+                $eventos->push([
+                    'cuando' => (string) ($d->confirmed_at ?? $d->created_at),
+                    'orden' => 1, 'id' => $d->id,
+                    'tipo' => $d->canal === CashDeposit::MOSTRADOR ? 'mostrador' : 'plataforma',
+                    'tienda' => (int) $d->busines_id, 'monto' => (float) $d->amount,
+                ]);
+            }
+
+            $porTienda = $this->repartirEntreTiendas($eventos);
+            $pendiente = $porTienda[$negocioId] ?? 0.0;
+
+            $salida[$id] = max(0.0, round(min($pendiente, $saldos[$id] ?? 0.0), 2));
+        }
+
+        return $salida;
+    }
+
+    /**
+     * El recorrido cronológico, tal cual estaba.
+     *
+     * Vive aparte para que haya UNA sola copia: la versión por lotes y la de
+     * uno solo acaban aquí. Por qué el orden importa está explicado arriba, en
+     * `pendienteConLaTienda`.
+     *
+     * @param  Collection<int, array<string, mixed>>  $eventos
+     * @return array<int, float>
+     */
+    private function repartirEntreTiendas($eventos): array
+    {
         $porTienda = [];
 
         foreach ($eventos->sortBy(fn ($e) => [$e['cuando'], $e['orden'], $e['id']]) as $e) {
@@ -183,9 +290,7 @@ class CustodiaDeEfectivo
             }
         }
 
-        $pendiente = $porTienda[$negocioId] ?? 0.0;
-
-        return max(0.0, round(min($pendiente, $this->saldo($domiciliaryId)), 2));
+        return $porTienda;
     }
 
     /**

@@ -71,7 +71,20 @@ class PedidosDelDomiciliarioController extends Controller
                 ->where('state', self::POR_TOMAR)
                 ->whereNull('domiciliary_id')
                 ->confirmados()
-                ->with($this->relaciones())
+                /*
+                 * SIN LAS DEL COMPRADOR, porque esta mitad no las enseña.
+                 *
+                 * `formatear($o, false, ...)` —el `false` de abajo— devuelve
+                 * `buyer => null` y `delivery_address => null`, que es el
+                 * sentido de esta lista: un pedido que no he tomado no me dice
+                 * de quién es ni a dónde va. Aun así se precargaban: el
+                 * comprador, su usuario, la dirección y sus tres hermanas se
+                 * traían de la base para tirarlas al serializar.
+                 *
+                 * Medido: esta ruta hacía 34 consultas y seis eran estas. La
+                 * respuesta no cambia —esos campos ya salían nulos—.
+                 */
+                ->with(PedidoParaLaApp::relacionesSinComprador())
                 ->get()
             : collect();
 
