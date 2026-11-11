@@ -1,8 +1,8 @@
 <?php
 
+use App\Http\Resources\Pedido\PedidoDeLaAppResource;
 use App\Models\Rol;
 use App\Models\User;
-use App\Services\PedidoParaLaApp;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
@@ -78,8 +78,8 @@ function escenarioDeReparto(int $porTomar = 2, int $mios = 1): array
 }
 
 it('la lista sin comprador se DERIVA de la completa, no se copia', function () {
-    $todas = PedidoParaLaApp::relaciones();
-    $sin = PedidoParaLaApp::relacionesSinComprador();
+    $todas = PedidoDeLaAppResource::relaciones();
+    $sin = PedidoDeLaAppResource::relacionesSinComprador();
 
     // Subconjunto: nada aparece ahí que no esté en la lista buena.
     expect(array_diff($sin, $todas))->toBe([]);

@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Domiciliary;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Pedido\PedidoDeLaAppResource;
 use App\Models\Domiciliary;
 use App\Models\Order\OrdersSales;
-use App\Services\PedidoParaLaApp;
 use Illuminate\Http\Request;
 
 /**
@@ -30,7 +30,13 @@ class PedidosDelDomiciliarioController extends Controller
 
     private const ENTREGADO = 4;
 
-    public function __construct(private readonly PedidoParaLaApp $presentador) {}
+    /*
+     * SIN CONSTRUCTOR. Aqui se inyectaba el presentador para llamar a su
+     * `formatear()`; la forma de la respuesta vive ahora en
+     * `PedidoDeLaAppResource`, asi que no queda nada que inyectar. De la
+     * clase vieja se sigue leyendo —estaticamente— la lista de relaciones a
+     * precargar, que es lo unico que le queda y lo unico que le corresponde.
+     */
 
     public function mios(Request $request)
     {
@@ -84,7 +90,7 @@ class PedidosDelDomiciliarioController extends Controller
                  * Medido: esta ruta hacía 34 consultas y seis eran estas. La
                  * respuesta no cambia —esos campos ya salían nulos—.
                  */
-                ->with(PedidoParaLaApp::relacionesSinComprador())
+                ->with(PedidoDeLaAppResource::relacionesSinComprador())
                 ->get()
             : collect();
 
@@ -95,9 +101,11 @@ class PedidosDelDomiciliarioController extends Controller
          * otro lado. El tercer `false` es eso.
          */
         $pedidos = $mios
-            ->map(fn (OrdersSales $o) => $this->presentador->formatear($o, true, false))
+            ->map(fn (OrdersSales $o) => (new PedidoDeLaAppResource($o, true, false))->resolve())
             ->concat(
-                $porTomar->map(fn (OrdersSales $o) => $this->presentador->formatear($o, false, false))
+                $porTomar->map(
+                    fn (OrdersSales $o) => (new PedidoDeLaAppResource($o, false, false))->resolve()
+                )
             )
             ->values();
 
@@ -117,7 +125,7 @@ class PedidosDelDomiciliarioController extends Controller
 
     /** Lo que el presentador necesita cargado para no disparar N+1. */
     /**
-     * Las declara `PedidoParaLaApp`, que es quien las lee.
+     * Las declara `PedidoDeLaAppResource`, que es quien las lee.
      *
      * Esta lista estaba completa y la del otro controlador que usa el mismo
      * presentador no: le faltaba `domiciliary.user`. Dos copias de la misma
@@ -125,6 +133,6 @@ class PedidosDelDomiciliarioController extends Controller
      */
     private function relaciones(): array
     {
-        return PedidoParaLaApp::relaciones();
+        return PedidoDeLaAppResource::relaciones();
     }
 }

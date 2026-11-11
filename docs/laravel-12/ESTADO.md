@@ -1,6 +1,6 @@
 # Estado del backend frente al estándar
 
-**Medido el 11 de noviembre de 2026.** Laravel 12.72 · 1234 pruebas en verde ·
+**Medido el 11 de noviembre de 2026.** Laravel 12.72 · 1238 pruebas en verde ·
 PHPStan y Pint limpios · 428 clases cargan · `composer audit` en cero.
 
 Doce ramas de trabajo fusionadas, y el backend **arrancado y recorrido entero**:
@@ -114,7 +114,7 @@ y sin un solo error. Ahora lo vigila `colas:comprobar --avisar`, a diario.
 | Análisis estático | no había | **PHPStan nivel 5** | línea base de 385; el CI exige código nuevo limpio |
 | Superficie de la API | sin congelar | **294 rutas** | prueba que falla si cambia verbo, URI, nombre o middleware. Eran 325: las 31 sin llamante se retiraron el 11 de noviembre |
 | Duración de la suite | 630 s | **48 s** | las pruebas ya no llaman a un Reverb real |
-| Pruebas | 1026 | **1234** | |
+| Pruebas | 1026 | **1238** | |
 | Procesos recorridos de punta a punta | 0 | **33** | `scripts/arnes/`, contra el servidor en marcha |
 | Avisos de `composer audit` | 20 | **0** | bloqueante en el CI |
 
@@ -258,16 +258,75 @@ búsqueda **es la autorización**. El motivo está en `EXCEPCIONES.md`.
 > cambiaban en cada corrida, así que ensuciaban el estado del repositorio con
 > binarios regenerables. Fuera del índice y en `.gitignore`.
 
-### `JsonResource` — la carpeta no existe
+### `JsonResource` — primera tanda hecha, y el mecanismo montado
 
 Es la regla más grande que queda, y la más peligrosa. La forma de la respuesta
 **es el contrato** que consumen la app publicada en las dos tiendas, tres
 paneles y las versiones que no se pueden actualizar. Reescribirla a ciegas
 rompe clientes.
 
-Hoy la sostienen 1234 pruebas, el congelado de rutas y los 33 procesos del arnés. Hacerlo bien exige
-endpoint por endpoint, con una prueba que fije la respuesta **antes** de
-tocarla — el mismo método que con las validaciones, multiplicado por 325.
+> **11 de noviembre de 2026 — hecha la primera tanda.** Existe
+> `app/Http/Resources/` con cuatro clases, y con ellas el método para las
+> demás. Lo que se movió: `OrdersSales::toApi()` → `PedidoResource`,
+> `PedidoParaLaApp::formatear()` → `PedidoDeLaAppResource`,
+> `PedidoParaLaApp::negocio()` → `NegocioDelPedidoResource` y
+> `Promotion::toApi()` → `PromocionResource`. Ocho sitios de llamada, seis
+> endpoints. **534 líneas menos de las que había**, y `PedidoParaLaApp`
+> desapareció: lo que le quedaba eran las listas de precarga, que se fueron al
+> Resource que las lee, por el mismo argumento que la clase vieja daba para
+> tenerlas.
+>
+> **CÓMO SE MOVIÓ, que es lo único que lo hace seguro.** El cuerpo de cada
+> método se extrajo del fichero con un guion y se pegó tal cual, con sus
+> comentarios; lo único que cambió fue `$this->` por `$pedido->`, con un
+> reemplazo mecánico. Son entre treinta y ciento sesenta líneas de nombres de
+> campo por clase: transcribirlas a ojo es el peor sitio posible para confiar
+> en la vista.
+>
+> **Y se comprobó byte a byte contra la base de desarrollo**: cuatro
+> endpoints, **1,6 MB de JSON real, cero diferencias** —294 340, 1 072 904,
+> 15 517 y 294 340 bytes, los mismos antes y después—.
+>
+> Esa comparación encontró **dos cosas que ninguna otra herramienta vio**:
+>
+> - `self::RETIRADA` dentro del Resource dejó de apuntar al modelo y empezó a
+>   apuntar al Resource, que no tiene esa constante: 500 con «Undefined
+>   constant». No lo vio `php -l`, ni PHPStan en su nivel, ni ninguna de las
+>   1234 pruebas, porque ninguna llamaba a la lista de promociones. **Mover un
+>   método de clase cambia el significado de `self` en silencio.**
+> - El primer guion de captura despachaba los cuatro endpoints con el MISMO
+>   kernel, y el guard de Sanctum se queda con el usuario de la primera
+>   petición: la del domiciliario salía autenticada como el tendero y
+>   devolvía un 403. Guardado como «la respuesta de antes», la comparación de
+>   después habría comparado dos errores iguales y dado verde.
+>
+> **La red que queda** es `tests/Feature/Contrato/FormaDeLaRespuestaTest.php`,
+> hermana del congelado de rutas: congela el camino de cada clave y el TIPO de
+> su valor —no la cifra, que cambia con los datos— y se regenera con
+> `CONGELAR_FORMA=1`. Probada rompiéndola de dos maneras: quitando un campo y
+> cambiando un `(int)` por `(string)`, tres de sus cuatro pruebas se ponen
+> rojas.
+>
+> Lleva su propia **prueba de clavo**, y hizo falta: el escenario no creaba
+> repartidor, así que `domiciliary` viajaba nula y el congelado no vigilaba
+> ninguno de sus cinco campos. Una red con agujeros que se veía verde. Es el
+> mismo error que ya había pasado en `ElClienteNoPoneElPrecioTest`.
+>
+> **Lo que queda son los otros ~288 endpoints**, y ahora el método está
+> escrito: extraer el cuerpo con el guion, pegarlo en su Resource, cambiar
+> `$this->`, comparar byte a byte contra la base de desarrollo y congelar la
+> forma. No se migra lo que no se pueda comparar.
+
+**Una diferencia que NO se unificó, y queda dicha.** Las dos formas del pedido
+tratan distinto la latitud del negocio: `PedidoResource` escribe
+`latitude ? (float) … : null` y `PedidoDeLaAppResource` escribe
+`latitude !== null ? (float) … : null`. O sea que una latitud **0 sale `0.0`
+en una respuesta y `null` en la otra**. Es exactamente lo que un «DRY»
+apresurado habría uniformado al juntar las dos clases, cambiando una respuesta
+que las apps publicadas ya reciben. Cuál de las dos es la buena es una
+decisión de producto; lo que se ganó es que ahora están una al lado de la otra
+y la diferencia está escrita, que es lo que no se podía hacer cuando vivían en
+dos ficheros distintos.
 
 ### Lo que hoy NO se puede cumplir
 

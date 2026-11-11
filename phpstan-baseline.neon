@@ -1093,6 +1093,12 @@ parameters:
 			path: app/Http/Controllers/User/UserController.php
 
 		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Resources/Pedido/PedidoResource.php
+
+		-
 			message: '#^Relation ''address'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
 			identifier: larastan.relationExistence
 			count: 1
@@ -1129,46 +1135,10 @@ parameters:
 			path: app/Models/Marketing/Banner.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$address\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Models/Order/OrdersSales.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$business\.$#'
-			identifier: property.notFound
-			count: 4
-			path: app/Models/Order/OrdersSales.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$details\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Models/Order/OrdersSales.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$domiciliary\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Models/Order/OrdersSales.php
-
-		-
-			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 1
-			path: app/Models/Order/OrdersSales.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\Product\\ProductGroup\:\:\$products\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Models/Product/ProductGroup.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Promotion\:\:\$products\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Models/Promotion.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\User\:\:\$rolRelation\.$#'
@@ -1307,48 +1277,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Services/PagoEnLinea.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$address\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/PedidoParaLaApp.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$business\.$#'
-			identifier: property.notFound
-			count: 11
-			path: app/Services/PedidoParaLaApp.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$buyer\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/PedidoParaLaApp.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$details\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/PedidoParaLaApp.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$domiciliary\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/PedidoParaLaApp.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$payments\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Services/PedidoParaLaApp.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSales\:\:\$promotions\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/PedidoParaLaApp.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\Product\\ProductBusiness\:\:\$product\.$#'

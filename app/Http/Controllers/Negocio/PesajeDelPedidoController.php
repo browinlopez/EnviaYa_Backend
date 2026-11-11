@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Negocio;
 use App\Events\OrderStatusUpdated;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Negocio\RegistrarPesajeRequest;
+use App\Http\Resources\Pedido\PedidoResource;
 use App\Models\Order\OrdersSales;
 use App\Models\Order\OrdersSalesDetail;
 use App\Services\Ajustes;
@@ -171,7 +172,7 @@ class PesajeDelPedidoController extends Controller
 
         return response()->json([
             'message' => 'Pesaje guardado.',
-            'data' => $resultado->fresh()->toApi(),
+            'data' => new PedidoResource($resultado->fresh()),
         ]);
     }
 }

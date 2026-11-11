@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Negocio;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Negocio\CancelarPedidoRequest;
+use App\Http\Resources\Pedido\PedidoResource;
 use App\Models\Order\OrdersSales;
 use App\Services\CancelacionDelPedido;
 
@@ -92,7 +93,7 @@ class CancelacionDelPedidoController extends Controller
         return response()->json([
             'message' => 'Pedido cancelado. Le avisamos al cliente con el motivo.'
                 .($hecho['aviso'] ? ' '.$hecho['aviso'] : ''),
-            'order' => $order->fresh()->toApi(),
+            'order' => new PedidoResource($order->fresh()),
             'devolucion' => $hecho['devolucion'],
             'motivo' => $hecho['motivo'],
         ]);

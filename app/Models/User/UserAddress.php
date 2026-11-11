@@ -85,7 +85,7 @@ class UserAddress extends Audit
      * cuyo departamento es «Atlántico» resuelven bien las dos y dan país
      * `null`, habiendo 27 países en la tabla.
      *
-     * POR QUÉ NO SE ARREGLA AQUÍ. `PedidoParaLaApp` lleva ese `null` al
+     * POR QUÉ NO SE ARREGLA AQUÍ. `PedidoDeLaAppResource` lleva ese `null` al
      * campo `country` de cada dirección de cada pedido, y lo llevan las dos
      * apps publicadas en las tiendas. Hacerlo resolver cambiaría un valor que
      * los clientes reciben como nulo desde siempre, y eso es una decisión de

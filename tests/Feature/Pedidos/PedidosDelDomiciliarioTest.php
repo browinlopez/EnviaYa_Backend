@@ -1,9 +1,9 @@
 <?php
 
+use App\Http\Resources\Pedido\PedidoDeLaAppResource;
 use App\Models\Order\OrdersSales;
 use App\Models\Rol;
 use App\Models\User;
-use App\Services\PedidoParaLaApp;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
@@ -240,7 +240,7 @@ test('la tienda si ve lo que le paga a su domiciliario', function () {
     $e = escenarioDomiciliario();
 
     $pedido = OrdersSales::find($e['mio']);
-    $ficha = app(PedidoParaLaApp::class)->formatear($pedido);
+    $ficha = (new PedidoDeLaAppResource($pedido))->resolve();
 
     expect((float) $ficha['domiciliary_fee'])->toBe(500.0);
 });

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Negocio;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Negocio\GuardarPromocionRequest;
+use App\Http\Resources\Promocion\PromocionResource;
 use App\Models\Business;
 use App\Models\Promotion;
 use App\Services\PromocionesDeLaTienda;
@@ -54,7 +55,7 @@ class PromocionesController extends Controller
             ->orderByDesc('promotion_id')
             ->limit(50)
             ->get()
-            ->map(fn (Promotion $p) => $p->toApi());
+            ->map(fn (Promotion $p) => (new PromocionResource($p))->resolve());
 
         return response()->json([
             'promociones' => $lista,
@@ -270,7 +271,7 @@ class PromocionesController extends Controller
                 // qué no vende más.
                 ? 'Guardamos tu promoción, pero todavía no tienes clientes afiliados que la reciban.'
                 : 'Tu promoción salió a '.count($destinatarios).' cliente'.(count($destinatarios) === 1 ? '' : 's').'.',
-            'promocion' => $promocion->toApi(),
+            'promocion' => new PromocionResource($promocion),
             'le_quedan_hoy' => $this->promociones->leQuedanHoy($businessId),
         ], 201);
     }
@@ -336,7 +337,7 @@ class PromocionesController extends Controller
 
         return response()->json([
             'message' => 'Corregimos tu promoción. A quien ya la recibió le aparecerá el texto nuevo.',
-            'promocion' => $corregida->toApi(),
+            'promocion' => new PromocionResource($corregida),
         ]);
     }
 

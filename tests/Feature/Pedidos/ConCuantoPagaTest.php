@@ -1,7 +1,7 @@
 <?php
 
+use App\Http\Resources\Pedido\PedidoDeLaAppResource;
 use App\Models\Order\OrdersSales;
-use App\Services\PedidoParaLaApp;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -143,7 +143,7 @@ test('el domiciliario recibe con cuánto paga y cuánto cambio llevar', function
         ->assertSuccessful();
 
     $orden = OrdersSales::latest('orderSales_id')->first();
-    $ficha = app(PedidoParaLaApp::class)->formatear($orden);
+    $ficha = (new PedidoDeLaAppResource($orden))->resolve();
 
     expect($ficha)->toHaveKeys(['cash_tendered', 'change_due'])
         ->and((float) $ficha['cash_tendered'])->toBe(50000.0)
