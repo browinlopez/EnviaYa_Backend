@@ -9,6 +9,7 @@ use App\Models\Payment\Payment;
 use App\Models\Payment\PaymentEvent;
 use App\Models\Payment\PaymentIntent;
 use App\Services\ConfirmacionDePago;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -66,18 +67,64 @@ class BoldWebhookController extends Controller
         $transactionId = $payload['subject'] ?? ($payload['data']['payment_id'] ?? null);
         $reference = $payload['data']['metadata']['reference'] ?? null;
 
-        // Idempotencia: Bold puede reenviar la misma notificación varias veces.
-        if ($notificationId && PaymentEvent::where('payload->id', $notificationId)->exists()) {
+        /*
+         * IDEMPOTENCIA: Bold reenvía la misma notificación cuando una entrega
+         * tarda, y esta ruta es la que marca pedidos como pagados.
+         *
+         * ANTES SE PREGUNTABA `where('payload->id', $id)->exists()`, y eso
+         * tenía dos problemas. Medido con `EXPLAIN`: `type=ALL`,
+         * `key=NINGUNA` — un escaneo completo de `payment_events` en cada
+         * aviso, sobre una tabla que crece con cada cobro para siempre. No hay
+         * índice posible sobre una ruta dentro de un JSON. Y era
+         * comprobar-luego-insertar: dos entregas simultáneas de la misma
+         * notificación pasan las dos la comprobación antes de que ninguna haya
+         * insertado.
+         *
+         * Ahora la llave vive en su columna, con índice ÚNICO. La búsqueda es
+         * por índice, y el duplicado lo decide la BASE: si dos entregas llegan
+         * a la vez, una inserta y la otra choca. Eso no se puede perder en un
+         * refactor.
+         *
+         * SIN `id` TAMBIÉN SE DESCARTA, que antes no: el guardia era
+         * `if ($notificationId && ...)`, así que un aviso sin llave se
+         * procesaba cada vez que llegara. La llave de reserva es el hash del
+         * cuerpo crudo — dos avisos sin `id` y con el cuerpo idéntico son el
+         * mismo aviso, porque no hay nada más que los distinga.
+         *
+         * QUÉ SALVA ESTO HOY, dicho para no exagerar: un duplicado que pasara
+         * tampoco cobraba dos veces, porque `ConfirmacionDePago::confirmar()`
+         * es idempotente a propósito. O sea que esto es defensa en profundidad,
+         * no la reparación de una avería en curso: lo que se gana es que la
+         * corrección deje de depender de un `if` en otro archivo.
+         */
+        $llave = $notificationId ?: 'sha256:'.hash('sha256', $rawBody);
+
+        if (PaymentEvent::where('notification_id', $llave)->exists()) {
             return response()->json(['ok' => true, 'duplicated' => true]);
         }
 
-        PaymentEvent::create([
-            'provider' => 'bold',
-            'event_type' => $type ?? 'unknown',
-            'reference_id' => $reference ?? $transactionId ?? 'unknown',
-            'payload' => $payload,
-            'received_at' => now(),
-        ]);
+        try {
+            PaymentEvent::create([
+                'provider' => 'bold',
+                'notification_id' => $llave,
+                'event_type' => $type ?? 'unknown',
+                'reference_id' => $reference ?? $transactionId ?? 'unknown',
+                'payload' => $payload,
+                'received_at' => now(),
+            ]);
+        } catch (UniqueConstraintViolationException $e) {
+            /*
+             * La otra entrega ganó la carrera entre la comprobación y el
+             * insert. No es un error: es exactamente lo que el índice único
+             * viene a resolver, y la respuesta es la misma que para cualquier
+             * duplicado.
+             */
+            Log::info('Bold webhook: aviso duplicado atrapado por el indice', [
+                'notification_id' => $llave,
+            ]);
+
+            return response()->json(['ok' => true, 'duplicated' => true]);
+        }
 
         $payment = $this->resolvePayment($transactionId, $reference);
 
