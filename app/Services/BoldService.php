@@ -42,7 +42,31 @@ class BoldService
      */
     protected function peticion(): PendingRequest
     {
-        return $this->peticion()
+        /*
+         * `Http::withHeaders($this->headers())`, y no `$this->peticion()`.
+         *
+         * Aqui decia `$this->peticion()`: el metodo se llamaba a si mismo. El
+         * commit que puso los topes sustituyo cada
+         * `Http::withHeaders($this->headers())` de la clase por
+         * `$this->peticion()` —siete sitios, correcto— y tambien el de DENTRO
+         * de este metodo, que era el unico que tenia que quedarse. Un
+         * reemplazo a ciegas.
+         *
+         * Lo que dejaba no era una llamada lenta: era recursion infinita.
+         * Medido: `Allowed memory size of 134217728 bytes exhausted in
+         * BoldService.php on line 45`. Un error FATAL, no una excepcion, asi
+         * que ni el `try/catch` de los controladores lo atrapa y bajo Octane se
+         * lleva al trabajador por delante. Las siete llamadas —crear intencion,
+         * pagar, anular, devolver, estado de devolucion, bancos PSE y consultar
+         * pago— mataban el proceso.
+         *
+         * Ninguna prueba lo vio porque ninguna ejercitaba estos metodos: la
+         * primera que entra en `LlamadasABoldTest` se cae con el codigo de
+         * antes. Y lo encontro el control del detector de llamadas HTTP, al
+         * exigir que `BoldService.php` apareciera entre los ficheros con
+         * `Http::` — no aparecia, porque ya no quedaba ninguno.
+         */
+        return Http::withHeaders($this->headers())
             ->connectTimeout((int) config('services.bold.connect_timeout', 5))
             ->timeout((int) config('services.bold.timeout', 15));
     }

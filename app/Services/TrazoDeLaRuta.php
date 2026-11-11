@@ -142,7 +142,7 @@ class TrazoDeLaRuta
             $memoria,
             now()->addMinutes(self::MINUTOS_EN_CACHE),
             function () use ($origen, $destino, $clave) {
-                $respuesta = Http::timeout(8)->get(
+                $respuesta = Http::connectTimeout(3)->timeout(8)->get(
                     'https://maps.googleapis.com/maps/api/directions/json',
                     [
                         'origin' => $origen,

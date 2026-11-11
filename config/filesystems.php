@@ -1,5 +1,46 @@
 <?php
 
+/*
+|--------------------------------------------------------------------------
+| TOPES DE TIEMPO CONTRA EL ALMACENAMIENTO DE OBJETOS
+|--------------------------------------------------------------------------
+|
+| EL AGUJERO QUE ESTO CIERRA ES EL MISMO QUE TENIA BOLD.
+|
+| El SDK de AWS arranca en modo `legacy`, y en ese modo no pone ningun tope.
+| Comprobado sobre la aplicacion en marcha y no leyendo documentacion: el
+| cliente del disco `r2` se resolvia SIN una sola opcion de `http`, asi que
+| valian los valores por defecto de Guzzle —`connect_timeout` y `timeout` en 0,
+| o sea esperar indefinidamente—.
+|
+| Y las subidas a R2 ocurren DENTRO de la peticion: `MediaService` y
+| `BusinessMediaService` escriben en el disco `r2` cuando el tendero sube el
+| logo de su tienda o una foto de su negocio. Con Octane los trabajadores son
+| un grupo fijo, asi que bastaba que R2 se QUEDARA COLGADO —ni siquiera que
+| fallara— para agotarlos y tumbar el backend entero, no solo las imagenes. El
+| `try/catch` que envuelve cada subida atrapa excepciones, NO lentitud: una
+| conexion colgada no lanza nada, espera.
+|
+| EL DISCO DE LAS COPIAS LLEVA OTRO TOPE, Y MUCHO MAS LARGO. Un volcado de la
+| base puede pesar cientos de megas. `S3Client::upload()` parte en trozos por
+| encima de 16 MB y cada trozo es su propia peticion HTTP, asi que el tope se
+| aplica POR TROZO y uno generoso no estorba. Un tope corto ahi no arreglaria
+| nada: romperia la copia de seguridad para proteger de una espera que ocurre
+| en un comando programado, de madrugada y con `withoutOverlapping` puesto.
+|
+| Las dos cosas salen del entorno porque el dia que R2 vaya lento de verdad hay
+| que poder aflojar el tope sin desplegar.
+*/
+$topesDeMedios = [
+    'connect_timeout' => (float) env('S3_CONNECT_TIMEOUT', 5),
+    'timeout' => (float) env('S3_TIMEOUT', 30),
+];
+
+$topesDeRespaldos = [
+    'connect_timeout' => (float) env('S3_BACKUP_CONNECT_TIMEOUT', 10),
+    'timeout' => (float) env('S3_BACKUP_TIMEOUT', 900),
+];
+
 return [
 
     /*
@@ -49,6 +90,7 @@ return [
 
         's3' => [
             'driver' => 's3',
+            'http' => $topesDeMedios,
             'key' => env('AWS_ACCESS_KEY_ID'),
             'secret' => env('AWS_SECRET_ACCESS_KEY'),
             'region' => env('AWS_DEFAULT_REGION'),
@@ -76,6 +118,7 @@ return [
          */
         'r2' => [
             'driver' => 's3',
+            'http' => $topesDeMedios,
             'key' => env('R2_ACCESS_KEY_ID'),
             'secret' => env('R2_SECRET_ACCESS_KEY'),
             'region' => 'auto',
@@ -106,6 +149,8 @@ return [
          */
         'r2_respaldos' => [
             'driver' => 's3',
+            // Generoso a proposito: ver la cabecera de este archivo.
+            'http' => $topesDeRespaldos,
             'key' => env('R2_BACKUP_ACCESS_KEY_ID', env('R2_ACCESS_KEY_ID')),
             'secret' => env('R2_BACKUP_SECRET_ACCESS_KEY', env('R2_SECRET_ACCESS_KEY')),
             'region' => 'auto',
