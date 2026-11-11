@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\IncidenteRequest;
 use App\Models\Operacion\Pqrs;
 use App\Models\Operacion\SafetyIncident;
 use App\Support\FiltroDeFechas;
@@ -45,9 +46,9 @@ class IncidentesApiController extends Controller
         ]);
     }
 
-    public function storeIncidente(Request $request)
+    public function storeIncidente(IncidenteRequest $request)
     {
-        $datos = $this->validarIncidente($request);
+        $datos = $request->validated();
         $datos['reported_by'] = $request->user()?->user_id;
 
         $i = SafetyIncident::create($datos);
@@ -58,8 +59,13 @@ class IncidentesApiController extends Controller
     public function updateIncidente(Request $request, $id)
     {
         $i = SafetyIncident::findOr($id, fn () => abort(404, 'El incidente no existe.'));
-
-        $datos = $this->validarIncidente($request, true);
+        /*
+         * EN LINEA Y NO EN UN FormRequest, a proposito: la busqueda de arriba
+         * contesta 404 cuando el registro no existe, y eso tiene que ir ANTES
+         * que un error de validacion. Las reglas no se repiten: se piden a
+         * `IncidenteRequest` en modo parcial.
+         */
+        $datos = $request->validate(IncidenteRequest::reglas(parcial: true));
 
         // Cerrar sin decir qué se hizo deja un registro que solo sirve para
         // contar cuántos hubo, y el módulo existe para que no se repitan.
@@ -79,25 +85,6 @@ class IncidentesApiController extends Controller
         $i->forceFill($datos)->save();
 
         return response()->json(['message' => 'Incidente actualizado.']);
-    }
-
-    private function validarIncidente(Request $request, bool $parcial = false): array
-    {
-        $regla = $parcial ? 'sometimes' : 'required';
-
-        return $request->validate([
-            'domiciliary_id' => 'sometimes|nullable|integer|exists:domiciliary,domiciliary_id',
-            'order_id' => 'sometimes|nullable|integer|exists:orderssales,orderSales_id',
-            'occurred_at' => "{$regla}|date",
-            'type' => "{$regla}|in:accidente_transito,caida,robo,agresion,falla_vehiculo,condicion_insegura,otro",
-            'severity' => 'sometimes|in:leve,moderado,grave',
-            'had_injuries' => 'sometimes|boolean',
-            'days_off' => 'sometimes|integer|min:0|max:2000',
-            'location' => 'sometimes|nullable|string|max:255',
-            'description' => "{$regla}|string",
-            'actions' => 'sometimes|nullable|string',
-            'state' => 'sometimes|integer|in:0,1,2',
-        ]);
     }
 
     /* ==================================================================

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\CampanaPushRequest;
 use App\Http\Requests\Admin\VistaPreviaDePushRequest;
 use App\Models\DeviceToken;
 use App\Models\Marketing\AdCampaign;
@@ -183,9 +184,9 @@ class MarketingApiController extends Controller
         ]);
     }
 
-    public function storePushCampaign(Request $request)
+    public function storePushCampaign(CampanaPushRequest $request)
     {
-        $datos = $this->validarPush($request);
+        $datos = $request->validated();
         $datos['created_by'] = $request->user()?->user_id;
 
         $p = PushCampaign::create($datos);
@@ -203,7 +204,13 @@ class MarketingApiController extends Controller
             ], 422);
         }
 
-        $p->update($this->validarPush($request, true));
+        /*
+         * EN LINEA Y NO EN UN FormRequest, a proposito: la busqueda de arriba
+         * contesta 404 cuando el registro no existe, y eso tiene que ir ANTES
+         * que un error de validacion. Las reglas no se repiten: se piden a
+         * `CampanaPushRequest` en modo parcial.
+         */
+        $p->update($request->validate(CampanaPushRequest::reglas(parcial: true)));
 
         return response()->json(['message' => 'Notificación actualizada.']);
     }
@@ -354,20 +361,5 @@ class MarketingApiController extends Controller
          */
 
         return $q;
-    }
-
-    private function validarPush(Request $request, bool $parcial = false): array
-    {
-        $regla = $parcial ? 'sometimes' : 'required';
-
-        return $request->validate([
-            'title' => "{$regla}|string|max:120",
-            'body' => "{$regla}|string|max:500",
-            'link_type' => 'sometimes|in:none,url,business,product,category',
-            'link_value' => 'sometimes|nullable|string|max:500',
-            'segment' => 'sometimes|nullable|array',
-            'scheduled_at' => 'sometimes|nullable|date',
-            'state' => 'sometimes|integer|in:0,1,3',
-        ]);
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\DocumentoRequest;
 use App\Models\Operacion\DomiciliaryDocument;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -89,9 +90,9 @@ class DocumentosApiController extends Controller
         ];
     }
 
-    public function storeDocumento(Request $request)
+    public function storeDocumento(DocumentoRequest $request)
     {
-        $d = DomiciliaryDocument::create($this->validarDocumento($request));
+        $d = DomiciliaryDocument::create($request->validated());
 
         return response()->json(['message' => 'Documento registrado.', 'id' => $d->id], 201);
     }
@@ -100,7 +101,13 @@ class DocumentosApiController extends Controller
     {
         $d = DomiciliaryDocument::findOr($id, fn () => abort(404, 'El documento no existe.'));
 
-        $d->update($this->validarDocumento($request, true));
+        /*
+         * EN LINEA Y NO EN UN FormRequest, a proposito: la busqueda de arriba
+         * contesta 404 cuando el registro no existe, y eso tiene que ir ANTES
+         * que un error de validacion. Las reglas no se repiten: se piden a
+         * `DocumentoRequest` en modo parcial.
+         */
+        $d->update($request->validate(DocumentoRequest::reglas(parcial: true)));
 
         return response()->json(['message' => 'Documento actualizado.']);
     }
@@ -112,24 +119,6 @@ class DocumentosApiController extends Controller
         $d->delete();
 
         return response()->json(['message' => 'Documento eliminado.']);
-    }
-
-    private function validarDocumento(Request $request, bool $parcial = false): array
-    {
-        $regla = $parcial ? 'sometimes' : 'required';
-
-        return $request->validate([
-            'domiciliary_id' => "{$regla}|integer|exists:domiciliary,domiciliary_id",
-            'type' => "{$regla}|in:licencia,soat,tecnomecanica,arl,eps,examen_medico,cedula,otro",
-            'number' => 'sometimes|nullable|string|max:60',
-            'issued_at' => 'sometimes|nullable|date',
-            // Puede ir nula: la cédula no caduca. Un documento sin fecha
-            // simplemente no entra en las alertas.
-            'expires_at' => 'sometimes|nullable|date',
-            'media_id' => 'sometimes|nullable|integer|exists:media_files,id',
-            'notes' => 'sometimes|nullable|string|max:255',
-            'state' => 'sometimes|boolean',
-        ]);
     }
 
     /* ==================================================================
