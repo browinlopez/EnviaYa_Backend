@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Conjunto;
 
 use App\Http\Controllers\Controller;
 use App\Services\PulsoDelConjunto;
+use App\Support\FiltroDeFechas;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -144,7 +145,9 @@ class VisitantesController extends Controller
              * anotó. Arrastrarlas haría crecer el conteo para siempre y la
              * cifra dejaría de significar nada.
              */
-            ->whereDate('e.created_at', now()->toDateString())
+            // Como rango y no `whereDate`: ver `FiltroDeFechas`. Medido
+            // sobre esta misma tabla, 1388 filas abiertas contra 1.
+            ->tap(fn ($q) => FiltroDeFechas::unDia($q, 'e.created_at', now()))
             ->leftJoin('domiciliary as d', 'd.domiciliary_id', '=', 'e.domiciliary_id')
             ->leftJoin('user as u', 'u.user_id', '=', 'd.user_id')
             ->orderByDesc('e.created_at')

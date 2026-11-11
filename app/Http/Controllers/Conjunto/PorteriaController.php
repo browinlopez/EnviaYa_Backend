@@ -8,6 +8,7 @@ use App\Http\Requests\Conjunto\VerificarEnPorteriaRequest;
 use App\Models\Domiciliary;
 use App\Services\AccesoAlConjunto;
 use App\Services\PulsoDelConjunto;
+use App\Support\FiltroDeFechas;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -169,12 +170,19 @@ class PorteriaController extends Controller
             $consulta->whereNull('e.exited_at');
         }
 
+        /*
+         * COMO RANGO, y el de `hasta` NO es la traduccion obvia: ver
+         * `FiltroDeFechas::hasta()`. `date(col) <= '2026-11-05'` incluye
+         * todo el dia 5; escribir `col <= '2026-11-05'` lo recorta a las
+         * 00:00:00 y se pierde el dia entero menos el primer segundo, sin
+         * un error: solo un numero mas pequenio.
+         */
         if ($desde = $request->query('desde')) {
-            $consulta->whereDate('e.created_at', '>=', $desde);
+            FiltroDeFechas::desde($consulta, 'e.created_at', $desde);
         }
 
         if ($hasta = $request->query('hasta')) {
-            $consulta->whereDate('e.created_at', '<=', $hasta);
+            FiltroDeFechas::hasta($consulta, 'e.created_at', $hasta);
         }
 
         $filas = $consulta

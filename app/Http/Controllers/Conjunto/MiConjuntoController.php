@@ -9,6 +9,7 @@ use App\Models\Buyer\ResidentialComplex;
 use App\Models\Conjunto\ComplexStaff;
 use App\Models\Rol;
 use App\Services\MediaService;
+use App\Support\FiltroDeFechas;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -65,10 +66,11 @@ class MiConjuntoController extends Controller
             'stats' => [
                 'residentes' => DB::table('buyer_complex')
                     ->where('complex_id', $complexId)->count(),
-                'entradas_hoy' => DB::table('complex_entries')
-                    ->where('complex_id', $complexId)
-                    ->whereDate('created_at', now()->toDateString())
-                    ->count(),
+                'entradas_hoy' => FiltroDeFechas::unDia(
+                    DB::table('complex_entries')->where('complex_id', $complexId),
+                    'created_at',
+                    now(),
+                )->count(),
                 'celadores' => ComplexStaff::where('complex_id', $complexId)
                     ->where('role', ComplexStaff::CELADOR)
                     ->where('state', true)

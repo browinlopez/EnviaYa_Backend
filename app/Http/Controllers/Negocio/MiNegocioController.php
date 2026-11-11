@@ -8,6 +8,7 @@ use App\Http\Requests\Negocio\RecibirPedidosRequest;
 use App\Http\Requests\Negocio\SubirLogoRequest;
 use App\Models\Order\OrdersSales;
 use App\Services\BusinessMediaService;
+use App\Support\FiltroDeFechas;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -239,7 +240,9 @@ class MiNegocioController extends Controller
     {
         $base = fn () => OrdersSales::where('busines_id', $businessId)->confirmados();
 
-        $hoy = $base()->whereDate('sale_date', now()->toDateString());
+        // Como rango y no `whereDate`: medido con EXPLAIN sobre esta misma
+        // consulta, 507 filas abiertas contra 21. Ver `FiltroDeFechas`.
+        $hoy = FiltroDeFechas::unDia($base(), 'sale_date', now());
 
         return [
             // Los que esperan que alguien pulse "Aceptar". Es la cifra que

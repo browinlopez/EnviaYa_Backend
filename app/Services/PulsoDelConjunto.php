@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Conjunto\ComplexStaff;
+use App\Support\FiltroDeFechas;
 use App\Support\SqlPortable;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
@@ -106,9 +107,13 @@ class PulsoDelConjunto
      */
     private function eseDia(mixed $consulta, string $columna, CarbonImmutable $dia): mixed
     {
-        return $consulta
-            ->where($columna, '>=', $dia->startOfDay())
-            ->where($columna, '<', $dia->addDay()->startOfDay());
+        /*
+         * Delega en `FiltroDeFechas`, que es donde vive el razonamiento y la
+         * prueba. Tenia su propia copia de estas dos lineas, y dos copias del
+         * mismo criterio de bordes es como una se queda con `<=` el dia que
+         * alguien la toque sin leer la otra.
+         */
+        return FiltroDeFechas::unDia($consulta, $columna, $dia);
     }
 
     private function deHoy(int $complexId, CarbonImmutable $hoy): array
