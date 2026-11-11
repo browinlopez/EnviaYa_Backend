@@ -8,13 +8,16 @@ use App\Services\Push\PushFirebase;
 use App\Services\Push\PushSegunPlataforma;
 use App\Services\Push\TransportePush;
 use App\Support\ContadorDeConsultas;
+use App\Support\DestinoDelRespaldo;
 use App\Support\PresupuestoDeConsultas;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
+use Spatie\Backup\Events\DumpingDatabase;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -107,6 +110,22 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(1000)->by(
                 $request->user()?->user_id ?: $request->ip(),
             );
+        });
+
+        /*
+         * LA COPIA DE SEGURIDAD NO SE SUBE A UN BUCKET PÚBLICO.
+         *
+         * Se engancha en `DumpingDatabase`, que spatie dispara ANTES de volcar
+         * la base: así aborta sin haber escrito nada. La excepción la recoge
+         * el propio `BackupJob` y la convierte en «respaldo fallido», que es
+         * lo que manda el aviso por correo. El síntoma pasa a ser un mensaje
+         * que dice qué está mal, en vez de un aviso diario diciendo que todo
+         * va bien mientras la base entera cuelga de una URL.
+         *
+         * El porqué, en `DestinoDelRespaldo`.
+         */
+        Event::listen(DumpingDatabase::class, function (): void {
+            DestinoDelRespaldo::comprobar();
         });
     }
 }
