@@ -447,7 +447,23 @@ class OrderController extends Controller
 
             return response()->json([
                 'message' => 'Orden creada',
-                'order' => $order->load('details.product.category', 'business', 'address', 'promotions', 'payments')->toApi(),
+                /*
+                 * `loadMissing` y no `load`: `AvisoDePedidoNuevo::anunciar()`,
+                 * unas lineas arriba, ya trajo `business` con sus duenios para
+                 * mandar el push. Con `load` se volvia a pedir la misma fila
+                 * —medido: `select * from business where busines_id in (1)` dos
+                 * veces en la misma peticion—.
+                 *
+                 * No cambia la respuesta, y eso hubo que comprobarlo: con
+                 * `loadMissing` el negocio llega con `owners` cargado, pero
+                 * `toApi()` arma la clave `business` campo por campo
+                 * —`business_id`, `name`, `address`, ...— asi que nada que se
+                 * cargue de mas aparece en el JSON. En el otro `load` de este
+                 * mismo controlador (`moverPedido`, al final) NO se puede
+                 * hacer lo mismo: ahi el modelo se serializa entero y cualquier
+                 * relacion cargada de mas SI saldria en la respuesta.
+                 */
+                'order' => $order->loadMissing('details.product.category', 'business', 'address', 'promotions', 'payments')->toApi(),
                 'bold_reference_id' => $intent->bold_reference_id ?? null,
                 /*
                  * La app lee el QR / redirect de acá para el pago online.
