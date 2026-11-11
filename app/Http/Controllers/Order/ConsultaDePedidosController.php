@@ -234,15 +234,10 @@ class ConsultaDePedidosController extends Controller
                             ->whereDate(DB::raw('COALESCE(updated_at, sale_date)'), now()->toDateString());
                     });
             })
-            ->with([
-                'business',
-                'details.product',
-                'buyer.user', // Buyer + User
-                'promotions',
-                'payments',
-                'address.municipality.department.country',
-                'address.alias',
-            ])
+            // La lista la declara el presentador, que es quien las lee: esta
+            // copia se habia quedado sin `domiciliary.user` y cargaba el
+            // repartidor de uno en uno.
+            ->with(PedidoParaLaApp::relaciones())
             ->get();
 
         // Datos del business, solo una vez
