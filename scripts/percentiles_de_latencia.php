@@ -24,13 +24,28 @@
  *    propósito. Ver `PercentilesDeLatencia::porRuta()`.
  */
 
+/*
+ * LOS `use` VAN ARRIBA, Y NO ES ESTILO.
+ *
+ * Estaban DEBAJO del arranque, y entonces Pint —con
+ * `fully_qualified_strict_types`— acorto
+ * `Illuminate\Contracts\Console\Kernel::class` a `Kernel::class` apoyandose en
+ * un `use` que PHP todavia no habia leido en ese punto del fichero. El
+ * resultado: `Target class [Kernel] does not exist` en cada ejecucion.
+ *
+ * Paso `php -l` sin una queja, que es justo lo que `ESTADO.md` ya advertia
+ * —«php -l no basta»— y el motivo de que exista
+ * `scripts/check_classes_load.php`. Ese comprobador mira CLASES; un script
+ * suelto que no arranca no lo ve nadie salvo al ejecutarlo.
+ */
+
+use App\Support\PercentilesDeLatencia;
+use Illuminate\Contracts\Console\Kernel;
+
 require __DIR__.'/../vendor/autoload.php';
 
 $app = require_once __DIR__.'/../bootstrap/app.php';
 $app->make(Kernel::class)->bootstrap();
-
-use App\Support\PercentilesDeLatencia;
-use Illuminate\Contracts\Console\Kernel;
 
 $dias = 7;
 $todas = false;
