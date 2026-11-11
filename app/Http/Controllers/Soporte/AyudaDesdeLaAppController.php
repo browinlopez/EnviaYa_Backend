@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Soporte;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Soporte\RadicarPqrsRequest;
 use App\Models\Operacion\Pqrs;
 use App\Models\Order\OrdersSales;
 use Illuminate\Http\Request;
@@ -26,17 +27,9 @@ use Illuminate\Support\Facades\DB;
  */
 class AyudaDesdeLaAppController extends Controller
 {
-    /** Lo que la app ofrece elegir. «Felicitación» no: eso es una reseña. */
-    private const TIPOS = 'peticion,queja,reclamo,sugerencia';
-
-    public function store(Request $request)
+    public function store(RadicarPqrsRequest $request)
     {
-        $datos = $request->validate([
-            'type' => 'required|in:'.self::TIPOS,
-            'subject' => 'required|string|max:200',
-            'description' => 'required|string|max:4000',
-            'order_id' => 'sometimes|nullable|integer|exists:orderssales,orderSales_id',
-        ]);
+        $datos = $request->validated();
 
         $usuario = $request->user();
 

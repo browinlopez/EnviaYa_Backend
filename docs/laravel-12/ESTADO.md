@@ -49,7 +49,7 @@ propio PR y su propia verificación. El CI ya los cuenta.
 
 | Regla | Antes | Hoy | Estado |
 |---|---:|---:|---|
-| Validación en `FormRequest` | 2 | **75** | 99 en línea quedan |
+| Validación en `FormRequest` | 2 | **110** | 66 en línea quedan, 0 convertibles |
 | Formato (Pint) | sin correr | **limpio** | en el CI |
 | `env()` fuera de `config/` | 2 | **0** | hecho |
 | Clases que no cargan | sin comprobar | **0 de 389** | comprobador nuevo en el CI |
@@ -62,16 +62,75 @@ propio PR y su propia verificación. El CI ya los cuenta.
 
 ## 3 · Lo que falta, por qué y cuánto cuesta
 
-### 99 validaciones en línea
+### 66 validaciones en línea, y ninguna «pendiente» sin más
 
-No son iguales y no se pueden tratar igual:
+> **10 de noviembre de 2026.** Esta tabla decía 99 repartidas en cuatro
+> grupos, medidos a mano antes de las conversiones de hoy. Ya no suma, y el
+> desglose lo hace ahora un detector:
+>
+> ```bash
+> python scripts/validaciones_en_linea.py
+> python scripts/validaciones_en_linea.py --convertibles
+> ```
 
-| Cuántas | Dónde | Qué hace falta |
+No son iguales y no se pueden tratar igual. **Medido, de las 66 que quedan:**
+
+| Cuántas | Motivo | Qué significa |
 |---:|---|---|
-| **48** | endpoints vivos sin ninguna prueba | escribir primero la prueba que fija la respuesta de hoy, después extraer |
-| **25** | endpoints que **ningún cliente llama** | nada: ver abajo |
-| **16** | con prueba, pero no mecánicas | una por una; el detector dice por qué |
-| **10** | en ayudantes privados parametrizados | decidir si `rules()` mira el verbo |
+| **0** | **CONVERTIBLE** | nada se ejecuta antes de validar: se extrae y punto |
+| 25 | SIN LLAMANTE | la ruta no la llama nadie. Extraer una regla de código pendiente de retirarse es invertir al revés |
+| 11 | ORDEN DE LA RESPUESTA | hay una búsqueda o un `abort_if` antes. Un `FormRequest` valida primero, así que quien hoy recibe 404 recibiría 422 hablándole del cuerpo |
+| 9 | DOS EN UN MÉTODO | valida dos veces según la rama; forzarlo cambia **cuál** 422 llega. §20 lo permite |
+| 8 | AYUDANTE PARAMETRIZADO | las reglas salen de un `validar*($request, $parcial)` que comparten `store` y `update` |
+| 4 | HAY CÓDIGO ANTES | algo se ejecuta antes y no se reconoce el patrón: hace falta que lo lea una persona |
+| 3 | SOLO A VECES | la validación está dentro de un `if`: a veces no valida nada |
+| 2 | EL CUERPO SE TOCA | un `merge()` arregla el cuerpo de una app vieja antes de validarlo |
+| 2 | SALIDA TEMPRANA | hay un `return` antes, normalmente para una versión vieja de la app |
+| 1 | REGLAS PRESTADAS | `validate($this->algo())` |
+| 1 | FUERA DE UNA RUTA | está en un servicio |
+
+**El bucket de convertibles está en cero**, y eso es un estado que significa
+algo: no queda ninguna que se mueva sin tomar una decisión. Las tres últimas
+se extrajeron hoy —`POST /v1/ayuda` y los dos controladores web de
+recuperación de contraseña que trajo Breeze—, las tres con pruebas que ya
+existían.
+
+**«Convertible» quiere decir que no se ejecuta NADA antes de validar**, no
+«no encontré ninguno de los estorbos que se me ocurrieron». La diferencia
+costó tres correcciones al detector, y la última la encontró el propio
+código: las tres validaciones de `MediosApiController` salían convertibles y
+**no lo son** —el 404 lo lanza `nombreDeEntidad()`, un ayudante, no un
+`abort_if` a la vista—, y el archivo ya lo explicaba en un comentario.
+Buscando patrones conocidos eso no se caza nunca, porque cualquier llamada
+puede abortar.
+
+**Y el trinquete ya no es una promesa.** El acuerdo escrito era «todo endpoint
+nuevo o tocado estrena su `FormRequest`; el contador solo baja; si sube, el PR
+no entra», y nada lo impedía. Ahora el CI corre
+`python3 scripts/validaciones_en_linea.py --trinquete`, que falla si:
+
+- aparece una validación **CONVERTIBLE** —la regla, literal: una validación en
+  línea con nada por delante es una que no tiene motivo para estar ahí—.
+  Probado: escribiendo un endpoint nuevo a la antigua, el CI se pone rojo y
+  dice qué hacer;
+- el total pasa del tope escrito en el script. Ese número **solo baja**, y se
+  baja a mano en el mismo cambio que convierte una: que haya que tocarlo es lo
+  que hace que alguien se entere;
+- **el propio detector no pudo medir.** Sin `route:list` todo cae en «fuera de
+  una ruta», los convertibles son cero y la compuerta pasaría en verde sin
+  haber comprobado una sola validación. Las dos autocomprobaciones están
+  probadas rompiéndolas.
+
+Los otros dos scripts que trajo el estándar siguen **fuera** del CI a
+propósito: `check_file_sizes.py` señala 112 archivos y §03 llama a esos
+umbrales «orientativos, no bloqueos»; `check_module_boundaries.py` mide una
+estructura modular que este backend decidió no tener.
+
+**El detector depende de `scripts/rutas-candidatas.json`** y lo dice si falta:
+sin esa lista, los convertibles pasan de 0 a 22, porque las que están sobre
+rutas que nadie llama parecen perfectamente convertibles. Son 22
+extracciones, con sus pruebas, sobre código que la siguiente decisión de
+producto puede borrar.
 
 **Las 25 sobre rutas muertas.** El propio repositorio las documentó en
 `Documentacion/SUPERFICIE-DE-API-SIN-USO.md`, al lado de este proyecto:

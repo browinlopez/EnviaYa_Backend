@@ -73,6 +73,21 @@ jobs:
       - name: Analisis estatico (PHPStan + Larastan)
         run: ./vendor/bin/phpstan analyse --no-progress --memory-limit=1G
 
+      # EL TRINQUETE DE LAS VALIDACIONES.
+      #
+      # El acuerdo escrito era «todo endpoint nuevo o tocado estrena su
+      # FormRequest; el contador solo baja; si sube, el PR no entra», y nada
+      # lo impedia: era una promesa. Esto la cumple.
+      #
+      # Falla si aparece una validacion en linea SIN NINGUN MOTIVO para
+      # estarlo —o sea, con nada ejecutandose antes—, que es la regla literal,
+      # y si el total pasa del tope escrito en el script. Y falla tambien si
+      # el propio detector no pudo medir: sin `route:list` o sin la lista de
+      # rutas sin llamante, el informe sale con buena cara y no ha comprobado
+      # nada, que es peor que no tener compuerta.
+      - name: Validaciones en linea (trinquete)
+        run: python3 scripts/validaciones_en_linea.py --trinquete
+
       - name: Pruebas
         run: php artisan test
 
