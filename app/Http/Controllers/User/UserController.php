@@ -10,7 +10,6 @@ use App\Http\Requests\User\ActualizarPerfilRequest;
 use App\Http\Requests\User\CambiarContrasenaRequest;
 use App\Http\Requests\User\DesactivarCuentaRequest;
 use App\Http\Resources\Usuario\UsuarioResource;
-use App\Models\Buyer\Buyer;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 
@@ -18,45 +17,17 @@ class UserController extends Controller
 {
     use ComprobarPertenencia;
 
-    // Listar todos los usuarios con relaciones
-    public function index()
-    {
-        $users = User::with([
-            'buyer.complexes.residentialComplex',
-            'addresses',
-        ])
-            ->where('rol', 4)
-            ->get();
-
-        $formatted = $users->map(function ($user) {
-            return [
-                'user_id' => $user->user_id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'phone' => $user->phone,
-                'address' => $user->address,
-                'rol' => $user->rol,
-                'qualification' => $user->buyer ? $user->buyer->qualification : null,
-                'state' => $user->state,
-
-                // Buyer directo (sin arreglo)
-                'buyer_id' => $user->buyer ? $user->buyer->buyer_id : null,
-
-                // Complexes simplificado (id y nombre del residencial)
-                'complexes' => $user->buyer && $user->buyer->complexes ? $user->buyer->complexes->map(function ($complex) {
-                    return [
-                        'id' => $complex->id,
-                        'name' => $complex->residentialComplex ? $complex->residentialComplex->name : null,
-                    ];
-                }) : [],
-
-                // Addresses completo
-                'addresses' => $user->addresses,
-            ];
-        });
-
-        return response()->json($formatted);
-    }
+    /*
+     * AQUI ESTABA `index()`, que servia `GET /v1/users`: todos los usuarios
+     * con `rol = 4` --el personal-- con su correo, telefono y direccion, y la
+     * ruta solo pedia sesion. Se retiro con la ruta: no la llamaba ningun
+     * cliente en ninguna version publicada ni en los 202 commits de la
+     * historia de la app. El detalle de la medicion esta en `routes/api.php`,
+     * donde estaba la ruta.
+     *
+     * Lo que los paneles usan para esto es
+     * `Admin\\Api\\UsuariosApiController@users`, detras de `modulo:usuarios`.
+     */
 
     // Actualizar usuario
     /**
