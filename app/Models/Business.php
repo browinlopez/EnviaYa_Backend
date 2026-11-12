@@ -135,6 +135,53 @@ class Business extends Audit
     }
 
     // relaciones
+    /**
+     * El surtido de la tienda, con las columnas del par tienda-producto.
+     *
+     * LAS TRES ÚLTIMAS SON EL ARREGLO DE LA VENTA AL PESO, y conviene saber
+     * qué pasaba sin ellas.
+     *
+     * `sale_unit`, `min_qty` y `step_qty` están en `products_business` desde
+     * la migración del peso, y dos sitios las leen —la ficha del negocio y el
+     * listado de destacados— con la forma `$product->pivot->sale_unit ??
+     * 'unidad'`. Pero no estaban en este `withPivot`, así que la relación no
+     * las traía: el pivote llegaba sin esas claves, el `??` se disparaba
+     * siempre y la respuesta decía `unidad` aunque la tienda hubiera
+     * configurado kilos.
+     *
+     * NO DABA NINGÚN ERROR. Un pivote al que le falta una columna devuelve
+     * null, no revienta, así que el camino entero —migración, columna,
+     * lectura, serialización— estaba bien escrito y no funcionaba.
+     *
+     * Medido antes de tocarlo, de dos maneras: una prueba que siembra un
+     * producto en `kg` y recibía `unidad`, y a mano contra la base de
+     * desarrollo —se puso una fila a `kg`, se cargó por la relación y salió
+     * `NULL`—.
+     *
+     * LO QUE ARREGLA, EN PANTALLA:
+     *
+     *  · la app recibe la unidad de verdad, que es con lo que decide si
+     *    ofrece el +/- de unidades o los botones de plata y de porción
+     *    —«3.000 de queso», «500 g»—;
+     *  · y la ficha del negocio deja de etiquetar como «en promoción» lo que
+     *    se vende al peso. Ese filtro es
+     *    `in_array($pivot->sale_unit, ['kg','libra','gramo'])` y, viendo
+     *    siempre `unidad`, nunca excluía nada: la etiqueta prometía una
+     *    rebaja que el motor de descuentos no aplica a esas líneas, así que
+     *    el cliente llegaba al total esperando otro número.
+     *
+     * NO CAMBIA NINGUNA RESPUESTA DE HOY, y eso también está medido: las 639
+     * filas de `products_business` están en `unidad`, así que no hay ni un
+     * producto al peso configurado todavía. Comprobado byte a byte en los
+     * cuatro endpoints del catálogo. Esto no enciende un comportamiento
+     * nuevo: hace que el que ya existía deje de estar roto el día que alguien
+     * lo use.
+     *
+     * `stock_weight` NO se añade. Es la existencia en kilos y la escribe y la
+     * lee `ExistenciasDelPedido` por `DB::table`, que no pasa por aquí; traer
+     * una columna que nadie lee desde la relación es peso en cada consulta
+     * del catálogo, que es la lectura de más tráfico de la plataforma.
+     */
     public function products()
     {
         return $this->belongsToMany(
@@ -142,7 +189,14 @@ class Business extends Audit
             'products_business',
             'busines_id',
             'products_id'
-        )->withPivot(['price', 'amount', 'qualification']);
+        )->withPivot([
+            'price',
+            'amount',
+            'qualification',
+            'sale_unit',
+            'min_qty',
+            'step_qty',
+        ]);
     }
 
     public function orders()

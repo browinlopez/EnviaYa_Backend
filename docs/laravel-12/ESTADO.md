@@ -1,6 +1,6 @@
 # Estado del backend frente al estándar
 
-**Medido el 11 de noviembre de 2026.** Laravel 12.72 · 1258 pruebas en verde ·
+**Medido el 11 de noviembre de 2026.** Laravel 12.72 · 1260 pruebas en verde ·
 PHPStan y Pint limpios · 428 clases cargan · `composer audit` en cero.
 
 Doce ramas de trabajo fusionadas, y el backend **arrancado y recorrido entero**:
@@ -114,7 +114,7 @@ y sin un solo error. Ahora lo vigila `colas:comprobar --avisar`, a diario.
 | Análisis estático | no había | **PHPStan nivel 5** | línea base de 385; el CI exige código nuevo limpio |
 | Superficie de la API | sin congelar | **294 rutas** | prueba que falla si cambia verbo, URI, nombre o middleware. Eran 325: las 31 sin llamante se retiraron el 11 de noviembre |
 | Duración de la suite | 630 s | **48 s** | las pruebas ya no llaman a un Reverb real |
-| Pruebas | 1026 | **1258** | |
+| Pruebas | 1026 | **1260** | |
 | Procesos recorridos de punta a punta | 0 | **33** | `scripts/arnes/`, contra el servidor en marcha |
 | Avisos de `composer audit` | 20 | **0** | bloqueante en el CI |
 
@@ -351,18 +351,32 @@ dos ficheros distintos.
 >    respuesta ya se cerro la fuga de los datos del propietario y esta se
 >    quedo.
 >
-> 3. **Y LOS CAMPOS DEL PESO NO LLEGAN NUNCA, por ningun endpoint.**
->    `Business::products()` declara `withPivot(['price','amount','qualification'])`
->    y no incluye `sale_unit`, `min_qty` ni `step_qty`. El controlador las lee
->    con `?? 'unidad'`, asi que el respaldo se dispara siempre. Medido dos
->    veces: una prueba que siembra un producto en `kg` y recibe `unidad`, y a
->    mano contra la base de desarrollo. Un tendero puede configurar su queso
->    en kilos y el comprador seguira viendo unidades.
+> 3. ~~**Y LOS CAMPOS DEL PESO NO LLEGAN NUNCA, por ningun endpoint.**~~
+>    **ARREGLADO el 11 de noviembre de 2026.** `Business::products()`
+>    declaraba `withPivot(['price','amount','qualification'])` y no incluia
+>    `sale_unit`, `min_qty` ni `step_qty`. El controlador las leia con
+>    `?? 'unidad'`, asi que el respaldo se disparaba siempre: un tendero podia
+>    configurar su queso en kilos y el comprador seguia viendo unidades.
 >
-> Las tres cambian lo que reciben dos apps publicadas, asi que las tres son
-> decision de producto. La tercera ademas tiene filo: encenderla es una
-> linea, pero si la pantalla del comprador no sabe pintar otra unidad, rompe
-> la compra en vez de arreglarla.
+>    No daba ningun error —un pivote al que le falta una columna devuelve
+>    null— asi que el camino entero estaba bien escrito y no funcionaba.
+>
+>    Arreglar tambien cerro la mitad que no se veia: la ficha del negocio
+>    excluye de la etiqueta de promocion lo que se vende al peso, porque el
+>    motor de descuentos no aplica promociones a esas lineas; ese filtro es
+>    `in_array($pivot->sale_unit, ['kg','libra','gramo'])` y, viendo siempre
+>    `unidad`, **nunca excluia nada**. La etiqueta prometia una rebaja que el
+>    carrito no da.
+>
+>    NO CAMBIA NINGUNA RESPUESTA DE HOY: las 639 filas de
+>    `products_business` estan en `unidad`, comprobado, y los cinco endpoints
+>    del catalogo salen byte a byte iguales. Dos pruebas, las dos probadas
+>    devolviendo el `withPivot` a como estaba.
+>
+> Las dos primeras cambian lo que reciben dos apps publicadas, asi que siguen
+> siendo decision de producto. La tercera no lo era: no cambiaba ninguna
+> respuesta de hoy porque no hay ni un producto al peso configurado, asi que
+> arreglarla solo hace que el camino funcione el dia que alguien lo use.
 >
 > Fijadas en `tests/Feature/Contrato/ElProductoSeVeDistintoSegunLaPuertaTest.php`
 > con la lista exacta de campos, para que el arreglo sea deliberado.
