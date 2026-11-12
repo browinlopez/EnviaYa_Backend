@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\BannerRequest;
+use App\Http\Resources\Marketing\BannerResource;
 use App\Models\Marketing\Banner;
 use App\Services\MediaService;
 use Illuminate\Http\Request;
@@ -37,7 +38,7 @@ class BannersApiController extends Controller
         $imagenes = $this->imagenesDe($banners->pluck('id')->all());
 
         return response()->json(
-            $banners->map(fn (Banner $b) => $this->presentarBanner($b, $imagenes))
+            $banners->map(fn (Banner $b) => (new BannerResource($b, $imagenes))->resolve())
         );
     }
 
@@ -46,7 +47,7 @@ class BannersApiController extends Controller
         $b = Banner::with('campaign.advertiser')
             ->findOr($id, fn () => abort(404, 'El banner no existe.'));
 
-        return response()->json($this->presentarBanner($b, $this->imagenesDe([$b->id])));
+        return response()->json(new BannerResource($b, $this->imagenesDe([$b->id])));
     }
 
     public function storeBanner(BannerRequest $request)
@@ -219,18 +220,6 @@ class BannersApiController extends Controller
             ->groupBy('entity_id')
             ->map(fn ($grupo) => $this->medios->url($grupo->first()->object_key))
             ->all();
-    }
-
-    private function presentarBanner(Banner $b, array $imagenes): array
-    {
-        return array_merge($b->toArray(), [
-            'image_url' => $imagenes[$b->id] ?? null,
-            'campaign_name' => $b->campaign?->name,
-            'advertiser_name' => $b->campaign?->advertiser?->name,
-            'ctr' => $b->impressions_count > 0
-                ? round($b->clicks_count / $b->impressions_count * 100, 2)
-                : 0,
-        ]);
     }
 
     /* ==================================================================
