@@ -3156,16 +3156,6 @@
         ]
     },
     {
-        "verbo": "GET",
-        "uri": "v1/users",
-        "nombre": null,
-        "middleware": [
-            "api",
-            "audit.api",
-            "auth:sanctum"
-        ]
-    },
-    {
         "verbo": "POST",
         "uri": "v1/users/addresses",
         "nombre": null,

@@ -375,8 +375,27 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::put('/notifications/read', [NotificacionesController::class, 'markNotificationAsRead']);
         Route::put('/notifications/read-all', [NotificacionesController::class, 'markAllNotificationsAsRead']);
 
-        // Listar usuarios
-        Route::get('/', [UserController::class, 'index']);
+        /*
+         * AQUI ESTABA `GET /v1/users`, y lo que devolvia era el listado del
+         * personal --`where('rol', 4)`-- con nombre, CORREO, telefono y
+         * direccion de cada uno, dentro de un grupo cuyo unico guardia es
+         * `auth:sanctum`. Es decir: a cualquiera con sesion. Medido contra la
+         * respuesta real, un COMPRADOR recibia 200 y dieciseis filas.
+         *
+         * Y no la llamaba nadie. Dos buscadores independientes, cada uno con
+         * su grupo de control: `scripts/rutas_sin_llamada_http.py` no la ve
+         * como camino en ninguno de los cuatro clientes, y
+         * `scripts/rutas_sin_llamante.py` no la encuentra en ninguna version
+         * publicada --1.0.0 a 1.0.12-- ni en los 202 commits de la historia
+         * de la app. Lo que los clientes llaman es `/admin/users`, que esta
+         * detras de `modulo:usuarios`, mas `/users/notifications`,
+         * `/users/password` y `/users/update`.
+         *
+         * Figuro viva un tiempo por un falso positivo: el detector buscaba
+         * `users` como subcadena y eso sale en `/admin/users` y en la clave
+         * de cache `useQuery(["users"])`. Un falso positivo en un detector de
+         * codigo muerto no da error: deja la ruta viva.
+         */
         // Detalle usuario
         // Actualizar el perfil propio (solo datos de contacto)
         Route::put('/update', [UserController::class, 'update']);

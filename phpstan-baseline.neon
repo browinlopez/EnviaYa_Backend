@@ -1021,36 +1021,6 @@ parameters:
 			path: app/Http/Controllers/User/DireccionesController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$addresses\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/User/UserController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\User\:\:\$buyer\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/User/UserController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\User\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Http/Controllers/User/UserController.php
-
-		-
-			message: '#^Relation ''addresses'' is not found in App\\Models\\User model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/User/UserController.php
-
-		-
-			message: '#^Relation ''buyer'' is not found in App\\Models\\User model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/User/UserController.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
