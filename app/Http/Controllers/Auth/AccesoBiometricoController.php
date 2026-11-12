@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Usuario\UsuarioResource;
 use App\Models\User;
 use Illuminate\Http\Request;
 
@@ -121,7 +122,7 @@ class AccesoBiometricoController extends Controller
         }
 
         return response()->json([
-            'user' => $user,
+            'user' => new UsuarioResource($user),
             'token' => $token,
         ]);
     }
