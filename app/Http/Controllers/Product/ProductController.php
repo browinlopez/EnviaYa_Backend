@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Product;
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Product\ListarProductosRequest;
+use App\Http\Resources\Producto\ProductoDelCatalogoPropioResource;
 use App\Models\Business;
 use App\Models\Product\Product;
 use App\Models\Product\ProductBusiness;
@@ -44,31 +45,15 @@ class ProductController extends Controller
                 ? ProductTypeSchema::extraFor((int) $business->type, $product)
                 : null;
 
-            return [
-                'product_id' => $product->products_id,
-                'name' => $product->name,
-                'description' => $product->description,
-                'category' => $product->category ? [
-                    'category_id' => $product->category->category_id,
-                    'name' => $product->category->name,
-                ] : null,
-                'image' => $product->image,
-                'state' => $product->state,
-                /* La presentacion y de que tarjeta cuelga. Ver
-                   `AgrupadorDeVariantes`. Campos nuevos: una app vieja los
-                   ignora y sigue igual. */
-                'variante' => $product->variante,
-                'group' => $product->group ? [
-                    'group_id' => (int) $product->group->group_id,
-                    'name' => $product->group->name,
-                    'image' => $product->group->image,
-                ] : null,
-                'price' => $product->pivot->price,
-                'amount' => $product->pivot->amount,
-                'qualification' => $product->pivot->qualification,
-                'business_type' => $business->type,
-                'extra' => $extraData, // datos extra según tipo
-            ];
+            /*
+             * `extra` y el tipo se le PASAN al Resource: el controlador
+             * precarga de una vez las relaciones de todos los tipos de
+             * negocio, y resolverlas dentro serian varias consultas por
+             * producto.
+             */
+            return (new ProductoDelCatalogoPropioResource(
+                $product, $business->type, $extraData,
+            ))->resolve();
         });
 
         return response()->json($products);

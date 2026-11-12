@@ -901,18 +901,6 @@ parameters:
 			path: app/Http/Controllers/Payment/PaymentController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSalesDetail\:\:\$product\.$#'
-			identifier: property.notFound
-			count: 6
-			path: app/Http/Controllers/Product/DestacadosDeProductoController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Order\\OrdersSalesDetail\:\:\$total_ordered\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Product/DestacadosDeProductoController.php
-
-		-
 			message: '#^Relation ''order'' is not found in App\\Models\\Order\\OrdersSalesDetail model\.$#'
 			identifier: larastan.relationExistence
 			count: 1
