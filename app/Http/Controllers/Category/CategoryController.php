@@ -9,6 +9,7 @@ use App\Http\Requests\Category\ActualizarCategoriaDeProductoRequest;
 use App\Http\Requests\Category\BorrarCategoriaDeProductoRequest;
 use App\Http\Requests\Category\CategoriasDeUnTipoRequest;
 use App\Http\Requests\Category\CrearCategoriaDeProductoRequest;
+use App\Http\Resources\Producto\CategoriaDeProductoResource;
 use App\Models\Product\Category;
 use Illuminate\Support\Facades\DB;
 
@@ -47,7 +48,7 @@ class CategoryController extends Controller
 
         return response()->json([
             'message' => 'Categoría creada correctamente',
-            'category' => $category,
+            'category' => (new CategoriaDeProductoResource($category))->resolve(),
         ], 201);
     }
 
@@ -61,7 +62,7 @@ class CategoryController extends Controller
 
         return response()->json([
             'message' => 'Categoría actualizada correctamente',
-            'category' => $category,
+            'category' => (new CategoriaDeProductoResource($category))->resolve(),
         ]);
     }
 

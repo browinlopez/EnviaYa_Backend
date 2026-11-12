@@ -63,10 +63,20 @@ mano: `Domiciliary/DomiciliaryController.php:190` --`'domiciliary' =>
 $domiciliary`, al lado de un `'user' => new UsuarioResource($user)` que si
 esta migrado-- y `Business/ConsultaDeNegociosController.php:487`.
 
+Y EL SEGUNDO PUNTO CIEGO, que aparecio recableando la octava tanda: esto
+busca `response()->json([...])` con lista de claves, asi que no ve el modelo
+devuelto COMO CUERPO ENTERO, sin lista ninguna:
+
+    return response()->json($f);            // FacturasApiController:265
+
+Que es el caso extremo del mismo problema. Buscar eso es otra pasada --un
+`response()->json($variable)` a secas-- y se hace a mano con un grep mientras
+no este escrita.
+
 Asi que la lista de «modelo pelado» es de CANDIDATAS y esta por debajo de la
-cuenta real. De las once de hoy, mirando una a una, algo mas de la mitad son
-fugas de verdad; el resto son enteros y arrays que heredan una asignacion
-parecida. Se mira cada una antes de tocarla.
+cuenta real por los dos lados. De las once de hoy, mirando una a una, algo mas
+de la mitad son fugas de verdad; el resto son enteros y arrays que heredan una
+asignacion parecida. Se mira cada una antes de tocarla.
 
 GRUPO DE CONTROL, DE DOS LADOS, y los dos hacen falta:
 

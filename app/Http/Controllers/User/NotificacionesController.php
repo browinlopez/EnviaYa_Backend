@@ -7,6 +7,7 @@ namespace App\Http\Controllers\User;
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\User\MarcarAvisoLeidoRequest;
+use App\Http\Resources\Usuario\AvisoResource;
 use App\Models\Notification;
 use Illuminate\Http\Request;
 
@@ -35,7 +36,7 @@ class NotificacionesController extends Controller
             ->get();
 
         return response()->json([
-            'notifications' => $avisos,
+            'notifications' => AvisoResource::collection($avisos)->resolve(),
             // El número que va en la burbuja de la campana.
             'unread' => $avisos->where('read', false)->count(),
         ]);

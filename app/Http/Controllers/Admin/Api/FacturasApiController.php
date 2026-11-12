@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Admin\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AnularFacturaRequest;
 use App\Http\Requests\Admin\AnularFacturasEnLoteRequest;
+use App\Http\Resources\Comprobante\FacturaResource;
 use App\Models\Invoice\Invoice;
 use App\Services\FacturaService;
 use App\Support\ListadoPaginado;
@@ -262,7 +263,7 @@ class FacturasApiController extends Controller
 
         // La foto guardada ya trae negocio, comprador y renglones: no hace falta
         // consultar nada vivo, que es justo el punto de haberla guardado.
-        return response()->json($f);
+        return response()->json((new FacturaResource($f))->resolve());
     }
 
     /**
@@ -352,7 +353,7 @@ class FacturasApiController extends Controller
 
         return response()->json([
             'message' => 'Comprobante anulado. Conserva su número y queda el motivo registrado.',
-            'invoice' => $f,
+            'invoice' => (new FacturaResource($f))->resolve(),
         ]);
     }
 }
