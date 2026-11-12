@@ -172,36 +172,6 @@ parameters:
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$advertiser\.$#'
 			identifier: property.notFound
 			count: 1
-			path: app/Http/Controllers/Admin/Api/BannersApiController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Admin/Api/BannersApiController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Admin/Api/CampanasApiController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Operacion\\DomiciliaryDocument\:\:\$domiciliary_name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Admin/Api/DocumentosApiController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Operacion\\DomiciliaryDocument\:\:\$domiciliary_phone\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Admin/Api/DocumentosApiController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$advertiser\.$#'
-			identifier: property.notFound
-			count: 1
 			path: app/Http/Controllers/Admin/Api/MarketingApiController.php
 
 		-

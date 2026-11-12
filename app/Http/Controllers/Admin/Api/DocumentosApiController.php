@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\DocumentoRequest;
+use App\Http\Resources\Sst\DocumentoDelDomiciliarioResource;
 use App\Models\Operacion\DomiciliaryDocument;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -42,12 +43,7 @@ class DocumentosApiController extends Controller
         ]);
 
         return response()->json([
-            'data' => $filas->map(fn (DomiciliaryDocument $d) => array_merge($d->toArray(), [
-                'domiciliary_name' => $d->domiciliary_name,
-                'domiciliary_phone' => $d->domiciliary_phone,
-                'situation' => $d->situacion(),
-                'days_left' => $d->diasRestantes(),
-            ])),
+            'data' => DocumentoDelDomiciliarioResource::collection($filas)->resolve(),
             'summary' => $this->resumenDocumentos(),
         ]);
     }

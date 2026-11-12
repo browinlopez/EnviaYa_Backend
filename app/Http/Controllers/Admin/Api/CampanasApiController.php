@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\CampanaRequest;
+use App\Http\Resources\Marketing\CampanaResource;
 use App\Models\Marketing\AdCampaign;
 use App\Models\Marketing\Banner;
 use Illuminate\Http\Request;
@@ -42,12 +43,17 @@ class CampanasApiController extends Controller
             $campanas->map(function (AdCampaign $c) use ($metricas) {
                 $m = $metricas[$c->id] ?? null;
 
-                return array_merge($c->toArray(), [
-                    'advertiser_name' => $c->advertiser?->name,
-                    'banners_count' => (int) ($m->banners_count ?? 0),
-                    'impressions' => (int) ($m->impressions ?? 0),
-                    'clicks' => (int) ($m->clicks ?? 0),
-                ]);
+                /*
+                 * Las metricas se le PASAN al Resource: salen de una consulta
+                 * agregada que se hace una vez para todas las campanas, y
+                 * calcularlas dentro serian tres consultas por campana.
+                 */
+                return (new CampanaResource(
+                    $c,
+                    (int) ($m->banners_count ?? 0),
+                    (int) ($m->impressions ?? 0),
+                    (int) ($m->clicks ?? 0),
+                ))->resolve();
             })
         );
     }
