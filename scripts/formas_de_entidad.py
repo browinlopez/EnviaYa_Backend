@@ -78,6 +78,24 @@ cuenta real por los dos lados. De las once de hoy, mirando una a una, algo mas
 de la mitad son fugas de verdad; el resto son enteros y arrays que heredan una
 asignacion parecida. Se mira cada una antes de tocarla.
 
+EL TERCER PUNTO CIEGO YA NO LO ES, y era el mas grande de los tres. Durante
+tres versiones esto solo miraba `response()->json([...])`, y una forma de
+entidad no tiene que estar en la respuesta: puede estar en el metodo auxiliar
+al que la respuesta llama, o en el cierre de un `->map()`. Dos ejemplos que
+pasaron desapercibidos hasta que se automatizo:
+
+    private function comoFicha($c) { return [...]; }    CargaDeCatalogo
+    private function ficha($c)     { return [...]; }    MiConjunto
+
+y las dos salian en el informe solo como `'data' => $algo` --una variable
+pelada que el medidor descartaba--, asi que la forma de verdad no aparecia por
+ningun lado. Ahora `formas_del_fichero()` recorre los dos sitios y cada fila
+dice de donde salio, `[json]` o `[ayudante]`.
+
+LO QUE ESO CAMBIO EN LA CUENTA, que es el motivo de escribirlo: las formas de
+entidad pasaron de 2 a 19. Diecisiete estaban invisibles, no arregladas. Un
+medidor con un agujero no dice «quedan dos»: dice «veo dos».
+
 GRUPO DE CONTROL, DE DOS LADOS, y los dos hacen falta:
 
   1. DOS TROZOS SINTETICOS escritos aca abajo, uno con forma de entidad y
@@ -184,6 +202,56 @@ def argumento(texto, desde):
                 break
         j += 1
     return texto[i + 1:j]
+
+
+def corchete(texto, i):
+    """El contenido del `[` que empieza en `i`, con los pares balanceados."""
+    niv, j = 0, i
+
+    while j < len(texto):
+        c = texto[j]
+        if c in '([':
+            niv += 1
+        elif c in ')]':
+            niv -= 1
+            if niv == 0:
+                break
+        j += 1
+
+    return texto[i + 1:j]
+
+
+def formas_del_fichero(s):
+    """Las formas de array del fichero: (posicion, contenido, de_donde).
+
+    DOS SITIOS, y el segundo es el tercer agujero que tenia este medidor:
+
+      json      `response()->json([...])`, la respuesta directa
+      ayudante  `return [...]` dentro de un metodo
+
+    El segundo hacia falta porque una forma de entidad no tiene que estar en
+    la respuesta: puede estar en un metodo auxiliar privado al que la
+    respuesta llama. `CargaDeCatalogoController::comoFicha()` y
+    `MiConjuntoController::ficha()` son dos, y las dos salian como
+    `'data' => $algo` --una variable pelada que el medidor descartaba por no
+    venir de una consulta--, asi que la forma de verdad no se veia por
+    ninguna parte.
+
+    Un `return [...]` sin `=>` --una lista, `return [$a, $b]`-- se clasifica
+    sola a cero y no llega al informe, igual que un array de reglas de
+    validacion, donde los valores son cadenas y no lecturas.
+    """
+    for m in re.finditer(r'response\(\)->json\s*\(', s):
+        try:
+            yield m.start(), argumento(s, m.end() - 1), 'json'
+        except (ValueError, IndexError):
+            continue
+
+    for m in re.finditer(r'\breturn\s*\[', s):
+        try:
+            yield m.start(), corchete(s, s.index('[', m.start())), 'ayudante'
+        except (ValueError, IndexError):
+            continue
 
 
 MOLDE = r'(\(\s*(int|float|bool|string|array)\s*\)\s*)?'
@@ -373,21 +441,61 @@ def veredicto(fle, ind, calc, crudo=0):
     return 'dudoso'
 
 
+# UN FICHERO DE MENTIRA CON UNA FORMA DE CADA CLASE. El extractor tiene que
+# encontrar las dos: la de la respuesta y la del metodo auxiliar. Si solo
+# encuentra una, su reparto no vale --y durante tres versiones solo encontro
+# la primera, que es como `comoFicha()` y `ficha()` pasaron desapercibidas.
+CONTROL_EXTRACTOR = """<?php
+class X {
+    public function index()
+    {
+        return response()->json(['a' => $m->a, 'b' => $m->b, 'c' => $m->c]);
+    }
+
+    private function comoFicha($c)
+    {
+        return ['d' => $c->d, 'e' => $c->e, 'f' => $c->f];
+    }
+}
+"""
+
+
 def control():
-    """Que separe los cuatro trozos sinteticos. Si no, no se informa nada."""
+    """Las dos mitades del control. Devuelve que fallo, o None si todo bien.
+
+    `extractor`      no encuentra las dos clases de forma del fichero
+    `clasificador`   no reparte bien los cuatro trozos sinteticos
+    """
     e = veredicto(*clasificar(CONTROL_ENTIDAD))
     i = veredicto(*clasificar(CONTROL_INFORME))
     c = veredicto(*clasificar(CONTROL_CRUDO, CONTEXTO_CRUDO))
     n = veredicto(*clasificar(CONTROL_NO_CRUDO, CONTEXTO_NO_CRUDO))
+
+    de_donde = sorted(d for _, _, d in formas_del_fichero(CONTROL_EXTRACTOR))
 
     print('CONTROL --- los cuatro trozos escritos a mano:')
     print('  %-9s con forma de entidad                  (entidad)' % (e or 'nada'))
     print('  %-9s con forma de informe                  (informe)' % (i or 'nada'))
     print('  %-9s tres claves y un MODELO pelado        (crudo)' % (c or 'nada'))
     print('  %-9s variables peladas que NO son modelos  (no crudo)' % (n or 'nada'))
+    print('  %-9s las dos clases de forma del fichero de mentira'
+          % (','.join(de_donde) or 'nada'))
 
-    return (e == 'entidad' and i == 'informe'
-            and c == 'crudo' and n != 'crudo')
+    # Se devuelve QUE fallo y no un si/no, porque los dos modos de fallo
+    # piden mirar sitios distintos: si el clasificador reparte mal, se mira
+    # `clasificar()`; si el extractor ve de menos, se mira
+    # `formas_del_fichero()`. Un mensaje que los confunda manda al lector al
+    # sitio equivocado, y eso paso la primera vez que se probo esto
+    # rompiendolo: el extractor quedo medio ciego y el guion dijo que el
+    # clasificador no separaba.
+    if de_donde != ['ayudante', 'json']:
+        return 'extractor'
+
+    if not (e == 'entidad' and i == 'informe'
+            and c == 'crudo' and n != 'crudo'):
+        return 'clasificador'
+
+    return None
 
 
 def main():
@@ -395,11 +503,22 @@ def main():
     print('=' * 78)
     print()
 
-    if not control():
+    fallo = control()
+
+    if fallo == 'extractor':
+        print()
+        print('EL EXTRACTOR VE DE MENOS. En el fichero de mentira no encuentra')
+        print('las dos clases de forma --la de `response()->json([...])` y la')
+        print('de un `return [...]` en un metodo auxiliar--, asi que lo que no')
+        print('salga abajo no quiere decir que no exista. Mirar')
+        print('`formas_del_fichero()`. No se informa.')
+        return 2
+
+    if fallo == 'clasificador':
         print()
         print('EL CLASIFICADOR NO SEPARA. No distingue un trozo con forma de')
         print('entidad de uno con forma de informe, asi que su reparto de abajo')
-        print('no significaria nada. No se informa.')
+        print('no significaria nada. Mirar `clasificar()`. No se informa.')
         return 2
 
     print()
@@ -418,19 +537,14 @@ def main():
             rel = os.path.relpath(ruta, RAIZ).replace('\\', '/')
             s = sin_comentarios(io.open(ruta, encoding='utf-8', errors='replace').read())
 
-            for m in re.finditer(r'response\(\)->json\s*\(', s):
-                try:
-                    arg = argumento(s, m.end() - 1)
-                except (ValueError, IndexError):
-                    continue
-
+            for pos, arg, de_donde in formas_del_fichero(s):
                 fle, ind, calc, crudo = clasificar(
-                    arg, cuerpo_de_la_funcion(s, m.start()))
+                    arg, cuerpo_de_la_funcion(s, pos))
                 cual = veredicto(fle, ind, calc, crudo)
 
                 if cual:
-                    cubos[cual].append(
-                        (rel, s.count('\n', 0, m.start()) + 1, fle, ind, calc, crudo))
+                    cubos[cual].append((rel, s.count('\n', 0, pos) + 1,
+                                        fle, ind, calc, crudo, de_donde))
 
     rotulos = {
         'crudo': 'MODELO PELADO --- publica la tabla entera; lo primero por arreglar',
@@ -444,8 +558,8 @@ def main():
         print('%s  (%d)' % (rotulos[cual], len(filas)))
         print('-' * 78)
 
-        for rel, linea, fle, ind, calc, crudo in filas:
-            print('  %s:%d' % (rel, linea))
+        for rel, linea, fle, ind, calc, crudo, de_donde in sorted(filas):
+            print('  %s:%d   [%s]' % (rel, linea, de_donde))
             print('        flecha %d · indice %d · calculo %d · PELADO %d'
                   % (fle, ind, calc, crudo))
 
