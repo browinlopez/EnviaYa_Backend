@@ -119,6 +119,137 @@ it('las relaciones que carga el login siguen llegando, en los tres roles', funct
     }
 });
 
+it('una columna nueva en buyer, owner, domiciliary o business NO sale tampoco', function () {
+    /*
+     * LA SEGUNDA MITAD DEL AGUJERO, cerrada el 12 de noviembre de 2026.
+     *
+     * `UsuarioResource` nacio pasando las tres relaciones del login TAL CUAL,
+     * y eso dejaba el problema a un nivel de profundidad: la lista de campos
+     * del usuario estaba escrita, pero `buyer`, `owner`, `domiciliary` y los
+     * `businesses` que cuelgan de los dos ultimos se seguian serializando
+     * enteros. Una columna nueva ahi se publicaba sola en el login.
+     *
+     * Esta prueba añade una columna de verdad a las CUATRO tablas y comprueba
+     * que ninguna aparece. Es la misma forma que la de arriba, aplicada un
+     * nivel mas abajo, que es donde el primer arreglo no llegaba.
+     */
+    $tendero = unUsuarioDeRol(2);
+    $ownerId = DB::table('owner')->insertGetId([
+        'user_id' => $tendero->user_id, 'state' => 1,
+    ], 'owner_id');
+
+    $tipo = DB::table('category_business')->insertGetId(['name' => 'Tienda'], 'id');
+    $negocio = DB::table('business')->insertGetId([
+        'name' => 'La del arreglo', 'qualification' => 0, 'state' => 1, 'type' => $tipo,
+    ], 'busines_id');
+    DB::table('owner_busines')->insert([
+        'owner_id' => $ownerId, 'busines_id' => $negocio, 'state' => 1,
+    ]);
+
+    $comprador = unUsuarioDeRol(1);
+    DB::table('buyer')->insert([
+        'user_id' => $comprador->user_id, 'qualification' => 0, 'state' => 1,
+    ]);
+
+    $repartidor = unUsuarioDeRol(3);
+    DB::table('domiciliary')->insert([
+        'user_id' => $repartidor->user_id, 'available' => 1,
+        'qualification' => 0, 'state' => 1,
+    ]);
+
+    foreach (['buyer', 'owner', 'domiciliary', 'business'] as $tabla) {
+        Schema::table($tabla, fn ($t) => $t->string('campo_colado')->nullable());
+        DB::table($tabla)->update(['campo_colado' => 'no deberia salir']);
+    }
+
+    $req = Request::create('/v1/login', 'POST');
+
+    $casos = [
+        [$comprador, 'buyer', 'buyer'],
+        [$tendero, 'owner.businesses', 'owner'],
+        [$repartidor, 'domiciliary.businesses', 'domiciliary'],
+    ];
+
+    foreach ($casos as [$u, $carga, $clave]) {
+        $fresco = User::find($u->user_id);
+        $fresco->load($carga);
+
+        $forma = (new UsuarioResource($fresco))->toArray($req);
+
+        expect($forma[$clave] ?? [])->not->toHaveKey(
+            'campo_colado',
+            // Sin mensaje: el segundo argumento de toHaveKey es el valor.
+        );
+
+        // Y en los negocios que cuelgan, que es un nivel mas abajo todavia.
+        foreach ($forma[$clave]['businesses'] ?? [] as $b) {
+            expect($b)->not->toHaveKey('campo_colado');
+        }
+    }
+
+    // La contrapartida: las columnas existen y los modelos las ven. Sin esto,
+    // la prueba pasaria si los `Schema::table` hubieran fallado en silencio.
+    foreach (['buyer', 'owner', 'domiciliary', 'business'] as $tabla) {
+        expect(Schema::hasColumn($tabla, 'campo_colado'))->toBeTrue();
+        Schema::table($tabla, fn ($t) => $t->dropColumn('campo_colado'));
+    }
+});
+
+it('el tope de credito de la tienda sigue viajando al tendero Y al domiciliario', function () {
+    /*
+     * ESTO NO ES UNA PRUEBA DE QUE ALGO FUNCIONE. Fija un hallazgo para que
+     * arreglarlo sea una decision.
+     *
+     * `credit_debt_cap` esta documentado en `NegocioRequest` con estas
+     * palabras: «lo que la tienda puede fiar entre todos sus clientes y la
+     * deuda que puede arrastrar con la plataforma. Solo lo pone el equipo; EL
+     * PANEL DEL TENDERO NO LO RECIBE».
+     *
+     * Lo recibe. Y el domiciliario tambien, de cada negocio con el que
+     * trabaja, junto con `max_courier_cash`. Medido contra la base de
+     * desarrollo: 1000000.00.
+     *
+     * El dia que se quite, esta prueba se pone roja y obliga a comprobar que
+     * ninguna pantalla lo estaba leyendo.
+     */
+    $tendero = unUsuarioDeRol(2);
+    $ownerId = DB::table('owner')->insertGetId([
+        'user_id' => $tendero->user_id, 'state' => 1,
+    ], 'owner_id');
+
+    $tipo = DB::table('category_business')->insertGetId(['name' => 'Tienda'], 'id');
+    $negocio = DB::table('business')->insertGetId([
+        'name' => 'La que fia', 'qualification' => 0, 'state' => 1, 'type' => $tipo,
+        'credit_debt_cap' => 750000,
+    ], 'busines_id');
+    DB::table('owner_busines')->insert([
+        'owner_id' => $ownerId, 'busines_id' => $negocio, 'state' => 1,
+    ]);
+
+    $repartidor = unUsuarioDeRol(3);
+    $domiId = DB::table('domiciliary')->insertGetId([
+        'user_id' => $repartidor->user_id, 'available' => 1,
+        'qualification' => 0, 'state' => 1,
+    ], 'domiciliary_id');
+    DB::table('business_domiciliary')->insert([
+        'busines_id' => $negocio, 'domiciliary_id' => $domiId, 'state' => 1,
+    ]);
+
+    $req = Request::create('/v1/login', 'POST');
+
+    foreach ([[$tendero, 'owner.businesses', 'owner'],
+        [$repartidor, 'domiciliary.businesses', 'domiciliary']] as [$u, $carga, $clave]) {
+        $fresco = User::find($u->user_id);
+        $fresco->load($carga);
+
+        $forma = (new UsuarioResource($fresco))->toArray($req);
+        $negocios = $forma[$clave]['businesses'] ?? [];
+
+        expect($negocios)->not->toBeEmpty();
+        expect((float) $negocios[0]['credit_debt_cap'])->toBe(750000.0);
+    }
+});
+
 it('el usuario del panel sale sin esas tres claves, igual que antes', function () {
     /*
      * La contrapartida de la prueba de arriba: el rol 4 no carga ninguna de

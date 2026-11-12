@@ -45,9 +45,16 @@ use Illuminate\Support\Arr;
  * blanca que solo dejara columnas las habria TIRADO, rompiendo el arranque de
  * la app en las tres. Por eso los tres nombres estan en la lista.
  *
- * Lo que queda abierto: esas tres relaciones se siguen serializando enteras,
- * asi que una columna nueva en `buyer`, `owner` o `domiciliary` si se publica
- * sola. Cerrar eso es otra tanda; esta cierra las columnas del usuario.
+ * Y LAS TRES RELACIONES YA NO VIAJAN ENTERAS. Cada una pasa por su propio
+ * Resource —`CompradorResource`, `PropietarioResource`,
+ * `DomiciliarioResource`— y los negocios que cuelgan de las dos ultimas por
+ * `NegocioVinculadoResource`. Eso cierra lo que esta clase dejo abierto en su
+ * primera version: una columna nueva en cualquiera de esas tablas se publicaba
+ * sola en el login.
+ *
+ * En `NegocioVinculadoResource` esta el hallazgo que salio de mirarlas: el
+ * tope de credito de la tienda viaja al tendero Y al domiciliario, teniendo
+ * escrito en el propio repositorio que «el panel del tendero no lo recibe».
  */
 class UsuarioResource extends JsonResource
 {
@@ -98,6 +105,32 @@ class UsuarioResource extends JsonResource
          * `toArray()` no mete las que no lo estan: el usuario del panel —rol
          * 4— sale sin ninguna de las tres, igual que antes.
          */
-        return Arr::only($this->resource->toArray(), self::CAMPOS);
+        $u = $this->resource;
+        $datos = Arr::only($u->toArray(), self::CAMPOS);
+
+        /*
+         * LAS TRES RELACIONES PASAN POR SU PROPIO RESOURCE, que es lo que
+         * cierra el agujero que esta clase dejaba abierto: hasta ahora se
+         * serializaban enteras, asi que una columna nueva en `buyer`, `owner`
+         * o `domiciliary` —o en los `businesses` que cuelgan de las dos
+         * ultimas— se publicaba sola en el login.
+         *
+         * Solo las que de verdad esten cargadas. El login carga una segun el
+         * rol y el usuario del panel ninguna; tocar una relacion no cargada
+         * disparia una consulta por cada usuario de la respuesta.
+         */
+        foreach ([
+            'buyer' => CompradorResource::class,
+            'owner' => PropietarioResource::class,
+            'domiciliary' => DomiciliarioResource::class,
+        ] as $relacion => $recurso) {
+            if (! $u->relationLoaded($relacion) || $u->{$relacion} === null) {
+                continue;
+            }
+
+            $datos[$relacion] = (new $recurso($u->{$relacion}))->resolve();
+        }
+
+        return $datos;
     }
 }
