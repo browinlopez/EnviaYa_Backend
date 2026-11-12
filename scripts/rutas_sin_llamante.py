@@ -155,7 +155,10 @@ def main():
         cfg = json.load(f)
 
     clientes = cfg['clientes']
-    rutas = [(v, u) for grupo in cfg['grupos'].values() for v, u in grupo]
+    # Los DOS estados de la lista: lo ya retirado --que se vuelve a medir
+    # porque es el registro-- y lo que sigue en el router sin decidir.
+    rutas = [(v, u) for g in cfg['grupos'].values() for v, u in g]
+    rutas += [(v, u) for g in cfg['pendientes']['grupos'].values() for v, u in g]
 
     print()
     print('LAS %d RUTAS SIN LLAMANTE, CONTRA EL CODIGO DE LOS CLIENTES' % len(rutas))
@@ -209,7 +212,11 @@ def main():
     de_pruebas = []
     ilegibles = {}
 
-    for grupo, filas in cfg['grupos'].items():
+    todos_los_grupos = list(cfg['grupos'].items())
+    todos_los_grupos += [('PENDIENTE · ' + g, f)
+                         for g, f in cfg['pendientes']['grupos'].items()]
+
+    for grupo, filas in todos_los_grupos:
         print('-' * 78)
         print(grupo.upper())
         print('-' * 78)
