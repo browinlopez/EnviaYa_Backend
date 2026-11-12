@@ -9,6 +9,7 @@ use App\Http\Requests\Negocio\ActualizarProductoRequest;
 use App\Http\Requests\Negocio\AgregarProductoRequest;
 use App\Http\Requests\Negocio\CopiarSurtidoRequest;
 use App\Http\Requests\Negocio\PreciosEnLoteRequest;
+use App\Http\Resources\Producto\ProductoDeLaTiendaResource;
 use App\Models\Product\Product;
 use App\Models\Product\ProductBusiness;
 use App\Services\CatalogoDeProductos;
@@ -83,54 +84,11 @@ class ProductosDelNegocioController extends Controller
 
         $productos = $filas
             ->filter(fn ($pb) => $pb->product !== null)
-            ->map(function ($pb) use ($compartidos) {
-                $p = $pb->product;
-
-                return [
-                    'products_id' => (int) $p->products_id,
-                    'name' => $p->name,
-                    'barcode' => $p->barcode,
-                    'brand' => $p->brand,
-                    'description' => $p->description,
-                    'image' => $p->image,
-                    'category' => $p->category ? [
-                        'category_id' => (int) $p->category->category_id,
-                        'name' => $p->category->name,
-                    ] : null,
-                    'state' => (bool) $p->state,
-                    'price' => (float) $pb->price,
-                    'amount' => (int) $pb->amount,
-                    /*
-                     * Como lo vende ESTA tienda. Con una unidad de peso,
-                     * `price` es el precio por esa medida y las existencias
-                     * estan en `stock_weight`: `amount` se queda para lo que
-                     * se vende por unidad.
-                     */
-                    'sale_unit' => $pb->sale_unit ?? 'unidad',
-                    'stock_weight' => (float) $pb->stock_weight,
-                    'min_qty' => $pb->min_qty !== null ? (float) $pb->min_qty : null,
-                    'step_qty' => $pb->step_qty !== null ? (float) $pb->step_qty : null,
-                    /*
-                     * Sin precio no se ofrece al comprador. Los que llegan por
-                     * copia de otra tienda nacen asi, y el panel tiene que
-                     * poder senalarlos: son la lista de trabajo del tendero.
-                     */
-                    'sin_precio' => (float) $pb->price <= 0,
-                    /*
-                     * El vencimiento es del LOTE de esta tienda. Antes colgaba
-                     * del producto compartido, asi que la fecha que escribiera
-                     * una tienda se la escribia a las demas: el atun de la
-                     * esquina vencia el mismo dia que el de tres cuadras alla.
-                     */
-                    'expiration_date' => $pb->expiration_date,
-                    'qualification' => $pb->qualification !== null ? (float) $pb->qualification : null,
-                    /*
-                     * Cuántas tiendas MÁS lo venden. Cero significa que es solo
-                     * suyo y los campos compartidos se pueden editar.
-                     */
-                    'compartido' => max(0, (int) ($compartidos[$p->products_id] ?? 1) - 1),
-                ];
-            })
+            ->map(fn ($pb) => (new ProductoDeLaTiendaResource(
+                $pb,
+                // Cuantas tiendas MAS lo venden: el contador trae el total.
+                otrasTiendas: max(0, (int) ($compartidos[$pb->product->products_id] ?? 1) - 1),
+            ))->resolve())
             ->sortBy('name')
             ->values();
 

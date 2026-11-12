@@ -7,6 +7,7 @@ namespace App\Models\Chat;
 use App\Models\Audit\Audit;
 use App\Models\Rol;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ChatParticipant extends Audit
 {
@@ -18,7 +19,8 @@ class ChatParticipant extends Audit
 
     protected $fillable = ['chat_id', 'user_id', 'role_id'];
 
-    public function user()
+    /** @return BelongsTo<User, $this> */
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id', 'user_id');
     }

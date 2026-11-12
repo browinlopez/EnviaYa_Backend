@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Negocio;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Negocio\AbonarAlFiadoRequest;
 use App\Http\Requests\Negocio\AsignarCupoDeFiadoRequest;
+use App\Http\Resources\Credito\ClienteConCreditoResource;
 use App\Models\Business\BusinessUserAffiliation;
 use App\Models\Operacion\StoreCredit;
 use App\Models\Operacion\StoreCreditMovement;
@@ -49,18 +50,11 @@ class CreditosDelNegocioController extends Controller
             ->get(['user_id', 'name', 'email', 'phone']);
 
         $clientes = $usuarios->map(function (User $u) use ($negocioId, $afiliados) {
-            $cupo = $this->creditos->cupo($negocioId, (int) $u->user_id);
-
-            return [
-                'user_id' => (int) $u->user_id,
-                'name' => $u->name,
-                'email' => $u->email,
-                'phone' => $u->phone,
-                'afiliado' => $afiliados->contains($u->user_id),
-                'limite' => $cupo['limite'],
-                'usado' => $cupo['usado'],
-                'disponible' => $cupo['disponible'],
-            ];
+            return (new ClienteConCreditoResource(
+                $u,
+                cupo: $this->creditos->cupo($negocioId, (int) $u->user_id),
+                afiliado: $afiliados->contains($u->user_id),
+            ))->resolve();
         })->values();
 
         return response()->json([

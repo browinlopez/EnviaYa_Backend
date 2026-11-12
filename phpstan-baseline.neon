@@ -7,12 +7,6 @@ parameters:
 			path: app/Console/Commands/AgruparVariantes.php
 
 		-
-			message: '#^Relation ''user'' is not found in App\\Models\\Chat\\Message model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Events/MessageSent.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>domicilio" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
@@ -217,36 +211,6 @@ parameters:
 			path: app/Http/Controllers/Business/FavoriteController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\Chat\\Chat\:\:\$messages\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Http/Controllers/Chat/ChatController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Chat\\Chat\:\:\$participants\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Http/Controllers/Chat/ChatController.php
-
-		-
-			message: '#^Relation ''messages'' is not found in App\\Models\\Chat\\Chat model\.$#'
-			identifier: larastan.relationExistence
-			count: 3
-			path: app/Http/Controllers/Chat/ChatController.php
-
-		-
-			message: '#^Relation ''participants'' is not found in App\\Models\\Chat\\Chat model\.$#'
-			identifier: larastan.relationExistence
-			count: 8
-			path: app/Http/Controllers/Chat/ChatController.php
-
-		-
-			message: '#^Relation ''user'' is not found in App\\Models\\Chat\\Message model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/Chat/ChatController.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\Conjunto\\ComplexStaff\:\:\$entradas\.$#'
 			identifier: property.notFound
 			count: 1
@@ -433,24 +397,6 @@ parameters:
 			path: app/Http/Controllers/Negocio/TorreDeControlController.php
 
 		-
-			message: '#^Relation ''alias'' is not found in App\\Models\\User\\UserAddress model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/Order/ConsultaDePedidosController.php
-
-		-
-			message: '#^Relation ''municipality'' is not found in App\\Models\\User\\UserAddress model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/Order/ConsultaDePedidosController.php
-
-		-
-			message: '#^Relation ''product'' is not found in App\\Models\\Order\\OrdersSalesDetail model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/Order/ConsultaDePedidosController.php
-
-		-
 			message: '#^Using nullsafe property access on non\-nullable type mixed\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 2
@@ -503,12 +449,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Http/Resources/Pedido/PedidoResource.php
-
-		-
-			message: '#^Cannot call method isPast\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Models/Business.php
 
 		-
 			message: '#^Class App\\Models\\OrderGeolocation not found\.$#'

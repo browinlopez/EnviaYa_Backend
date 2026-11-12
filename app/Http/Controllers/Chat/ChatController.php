@@ -10,9 +10,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Chat\ChatsDeUnaPersonaRequest;
 use App\Http\Requests\Chat\MandarMensajeRequest;
 use App\Http\Requests\Chat\MarcarMensajeRequest;
+use App\Http\Resources\Chat\ChatDeLaListaResource;
 use App\Http\Resources\Chat\ChatResource;
 use App\Http\Resources\Chat\MensajeResource;
-use App\Http\Resources\Chat\ParticipanteDeLaListaResource;
 use App\Models\Chat\Chat;
 use App\Models\Chat\ChatParticipant;
 use App\Models\Chat\Message;
@@ -272,25 +272,9 @@ class ChatController extends Controller
             ->sortByDesc(fn ($chat) => optional($chat->messages->first())->created_at)
             ->values();
 
-        $formattedChats = $chats->map(function ($chat) {
-            $ultimo = $chat->messages->first();
-
-            return [
-                'chat_id' => $chat->chat_id,
-                'type' => $chat->type,
-                'created_at' => $chat->created_at,
-                'last_message' => $ultimo?->content,
-                'last_message_at' => $ultimo?->created_at,
-                'last_message_user_id' => $ultimo?->user_id,
-                /*
-                 * OJO: NUEVE campos, no los cuatro de la otra forma del
-                 * mismo participante. Lleva correo, telefono y direccion.
-                 * Medido y escrito en la cabecera de
-                 * `ParticipanteDeLaListaResource`; es un asunto sin decidir.
-                 */
-                'participants' => ParticipanteDeLaListaResource::collection($chat->participants)->resolve(),
-            ];
-        });
+        $formattedChats = $chats->map(
+            fn ($chat) => (new ChatDeLaListaResource($chat))->resolve(),
+        );
 
         return response()->json($formattedChats);
     }

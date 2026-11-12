@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Negocio\ActualizarMiNegocioRequest;
 use App\Http\Requests\Negocio\RecibirPedidosRequest;
 use App\Http\Requests\Negocio\SubirLogoRequest;
+use App\Http\Resources\Negocio\MiNegocioResource;
 use App\Models\Order\OrdersSales;
 use App\Services\BusinessMediaService;
 use App\Support\FiltroDeFechas;
@@ -186,44 +187,7 @@ class MiNegocioController extends Controller
 
     private function ficha($b): array
     {
-        return [
-            'busines_id' => (int) $b->busines_id,
-            'name' => $b->name,
-            'phone' => $b->phone,
-            'address' => $b->address,
-            'description' => $b->description,
-            'NIT' => $b->NIT,
-            'razonSocial_DCD' => $b->razonSocial_DCD,
-            'logo' => $b->logo,
-            // El tope de efectivo de sus domiciliarios. Sin él, la pantalla
-            // de la app lo mostraba vacío y al guardar lo borraba.
-            'max_courier_cash' => $b->max_courier_cash !== null ? (float) $b->max_courier_cash : null,
-            'type' => (int) $b->type,
-            'state' => (int) $b->state,
-            /*
-             * El interruptor del mostrador. Va junto a `state` y separado de
-             * él a propósito: `state` es el alta en la plataforma, esto es si
-             * hoy, ahora, la tienda atiende.
-             */
-            /*
-             * El estado EFECTIVO, no la columna: una pausa «hasta las 3» ya no
-             * vale a las 4, y el panel tiene que pintar lo mismo que decide el
-             * servidor cuando llega un pedido. Ver `Business::recibiendoAhora`.
-             */
-            'accepting_orders' => (bool) $b->recibiendo_ahora,
-            // Hasta cuándo dura la pausa, para escribir «Pausada hasta las
-            // 3:00 p. m.». Nula cuando no tiene hora o cuando ya pasó.
-            'accepting_until' => $b->recibiendo_ahora
-                ? null
-                : $b->accepting_until?->toIso8601String(),
-            // Desde cuándo está así, para poder avisar «llevas cuatro horas
-            // sin recibir pedidos» a quien pausó sin hora y se le olvidó.
-            'accepting_changed_at' => $b->accepting_changed_at?->toIso8601String(),
-            'qualification' => $b->qualification !== null ? (float) $b->qualification : null,
-            'municipality_id' => $b->municipality_id !== null ? (int) $b->municipality_id : null,
-            'latitude' => $b->latitude !== null ? (float) $b->latitude : null,
-            'longitude' => $b->longitude !== null ? (float) $b->longitude : null,
-        ];
+        return (new MiNegocioResource($b))->resolve();
     }
 
     /**
