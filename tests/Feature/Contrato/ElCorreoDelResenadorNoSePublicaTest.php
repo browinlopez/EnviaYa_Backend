@@ -125,7 +125,17 @@ it('el negocio de la resena no es el de la ficha: la diferencia es city', functi
         'business_id', 'name', 'phone', 'address', 'qualification',
         'razon_social', 'NIT', 'logo', 'city', 'state',
     ]);
-    expect($publicado['city'])->toBe('Bogotá');
+    /* `city` sale NULL, y la prueba decia 'Bogotá' porque el negocio de
+       mentira lo traia en sus atributos crudos. En produccion nunca fue asi:
+       `business.city` NO EXISTE como columna --la tabla tiene
+       `municipality_id`-- y esta clave publica `null` en cinco respuestas
+       distintas desde que se escribio. Lo destapo PHPStan al tipar el
+       recurso, una tanda despues de escribir esta prueba.
+
+       La clave se conserva, con `null` explicito en el codigo, porque
+       quitarla cambia lo que recibe la app. Lo que se corrige aca es la
+       prueba, que afirmaba algo que solo era verdad dentro de la prueba. */
+    expect($publicado['city'])->toBeNull();
 });
 
 it('el user del domiciliario lee de user, que es la trampa de los nombres iguales', function () {

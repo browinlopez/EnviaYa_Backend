@@ -250,7 +250,8 @@ class PedidoDeLaAppResource extends JsonResource
                 'latitude' => $order->business->latitude !== null ? (float) $order->business->latitude : null,
                 'longitude' => $order->business->longitude !== null ? (float) $order->business->longitude : null,
                 'phone' => $order->business->phone,
-                'city' => $order->business->city,
+                // `city` no existe como columna: ver NegocioDelPedidoResource.
+                'city' => null,
                 'state' => $order->business->state,
                 'logo' => $order->business->logo,
             ],
@@ -289,32 +290,9 @@ class PedidoDeLaAppResource extends JsonResource
                 'state' => $order->domiciliary->state,
                 'user_id' => $order->domiciliary->user->user_id,
             ] : null,
-            'details' => $order->details->map(function ($detail) {
-                return [
-                    // Por donde se pesa: un pedido puede traer la misma
-                    // referencia en dos lineas.
-                    'orderDet_id' => $detail->orderDet_id,
-                    'product_id' => $detail->product->products_id,
-                    'name' => $detail->product->name,
-                    'description' => $detail->product->description,
-                    'category' => $detail->product->category?->name,
-                    'image' => $detail->product->image,
-                    'amount' => $detail->amount,
-                    'unit_price' => $detail->unit_price,
-                    /*
-                             * LO QUE SE VENDE AL PESO. `amount` vale 1 en esas lineas
-                             * --migrarlo a decimal habria cambiado en silencio el
-                             * significado de veintidos sitios-- asi que la cantidad de
-                             * verdad viaja aca, junto con la unidad y el importe ya
-                             * congelado.
-                             */
-                    'sale_unit' => $detail->sale_unit,
-                    'pedido_por' => $detail->pedido_por,
-                    'qty_requested' => $detail->qty_requested,
-                    'qty_final' => $detail->qty_final,
-                    'line_total' => $detail->line_total,
-                ];
-            }),
+            'details' => $order->details->map(
+                fn ($detail) => (new RenglonDelPedidoResource($detail))->resolve()
+            ),
             'promotions' => $order->promotions,
             /*
                      * `payments` iba crudo, y lleva su `domiciliary_fee` dentro: era

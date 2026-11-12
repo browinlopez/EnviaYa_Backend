@@ -8,6 +8,7 @@ use App\Models\Audit\Audit;
 use App\Models\Business;
 use App\Models\Order\OrdersSales;
 use App\Models\Order\OrdersSalesDetail;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Storage;
 
 class Product extends Audit
@@ -96,7 +97,8 @@ class Product extends Audit
         });
     }
 
-    public function category()
+    /** @return BelongsTo<Category, $this> */
+    public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class, 'category_id', 'category_id');
     }

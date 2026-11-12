@@ -12,6 +12,7 @@ use App\Http\Requests\Order\PedidosDelUsuarioRequest;
 use App\Http\Requests\Order\UltimosPedidosRequest;
 use App\Http\Resources\Negocio\NegocioDelPedidoResource;
 use App\Http\Resources\Pedido\PedidoDeLaAppResource;
+use App\Http\Resources\Pedido\PedidoDelCompradorResource;
 use App\Http\Resources\Pedido\PosicionDelDomiciliarioResource;
 use App\Models\Business;
 use App\Models\Buyer\Buyer;
@@ -43,128 +44,9 @@ class ConsultaDePedidosController extends Controller
             ->with('details.product.category', 'business', 'promotions', 'payments', 'address.municipality.department.country', 'address.alias', 'domiciliary.user')
             ->get();
 
-        $formattedOrders = $orders->map(function ($order) {
-            return [
-                'order_id' => $order->orderSales_id,
-                'buyer_id' => $order->buyer_id,
-                'busines_id' => $order->busines_id,
-                'total' => $order->total,
-                // Desglose, para que cada rol sepa qué parte le corresponde:
-                // el negocio cobra el subtotal y el domiciliario el domicilio.
-                'subtotal' => $order->subtotal,
-                'domicilio' => $order->domicilio,
-                'domiciliary_fee' => $order->domiciliary_fee,
-                /*
-                 * Con cuánto dijo el cliente que va a pagar, y cuánto cambio
-                 * hay que mandarle. La tienda es quien prepara el sencillo
-                 * ANTES de que el domiciliario salga: si el dato no llega
-                 * acá, el cambio no sale de la tienda y da igual que el
-                 * domiciliario lo vea después.
-                 */
-                'cash_tendered' => $order->cash_tendered,
-                'change_due' => $order->change_due,
-                // Si falta pesar: el tablero lo marca y el despacho se bloquea.
-                'weighing_state' => (int) $order->weighing_state,
-                // El domiciliario necesita saber si cobra en la puerta o
-                // si el pedido ya viene pagado en línea.
-                'methods_id' => $order->methods_id,
-                'payment_state' => $order->payment_state,
-                'sale_date' => $order->sale_date,
-                'is_scheduled' => $order->is_scheduled,
-                'delivery_date' => $order->delivery_date,
-                'delivery_type' => $order->pickup ? 'pickup' : 'delivery',
-                'pickup' => (bool) $order->pickup,
-                'pickup_time' => $order->pickup_time,
-                'has_review' => $order->has_review,
-                'dispatched_at' => $order->dispatched_at,
-                // Compromiso y cumplimiento del plazo. Se mandan resueltos
-                // desde acá para que la app no tenga que reimplementar la
-                // regla y contarla distinto que el informe del panel.
-                'promised_minutes' => $order->promised_minutes,
-                'delivery_minutes' => $order->delivery_minutes,
-                'on_time' => $order->on_time,
-                'delay_minutes' => $order->delay_minutes,
-                'state' => $order->state,
-                'business' => [
-                    'business_id' => $order->business->busines_id,
-                    'name' => $order->business->name,
-                    'address' => $order->business->address,
-                    'address' => $order->business->address,
-                    'latitude' => $order->business->latitude !== null ? (float) $order->business->latitude : null,
-                    'longitude' => $order->business->longitude !== null ? (float) $order->business->longitude : null,
-                    'phone' => $order->business->phone,
-                    'city' => $order->business->city,
-                    'state' => $order->business->state,
-                    'logo' => $order->business->logo,
-                ],
-                'delivery_address' => ! $order->pickup && $order->address ? [
-                    'address_id' => $order->address->address_id,
-                    /*
-                     * La calle va JUNTO a la dirección del mapa, no en vez de
-                     * ella.
-                     *
-                     * La del mapa sitúa la cuadra; la que escribió la persona
-                     * lleva el número de casa o apartamento. El domiciliario
-                     * necesita las dos para llegar a la puerta, y hasta ahora
-                     * solo le llegaba la primera.
-                     */
-                    'address' => trim(implode(', ', array_filter([
-                        $order->address->street,
-                        $order->address->address,
-                    ]))),
-                    'street' => $order->address->street,
-                    'alias' => $order->address->alias?->name,
-                    'municipality' => $order->address->municipality?->name,
-                    'department' => $order->address->department?->name,
-                    'country' => $order->address->country?->name,
-                    'latitude' => $order->address->latitude !== null ? (float) $order->address->latitude : null,
-                    'longitude' => $order->address->longitude !== null ? (float) $order->address->longitude : null,
-                ] : null,
-                'domiciliary' => $order->domiciliary ? [
-                    'name' => $order->domiciliary->user->name,
-                    'email' => $order->domiciliary->user->email,
-                    'phone' => $order->domiciliary->user->phone,
-                    'domiciliary_id' => $order->domiciliary->domiciliary_id,
-                    'available' => $order->domiciliary->available,
-                    'qualification' => $order->domiciliary->qualification,
-                    'state' => $order->domiciliary->state,
-                    'user_id' => $order->domiciliary->user->user_id,
-                ] : null,
-                'details' => $order->details->map(function ($detail) {
-                    return [
-                        /*
-                         * EL ID DE LA LINEA, que es por donde se pesa.
-                         *
-                         * Y no por `product_id`: un pedido puede traer la
-                         * misma referencia en dos lineas --media libra de
-                         * queso para hoy y un kilo para la semana-- y con el
-                         * producto no se sabe a cual va cada peso.
-                         */
-                        'orderDet_id' => $detail->orderDet_id,
-                        'product_id' => $detail->product->products_id,
-                        'name' => $detail->product->name,
-                        'description' => $detail->product->description,
-                        'category' => $detail->product->category?->name,
-                        'image' => $detail->product->image,
-                        'amount' => $detail->amount,
-                        'unit_price' => $detail->unit_price,
-                        /*
-                         * Lo que se vende al peso. Esta pantalla es la que
-                         * usa el tendero para armar la bolsa y para pesar,
-                         * asi que necesita la cantidad de verdad: en esas
-                         * lineas `amount` vale 1.
-                         */
-                        'sale_unit' => $detail->sale_unit,
-                        'pedido_por' => $detail->pedido_por,
-                        'qty_requested' => $detail->qty_requested,
-                        'qty_final' => $detail->qty_final,
-                        'line_total' => $detail->line_total,
-                    ];
-                }),
-                'promotions' => $order->promotions,
-                'payments' => $order->payments,
-            ];
-        });
+        $formattedOrders = $orders->map(
+            fn ($order) => (new PedidoDelCompradorResource($order))->resolve(),
+        );
 
         return response()->json([
             'message' => 'Órdenes encontradas',
