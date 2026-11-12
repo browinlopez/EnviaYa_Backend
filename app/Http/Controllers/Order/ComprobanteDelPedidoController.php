@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Order;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Comprobante\ComprobanteResource;
 use App\Models\Buyer\Buyer;
 use App\Models\Invoice\Invoice;
 use App\Models\Order\OrdersSales;
@@ -112,23 +113,9 @@ class ComprobanteDelPedidoController extends Controller
          */
         abort_if(! $comprobante, 404, 'El comprobante se emite cuando el pedido se entrega.');
 
-        return response()->json([
-            'invoice_id' => $comprobante->invoice_id,
-            'invoice_number' => $comprobante->invoice_number,
-            'invoice_date' => $comprobante->invoice_date,
-            'order_id' => $comprobante->orderSales_id,
-            'subtotal' => $comprobante->subtotal,
-            'descuento' => $comprobante->descuento,
-            'domicilio' => $comprobante->domicilio,
-            'iva' => $comprobante->iva,
-            'total' => $comprobante->total,
-            'currency' => $comprobante->currency,
-            'anulado' => $comprobante->estaAnulada(),
-            // La foto guardada: negocio, comprador, entrega y renglones. Nada
-            // de esto se consulta vivo, que es el punto de haberla guardado.
-            'snapshot' => $comprobante->snapshot ?? [],
-            'pdf_url' => $this->enlaceDelPdf($comprobante),
-        ]);
+        return response()->json(
+            new ComprobanteResource($comprobante, $this->enlaceDelPdf($comprobante))
+        );
     }
 
     /**

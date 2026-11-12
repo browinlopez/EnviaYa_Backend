@@ -10,6 +10,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Chat\ChatsDeUnaPersonaRequest;
 use App\Http\Requests\Chat\MandarMensajeRequest;
 use App\Http\Requests\Chat\MarcarMensajeRequest;
+use App\Http\Resources\Chat\MensajeDelChatResource;
+use App\Http\Resources\Chat\ParticipanteDeLaListaResource;
+use App\Http\Resources\Chat\ParticipanteDelChatResource;
 use App\Models\Chat\Chat;
 use App\Models\Chat\ChatParticipant;
 use App\Models\Chat\Message;
@@ -252,24 +255,8 @@ class ChatController extends Controller
             'chat_id' => $chat->chat_id,
             'type' => $chat->type,
             'created_at' => $chat->created_at,
-            'participants' => $chat->participants->map(function ($participant) {
-                return [
-                    'user_id' => $participant->user->user_id,
-                    'name' => $participant->user->name,
-                    'role_id' => $participant->role_id,
-                    'joined_at' => $participant->joined_at,
-                ];
-            }),
-            'messages' => $chat->messages->map(function ($message) {
-                return [
-                    'message_id' => $message->message_id,
-                    'user_id' => $message->user->user_id,
-                    'name' => $message->user->name,
-                    'role_id' => $message->role_id,
-                    'content' => $message->content,
-                    'created_at' => $message->created_at,
-                ];
-            }),
+            'participants' => ParticipanteDelChatResource::collection($chat->participants)->resolve(),
+            'messages' => MensajeDelChatResource::collection($chat->messages)->resolve(),
         ]);
     }
 
@@ -301,19 +288,13 @@ class ChatController extends Controller
                 'last_message' => $ultimo?->content,
                 'last_message_at' => $ultimo?->created_at,
                 'last_message_user_id' => $ultimo?->user_id,
-                'participants' => $chat->participants->map(function ($participant) {
-                    return [
-                        'user_id' => $participant->user->user_id,
-                        'name' => $participant->user->name,
-                        'email' => $participant->user->email,
-                        'phone' => $participant->user->phone,
-                        'address' => $participant->user->address,
-                        'role_id' => $participant->role_id,
-                        'qualification' => $participant->user->qualification,
-                        'state' => $participant->user->state,
-                        'joined_at' => $participant->joined_at,
-                    ];
-                }),
+                /*
+                 * OJO: NUEVE campos, no los cuatro de la otra forma del
+                 * mismo participante. Lleva correo, telefono y direccion.
+                 * Medido y escrito en la cabecera de
+                 * `ParticipanteDeLaListaResource`; es un asunto sin decidir.
+                 */
+                'participants' => ParticipanteDeLaListaResource::collection($chat->participants)->resolve(),
             ];
         });
 
