@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Business;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Business\AlternarFavoritoRequest;
 use App\Http\Requests\Business\MisFavoritosRequest;
+use App\Http\Resources\Negocio\NegocioFavoritoResource;
 use App\Http\Resources\Negocio\PropietarioResource;
 use App\Http\Resources\Negocio\ResenaDelNegocioResource;
 use App\Http\Resources\Producto\ProductoFavoritoResource;
@@ -117,56 +118,28 @@ class FavoriteController extends Controller
                 $lon,
             );
 
-            return [
-                'favorite_id' => $favorite->id,
-                'business_id' => $business->busines_id,
-                'latitude' => $business->latitude !== null ? (float) $business->latitude : null,
-                'longitude' => $business->longitude !== null ? (float) $business->longitude : null,
-                'distance_km' => $km === null ? null : round($km, 2),
-                'delivery_fee' => $this->distancias->paraDistancia($km),
-                'in_range' => $this->distancias->reparteHasta($km),
-                'name' => $business->name,
-                // La tarjeta la pinta debajo del nombre; sin ella decía «Sin
-                // descripción» de una tienda que sí la tiene.
-                'description' => $business->description,
-                'phone' => $business->phone,
-                'address' => $business->address,
-                'qualification' => (float) $business->qualification,
-                'razon_social' => $business->razonSocial_DCD,
-                'NIT' => $business->NIT,
-                'logo' => $business->logo ?? 'https://example.com/default-logo.png',
-                'state' => (bool) $business->state,
-                'type' => $business->type,
-                'municipality' => $business->municipality ? [
-                    'id' => $business->municipality->id,
-                    'name' => $business->municipality->name,
-                ] : null,
-                'owner_count' => $business->owners->count(),
+            return (new NegocioFavoritoResource(
+                $business,
+                favoritoId: (int) $favorite->id,
+                reparto: [
+                    'distance_km' => $km === null ? null : round($km, 2),
+                    'delivery_fee' => $this->distancias->paraDistancia($km),
+                    'in_range' => $this->distancias->reparteHasta($km),
+                ],
                 /*
-                 * DEL PROPIETARIO SOLO SALE LO QUE HACE FALTA PARA COMPRAR.
-                 *
-                 * Acá salían su número de documento, su fecha de nacimiento,
-                 * su teléfono secundario y las notas internas que le haya
-                 * puesto el equipo. La misma fuga se cerró en los dos listados
-                 * del catálogo y ESTE se quedó sin tocar: bastaba con marcar
-                 * la tienda como favorita para volver a leerlo todo. Ahora usa
-                 * el mismo presentador que los otros, para que no pueda volver
-                 * a divergir.
+                 * OJO CON EL PRECIO: `ProductoFavoritoResource` NO comprueba
+                 * la afiliacion, al contrario que los dos listados del
+                 * catalogo. Esta medido y escrito en la cabecera de esa clase
+                 * y en la de `NegocioFavoritoResource`; es un asunto de
+                 * producto sin decidir, no una errata.
                  */
-                'owners' => PropietarioResource::collection($business->owners)->resolve(),
-                /*
-                 * OJO CON EL PRECIO: esta forma NO comprueba la afiliacion y
-                 * cae a `null`, al contrario que la del catalogo. Esta medido
-                 * y escrito en la cabecera de `ProductoFavoritoResource`, y es
-                 * un asunto sin decidir.
-                 */
-                'products' => $ligero
+                productos: $ligero
                     ? []
                     : ProductoFavoritoResource::collection($business->products)->resolve(),
-                'reviews' => $ligero
+                resenas: $ligero
                     ? []
                     : ResenaDelNegocioResource::collection($business->reviews)->resolve(),
-            ];
+            ))->resolve();
         });
 
         return response()->json([

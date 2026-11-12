@@ -12,6 +12,8 @@ use App\Models\Owner\Owner;
 use App\Models\Product\Product;
 use App\Models\Product\ProductBusiness;
 use App\Models\Reviews\BusinessReview;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Business extends Audit
 {
@@ -119,7 +121,8 @@ class Business extends Audit
         });
     }
 
-    public function owners()
+    /** @return BelongsToMany<Owner, $this> */
+    public function owners(): BelongsToMany
     {
         return $this->belongsToMany(
             Owner::class,
@@ -129,9 +132,10 @@ class Business extends Audit
         )->withPivot('state');
     }
 
-    public function municipality()
+    /** @return BelongsTo<Municipality, $this> */
+    public function municipality(): BelongsTo
     {
-        return $this->belongsTo(Municipality::class, 'municipality_id', 'id'); // ajusta según tu pk de municipalities
+        return $this->belongsTo(Municipality::class, 'municipality_id', 'id');
     }
 
     // relaciones

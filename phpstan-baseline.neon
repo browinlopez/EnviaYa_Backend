@@ -229,43 +229,7 @@ parameters:
 			path: app/Http/Controllers/Business/AffiliationController.php
 
 		-
-			message: '#^Relation ''municipality'' is not found in App\\Models\\Business model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/Business/BusinessController.php
-
-		-
-			message: '#^Relation ''owners'' is not found in App\\Models\\Business model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/Business/BusinessController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Business\:\:\$municipality\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Http/Controllers/Business/ConsultaDeNegociosController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Business\:\:\$owners\.$#'
-			identifier: property.notFound
-			count: 4
-			path: app/Http/Controllers/Business/ConsultaDeNegociosController.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\Business\:\:\$reviews\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Http/Controllers/Business/ConsultaDeNegociosController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Business\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Business\>\:\:\$municipality\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Business/ConsultaDeNegociosController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Business\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Business\>\:\:\$owners\.$#'
 			identifier: property.notFound
 			count: 2
 			path: app/Http/Controllers/Business/ConsultaDeNegociosController.php
@@ -296,18 +260,6 @@ parameters:
 
 		-
 			message: '#^Relation ''affiliatedBusinesses'' is not found in App\\Models\\User model\.$#'
-			identifier: larastan.relationExistence
-			count: 3
-			path: app/Http/Controllers/Business/ConsultaDeNegociosController.php
-
-		-
-			message: '#^Relation ''municipality'' is not found in App\\Models\\Business model\.$#'
-			identifier: larastan.relationExistence
-			count: 3
-			path: app/Http/Controllers/Business/ConsultaDeNegociosController.php
-
-		-
-			message: '#^Relation ''owners'' is not found in App\\Models\\Business model\.$#'
 			identifier: larastan.relationExistence
 			count: 3
 			path: app/Http/Controllers/Business/ConsultaDeNegociosController.php
