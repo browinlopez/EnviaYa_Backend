@@ -8,6 +8,7 @@ use App\Models\Audit\Audit;
 use App\Models\Reviews\BusinessReview;
 use App\Models\Reviews\DomiciliaryReview;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Buyer extends Audit
 {
@@ -19,7 +20,8 @@ class Buyer extends Audit
 
     protected $fillable = ['user_id', 'qualification', 'state', 'belongs_to_complex'];
 
-    public function user()
+    /** @return BelongsTo<User, $this> */
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id', 'user_id');
     }
