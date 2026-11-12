@@ -145,7 +145,17 @@ class TorreDeControlController extends Controller
      * lo que decide si se le puede despachar otro contra entrega—.
      *
      * @param  list<int>  $ids
-     * @return Collection<int, Collection<int, array>>
+     *                          La clave de fuera es `int|string` y no `int`: `groupBy()` devuelve las
+     *                          claves tal como las da el motor, y un `domiciliary_id` puede llegar
+     *                          como cadena. Decia `int` y nadie lo notaba porque la relacion de
+     *                          `OrdersSales` no estaba tipada y PHPStan no podia ver lo que sale.
+     * @return Collection<int|string, Collection<int, array{
+     *     domiciliary_id: int, orderSales_id: int, cliente: string|null,
+     *     telefono: string|null, direccion: string|null,
+     *     recoge_en_tienda: bool, total: float,
+     *     productos: Collection<int, array{nombre: string, cantidad: float, unidad: string}>,
+     *     en_efectivo: bool, despachado_el: string|null, minutos: int|null,
+     * }>>
      */
     private function pedidosABordo(int $businessId, array $ids): Collection
     {
@@ -186,7 +196,12 @@ class TorreDeControlController extends Controller
                  * pedido ya pagado al mirar la fila.
                  */
                 'en_efectivo' => (int) $o->methods_id === 1,
-                'despachado_el' => optional($o->dispatched_at)->toIso8601String(),
+                /* `?->` y no `optional()`: lo mismo en tiempo de ejecucion,
+                   pero `optional()` devuelve `mixed` y con eso el tipo de
+                   retorno de este metodo no se puede declarar --los
+                   genericos de Collection son invariantes y piden el tipo
+                   exacto-. */
+                'despachado_el' => $o->dispatched_at?->toIso8601String(),
                 'minutos' => $o->dispatched_at
                     ? (int) $o->dispatched_at->diffInMinutes(now())
                     : null,

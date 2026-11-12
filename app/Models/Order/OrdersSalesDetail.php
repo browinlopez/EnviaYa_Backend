@@ -6,6 +6,7 @@ namespace App\Models\Order;
 
 use App\Models\Audit\Audit;
 use App\Models\Product\Product;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OrdersSalesDetail extends Audit
 {
@@ -43,12 +44,14 @@ class OrdersSalesDetail extends Audit
         'weighed_at' => 'datetime',
     ];
 
-    public function order()
+    /** @return BelongsTo<OrdersSales, $this> */
+    public function order(): BelongsTo
     {
         return $this->belongsTo(OrdersSales::class, 'orderSales_id', 'orderSales_id');
     }
 
-    public function product()
+    /** @return BelongsTo<Product, $this> */
+    public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class, 'product_id', 'products_id');
     }

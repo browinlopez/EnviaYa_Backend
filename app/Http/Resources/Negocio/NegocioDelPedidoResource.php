@@ -34,7 +34,25 @@ class NegocioDelPedidoResource extends JsonResource
             'latitude' => $negocio->latitude !== null ? (float) $negocio->latitude : null,
             'longitude' => $negocio->longitude !== null ? (float) $negocio->longitude : null,
             'phone' => $negocio->phone,
-            'city' => $negocio->city,
+            /*
+            * `city` NO EXISTE como columna de `business`. La tabla tiene
+            * `municipality_id`, y la ciudad de verdad sale de ahi. Esta
+            * clave ha estado publicando `null` desde que se escribio, en
+            * CINCO respuestas distintas, y lo destapo PHPStan al tipar el
+            * recurso: mientras la relacion no estaba declarada, no podia
+            * comprobar el campo.
+            *
+            * Se deja la clave, con `null` explicito: la salida es la
+            * misma que hoy --`null` de las dos maneras-- y quitarla del
+            * todo obligaria a la app a defenderse de un `undefined`
+            * donde hoy recibe un nulo. Lo que cambia es que ya no
+            * finge leer una columna que no hay.
+            *
+            * Si algun dia la ciudad hace falta de verdad, sale de
+            * `municipality->name`, que ya viaja en varias de estas
+            * respuestas.
+            */
+            'city' => null,
             'qualification' => $negocio->qualification,
             'state' => $negocio->state,
             'logo' => $negocio->logo,

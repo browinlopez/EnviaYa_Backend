@@ -15,6 +15,9 @@ use App\Models\Payment\PaymentMethods;
 use App\Models\Payment\PaymentTransaction;
 use App\Models\User\UserAddress;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class OrdersSales extends Audit
 {
@@ -293,33 +296,44 @@ class OrdersSales extends Audit
         );
     }
 
-    public function buyer()
+    /** @return BelongsTo<Buyer, $this> */
+    public function buyer(): BelongsTo
     {
         // el buyer_id de orderssales apunta al buyer_id de la tabla buyer
         return $this->belongsTo(Buyer::class, 'buyer_id', 'buyer_id');
     }
 
-    public function business()
+    /** @return BelongsTo<Business, $this> */
+    public function business(): BelongsTo
     {
         return $this->belongsTo(Business::class, 'busines_id', 'busines_id');
     }
 
-    public function domiciliary()
+    /** @return BelongsTo<Domiciliary, $this> */
+    public function domiciliary(): BelongsTo
     {
         return $this->belongsTo(Domiciliary::class, 'domiciliary_id', 'domiciliary_id');
     }
 
-    public function details()
+    /** @return HasMany<OrdersSalesDetail, $this> */
+    public function details(): HasMany
     {
         return $this->hasMany(OrdersSalesDetail::class, 'orderSales_id', 'orderSales_id');
     }
 
-    public function promotions()
+    /** @return HasMany<OrderPromotion, $this> */
+    public function promotions(): HasMany
     {
         return $this->hasMany(OrderPromotion::class, 'orderSales_id', 'orderSales_id');
     }
 
-    public function payments()
+    /*
+     * `hasOne` y la clave se llama `payments`, en plural. Se queda: es el
+     * nombre que leen las apps publicadas en `'payments' => ...`, y
+     * renombrarlo cambia la respuesta.
+     */
+    /** @return HasOne<Payment, $this> */
+    public function payments(): HasOne
     {
         return $this->hasOne(Payment::class, 'orderSales_id', 'orderSales_id');
     }
@@ -334,7 +348,8 @@ class OrdersSales extends Audit
         return $this->belongsTo(PaymentForms::class, 'forms_id');
     }
 
-    public function address()
+    /** @return BelongsTo<UserAddress, $this> */
+    public function address(): BelongsTo
     {
         return $this->belongsTo(UserAddress::class, 'address_id', 'address_id');
     }

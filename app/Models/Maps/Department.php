@@ -6,6 +6,7 @@ namespace App\Models\Maps;
 
 use App\Models\Audit\Audit;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Department extends Audit
 {
@@ -17,7 +18,8 @@ class Department extends Audit
 
     protected $fillable = ['name', 'country_id'];
 
-    public function country()
+    /** @return BelongsTo<Country, $this> */
+    public function country(): BelongsTo
     {
         return $this->belongsTo(Country::class, 'country_id', 'id');
     }

@@ -12,6 +12,8 @@ use App\Models\Maps\Department;
 use App\Models\Maps\Municipality;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 
 class UserAddress extends Audit
 {
@@ -55,17 +57,20 @@ class UserAddress extends Audit
         return $this->belongsTo(User::class, 'user_id', 'user_id');
     }
 
-    public function municipality()
+    /** @return BelongsTo<Municipality, $this> */
+    public function municipality(): BelongsTo
     {
         return $this->belongsTo(Municipality::class, 'municipality_id', 'id');
     }
 
-    public function alias()
+    /** @return BelongsTo<Alias, $this> */
+    public function alias(): BelongsTo
     {
         return $this->belongsTo(Alias::class, 'alias_id', 'alias_id');
     }
 
-    public function department()
+    /** @return HasOneThrough<Department, Municipality, $this> */
+    public function department(): HasOneThrough
     {
         return $this->hasOneThrough(
             Department::class,
@@ -104,7 +109,8 @@ class UserAddress extends Audit
      *
      * @deprecated Devuelve null siempre: ver arriba antes de usarla.
      */
-    public function country()
+    /** @return HasOneThrough<Country, Department, $this> */
+    public function country(): HasOneThrough
     {
         return $this->hasOneThrough(
             Country::class,

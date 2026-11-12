@@ -46,7 +46,6 @@ class Business extends Audit
         'municipality_id',
         'NIT',
         'logo',
-        'city',
         'type',
         'state',
         /*

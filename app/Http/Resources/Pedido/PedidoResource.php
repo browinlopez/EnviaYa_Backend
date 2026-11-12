@@ -72,7 +72,8 @@ class PedidoResource extends JsonResource
                 'latitude' => $pedido->business->latitude ? (float) $pedido->business->latitude : null,
                 'longitude' => $pedido->business->longitude ? (float) $pedido->business->longitude : null,
                 'phone' => $pedido->business->phone ?? null,
-                'city' => $pedido->business->city ?? null,
+                // `city` no existe como columna: ver NegocioDelPedidoResource.
+                'city' => null,
                 'state' => $pedido->business->state ?? null,
                 'logo' => $pedido->business->logo ?? null,
             ],
