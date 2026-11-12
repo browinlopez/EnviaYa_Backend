@@ -63,8 +63,24 @@ $detalle = in_array('--detalle', $argv, true);
  * ruta que ya no existe y el otro se la saltaría, y nadie lo notaría porque
  * los dos imprimen números con buena cara.
  */
-$CANDIDATAS = json_decode(file_get_contents(__DIR__.'/rutas-candidatas.json'), true)['grupos']
+$LISTA = json_decode(file_get_contents(__DIR__.'/rutas-candidatas.json'), true)
     ?? throw new RuntimeException('No se pudo leer scripts/rutas-candidatas.json');
+
+/* LOS DOS ESTADOS DE LA LISTA, y hay que recorrer los dos. `grupos` es lo ya
+   retirado --que sigue acá porque es el registro-- y `pendientes` lo que
+   sigue en el router sin decidir. Las pendientes son justo las que más piden
+   este informe: de una ruta ya retirada el tráfico solo puede decir que no
+   la llamaron antes de irse, mientras que de una viva dice si alguien la
+   está llamando hoy.
+
+   Leer solo `grupos` dejaba siete rutas sin medir sin que faltara una línea
+   en la salida, que es el mismo modo de fallo que tuvo `rutas_sin_llamante.py`
+   el día que se partió la lista. */
+$CANDIDATAS = $LISTA['grupos'];
+
+foreach ($LISTA['pendientes']['grupos'] ?? [] as $grupo => $filas) {
+    $CANDIDATAS['PENDIENTE · '.$grupo] = $filas;
+}
 
 /* ------------------------------------------------------------------ */
 /* 1 · EL REGISTRO: una pasada, no 31 greps */
