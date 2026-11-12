@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Business;
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Business\VerNegocioRequest;
+use App\Http\Resources\Negocio\NegocioDelListadoResource;
 use App\Http\Resources\Negocio\PropietarioResource;
 use App\Http\Resources\Negocio\ResenaDelNegocioResource;
 use App\Http\Resources\Producto\ProductoDeLaFichaResource;
@@ -166,59 +167,24 @@ class ConsultaDeNegociosController extends Controller
                 $lon,
             );
 
-            return [
-                'business_id' => $business->busines_id,
-                // Para pintarlos en el mapa cuando no hay ninguno cerca.
-                'latitude' => $business->latitude !== null ? (float) $business->latitude : null,
-                'longitude' => $business->longitude !== null ? (float) $business->longitude : null,
-                'distance_km' => $km === null ? null : round($km, 2),
-                'delivery_fee' => $this->distancias->paraDistancia($km),
-                // Lo que tarda desde ESTA tienda: la de la esquina no puede
-                // anunciar el mismo plazo que la del otro barrio.
-                'delivery_time_minutes' => $this->plazos->minutosPara($km),
-                'in_range' => $this->distancias->reparteHasta($km),
-                'name' => $business->name,
-                'phone' => $business->phone,
-                'address' => $business->address,
-                'qualification' => (float) $business->qualification,
-                'razon_social' => $business->razonSocial_DCD,
-                'NIT' => $business->NIT,
-                'logo' => $business->logo ?? 'https://example.com/default-logo.png',
-                'state' => (bool) $business->state,
-                'accepting_orders' => (bool) $business->accepting_orders,
-                'type' => $business->type,
-                'municipality' => $business->municipality ? [
-                    'id' => $business->municipality->id,
-                    'name' => $business->municipality->name,
-                ] : null,
-                'owner_count' => $business->owners->count(),
-                /*
-                 * DEL PROPIETARIO SOLO SALE LO QUE HACE FALTA PARA COMPRAR.
-                 *
-                 * Acá salían también su número de documento, su fecha de nacimiento, su
-                 * teléfono secundario y las notas internas que le haya puesto el
-                 * equipo. (Iba además un `document_type` que siempre valía null:
-                 * la columna real es `document_type_id`.) Nada de eso lo usa la
-                 * app —solo lee
-                 * `user_id`, para abrir el chat— y `indexByQualification` es un
-                 * endpoint PÚBLICO: cualquiera sin cuenta podía listar la cédula de
-                 * todos los tenderos aliados.
-                 *
-                 * Si algún día el panel necesita esos campos, van por la API de
-                 * administración, que ya exige rol 4 y módulo.
-                 */
-                'owners' => PropietarioResource::collection($business->owners)->resolve(),
-                /*
-                 * Las claves siguen viajando, vacias: la app las lee sin
-                 * comprobar si existen, y quitarlas del todo la obligaria a
-                 * defenderse de un `undefined` en cada pantalla.
-                 */
-                'products' => $ligero
+            return (new NegocioDelListadoResource(
+                $business,
+                reparto: [
+                    'distance_km' => $km === null ? null : round($km, 2),
+                    'delivery_fee' => $this->distancias->paraDistancia($km),
+                    'delivery_time_minutes' => $this->plazos->minutosPara($km),
+                    'in_range' => $this->distancias->reparteHasta($km),
+                ],
+                productos: $ligero
                     ? []
                     : ProductoDelNegocioResource::deLaTienda($business, $isAffiliated, $userId),
-                'reviews' => $ligero ? [] : ResenaDelNegocioResource::collection($business->reviews)->resolve(),
-                'is_affiliated' => $isAffiliated,
-            ];
+                resenas: $ligero
+                    ? []
+                    : ResenaDelNegocioResource::collection($business->reviews)->resolve(),
+                estaAfiliado: $isAffiliated,
+                // Este listado NO manda `description`; el de calificacion si.
+                conDescripcion: false,
+            ))->resolve();
         });
 
         /*
@@ -336,62 +302,31 @@ class ConsultaDeNegociosController extends Controller
                 $lon,
             );
 
-            return [
-                'business_id' => $business->busines_id,
-                'latitude' => $business->latitude !== null ? (float) $business->latitude : null,
-                'longitude' => $business->longitude !== null ? (float) $business->longitude : null,
-                'distance_km' => $km === null ? null : round($km, 2),
-                'delivery_fee' => $this->distancias->paraDistancia($km),
-                // Lo que tarda desde ESTA tienda: la de la esquina no puede
-                // anunciar el mismo plazo que la del otro barrio.
-                'delivery_time_minutes' => $this->plazos->minutosPara($km),
-                'in_range' => $this->distancias->reparteHasta($km),
-                'name' => $business->name,
-                'phone' => $business->phone,
-                'address' => $business->address,
-                'description' => $business->description,
-                'qualification' => (float) $business->qualification,
-                'razon_social' => $business->razonSocial_DCD,
-                'NIT' => $business->NIT,
-                'logo' => $business->logo ?? 'https://example.com/default-logo.png',
-                'state' => (bool) $business->state,
-                'accepting_orders' => (bool) $business->accepting_orders,
-                'type' => $business->type,
-                'municipality' => $business->municipality ? [
-                    'id' => $business->municipality->id,
-                    'name' => $business->municipality->name,
-                ] : null,
-                'owner_count' => $business->owners->count(),
+            return (new NegocioDelListadoResource(
+                $business,
+                reparto: [
+                    'distance_km' => $km === null ? null : round($km, 2),
+                    'delivery_fee' => $this->distancias->paraDistancia($km),
+                    'delivery_time_minutes' => $this->plazos->minutosPara($km),
+                    'in_range' => $this->distancias->reparteHasta($km),
+                ],
                 /*
-                 * DEL PROPIETARIO SOLO SALE LO QUE HACE FALTA PARA COMPRAR.
-                 *
-                 * Acá salían también su número de documento, su fecha de nacimiento, su
-                 * teléfono secundario y las notas internas que le haya puesto el
-                 * equipo. (Iba además un `document_type` que siempre valía null:
-                 * la columna real es `document_type_id`.) Nada de eso lo usa la
-                 * app —solo lee
-                 * `user_id`, para abrir el chat— y `indexByQualification` es un
-                 * endpoint PÚBLICO: cualquiera sin cuenta podía listar la cédula de
-                 * todos los tenderos aliados.
-                 *
-                 * Si algún día el panel necesita esos campos, van por la API de
-                 * administración, que ya exige rol 4 y módulo.
+                 * OJO: NO ES LA MISMA FORMA DE PRODUCTO que el listado por
+                 * cercania. Doce campos alli y siete aqui; la diferencia esta
+                 * medida y escrita en la cabecera de
+                 * `ProductoDestacadoResource`, y es un asunto de producto sin
+                 * decidir. Pasarla por aqui la deja a la vista, en vez de
+                 * enterrada en un `return` de cincuenta lineas.
                  */
-                'owners' => PropietarioResource::collection($business->owners)->resolve(),
-                // productos del negocio
-                'products' => $ligero
+                productos: $ligero
                     ? []
-                    /*
-                     * OJO: NO ES LA MISMA FORMA que la vitrina. Doce campos
-                     * aqui y siete alli; la diferencia esta medida y escrita
-                     * en la cabecera de `ProductoDestacadoResource`, y es un
-                     * asunto de producto sin decidir.
-                     */
                     : ProductoDestacadoResource::deLaTienda($business, $isAffiliated, $userId),
-                // reviews del negocio
-                'reviews' => $ligero ? [] : ResenaDelNegocioResource::collection($business->reviews)->resolve(),
-                'is_affiliated' => $isAffiliated,
-            ];
+                resenas: $ligero
+                    ? []
+                    : ResenaDelNegocioResource::collection($business->reviews)->resolve(),
+                estaAfiliado: $isAffiliated,
+                conDescripcion: true,
+            ))->resolve();
         });
 
         return response()->json([
