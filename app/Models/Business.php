@@ -14,7 +14,30 @@ use App\Models\Product\ProductBusiness;
 use App\Models\Reviews\BusinessReview;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Carbon;
 
+/**
+ * EL NEGOCIO.
+ *
+ * Las dos columnas de la pausa van anotadas porque Larastan no las ve: sus
+ * moldes estan en el metodo `casts()` --la forma de Laravel 11-- y esta
+ * version de Larastan solo lee la PROPIEDAD `$casts`. Sin la anotacion, cree
+ * que son cadenas y da «Cannot call method toIso8601String() on string» en un
+ * sitio donde en ejecucion hay un Carbon. Comprobado: hay una fila con
+ * `accepting_changed_at` y el modelo devuelve `Illuminate\Support\Carbon`.
+ *
+ * `recibiendo_ahora` es un accessor, no una columna: ver `recibiendoAhora()`.
+ *
+ * PENDIENTE, y no es cosa de este modelo: `scripts/anotar_modelos.php` escribe
+ * el bloque `@property` de los setenta modelos leyendo las migraciones, y
+ * NUNCA SE HA CORRIDO --`ya tenian @property: 0`--. El guion llevaba roto por
+ * el orden de los `use` y nadie lo llamaba. Correrlo quitaria buena parte de
+ * las supresiones que quedan en el baseline, y es su propia tanda.
+ *
+ * @property Carbon|null $accepting_until
+ * @property Carbon|null $accepting_changed_at
+ * @property bool $recibiendo_ahora
+ */
 class Business extends Audit
 {
     protected $table = 'business';

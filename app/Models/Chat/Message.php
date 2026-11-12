@@ -6,6 +6,7 @@ namespace App\Models\Chat;
 
 use App\Models\Audit\Audit;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Message extends Audit
 {
@@ -22,13 +23,15 @@ class Message extends Audit
         'content',
     ];
 
-    public function user()
+    /** @return BelongsTo<User, $this> */
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id', 'user_id');
     }
 
     // Relación con chat
-    public function chat()
+    /** @return BelongsTo<Chat, $this> */
+    public function chat(): BelongsTo
     {
         return $this->belongsTo(Chat::class, 'chat_id', 'chat_id');
     }

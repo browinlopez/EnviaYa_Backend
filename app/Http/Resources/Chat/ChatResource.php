@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Resources\Chat;
 
+use App\Models\Chat\Chat;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -26,6 +27,9 @@ class ChatResource extends JsonResource
     /** @return array<string, mixed> */
     public function toArray(Request $request): array
     {
+        /* Tipado a proposito: sin esto el recurso es `mixed` y los avisos
+           de relacion no declarada no se arreglan, se esconden. */
+        /** @var Chat $chat */
         $chat = $this->resource;
 
         return [
