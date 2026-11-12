@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\User\ActualizarPerfilRequest;
 use App\Http\Requests\User\CambiarContrasenaRequest;
 use App\Http\Requests\User\DesactivarCuentaRequest;
+use App\Http\Resources\Usuario\UsuarioResource;
 use App\Models\Buyer\Buyer;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
@@ -110,7 +111,7 @@ class UserController extends Controller
         }
         $user->update($cambios);
 
-        return response()->json($user);
+        return response()->json(new UsuarioResource($user));
     }
 
     /**

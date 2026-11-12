@@ -9,6 +9,7 @@ use App\Http\Requests\Domiciliary\ActualizarDomiciliarioRequest;
 use App\Http\Requests\Domiciliary\CrearDomiciliarioRequest;
 use App\Http\Requests\Domiciliary\DomiciliariosDeUnNegocioRequest;
 use App\Http\Requests\Domiciliary\VerDomiciliarioRequest;
+use App\Http\Resources\Usuario\UsuarioResource;
 use App\Models\Business;
 use App\Models\Domiciliary;
 use App\Models\User;
@@ -138,7 +139,7 @@ class DomiciliaryController extends Controller
 
             return response()->json([
                 'message' => 'Usuario y domiciliario creados correctamente',
-                'user' => $user,
+                'user' => new UsuarioResource($user),
                 'domiciliary' => $domiciliary->load('businesses'),
             ]);
         } catch (\Throwable $e) {
@@ -188,7 +189,7 @@ class DomiciliaryController extends Controller
 
         return response()->json([
             'message' => 'Información actualizada correctamente',
-            'user' => $user,
+            'user' => new UsuarioResource($user),
             'domiciliary' => $domiciliary,
         ]);
     }

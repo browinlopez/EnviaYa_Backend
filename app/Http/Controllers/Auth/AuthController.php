@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\EntrarRequest;
+use App\Http\Resources\Usuario\UsuarioResource;
 use App\Models\User;
 use App\Services\Totp;
 use Illuminate\Http\Request;
@@ -101,7 +102,7 @@ class AuthController extends Controller
         }
 
         return response()->json([
-            'user' => $user,
+            'user' => new UsuarioResource($user),
             'token' => $token,
         ]);
     }
@@ -162,6 +163,6 @@ class AuthController extends Controller
     // Perfil
     public function profile(Request $request)
     {
-        return response()->json($request->user());
+        return response()->json(new UsuarioResource($request->user()));
     }
 }
