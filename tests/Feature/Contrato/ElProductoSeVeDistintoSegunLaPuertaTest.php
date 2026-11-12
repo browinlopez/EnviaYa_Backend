@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Resources\Producto\ProductoDelNegocioResource;
 use App\Http\Resources\Producto\ProductoDestacadoResource;
 use App\Http\Resources\Producto\ProductoFavoritoResource;
+use App\Models\Business;
 use App\Models\Product\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -74,22 +75,29 @@ function unProductoDeTienda(): array
     return ['negocio' => (int) $negocio, 'producto' => (int) $producto];
 }
 
-/** El producto, con el pivote cargado como lo cargan los controladores. */
+/**
+ * El producto, cargado COMO LO CARGAN LOS CONTROLADORES.
+ *
+ * Por `Business::with('products')` y no por `Product::with('businesses')`, y
+ * la diferencia importa: las columnas del pivote se declaran por relacion, y
+ * las del peso estan en `Business::products()`. Cargar por el otro lado daba
+ * un pivote sin ellas y la prueba medía el camino equivocado — fue asi al
+ * principio, y por eso esta dicho aqui.
+ */
 function productoConPivote(int $negocioId): Product
 {
-    $p = Product::whereHas('businesses', fn ($q) => $q->where('business.busines_id', $negocioId))
-        ->with(['businesses' => fn ($q) => $q->where('business.busines_id', $negocioId)])
-        ->first();
+    $negocio = Business::with('products')->find($negocioId);
+
+    expect($negocio)->not->toBeNull();
+
+    $p = $negocio->products->first();
 
     expect($p)->not->toBeNull();
-
-    // El pivote que las tres formas leen sale de la relacion muchos-a-muchos.
-    $p->setRelation('pivot', $p->businesses->first()->pivot);
 
     return $p;
 }
 
-it('la vitrina no manda los campos del peso, y los destacados los mandan vacios', function () {
+it('la vitrina no manda los campos del peso, y los destacados si los mandan', function () {
     $e = unProductoDeTienda();
     $p = productoConPivote($e['negocio']);
     $req = Request::create('/v1/businesses/index', 'GET');
@@ -119,45 +127,26 @@ it('la vitrina no manda los campos del peso, y los destacados los mandan vacios'
     expect($soloEnVitrina)->toBe(['category_id']);
 
     /*
-     * Y AQUI SALE EL FALLO DE VERDAD, que esta asercion destapo.
+     * Y QUE LLEGAN DE VERDAD, que es donde estaba el fallo.
      *
-     * El producto que siembra esta prueba tiene `sale_unit = 'kg'` y
-     * `min_qty = 0.25` EN LA BASE. Lo que llega al Resource es `'unidad'` y
-     * `null`.
+     * Aqui esta prueba afirmaba `'unidad'` y `null`, y no porque la tienda no
+     * tuviera kilos configurados: `Business::products()` declaraba
+     * `withPivot(['price','amount','qualification'])` y NO incluia
+     * `sale_unit`, `min_qty` ni `step_qty`. La relacion no traia esas
+     * columnas, el pivote llegaba sin ellas, y el `?? 'unidad'` del Resource
+     * se disparaba siempre.
      *
-     * El motivo: `Business::products()` declara
-     * `withPivot(['price', 'amount', 'qualification'])` y NO incluye
-     * `sale_unit`, `min_qty` ni `step_qty`. El controlador las lee
-     * —`$product->pivot->sale_unit ?? 'unidad'`— pero la relacion nunca las
-     * trae, asi que el `??` se dispara siempre.
+     * No daba ningun error: un pivote al que le falta una columna devuelve
+     * null. Asi que el camino entero —migracion, columna, lectura,
+     * serializacion— estaba bien escrito y no funcionaba, y nada lo decia.
      *
-     * Comprobado tambien contra la base de desarrollo, fuera de las pruebas:
-     * se puso una fila a `kg`, se cargo por la relacion y salio `NULL`.
-     *
-     * LO QUE SIGNIFICA: los tres campos con los que la app decide si ofrece
-     * los botones de plata y de porcion para lo que se vende al peso NO
-     * LLEGAN NUNCA, por ningun endpoint. Un tendero puede configurar su queso
-     * en kilos y el comprador seguira viendo el +/- de unidades.
-     *
-     * NO SE ARREGLA AQUI, y el arreglo es de una linea: añadir las tres
-     * columnas al `withPivot`. No se hace porque enciende un camino que las
-     * apps publicadas en las dos tiendas reciben hoy apagado, y si la pantalla
-     * del comprador no sabe pintar una unidad distinta de `unidad`, encenderlo
-     * rompe la compra en vez de arreglarla. Eso lo decide quien conozca el
-     * estado de la app, no yo.
-     *
-     * Esta prueba fija el fallo TAL COMO ESTA. El dia que se arregle se pone
-     * roja, y ese es el punto: cambiarla es el momento de comprobar la app.
+     * Arreglado el 11 de noviembre de 2026 anadiendo las tres al `withPivot`.
+     * Estas dos lineas son la prueba de que llega: sin ellas, la comprobacion
+     * de las claves de arriba pasaria igual con todos los valores vacios.
      */
-    expect($destacado['sale_unit'])->toBe('unidad');
-    expect($destacado['min_qty'])->toBeNull();
-
-    // Y que la base SI tiene el valor, para que no se lea esto como «no habia
-    // dato»: el dato esta, no llega.
-    expect(DB::table('products_business')
-        ->where('busines_id', $e['negocio'])
-        ->where('products_id', $e['producto'])
-        ->value('sale_unit'))->toBe('kg');
+    expect($destacado['sale_unit'])->toBe('kg');
+    expect((float) $destacado['min_qty'])->toBe(0.25);
+    expect((float) $destacado['step_qty'])->toBe(0.25);
 });
 
 it('favoritos manda el precio SIN comprobar la afiliacion, y el catalogo no', function () {
