@@ -433,12 +433,6 @@ parameters:
 			path: app/Http/Controllers/Domiciliary/DomiciliaryController.php
 
 		-
-			message: '#^Relation ''user'' is not found in App\\Models\\Domiciliary model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/Domiciliary/DomiciliaryController.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\Domiciliary\:\:\$businesses\.$#'
 			identifier: property.notFound
 			count: 1
@@ -449,18 +443,6 @@ parameters:
 			identifier: larastan.relationExistence
 			count: 1
 			path: app/Http/Controllers/Domiciliary/PedidosDelDomiciliarioController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Domiciliary\:\:\$user\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Http/Controllers/Negocio/AltaDeDomiciliarioController.php
-
-		-
-			message: '#^Relation ''user'' is not found in App\\Models\\Domiciliary model\.$#'
-			identifier: larastan.relationExistence
-			count: 3
-			path: app/Http/Controllers/Negocio/AltaDeDomiciliarioController.php
 
 		-
 			message: '#^Relation ''buyer'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
@@ -475,28 +457,10 @@ parameters:
 			path: app/Http/Controllers/Negocio/ClientesDelNegocioController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\Domiciliary\:\:\$user\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Negocio/DocumentosDelDomiciliarioController.php
-
-		-
 			message: '#^Relation ''businesses'' is not found in App\\Models\\Domiciliary model\.$#'
 			identifier: larastan.relationExistence
 			count: 2
 			path: app/Http/Controllers/Negocio/DocumentosDelDomiciliarioController.php
-
-		-
-			message: '#^Relation ''user'' is not found in App\\Models\\Domiciliary model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/Negocio/DocumentosDelDomiciliarioController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Domiciliary\:\:\$user\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Http/Controllers/Negocio/EfectivoDeLaTiendaController.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\Operacion\\CashDeposit\:\:\$domiciliario\.$#'
@@ -529,21 +493,9 @@ parameters:
 			path: app/Http/Controllers/Negocio/EfectivoDeLaTiendaController.php
 
 		-
-			message: '#^Relation ''user'' is not found in App\\Models\\Domiciliary model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/Negocio/EfectivoDeLaTiendaController.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\Domiciliary\:\:\$businesses\.$#'
 			identifier: property.notFound
 			count: 1
-			path: app/Http/Controllers/Negocio/FichaDelDomiciliarioController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Domiciliary\:\:\$user\.$#'
-			identifier: property.notFound
-			count: 3
 			path: app/Http/Controllers/Negocio/FichaDelDomiciliarioController.php
 
 		-
@@ -580,12 +532,6 @@ parameters:
 			message: '#^Relation ''buyer'' is not found in App\\Models\\Order\\OrdersSales model\.$#'
 			identifier: larastan.relationExistence
 			count: 2
-			path: app/Http/Controllers/Negocio/FichaDelDomiciliarioController.php
-
-		-
-			message: '#^Relation ''user'' is not found in App\\Models\\Domiciliary model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
 			path: app/Http/Controllers/Negocio/FichaDelDomiciliarioController.php
 
 		-
@@ -923,54 +869,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Http/Controllers/Review/AyudasDeResenas.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Reviews\\DomiciliaryReview\:\:\$buyer\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Review/ResenasDeDomiciliarioController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Reviews\\DomiciliaryReview\:\:\$domiciliary\.$#'
-			identifier: property.notFound
-			count: 8
-			path: app/Http/Controllers/Review/ResenasDeDomiciliarioController.php
-
-		-
-			message: '#^Relation ''buyer'' is not found in App\\Models\\Reviews\\DomiciliaryReview model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/Review/ResenasDeDomiciliarioController.php
-
-		-
-			message: '#^Relation ''domiciliary'' is not found in App\\Models\\Reviews\\DomiciliaryReview model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/Review/ResenasDeDomiciliarioController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Reviews\\BusinessReview\:\:\$business\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Review/ResenasDeNegocioController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Reviews\\BusinessReview\:\:\$buyer\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Review/ResenasDeNegocioController.php
-
-		-
-			message: '#^Relation ''business'' is not found in App\\Models\\Reviews\\BusinessReview model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/Review/ResenasDeNegocioController.php
-
-		-
-			message: '#^Relation ''buyer'' is not found in App\\Models\\Reviews\\BusinessReview model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/Review/ResenasDeNegocioController.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\User\:\:\$buyer\.$#'

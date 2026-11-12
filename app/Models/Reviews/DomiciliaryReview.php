@@ -7,6 +7,7 @@ namespace App\Models\Reviews;
 use App\Models\Audit\Audit;
 use App\Models\Buyer\Buyer;
 use App\Models\Domiciliary;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class DomiciliaryReview extends Audit
 {
@@ -25,12 +26,14 @@ class DomiciliaryReview extends Audit
         'state',
     ];
 
-    public function domiciliary()
+    /** @return BelongsTo<Domiciliary, $this> */
+    public function domiciliary(): BelongsTo
     {
         return $this->belongsTo(Domiciliary::class, 'domiciliary_id', 'domiciliary_id');
     }
 
-    public function buyer()
+    /** @return BelongsTo<Buyer, $this> */
+    public function buyer(): BelongsTo
     {
         return $this->belongsTo(Buyer::class, 'buyer_id', 'buyer_id');
     }

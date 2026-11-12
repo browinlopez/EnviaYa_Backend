@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Models\Audit\Audit;
 use App\Models\Order\OrdersSales;
 use App\Models\Reviews\DomiciliaryReview;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Domiciliary extends Audit
 {
@@ -18,7 +19,8 @@ class Domiciliary extends Audit
 
     protected $fillable = ['user_id', 'available', 'document',  'qualification', 'state', 'registrado_por_negocio'];
 
-    public function user()
+    /** @return BelongsTo<User, $this> */
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id', 'user_id');
     }

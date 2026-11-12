@@ -7,6 +7,7 @@ namespace App\Models\Reviews;
 use App\Models\Audit\Audit;
 use App\Models\Business;
 use App\Models\Buyer\Buyer;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class BusinessReview extends Audit
 {
@@ -27,12 +28,14 @@ class BusinessReview extends Audit
         'state',
     ];
 
-    public function business()
+    /** @return BelongsTo<Business, $this> */
+    public function business(): BelongsTo
     {
         return $this->belongsTo(Business::class, 'busines_id', 'busines_id');
     }
 
-    public function buyer()
+    /** @return BelongsTo<Buyer, $this> */
+    public function buyer(): BelongsTo
     {
         return $this->belongsTo(Buyer::class, 'buyer_id', 'buyer_id');
     }
