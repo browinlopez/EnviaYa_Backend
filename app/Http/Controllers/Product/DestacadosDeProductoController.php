@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Product;
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Product\MasVendidosDelNegocioRequest;
+use App\Http\Resources\Producto\ProductoMasVendidoResource;
 use App\Models\Order\OrdersSalesDetail;
 use App\Models\Product\ProductBusiness;
 
@@ -34,18 +35,9 @@ class DestacadosDeProductoController extends Controller
             ->whereIn('products_id', $products->pluck('product_id'))
             ->pluck('price', 'products_id');
 
-        $formatted = $products->map(function ($item) use ($prices) {
-            return [
-                'product_id' => $item->product->products_id,
-                'name' => $item->product->name,
-                'description' => $item->product->description,
-                'category_id' => $item->product->category_id,
-                'image' => $item->product->image,
-                'state' => $item->product->state,
-                'price' => (float) ($prices[$item->product_id] ?? 0),
-                'total_ordered' => (int) $item->total_ordered, // cantidad total pedida
-            ];
-        });
+        $formatted = $products->map(fn ($item) => (new ProductoMasVendidoResource(
+            $item, (float) ($prices[$item->product_id] ?? 0),
+        ))->resolve());
 
         return response()->json([
             'message' => 'Productos más populares del negocio',

@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Business\VerNegocioRequest;
 use App\Http\Resources\Negocio\PropietarioResource;
 use App\Http\Resources\Negocio\ResenaDelNegocioResource;
+use App\Http\Resources\Producto\ProductoDeLaFichaResource;
 use App\Http\Resources\Producto\ProductoDelNegocioResource;
 use App\Http\Resources\Producto\ProductoDestacadoResource;
 use App\Models\Business;
@@ -538,38 +539,9 @@ class ConsultaDeNegociosController extends Controller
             'products' => $business->products
                 ->filter(fn ($p) => (float) ($p->pivot->price ?? 0) > 0)
                 ->values()
-                ->map(function ($product) use ($estaAfiliado, $promoDe) {
-                    return [
-                        'product_id' => $product->products_id,
-                        'name' => $product->name,
-                        'description' => $product->description,
-                        'category_id' => $product->category_id,
-                        // La ficha agrupa por nombre de categoría, igual que el
-                        // listado; con solo el id no podía pintar las secciones.
-                        'category' => $product->category?->name,
-                        'image' => $product->image,
-                        'state' => (bool) $product->state,
-                        'price' => $estaAfiliado ? ($product->pivot->price ?? 0) : 0,
-                        // Como se vende: por unidad o al peso. Ver arriba.
-                        'sale_unit' => $product->pivot->sale_unit ?? 'unidad',
-                        'min_qty' => $product->pivot->min_qty !== null ? (float) $product->pivot->min_qty : null,
-                        'step_qty' => $product->pivot->step_qty !== null ? (float) $product->pivot->step_qty : null,
-                        /*
-                         * `null` cuando no hay ninguna. La app pinta la etiqueta
-                         * solo si viene algo.
-                         *
-                         * Y NUNCA sobre lo que se vende al peso: el motor de
-                         * descuentos excluye esas lineas --un «lleva 3, paga 2»
-                         * sobre 1,18 kg no esta definido-- asi que la etiqueta
-                         * prometeria una rebaja que el carrito no va a aplicar.
-                         * Es peor que no ensenar nada: el cliente llega al total
-                         * esperando otro numero.
-                         */
-                        'promocion' => in_array($product->pivot->sale_unit ?? 'unidad', ['kg', 'libra', 'gramo'], true)
-                            ? null
-                            : $promoDe((int) $product->products_id),
-                    ];
-                }),
+                ->map(fn ($product) => (new ProductoDeLaFichaResource(
+                    $product, $estaAfiliado, $promoDe,
+                ))->resolve()),
 
             /*
                  * Las promociones de la tienda, para la franja de arriba. Solo las
