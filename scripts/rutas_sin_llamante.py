@@ -40,6 +40,7 @@ prueba de carga— no aparece por ningun lado. Para eso esta
 """
 import json
 import os
+import re
 import subprocess
 import sys
 
@@ -77,25 +78,70 @@ def correr(cwd, orden, timeout=300):
 
 
 def aguja(uri):
-    """La ruta como la escribe un cliente: sin el prefijo, que va en la base."""
-    return uri[3:] if uri.startswith('v1/') else uri
+    """El camino como literal COMPLETO, no como trozo de otro.
+
+    Esto era `--fixed-strings` con el camino pelado, y asi buscado `users`
+    sale en `/admin/users`, en `/users/update` y en `useQuery(["users"])`.
+    Las tres cosas son otra ruta o ninguna, y el tercer caso es el que dejo
+    `GET /v1/users` viva mientras publicaba el personal con sus correos.
+
+    Lo que separa un camino de API de una clave de cache es LA BARRA
+    INICIAL: un camino se escribe `'/users'`, una clave `["users"]`. Y lo
+    que separa `/users` de `/users/update` es que el literal se CIERRA ahi.
+    Asi que la aguja pide comilla, barra, el camino, y comilla:
+
+        users                 ->  ['"`]/users['"`]
+        creditos/tienda/{id}  ->  ['"`]/creditos/tienda/[^/'"`]+['"`]
+
+    Lo que esta aguja NO ve, y por eso lo de abajo son candidatas y no
+    muertas: un camino armado a trozos, `` `${base}/users` ``, donde lo que
+    precede al camino no es una comilla sino `}`.
+    """
+    camino = uri[3:] if uri.startswith('v1/') else uri
+    camino = camino.strip('/')
+
+    patron = re.escape('/' + camino)
+    # `{id}` de la ruta casa con `${id}` o con un trozo cualquiera.
+    patron = re.sub(r'\\\{[^}]*\\\}', r'[^/\'"`]+', patron)
+
+    return '[\'"`]' + patron + '[\'"`]'
+
+
+def es_prueba(fichero):
+    return '.test.' in fichero or '.spec.' in fichero or '__tests__' in fichero
 
 
 def buscar(raiz, cliente, texto):
-    """¿Esta `texto` en ese cliente? (encontrado, motivo_si_no_se_pudo)"""
+    """¿Esta `texto` en ese cliente? (hallazgo, motivo_si_no_se_pudo)
+
+    `hallazgo` es None, `'codigo'` o `'pruebas'`. La tercera posibilidad
+    existe porque la encontro el caso de `GET /v1/ads/featured`: su unica
+    aparicion en toda la app es una lista dentro de `httpClient.test.ts`.
+    Una ruta a la que solo llama la prueba de un cliente no la llama nadie
+    —la prueba la mantiene viva sola—, y contarla como llamante es dejar
+    viva una ruta muerta, que es justo el error que no avisa.
+    """
     cwd = os.path.join(raiz, cliente['repo'].replace('/', os.sep))
 
     if not os.path.isdir(os.path.join(cwd, '.git')):
-        return False, 'no esta en ' + cwd
+        return None, 'no esta en ' + cwd
 
     salida, fallo = correr(cwd, [
-        'git', 'grep', '-l', '--fixed-strings', texto, cliente['ref'], '--', cliente['dir'],
+        'git', 'grep', '-l', '-E', texto, cliente['ref'], '--', cliente['dir'],
     ])
 
     if fallo:
-        return False, str(fallo)
+        return None, str(fallo)
 
-    return bool(salida), None
+    ficheros = [x for x in salida.splitlines() if x.strip()]
+
+    if not ficheros:
+        return None, None
+
+    if all(es_prueba(x) for x in ficheros):
+        return 'pruebas', None
+
+    return 'codigo', None
 
 
 def main():
@@ -128,11 +174,11 @@ def main():
         donde, motivos = [], []
 
         for c in clientes:
-            hay, no_pudo = buscar(raiz, c, texto)
+            hallazgo, no_pudo = buscar(raiz, c, aguja(texto))
 
             if no_pudo:
                 motivos.append(c['rotulo'] + ': ' + no_pudo)
-            elif hay:
+            elif hallazgo == 'codigo':
                 donde.append(c['rotulo'])
 
         if donde:
@@ -160,6 +206,7 @@ def main():
     # ---------------------------------------------------------------- #
     ausentes = []
     con_llamante = []
+    de_pruebas = []
     ilegibles = {}
 
     for grupo, filas in cfg['grupos'].items():
@@ -171,20 +218,34 @@ def main():
             texto = aguja(uri)
             donde = []
 
+            solo_pruebas = []
+
             for c in clientes:
-                hay, no_pudo = buscar(raiz, c, texto)
+                hallazgo, no_pudo = buscar(raiz, c, texto)
 
                 if no_pudo:
                     ilegibles[c['rotulo']] = no_pudo
-                elif hay:
+                elif hallazgo == 'codigo':
                     donde.append(c['rotulo'])
+                elif hallazgo == 'pruebas':
+                    solo_pruebas.append(c['rotulo'])
 
-            print('  %-7s %-46s %s' % (verbo, uri, ', '.join(donde) if donde else 'nadie'))
+            if donde:
+                dicho = ', '.join(donde)
+            elif solo_pruebas:
+                dicho = 'solo en pruebas de ' + ', '.join(solo_pruebas)
+            else:
+                dicho = 'nadie'
+
+            print('  %-7s %-46s %s' % (verbo, uri, dicho))
 
             if donde:
                 con_llamante.append((verbo, uri, donde))
             else:
                 ausentes.append((verbo, uri))
+
+                if solo_pruebas:
+                    de_pruebas.append((verbo, uri, solo_pruebas))
 
         print()
 
@@ -209,7 +270,8 @@ def main():
 
         for verbo, uri in ausentes:
             salida, fallo = correr(cwd, [
-                'git', 'log', '--all', '-S', aguja(uri), '--oneline', '--', hist['dir'],
+                'git', 'log', '--all', '--pickaxe-regex', '-S', aguja(uri),
+                '--oneline', '--', hist['dir'],
             ], timeout=600)
 
             if fallo:
@@ -244,6 +306,15 @@ def main():
         print('SE QUEDAN, ESTA MEDIDO:')
 
         for v, u, d in con_llamante:
+            print('  %-7s %-46s %s' % (v, u, ', '.join(d)))
+
+        print()
+
+    if de_pruebas:
+        print('SOLO LAS LLAMA UNA PRUEBA DE CLIENTE — cuentan como ausentes, y')
+        print('hay que borrar tambien esa prueba, o volvera a darlas por vivas:')
+
+        for v, u, d in de_pruebas:
             print('  %-7s %-46s %s' % (v, u, ', '.join(d)))
 
         print()
