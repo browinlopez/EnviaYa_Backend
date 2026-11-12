@@ -59,20 +59,64 @@
       ["POST", "v1/users/buyer"],
       ["POST", "v1/users/show"]
     ],
-    "Negocios, altas y cambios": [
-      ["POST", "v1/businesses/store"],
-      ["PUT", "v1/businesses/update"]
-    ],
     "Usuarios": [
-      ["GET", "v1/users"],
-      ["DELETE", "v1/users/delete"]
-    ],
-    "Duplicadas o reemplazadas": [
-      ["POST", "v1/email/resend-verification"],
-      ["GET", "v1/bold/status/{ref}"],
-      ["GET", "v1/ads/featured"],
-      ["GET", "v1/creditos"]
+      ["GET", "v1/users"]
     ]
+  },
+  "pendientes": {
+    "_": [
+      "CANDIDATAS SIN DECIDIR. No se han retirado: siguen en el router.",
+      "",
+      "Esta division no estaba y costo una prueba roja: `grupos` es el",
+      "REGISTRO DE LO QUE SE FUE --`LasRetiradasNoVuelvenTest` comprueba que",
+      "ninguna volvio al router y cuenta las filas para que nadie recorte la",
+      "lista-- y meter ahi una ruta viva dice que se retiro algo que no se",
+      "retiro. Son dos estados de la misma lista, no dos listas: los dos",
+      "buscadores recorren `grupos` y `pendientes`; la prueba, solo `grupos`.",
+      "",
+      "Las siete de aqui salieron el 12 de noviembre de 2026 del buscador de",
+      "caminos, y las confirmo el pickaxe: ningun llamante en ninguna version",
+      "publicada ni en los 202 commits de la historia de la app. Lo que falta",
+      "no es medirlas, es decidir cada una, y tres no son evidentes:",
+      "",
+      "  users/delete            la baja de cuenta. La app no la llama: manda",
+      "                          a la web, `vecipaya.com/eliminar-cuenta`. Las",
+      "                          tiendas de aplicaciones exigen un camino para",
+      "                          darse de baja, asi que antes de retirarla hay",
+      "                          que saber cual de los dos es el bueno.",
+      "  creditos                `Buyer\\MiCreditoController@index`, el credito",
+      "                          propio del comprador. La app solo llama",
+      "                          `/creditos/tienda/{id}`, que es otro metodo:",
+      "                          esto huele a funcion a medio hacer, no a",
+      "                          sobra.",
+      "  bold/status/{ref}       en `routes/api.php:360` hay escrito «si es un",
+      "                          manejador de verdad y se queda», de una",
+      "                          limpieza anterior. La medicion de ahora dice",
+      "                          lo contrario, y la app lo dice con palabras en",
+      "                          `features/payments/data/paymentsApi.ts:7`:",
+      "                          reemplaza al viejo `GET /bold/status/{ref}`.",
+      "                          Lo que usa es `payment/status`. Decidir cual",
+      "                          de las dos frases vale.",
+      "",
+      "Y una nota de `ads/featured`: su unica aparicion en toda la app es una",
+      "lista dentro de `httpClient.test.ts`. Si se retira, hay que borrar esa",
+      "linea tambien, o la prueba del cliente la volvera a dar por viva."
+    ],
+    "grupos": {
+      "Negocios, altas y cambios": [
+        ["POST", "v1/businesses/store"],
+        ["PUT", "v1/businesses/update"]
+      ],
+      "Usuarios": [
+        ["DELETE", "v1/users/delete"]
+      ],
+      "Duplicadas o reemplazadas": [
+        ["POST", "v1/email/resend-verification"],
+        ["GET", "v1/bold/status/{ref}"],
+        ["GET", "v1/ads/featured"],
+        ["GET", "v1/creditos"]
+      ]
+    }
   },
   "control": {
     "_": [
