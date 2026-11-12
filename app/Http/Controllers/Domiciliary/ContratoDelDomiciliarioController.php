@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Domiciliary;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Domiciliary\FirmarContratoRequest;
+use App\Http\Resources\Domiciliario\ContratoResource;
 use App\Services\ContratoService;
 use App\Services\MediaService;
 use Illuminate\Http\Request;
@@ -93,21 +94,11 @@ class ContratoDelDomiciliarioController extends Controller
             return response()->json(['message' => 'Tu cuenta no es la de un domiciliario.'], 403);
         }
 
-        return response()->json([
-            'firmado' => $d->contract_signed_at !== null,
-            'firmado_el' => $d->contract_signed_at,
-            'ciudad' => $d->contract_city,
-            'documento' => $d->document,
-            'nombre' => $d->name,
-            /*
-             * Hace falta ANTES de firmar: el acuerdo lleva la cédula impresa y
-             * firmarlo sin ella no tiene sentido. La pantalla la pide cuando
-             * falta en vez de dejar que el envío reviente.
-             */
-            'falta_documento' => empty($d->document),
-            'url' => $this->enlace($d->contract_media_id ? (int) $d->contract_media_id : null),
-            'texto' => $this->contratos->comoTexto($d),
-        ]);
+        return response()->json((new ContratoResource(
+            $d,
+            $this->enlace($d->contract_media_id ? (int) $d->contract_media_id : null),
+            $this->contratos->comoTexto($d),
+        ))->resolve());
     }
 
     /** Firmarlo. */

@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Operacion;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Operacion\ResolverDepositoRequest;
+use App\Http\Resources\Operacion\DepositoResource;
 use App\Models\Domiciliary;
 use App\Models\Operacion\CashDeposit;
 use App\Models\Operacion\CashMovement;
@@ -101,7 +102,7 @@ class EfectivoController extends Controller
 
         return response()->json([
             'message' => 'Consignación registrada. Queda pendiente de confirmación.',
-            'deposit' => $deposito,
+            'deposit' => (new DepositoResource($deposito))->resolve(),
             'balance' => $this->custodia->saldo($domiciliario->domiciliary_id),
         ], 201);
     }
@@ -178,7 +179,7 @@ class EfectivoController extends Controller
             'message' => $datos['state'] === CashDeposit::CONFIRMADA
                 ? 'Depósito confirmado. El saldo bajó.'
                 : 'Depósito rechazado. El saldo no cambió.',
-            'deposit' => $deposito,
+            'deposit' => (new DepositoResource($deposito))->resolve(),
             'balance' => $this->custodia->saldo($deposito->domiciliary_id),
         ]);
     }

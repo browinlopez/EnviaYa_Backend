@@ -12,6 +12,7 @@ use App\Http\Resources\Negocio\ResenaDelNegocioResource;
 use App\Http\Resources\Producto\ProductoDeLaFichaResource;
 use App\Http\Resources\Producto\ProductoDelNegocioResource;
 use App\Http\Resources\Producto\ProductoDestacadoResource;
+use App\Http\Resources\Promocion\PromocionDeLaFichaResource;
 use App\Models\Business;
 use App\Models\Promotion;
 use App\Models\User;
@@ -476,12 +477,7 @@ class ConsultaDeNegociosController extends Controller
                 fn (Promotion $p) => $p->descuentoSobre($p->minimoParaAplicar(), 1000),
             )->first();
 
-            return [
-                'promotion_id' => (int) $mejor->promotion_id,
-                'texto' => (string) $mejor->description,
-                'regla' => $mejor->reglaEnPalabras(),
-                'hasta_texto' => $mejor->hastaEnPalabras(),
-            ];
+            return (new PromocionDeLaFichaResource($mejor))->resolve();
         };
 
         return response()->json([
@@ -551,12 +547,8 @@ class ConsultaDeNegociosController extends Controller
                  */
             'promociones' => $promociones
                 ->filter(fn (Promotion $p) => $p->descuenta())
-                ->map(fn (Promotion $p) => [
-                    'promotion_id' => (int) $p->promotion_id,
-                    'texto' => (string) $p->description,
-                    'regla' => $p->reglaEnPalabras(),
-                    'hasta_texto' => $p->hastaEnPalabras(),
-                ])->values(),
+                ->map(fn (Promotion $p) => (new PromocionDeLaFichaResource($p))->resolve())
+                ->values(),
             'reviews' => ResenaDelNegocioResource::collection($business->reviews)->resolve(),
         ]);
     }
