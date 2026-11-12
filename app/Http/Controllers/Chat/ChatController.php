@@ -11,6 +11,7 @@ use App\Http\Requests\Chat\ChatsDeUnaPersonaRequest;
 use App\Http\Requests\Chat\MandarMensajeRequest;
 use App\Http\Requests\Chat\MarcarMensajeRequest;
 use App\Http\Resources\Chat\MensajeDelChatResource;
+use App\Http\Resources\Chat\MensajeResource;
 use App\Http\Resources\Chat\ParticipanteDeLaListaResource;
 use App\Http\Resources\Chat\ParticipanteDelChatResource;
 use App\Models\Chat\Chat;
@@ -242,7 +243,7 @@ class ChatController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => $message,
+            'message' => (new MensajeResource($message))->resolve(),
         ]);
     }
 
