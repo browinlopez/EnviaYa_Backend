@@ -10,10 +10,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Chat\ChatsDeUnaPersonaRequest;
 use App\Http\Requests\Chat\MandarMensajeRequest;
 use App\Http\Requests\Chat\MarcarMensajeRequest;
-use App\Http\Resources\Chat\MensajeDelChatResource;
+use App\Http\Resources\Chat\ChatResource;
 use App\Http\Resources\Chat\MensajeResource;
 use App\Http\Resources\Chat\ParticipanteDeLaListaResource;
-use App\Http\Resources\Chat\ParticipanteDelChatResource;
 use App\Models\Chat\Chat;
 use App\Models\Chat\ChatParticipant;
 use App\Models\Chat\Message;
@@ -252,13 +251,7 @@ class ChatController extends Controller
      */
     protected function formatChatResponse(Chat $chat)
     {
-        return response()->json([
-            'chat_id' => $chat->chat_id,
-            'type' => $chat->type,
-            'created_at' => $chat->created_at,
-            'participants' => ParticipanteDelChatResource::collection($chat->participants)->resolve(),
-            'messages' => MensajeDelChatResource::collection($chat->messages)->resolve(),
-        ]);
+        return response()->json((new ChatResource($chat))->resolve());
     }
 
     public function getUserChats(ChatsDeUnaPersonaRequest $request)

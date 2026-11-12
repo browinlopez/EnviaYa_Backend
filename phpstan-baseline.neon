@@ -345,13 +345,13 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Models\\Chat\\Chat\:\:\$messages\.$#'
 			identifier: property.notFound
-			count: 3
+			count: 2
 			path: app/Http/Controllers/Chat/ChatController.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\Chat\\Chat\:\:\$participants\.$#'
 			identifier: property.notFound
-			count: 3
+			count: 2
 			path: app/Http/Controllers/Chat/ChatController.php
 
 		-

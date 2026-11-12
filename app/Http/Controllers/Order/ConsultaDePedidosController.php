@@ -12,6 +12,7 @@ use App\Http\Requests\Order\PedidosDelUsuarioRequest;
 use App\Http\Requests\Order\UltimosPedidosRequest;
 use App\Http\Resources\Negocio\NegocioDelPedidoResource;
 use App\Http\Resources\Pedido\PedidoDeLaAppResource;
+use App\Http\Resources\Pedido\PosicionDelDomiciliarioResource;
 use App\Models\Business;
 use App\Models\Buyer\Buyer;
 use App\Models\Order\OrderGeolocation;
@@ -470,13 +471,9 @@ class ConsultaDePedidosController extends Controller
             ->first();
 
         if ($last) {
-            return response()->json([
-                'latitude' => $last->latitude,
-                'longitude' => $last->longitude,
-                'orderSales_id' => $last->orderSales_id,
-                'state' => $last->state,
-                'created_at' => $last->created_at,
-            ]);
+            return response()->json(
+                (new PosicionDelDomiciliarioResource($last))->resolve()
+            );
         }
 
         return response()->json([]); // sin ubicación
