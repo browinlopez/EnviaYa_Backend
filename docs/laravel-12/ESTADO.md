@@ -125,9 +125,11 @@ y sin un solo error. Ahora lo vigila `colas:comprobar --avisar`, a diario.
 
 ## 2.1 · ¿Cumple ya? Una respuesta y no una impresión
 
-**Las reglas duras del estándar se cumplen, con UNA excepción que no es una
-excepción razonada sino un incumplimiento abierto.** Lo que queda se reparte
-en tres clases, y mezclarlas es lo que hace que un marcador no sirva.
+**Las reglas duras del estándar se cumplen.** El único incumplimiento abierto
+—la ficha del domiciliario servida a cualquiera con sesión— se arregló el 13
+de noviembre y queda contado abajo, porque el motivo por el que se coló vale
+más que el arreglo. Lo que falta se reparte en dos clases, y mezclarlas es lo
+que hace que un marcador no sirva.
 
 ### Lo que SÍ está, y comprobado por máquina y no por lectura
 
@@ -142,22 +144,59 @@ noviembre:
 | `->get()->count()` | el único aviso es un `groupBy` ya en memoria; «podría ser una consulta» querría decir una consulta por día |
 | `dd()` / `dump()` | ninguno vivo. El que queda está dentro de un `/* */` |
 | `catch (\Throwable)` que silencia | uno solo, y registra el motivo y responde 500, que es justo lo que §09 pide |
-| alcance global que exponga registros de otros | **AQUÍ ESTÁ EL INCUMPLIMIENTO.** Ver abajo |
+| alcance global que exponga registros de otros | cerrado el 13 de noviembre; era `showDomiciliary`. Ver abajo |
 
-### El incumplimiento abierto, y es uno
+### El incumplimiento que había, ARREGLADO el 13 de noviembre de 2026
 
-`POST /v1/domiciliaries/showDomiciliary` toma el `domiciliary_id` **del cuerpo
-de la petición** y no lo compara con quien pregunta; encima del grupo solo hay
-`auth:sanctum`. Comprobado contra la pila HTTP: un comprador con sesión recibe
-200, la **cédula** del domiciliario, su correo y su teléfono.
+`POST /v1/domiciliaries/showDomiciliary` tomaba el `domiciliary_id` **del
+cuerpo de la petición** y no lo comparaba con quien preguntaba; encima del
+grupo solo hay `auth:sanctum`. Medido contra la pila HTTP: un comprador con
+sesión recibía 200 y doce claves, entre ellas la **cédula** del domiciliario,
+su correo, su teléfono y —lo que menos se veía— el
+**`email_verification_token`** de su usuario, que es con lo que se verifica un
+correo.
 
-Eso es exactamente lo que `AGENTS.md` §8 manda («autorización por
-registro/tenant») y lo que su lista de prohibiciones nombra primero. No está
-arreglado porque las dos salidas cambian lo que reciben apps publicadas —un
-403 donde había 200, o enumerar las claves de una respuesta que ya se lee— y
-eso es decisión de producto, no refactor. Está pinchado en
-`tests/Feature/Seguridad/LaCedulaDelDomiciliarioLaVeCualquieraTest.php`, que
-se pone **roja** el día que se arregle.
+**No era una fuga de diseño, era un olvido con fecha.** `updateDomiciliary`,
+en el mismo archivo y cuarenta líneas más arriba, ya se había acotado por este
+mismo motivo: su comentario dice «antes cualquier sesión válida podía
+modificar a cualquier usuario mandando su user_id». Se arregló la escritura y
+se olvidó la lectura, que deja la misma puerta abierta en modo consulta. Las
+dos usan ahora el mismo predicado, y se llama `puedeVerYEditarDomiciliario`
+para que se note cuando aparezca un tercer método.
+
+**Y el token era lo peor por una razón que conviene entender.**
+`UsuarioResource` lo conserva A PROPÓSITO, y lo tiene escrito: «en cinco de
+los seis sitios el usuario es EL PROPIO, así que su token y su IP no son una
+fuga: son sus datos». Esa decisión se apoya en una premisa —que el usuario es
+quien pregunta— y esta ruta era justo donde la premisa no se cumplía. Por eso
+el arreglo es la AUTORIZACIÓN y no quitar campos: lo roto era la premisa, no
+la lista.
+
+**Qué se hizo, en las dos mitades:**
+
+- **Servidor.** El identificador pasa a ser OPCIONAL: si no viene, el
+  domiciliario se resuelve de la sesión. Si viene, se atiende solo cuando es
+  el propio o el de una tienda del que pregunta; si no, **403**. Se sigue
+  aceptando para no romper lo instalado —las versiones publicadas mandan el
+  suyo, que es el que resolvería la sesión—. De paso, un id inexistente da
+  **404** y no un 200 con cuerpo `null`, que es lo que hacía.
+- **Forma.** `MiFichaDeDomiciliarioResource`, con las claves medidas de la
+  respuesta real: 10 de `domiciliary`, las 20 de `UsuarioResource` para el
+  `user` anidado y 8 por reseña. **La forma no cambia** —hay una prueba que la
+  compara con el `toArray()` del modelo— y lo que cambia es que la lista está
+  escrita: una columna nueva en cualquiera de esas tres tablas ya no se
+  publica sola. Con esto, `scripts/formas_de_entidad.py` baja a **cero**
+  modelos pelados en `app/Http`.
+- **Cliente, app y web a la vez.** `getUserInfoDomi()` dejó de mandar el
+  identificador: el módulo es el mismo para nativo y para web, así que el
+  arreglo cubre las dos. Lo que no se manda no se puede falsear.
+
+Ocho pruebas en `tests/Feature/Seguridad/LaFichaDelDomiciliarioEsSuyaTest.php`
+—comprador 403, el propio 200 sin mandar nada, el propio 200 mandando su id
+como la app vieja, su tienda 200, otra tienda 403, el control de que esa misma
+sesión sí llega a `/v1/profile`, la forma intacta y la columna nueva filtrada—.
+En el cliente, la aserción pasa a `toHaveBeenCalledWith()` sin argumentos, que
+es la que se pone roja si alguien vuelve a mandarlo «por claridad».
 
 ### Lo que falta y NO es código
 
