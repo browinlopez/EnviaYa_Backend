@@ -15,7 +15,26 @@ parameters:
     # Se comprobaron a mano los nueve hallazgos de mas senal del nivel 5 y los
     # nueve eran artefactos de inferencia.
     #
-    # Por eso la linea base: congela los 503 de hoy y exige que el codigo
-    # NUEVO salga limpio. El numero solo puede bajar. Anotar los modelos con
-    # `@property` quitaria la mayoria, y es trabajo de otro dia.
+    # Por eso la linea base: congela los de hoy y exige que el codigo NUEVO
+    # salga limpio. El numero solo puede bajar: 503 -> 157 -> 60.
+    #
+    # DECIA que anotar los modelos con `@property` quitaria la mayoria. SE
+    # MIDIO Y ES FALSO. Se anotaron los 70 modelos leyendo el esquema
+    # (`scripts/anotar_modelos.php`): 894 lineas, y el resultado fue 157 -> 161
+    # --cero quitados y cuatro nuevos, porque el tipo de ESCRITURA de una
+    # columna es mas ancho que el de lectura: a un `decimal` se le asigna un
+    # float y se lee una cadena--. Ni uno solo de los 68 `property.notFound`
+    # era una columna.
+    #
+    # Lo que SI eran: metodos de relacion sin tipo de retorno. Larastan no
+    # distingue `public function buyer()` de un metodo cualquiera, asi que
+    # `$user->buyer` le parecia inventado. Se tiparon las 100 que faltaban y
+    # cayeron de golpe los 42 `larastan.relationExistence` y 52 de los 68
+    # `property.notFound`. De paso salio una relacion ROTA de verdad
+    # --`Domiciliary::geolocation()`, que reventaba al llamarla-- y la vigila
+    # `tests/Feature/Contrato/LasRelacionesSeConstruyenTest.php`.
+    #
+    # Los 16 `property.notFound` que quedan son alias de `selectRaw`
+    # (`$pedido->ganado`, `total_orders`, `items_count`): no son columnas ni
+    # relaciones, y anotarlos seria describir la consulta en el modelo.
     treatPhpDocTypesAsCertain: false

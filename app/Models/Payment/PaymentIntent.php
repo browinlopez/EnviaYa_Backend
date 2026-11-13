@@ -7,6 +7,8 @@ namespace App\Models\Payment;
 use App\Models\Audit\Audit;
 use App\Models\Order\OrdersSales;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PaymentIntent extends Audit
 {
@@ -30,12 +32,14 @@ class PaymentIntent extends Audit
         'response' => 'array',
     ];
 
-    public function order()
+    /** @return BelongsTo<OrdersSales, $this> */
+    public function order(): BelongsTo
     {
         return $this->belongsTo(OrdersSales::class, 'orderSales_id');
     }
 
-    public function transactions()
+    /** @return HasMany<PaymentTransaction, $this> */
+    public function transactions(): HasMany
     {
         return $this->hasMany(PaymentTransaction::class, 'payment_intent_id');
     }

@@ -7,6 +7,8 @@ namespace App\Models\Payment;
 use App\Models\Audit\Audit;
 use App\Models\Order\OrdersSales;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Payment extends Audit
 {
@@ -58,22 +60,26 @@ class Payment extends Audit
         'qr_expires_at' => 'datetime',
     ];
 
-    public function order()
+    /** @return BelongsTo<OrdersSales, $this> */
+    public function order(): BelongsTo
     {
         return $this->belongsTo(OrdersSales::class, 'orderSales_id');
     }
 
-    public function intent()
+    /** @return HasOne<PaymentIntent, $this> */
+    public function intent(): HasOne
     {
         return $this->hasOne(PaymentIntent::class, 'orderSales_id', 'orderSales_id');
     }
 
-    public function method()
+    /** @return BelongsTo<PaymentMethods, $this> */
+    public function method(): BelongsTo
     {
         return $this->belongsTo(PaymentMethods::class, 'methods_id', 'methods_id');
     }
 
-    public function form()
+    /** @return BelongsTo<PaymentForms, $this> */
+    public function form(): BelongsTo
     {
         return $this->belongsTo(PaymentForms::class, 'forms_id', 'forms_id');
     }

@@ -7,6 +7,7 @@ namespace App\Models\Maps;
 use App\Models\Audit\Audit;
 use App\Models\User\UserAddress;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Alias extends Audit
 {
@@ -21,7 +22,8 @@ class Alias extends Audit
     ];
 
     // RelaciÃ³n con las direcciones de usuarios
-    public function userAddresses()
+    /** @return HasMany<UserAddress, $this> */
+    public function userAddresses(): HasMany
     {
         return $this->hasMany(UserAddress::class, 'alias_id', 'alias_id');
     }

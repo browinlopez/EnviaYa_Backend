@@ -3,10 +3,39 @@
 /**
  * Escribe el bloque `@property` de cada modelo, leyendo el esquema de verdad.
  *
- * POR QUÉ. PHPStan nivel 5 daba 503 avisos y 278 eran `property.notFound`:
- * Larastan no sabe qué columnas tiene un modelo de Eloquent, así que cada
- * `$pedido->total` le parece una propiedad inventada. No son fallos, son
- * ruido — y el ruido es lo que hace que nadie mire la herramienta.
+ * POR QUÉ SE ESCRIBIÓ. PHPStan nivel 5 daba 503 avisos y 278 eran
+ * `property.notFound`: Larastan no sabe qué columnas tiene un modelo de
+ * Eloquent, así que cada `$pedido->total` le parece una propiedad inventada.
+ * No son fallos, son ruido — y el ruido es lo que hace que nadie mire la
+ * herramienta.
+ *
+ * ================================================================
+ * MEDIDO EL 13-11-2026: HOY NO QUITA NADA. NO LO CORRAS ESPERANDO
+ * QUE BAJE EL NÚMERO.
+ * ================================================================
+ *
+ * Se corrió sobre los 70 modelos y se midió el antes y el después sin línea
+ * base: **157 -> 161**. Cero avisos quitados y cuatro nuevos. Las 894 líneas
+ * que escribe se revirtieron.
+ *
+ * Las dos razones, y las dos valen para la próxima vez:
+ *
+ *  1. NI UNO de los 68 `property.notFound` que quedaban era una columna. Eran
+ *     relaciones sin tipo de retorno (ya tipadas, las vigila
+ *     `LasRelacionesSeConstruyenTest`) y alias de `selectRaw`
+ *     --`$pedido->ganado`, `total_orders`--, que una anotación de columnas no
+ *     puede tocar. Los 278 del principio se habían ido por otro camino.
+ *
+ *  2. `@property` declara el tipo de LECTURA y el de ESCRITURA a la vez, y en
+ *     Eloquent no coinciden: a una columna `decimal` se le asigna un float y
+ *     se lee una cadena. De ahí los cuatro nuevos. Para hacerlo bien harían
+ *     falta `@property-read` y `@property-write` por separado, el doble de
+ *     líneas, y seguiría sin quitar ninguno de los 60 que quedan.
+ *
+ * Se deja porque la anotación tiene valor para quien lee el modelo —dice qué
+ * columnas hay sin ir a las migraciones— y porque el día que Larastan empiece
+ * a mirar las columnas, esto es lo que hará falta. Pero el motivo por el que
+ * se escribió ya no se sostiene, y conviene saberlo antes de correrlo.
  *
  * DE DÓNDE SALEN LOS TIPOS. De las migraciones, corridas sobre SQLite en
  * memoria. No de la base de desarrollo: leerla ataría la anotación a lo que
@@ -115,6 +144,26 @@ foreach ($archivos as $archivo) {
     }
 
     $casts = $modelo->getCasts();
+
+    /*
+     * `created_at` y `updated_at` NO SALEN EN `getCasts()`. Laravel los
+     * convierte por otro camino —`getDates()`—, así que preguntando solo por
+     * los casts se anotaban como `string|null`, que es lo que trae el motor
+     * pero NO lo que devuelve el modelo.
+     *
+     * Y eso no es un detalle: con esa anotación, cada
+     * `$pedido->created_at->format(...)` del repositorio pasa a ser un error
+     * nuevo. El guion estaría CREANDO ruido en vez de quitarlo, que es
+     * exactamente lo contrario de para lo que se escribió.
+     */
+    if ($modelo->usesTimestamps()) {
+        foreach ([$modelo->getCreatedAtColumn(), $modelo->getUpdatedAtColumn()] as $columna) {
+            if ($columna !== null) {
+                $casts[$columna] ??= 'datetime';
+            }
+        }
+    }
+
     $lineas = [];
 
     foreach (Schema::getColumns($tabla) as $col) {

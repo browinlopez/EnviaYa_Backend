@@ -7,6 +7,7 @@ namespace App\Models\Conjunto;
 use App\Models\Audit\Audit;
 use App\Models\Buyer\ResidentialComplex;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * El vínculo entre una persona y SU conjunto.
@@ -44,12 +45,14 @@ class ComplexStaff extends Audit
 
     protected $casts = ['state' => 'boolean'];
 
-    public function user()
+    /** @return BelongsTo<User, $this> */
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id', 'user_id');
     }
 
-    public function complex()
+    /** @return BelongsTo<ResidentialComplex, $this> */
+    public function complex(): BelongsTo
     {
         return $this->belongsTo(ResidentialComplex::class, 'complex_id', 'complex_id');
     }

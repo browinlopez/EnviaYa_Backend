@@ -8,6 +8,9 @@ use App\Models\Audit\Audit;
 use App\Models\Order\OrderPromotion;
 use App\Models\Product\Product;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Promotion extends Audit
 {
@@ -90,18 +93,24 @@ class Promotion extends Audit
         'usos' => 'integer',
     ];
 
-    public function business()
+    /** @return BelongsTo<Business, $this> */
+    public function business(): BelongsTo
     {
         return $this->belongsTo(Business::class, 'busines_id', 'busines_id');
     }
 
-    public function orders()
+    /** @return HasMany<OrderPromotion, $this> */
+    public function orders(): HasMany
     {
         return $this->hasMany(OrderPromotion::class, 'promotion_id', 'promotion_id');
     }
 
-    /** Los productos a los que se refiere la frase. Puede estar vacía. */
-    public function products()
+    /**
+     * Los productos a los que se refiere la frase. Puede estar vacía.
+     *
+     * @return BelongsToMany<Product, $this>
+     */
+    public function products(): BelongsToMany
     {
         return $this->belongsToMany(
             Product::class,

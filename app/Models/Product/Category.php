@@ -6,6 +6,7 @@ namespace App\Models\Product;
 
 use App\Models\Audit\Audit;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Category extends Audit
 {
@@ -31,7 +32,8 @@ class Category extends Audit
     }
 
     // Relación con productos
-    public function products()
+    /** @return HasMany<Product, $this> */
+    public function products(): HasMany
     {
         return $this->hasMany(Product::class, 'category_id', 'category_id');
     }

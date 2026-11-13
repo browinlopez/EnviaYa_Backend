@@ -25,7 +25,8 @@ class ChatParticipant extends Audit
         return $this->belongsTo(User::class, 'user_id', 'user_id');
     }
 
-    public function role()
+    /** @return BelongsTo<Rol, $this> */
+    public function role(): BelongsTo
     {
         return $this->belongsTo(Rol::class, 'role_id', 'rol_id');
     }

@@ -7,6 +7,7 @@ namespace App\Models\Order;
 use App\Models\Audit\Audit;
 use App\Models\Promotion;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OrderPromotion extends Audit
 {
@@ -20,7 +21,8 @@ class OrderPromotion extends Audit
 
     protected $fillable = ['orderSales_id', 'promotion_id', 'state'];
 
-    public function promotion()
+    /** @return BelongsTo<Promotion, $this> */
+    public function promotion(): BelongsTo
     {
         return $this->belongsTo(Promotion::class, 'promotion_id', 'promotion_id');
     }

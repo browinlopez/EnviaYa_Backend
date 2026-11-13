@@ -6,6 +6,7 @@ namespace App\Models\Payment;
 
 use App\Models\Audit\Audit;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PaymentTransaction extends Audit
 {
@@ -26,7 +27,8 @@ class PaymentTransaction extends Audit
         'response' => 'array',
     ];
 
-    public function intent()
+    /** @return BelongsTo<PaymentIntent, $this> */
+    public function intent(): BelongsTo
     {
         return $this->belongsTo(PaymentIntent::class, 'payment_intent_id');
     }

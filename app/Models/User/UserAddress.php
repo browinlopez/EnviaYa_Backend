@@ -43,7 +43,8 @@ class UserAddress extends Audit
         'state',
     ];
 
-    public function complex()
+    /** @return BelongsTo<ResidentialComplex, $this> */
+    public function complex(): BelongsTo
     {
         return $this->belongsTo(
             ResidentialComplex::class,
@@ -52,7 +53,8 @@ class UserAddress extends Audit
         );
     }
 
-    public function user()
+    /** @return BelongsTo<User, $this> */
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id', 'user_id');
     }

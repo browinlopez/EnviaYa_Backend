@@ -9,6 +9,9 @@ use App\Models\Business;
 use App\Models\Order\OrdersSales;
 use App\Models\Order\OrdersSalesDetail;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Storage;
 
 class Product extends Audit
@@ -109,20 +112,32 @@ class Product extends Audit
      * Casi siempre es null, y esta bien: solo lo tienen los productos que se
      * venden en mas de una presentacion. Lo que se vende, se pide y se cobra
      * sigue siendo ESTA fila; el grupo solo decide como se pinta la lista.
+     *
+     * @return BelongsTo<ProductGroup, $this>
      */
-    public function group()
+    public function group(): BelongsTo
     {
         return $this->belongsTo(ProductGroup::class, 'group_id', 'group_id');
     }
 
-    /** Las demas presentaciones del mismo producto. */
-    public function hermanas()
+    /**
+     * Las demas presentaciones del mismo producto.
+     *
+     * El `whereKeyNot` se encadena sobre la relacion y DEVUELVE LA RELACION,
+     * no el constructor de consultas: `forwardDecoratedCallTo` compara el
+     * resultado con el objeto al que reenvio y devuelve `$this` cuando
+     * coinciden. Por eso el tipo de retorno fijo no la revienta.
+     *
+     * @return HasMany<Product, $this>
+     */
+    public function hermanas(): HasMany
     {
         return $this->hasMany(self::class, 'group_id', 'group_id')
             ->whereKeyNot($this->getKey());
     }
 
-    public function productBusinesses()
+    /** @return HasMany<ProductBusiness, $this> */
+    public function productBusinesses(): HasMany
     {
         return $this->hasMany(
             ProductBusiness::class,
@@ -131,18 +146,21 @@ class Product extends Audit
         );
     }
 
-    public function sales()
+    /** @return HasMany<OrdersSales, $this> */
+    public function sales(): HasMany
     {
         return $this->hasMany(OrdersSales::class, 'product_id', 'products_id');
     }
 
-    public function salesDetails()
+    /** @return HasMany<OrdersSalesDetail, $this> */
+    public function salesDetails(): HasMany
     {
         return $this->hasMany(OrdersSalesDetail::class, 'product_id', 'products_id');
     }
 
     // ✔ ACCESO A BUSINESS A TRAVÉS DE LA PIVOTE
-    public function businesses()
+    /** @return BelongsToMany<Business, $this> */
+    public function businesses(): BelongsToMany
     {
         return $this->belongsToMany(
             Business::class,
@@ -157,22 +175,26 @@ class Product extends Audit
         ]);
     }
 
-    public function grocery()
+    /** @return HasOne<GroceryProduct, $this> */
+    public function grocery(): HasOne
     {
         return $this->hasOne(GroceryProduct::class, 'products_id', 'products_id');
     }
 
-    public function pharmacy()
+    /** @return HasOne<PharmacyProduct, $this> */
+    public function pharmacy(): HasOne
     {
         return $this->hasOne(PharmacyProduct::class, 'products_id', 'products_id');
     }
 
-    public function restaurant()
+    /** @return HasOne<RestaurantProducts, $this> */
+    public function restaurant(): HasOne
     {
         return $this->hasOne(RestaurantProducts::class, 'products_id', 'products_id');
     }
 
-    public function carPart()
+    /** @return HasOne<CarPartsProducts, $this> */
+    public function carPart(): HasOne
     {
         return $this->hasOne(CarPartsProducts::class, 'products_id', 'products_id');
     }

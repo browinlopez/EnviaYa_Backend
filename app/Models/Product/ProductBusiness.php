@@ -6,6 +6,7 @@ namespace App\Models\Product;
 
 use App\Models\Audit\Audit;
 use App\Models\Business;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ProductBusiness extends Audit
 {
@@ -47,12 +48,14 @@ class ProductBusiness extends Audit
         'step_qty' => 'decimal:3',
     ];
 
-    public function business()
+    /** @return BelongsTo<Business, $this> */
+    public function business(): BelongsTo
     {
         return $this->belongsTo(Business::class, 'busines_id', 'busines_id');
     }
 
-    public function product()
+    /** @return BelongsTo<Product, $this> */
+    public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class, 'products_id', 'products_id');
     }
