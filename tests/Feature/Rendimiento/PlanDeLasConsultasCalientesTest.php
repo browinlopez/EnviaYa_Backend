@@ -29,6 +29,18 @@
  * después, cuando la tabla ya creció. `possible_keys` vacío las caza el mismo
  * día.
  *
+ * QUÉ CUBRE OTRO ARCHIVO, para que «saltada» no se lea como «sin comprobar».
+ * De las dos regresiones de arriba, la PRIMERA --el `dropIndex` suelto, o un
+ * `up()` que se queda a medias-- la caza
+ * `LosIndicesDeclaradosExistenTest.php` en CUALQUIER motor y en cada corrida:
+ * reproduce las migraciones, se queda con los 92 índices con nombre que
+ * dejan puestos, y exige que estén en el esquema.
+ *
+ * Lo que de verdad solo puede comprobarse acá es la SEGUNDA: la pérdida de
+ * sargabilidad. Envolver la columna en una función no cambia el esquema
+ * --el índice sigue estando, intacto-- y solo el plan delata que ya no se
+ * puede usar.
+ *
  * CÓMO SE MIDIÓ LO QUE HAY DEBAJO. Con las dos migraciones del 10 de
  * noviembre de 2026 puestas, contra MySQL 8.0.42 y los datos de desarrollo,
  * una ventana de una semana: cada consulta examina exactamente las 49 filas
