@@ -230,3 +230,65 @@ it('ninguna relacion se queda sin genericos', function () {
 
     expect($sinGenericos)->toBe([]);
 });
+
+it('ningun generico esta escrito DENTRO del tipo de retorno', function () {
+    /*
+     * EL GENÉRICO VIVE EN EL DOCBLOQUE Y EN NINGÚN OTRO SITIO. En una firma no
+     * es un estilo discutible: es un error de sintaxis.
+     *
+     *     public function campaign(): BelongsTo<AdCampaign, $this>   // NO
+     *     /** @return BelongsTo<AdCampaign, $this> *\/                // sí
+     *
+     * ESTO NO ES HIPOTÉTICO. `scripts/genericos_de_relaciones.php` lo escribía
+     * así, y corrido con `--escribir` dejaba 62 modelos sin poder cargarse: la
+     * aplicación entera sin arrancar. Llevaba ahí desde el 10 de noviembre,
+     * guardado a propósito como registro de un camino que no funcionó, pero
+     * ejecutable. Se reprodujo y se arregló el 13.
+     *
+     * POR QUÉ MERECE UNA PRUEBA SI NO ARRANCA NADA. Justo por eso: el fallo no
+     * se cuela a producción, se cuela en la tarde de alguien. Un error de
+     * sintaxis en 62 ficheros no dice de dónde salió, y lo que esta prueba
+     * aporta no es detectarlo —se detecta solo— sino NOMBRARLO: dice qué
+     * ficheros y qué métodos, y así quien lo provoque sabe en un segundo que
+     * fue esto y no otra cosa.
+     *
+     * Y caza a quien lo cause, no al guion: una edición a mano o una fusión
+     * mal resuelta dejan la misma firma inválida.
+     */
+    $raiz = base_path('app/Models');
+    $it = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($raiz, FilesystemIterator::SKIP_DOTS)
+    );
+
+    /* Un `<` justo detrás del tipo de retorno de un método. */
+    $rx = '~public function (\w+)\(\)\s*:\s*\\\\?\w+\s*<~';
+
+    $invalidos = [];
+    $revisados = 0;
+
+    foreach ($it as $fichero) {
+        if ($fichero->getExtension() !== 'php') {
+            continue;
+        }
+
+        $revisados++;
+
+        if (preg_match_all($rx, file_get_contents($fichero->getPathname()), $m, PREG_SET_ORDER)) {
+            foreach ($m as $x) {
+                $invalidos[] = basename($fichero->getPathname()).'::'.$x[1].'()';
+            }
+        }
+    }
+
+    /* CONTROL: que de verdad haya leído los modelos. Con la carpeta vacía o un
+       recorrido roto, «ninguno inválido» es verdad sin significar nada. */
+    expect($revisados)->toBeGreaterThan(60);
+
+    /* Y la otra mitad: que el patrón RECONOZCA la forma mala. Sin esto, la
+       prueba pasaría igual con una expresión regular que no casa con nada —que
+       es como se vería si alguien la «simplifica»—. */
+    expect(preg_match($rx, 'public function campaign(): BelongsTo<AdCampaign, $this>'))->toBe(1);
+    expect(preg_match($rx, 'public function campaign(): BelongsTo'))->toBe(0);
+
+    expect($invalidos)->toBe([]);
+});
