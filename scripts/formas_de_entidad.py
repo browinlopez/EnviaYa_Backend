@@ -118,6 +118,26 @@ RAIZ = sys.argv[1] if len(sys.argv) > 1 else os.path.dirname(
 
 YA_MIGRADO = 'app/Http/Resources'
 
+# FORMAS MIRADAS Y DECIDIDAS, con el motivo. No son pendientes.
+#
+# Sin esto el informe las cuenta cada vez y quien lo lea tiene que volver a
+# averiguar lo mismo. Es la leccion de `SIN_CLIENTE` en
+# `rutas_sin_llamada_http.py`: una lista de candidatas sin los descartes
+# escritos obliga a rehacer el trabajo en cada pasada.
+DECIDIDAS = {
+    'app/Http/Controllers/Marketing/AdsController.php':
+        'el veredicto de un cupon: `valid`, el descuento y el total. Se arma '
+        'con atributos del cupon --por eso el clasificador lo ve como '
+        'entidad-- pero es un si-o-no con su importe, no una entidad '
+        'publicada. Un Resource aqui seria envolver una validacion.',
+    'app/Http/Controllers/Business/ConsultaDeNegociosController.php':
+        'la ficha del negocio. YA enumera sus claves y lo anidado YA va por '
+        'Resources --propietarios, productos, resenas y promociones--, asi '
+        'que lo unico que queda a mano es la envoltura. Moverla pediria '
+        'pasarle media docena de piezas ya resueltas por el constructor, que '
+        'es la indireccion que se declino tambien en la decima tanda.',
+}
+
 CONTROL_ENTIDAD = """[
     'business_id' => $business->busines_id,
     'name' => $business->name,
@@ -523,7 +543,7 @@ def main():
 
     print()
 
-    cubos = {'crudo': [], 'entidad': [], 'informe': [], 'dudoso': []}
+    cubos = {'crudo': [], 'entidad': [], 'decidida': [], 'informe': [], 'dudoso': []}
 
     for d, _, fs in os.walk(os.path.join(RAIZ, 'app', 'Http')):
         if YA_MIGRADO.replace('/', os.sep) in d:
@@ -542,6 +562,9 @@ def main():
                     arg, cuerpo_de_la_funcion(s, pos))
                 cual = veredicto(fle, ind, calc, crudo)
 
+                if cual == 'entidad' and rel in DECIDIDAS:
+                    cual = 'decidida'
+
                 if cual:
                     cubos[cual].append((rel, s.count('\n', 0, pos) + 1,
                                         fle, ind, calc, crudo, de_donde))
@@ -549,17 +572,24 @@ def main():
     rotulos = {
         'crudo': 'MODELO PELADO --- publica la tabla entera; lo primero por arreglar',
         'entidad': 'FORMAS DE ENTIDAD --- esto es lo que §04 quiere en un Resource',
+        'decidida': 'MIRADAS Y DECIDIDAS --- no son pendientes; el motivo, debajo',
         'informe': 'INFORMES --- agregados; un Resource aqui seria ceremonia',
         'dudoso': 'A MIRAR A MANO --- ni una cosa ni la otra',
     }
 
-    for cual in ('crudo', 'entidad', 'informe', 'dudoso'):
+    for cual in ('crudo', 'entidad', 'decidida', 'informe', 'dudoso'):
         filas = cubos[cual]
         print('%s  (%d)' % (rotulos[cual], len(filas)))
         print('-' * 78)
 
         for rel, linea, fle, ind, calc, crudo, de_donde in sorted(filas):
             print('  %s:%d   [%s]' % (rel, linea, de_donde))
+
+            if cual == 'decidida':
+                for trozo in DECIDIDAS[rel].split('. '):
+                    print('        %s' % trozo.strip())
+                continue
+
             print('        flecha %d · indice %d · calculo %d · PELADO %d'
                   % (fle, ind, calc, crudo))
 
