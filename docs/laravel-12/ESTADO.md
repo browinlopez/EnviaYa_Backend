@@ -1,7 +1,8 @@
 # Estado del backend frente al estándar
 
-**Medido el 11 de noviembre de 2026.** Laravel 12.72 · 1260 pruebas en verde ·
-PHPStan y Pint limpios · 428 clases cargan · `composer audit` en cero.
+**Medido el 13 de noviembre de 2026.** Laravel 12.72 · 1336 pruebas en verde y
+12 saltadas · PHPStan y Pint limpios · 493 clases cargan · `composer audit` en
+cero · OpenAPI al día.
 
 Doce ramas de trabajo fusionadas, y el backend **arrancado y recorrido entero**:
 33 procesos, 1223 peticiones contra MySQL de verdad y la pasarela de verdad.
@@ -107,16 +108,73 @@ y sin un solo error. Ahora lo vigila `colas:comprobar --avisar`, a diario.
 
 | Regla | Antes | Hoy | Estado |
 |---|---:|---:|---|
-| Validación en `FormRequest` | 2 | **120** | 39 en línea quedan, y ninguna convertible: las que quedan cambiarían el contrato |
+| Validación en `FormRequest` | 2 | **120** | 37 en línea quedan, y ninguna convertible: las que quedan cambiarían el contrato. `scripts/validaciones_en_linea.py` las lista con el motivo de cada una |
 | Formato (Pint) | sin correr | **limpio** | en el CI |
 | `env()` fuera de `config/` | 2 | **0** | hecho |
-| Clases que no cargan | sin comprobar | **0 de 428** | comprobador nuevo en el CI |
-| Análisis estático | no había | **PHPStan nivel 5** | línea base de 385; el CI exige código nuevo limpio |
-| Superficie de la API | sin congelar | **294 rutas** | prueba que falla si cambia verbo, URI, nombre o middleware. Eran 325: las 31 sin llamante se retiraron el 11 de noviembre |
+| Clases que no cargan | sin comprobar | **0 de 493** | comprobador nuevo en el CI |
+| Análisis estático | no había | **PHPStan nivel 5** | línea base de **44 entradas / 59 avisos**, desde 503. El CI exige código nuevo limpio. El camino y lo que NO sirvió, en §4 |
+| Superficie de la API | sin congelar | **293 rutas** | prueba que falla si cambia verbo, URI, nombre o middleware. Eran 325: 31 sin llamante se retiraron el 11 de noviembre y `GET /v1/users` el 12, que publicaba el personal con sus correos a cualquiera con sesión |
 | Duración de la suite | 630 s | **48 s** | las pruebas ya no llaman a un Reverb real |
-| Pruebas | 1026 | **1260** | |
+| Forma de la respuesta en `JsonResource` | 0 | **55 clases** | quince tandas. `scripts/formas_de_entidad.py` mide **0 formas de entidad por migrar** en `app/Http`: lo que queda son informes de agregados, donde un Resource sería la ceremonia que §05 prohíbe |
+| Relaciones de Eloquent tipadas | 52 | **153 de 153** | con genéricos las 153. Dos pruebas lo fijan: que toda relación declarada se construya, y que ninguna nueva se quede sin tipo ni sin genéricos |
+| Pruebas | 1026 | **1336** | 12 saltadas, y es honesto decir cuáles: 9 son de `EXPLAIN` y `for update`, que solo significan algo en MySQL. Que los **92 índices con nombre existan** sí se comprueba en cada corrida y en cualquier motor |
 | Procesos recorridos de punta a punta | 0 | **33** | `scripts/arnes/`, contra el servidor en marcha |
 | Avisos de `composer audit` | 20 | **0** | bloqueante en el CI |
+
+---
+
+## 2.1 · ¿Cumple ya? Una respuesta y no una impresión
+
+**Las reglas duras del estándar se cumplen, con UNA excepción que no es una
+excepción razonada sino un incumplimiento abierto.** Lo que queda se reparte
+en tres clases, y mezclarlas es lo que hace que un marcador no sirva.
+
+### Lo que SÍ está, y comprobado por máquina y no por lectura
+
+Las prohibiciones explícitas de `AGENTS.md` se revisaron una a una el 13 de
+noviembre:
+
+| Prohibición | Cómo se sabe |
+|---|---|
+| `env()` fuera de `config/` | 0 |
+| `Model::all()` en listados | un solo caso, documentado |
+| consultas dentro de un `Resource` | `Model::preventLazyLoading()` está activo fuera de producción (`AppServiceProvider:89`), así que una carga perezosa dentro de un Resource **lanza** y la suite se cae. No es una revisión a ojo: es mecánico |
+| `->get()->count()` | el único aviso es un `groupBy` ya en memoria; «podría ser una consulta» querría decir una consulta por día |
+| `dd()` / `dump()` | ninguno vivo. El que queda está dentro de un `/* */` |
+| `catch (\Throwable)` que silencia | uno solo, y registra el motivo y responde 500, que es justo lo que §09 pide |
+| alcance global que exponga registros de otros | **AQUÍ ESTÁ EL INCUMPLIMIENTO.** Ver abajo |
+
+### El incumplimiento abierto, y es uno
+
+`POST /v1/domiciliaries/showDomiciliary` toma el `domiciliary_id` **del cuerpo
+de la petición** y no lo compara con quien pregunta; encima del grupo solo hay
+`auth:sanctum`. Comprobado contra la pila HTTP: un comprador con sesión recibe
+200, la **cédula** del domiciliario, su correo y su teléfono.
+
+Eso es exactamente lo que `AGENTS.md` §8 manda («autorización por
+registro/tenant») y lo que su lista de prohibiciones nombra primero. No está
+arreglado porque las dos salidas cambian lo que reciben apps publicadas —un
+403 donde había 200, o enumerar las claves de una respuesta que ya se lee— y
+eso es decisión de producto, no refactor. Está pinchado en
+`tests/Feature/Seguridad/LaCedulaDelDomiciliarioLaVeCualquieraTest.php`, que
+se pone **roja** el día que se arregle.
+
+### Lo que falta y NO es código
+
+- **§25, presupuestos por endpoint.** Se mide ya; falta TRÁFICO. Ver §3.
+- **9 de las 12 pruebas saltadas.** `EXPLAIN` y `for update` solo significan
+  algo en MySQL, y corren en `pruebas-mysql.yml`.
+- **La báscula Bluetooth.** Exige compilar y una báscula real delante.
+
+### Lo que el estándar mismo llama orientativo
+
+**§51, tamaños de archivo: 135 por encima del objetivo de revisión.** §03 los
+llama «umbrales orientativos, no bloqueos» y §00 pone el tamaño en el ÚLTIMO
+lugar de las prioridades. No se persigue.
+
+**Y la estructura: NO hay `app/Modules/`.** Es la excepción mayor del
+repositorio, razonada en `EXCEPCIONES.md`: montar una segunda estructura al
+lado de la que ya existe es peor que cualquiera de las dos.
 
 ---
 
@@ -258,7 +316,7 @@ búsqueda **es la autorización**. El motivo está en `EXCEPCIONES.md`.
 > cambiaban en cada corrida, así que ensuciaban el estado del repositorio con
 > binarios regenerables. Fuera del índice y en `.gitignore`.
 
-### `JsonResource` — primera tanda hecha, y el mecanismo montado
+### `JsonResource` — HECHO: 55 clases, cero formas de entidad pendientes
 
 Es la regla más grande que queda, y la más peligrosa. La forma de la respuesta
 **es el contrato** que consumen la app publicada en las dos tiendas, tres
@@ -650,9 +708,14 @@ creído sola.
 
 ---
 
-## 4 · Sobre PHPStan, para que nadie persiga 503 avisos
+## 4 · Sobre PHPStan: de 503 a 59, y lo que NO funcionó
 
-Nivel 5 da **503 hallazgos**. De ellos, **440 son ruido**
+**Al 13 de noviembre de 2026 la línea base tiene 44 entradas y 59 avisos.** El
+camino fue 503 → 385 → 351 → 157 → 60 → 59. Lo de abajo describe el punto de
+partida y se conserva porque el razonamiento sigue valiendo; lo que cambió es
+el final, y está al cierre de esta sección.
+
+Nivel 5 daba **503 hallazgos**. De ellos, **440 eran ruido**
 (`property.notFound`, `larastan.relationExistence`) sobre modelos de Eloquent
 sin anotar.
 
@@ -668,8 +731,37 @@ artefactos de inferencia**:
   valores.
 
 Por eso la línea base. Lo que aporta la herramienta hoy **no es encontrar
-fallos**, es el trinquete: el código nuevo tiene que salir limpio. Anotar los
-modelos con `@property` quitaría la mayoría del ruido y es trabajo de otro día.
+fallos**, es el trinquete: el código nuevo tiene que salir limpio.
+
+### Lo que lo bajó, y lo que NO — medido, porque este archivo se equivocaba
+
+Esta sección decía que «anotar los modelos con `@property` quitaría la mayoría
+del ruido». **Se midió el 13 de noviembre y es falso.** Se corrió
+`scripts/anotar_modelos.php` sobre los 70 modelos —894 líneas— y el resultado
+fue **157 → 161**: cero quitados y cuatro nuevos, porque `@property` declara
+el tipo de lectura y el de escritura a la vez y en Eloquent no coinciden (a un
+`decimal` se le asigna un float y se lee una cadena). Las 894 líneas se
+revirtieron.
+
+Lo que de verdad lo bajó fue **tipar las relaciones**: 100 de las 152 no
+declaraban su tipo de retorno, y sin él Larastan no distingue
+`public function buyer()` de un método cualquiera. **157 → 60.**
+
+Y el aviso que importa para quien lo intente: el commit `a6f993f`, del 10 de
+noviembre, ya había probado los tres caminos y los tres fallaron —tipar sin
+genéricos SUBE la cuenta de 503 a 564, porque un `BelongsTo` pelado dice que
+hay relación pero no con qué—. Lo que funciona es **las dos cosas a la vez**,
+tipo y genérico, con Pint y la suite detrás. Están los 153 de 153, y dos
+pruebas impiden que vuelva a desparejarse.
+
+**Los 59 que quedan, ya mirados uno a uno** —no quedan sospechosos—:
+
+| cuántos | qué son |
+|---:|---|
+| 28 | `$x?->name ?? 'y'`. **Cosméticos, comprobado**: `??` tiene semántica de `isset` en su izquierda, así que el `?->` no aporta nada. Quitarlos bajaría a ~32 y no se hace: doce ficheros publicados tocados para no cambiar ni una respuesta |
+| 15 | alias de `select` (`'u.name as domiciliario'`, `$pedido->ganado`). No son columnas ni relaciones; anotarlos sería describir la consulta en el modelo |
+| 9 | `staticClassAccess.privateMethod` y `argument.unresolvableType` |
+| 7 | los sueltos, revisados uno a uno: **ninguno es un fallo**. Un conteo asignado a mano (que es el patrón bueno), una precaución muerta, dos artefactos de Larastan, una comparación redundante y un `count()` sobre una colección ya en memoria |
 
 ---
 
