@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\User\AgregarDireccionRequest;
 use App\Http\Requests\User\BorrarDireccionRequest;
 use App\Http\Requests\User\DireccionesDelUsuarioRequest;
+use App\Http\Resources\Usuario\DireccionResource;
 use App\Models\User\UserAddress;
 use App\Services\MunicipioPorNombre;
 
@@ -41,21 +42,7 @@ class DireccionesController extends Controller
             ])
             ->get()
             ->map(function ($address) {
-                return [
-                    'address_id' => $address->address_id,
-                    'address' => $address->address,
-                    'latitude' => $address->latitude,
-                    'longitude' => $address->longitude,
-                    'alias_id' => $address->alias?->alias_id,
-                    'alias_name' => $address->alias?->name,
-                    'municipality_id' => $address->municipality?->id,
-                    'municipality_name' => $address->municipality?->name,
-                    'department_id' => $address->municipality?->department?->id,
-                    'department_name' => $address->municipality?->department?->name,
-                    'country_id' => $address->municipality?->department?->country?->id,
-                    'country_name' => $address->municipality?->department?->country?->name,
-                    'country_iso_code' => $address->municipality?->department?->country?->iso_code,
-                ];
+                return (new DireccionResource($address))->resolve();
             });
 
         return response()->json($addresses);

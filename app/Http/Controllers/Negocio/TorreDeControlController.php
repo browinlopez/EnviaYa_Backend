@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Negocio;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Domiciliario\DomiciliarioEnElTableroResource;
 use App\Models\Business;
 use App\Models\Order\OrderGeolocation;
 use App\Models\Order\OrdersSales;
@@ -94,31 +95,14 @@ class TorreDeControlController extends Controller
             $suyos = $pedidos->get($id, collect());
             $efectivo = round($saldos[$id] ?? 0.0, 2);
 
-            return [
-                'domiciliary_id' => $id,
-                'user_id' => (int) $d->user_id,
-                'name' => $d->user?->name,
-                'phone' => $d->user?->phone,
-                'disponible' => (bool) $d->available,
-
-                'pedidos' => $suyos->values(),
-                'a_bordo' => $suyos->count(),
-                /*
-                 * Desde cuándo lleva repartiendo: el despacho del pedido MÁS
-                 * VIEJO que carga, no el último. Es la cifra que hace saltar
-                 * al tendero —«lleva hora y media con ese pedido»—, y
-                 * tomando el último se escondería justamente ese caso cada
-                 * vez que se le despacha uno nuevo.
-                 */
-                'desde' => $suyos->pluck('despachado_el')->filter()->sort()->first(),
-
-                'efectivo' => $efectivo,
-                'tope_efectivo' => $tope,
-                'le_cabe' => $tope === null ? null : max(0, round($tope - $efectivo, 2)),
-                'sobre_el_tope' => $tope !== null && $efectivo > $tope,
-
-                'posicion' => $posicion->get($id),
-            ];
+            return (new DomiciliarioEnElTableroResource(
+                $d,
+                id: $id,
+                suyos: $suyos,
+                efectivo: $efectivo,
+                tope: $tope,
+                posicion: $posicion->get($id),
+            ))->resolve();
         });
 
         return response()->json([
