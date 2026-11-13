@@ -39,6 +39,7 @@ class SettlementItem extends Model
         'net' => 'decimal:2',
     ];
 
+    /** @return BelongsTo<Settlement, $this> */
     public function settlement(): BelongsTo
     {
         return $this->belongsTo(Settlement::class, 'settlement_id');

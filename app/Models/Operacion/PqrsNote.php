@@ -29,6 +29,7 @@ class PqrsNote extends Model
         'is_internal' => 'boolean',
     ];
 
+    /** @return BelongsTo<User, $this> */
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id', 'user_id');

@@ -79,12 +79,6 @@ parameters:
 			path: app/Http/Controllers/Admin/Api/AnunciantesApiController.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$advertiser\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Admin/Api/MarketingApiController.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\Operacion\\Pqrs\:\:\$overdue\.$#'
 			identifier: property.notFound
 			count: 1

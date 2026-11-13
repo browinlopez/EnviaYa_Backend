@@ -32,11 +32,13 @@ class Advertiser extends Model
         'state' => 'integer',
     ];
 
+    /** @return BelongsTo<Business, $this> */
     public function business(): BelongsTo
     {
         return $this->belongsTo(Business::class, 'business_id', 'busines_id');
     }
 
+    /** @return HasMany<AdCampaign, $this> */
     public function campaigns(): HasMany
     {
         return $this->hasMany(AdCampaign::class, 'advertiser_id');

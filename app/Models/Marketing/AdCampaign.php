@@ -45,11 +45,13 @@ class AdCampaign extends Model
         'state' => 'integer',
     ];
 
+    /** @return BelongsTo<Advertiser, $this> */
     public function advertiser(): BelongsTo
     {
         return $this->belongsTo(Advertiser::class, 'advertiser_id');
     }
 
+    /** @return HasMany<Banner, $this> */
     public function banners(): HasMany
     {
         return $this->hasMany(Banner::class, 'campaign_id');

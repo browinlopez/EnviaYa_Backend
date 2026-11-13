@@ -65,11 +65,13 @@ class Pqrs extends Model
         'resolved_at' => 'datetime',
     ];
 
+    /** @return HasMany<PqrsNote, $this> */
     public function notes(): HasMany
     {
         return $this->hasMany(PqrsNote::class, 'pqrs_id')->orderByDesc('id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to', 'user_id');

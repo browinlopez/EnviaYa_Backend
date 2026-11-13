@@ -37,6 +37,7 @@ class Area extends Model
         'state' => 'integer',
     ];
 
+    /** @return HasMany<User, $this> */
     public function users(): HasMany
     {
         return $this->hasMany(User::class, 'area_id');

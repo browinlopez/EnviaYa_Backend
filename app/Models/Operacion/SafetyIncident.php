@@ -47,6 +47,7 @@ class SafetyIncident extends Model
         'reported_by' => 'integer',
     ];
 
+    /** @return BelongsTo<Domiciliary, $this> */
     public function domiciliary(): BelongsTo
     {
         return $this->belongsTo(Domiciliary::class, 'domiciliary_id', 'domiciliary_id');

@@ -52,11 +52,13 @@ class Banner extends Model
         'state' => 'integer',
     ];
 
+    /** @return BelongsTo<AdCampaign, $this> */
     public function campaign(): BelongsTo
     {
         return $this->belongsTo(AdCampaign::class, 'campaign_id');
     }
 
+    /** @return HasMany<BannerEvent, $this> */
     public function events(): HasMany
     {
         return $this->hasMany(BannerEvent::class, 'banner_id');
