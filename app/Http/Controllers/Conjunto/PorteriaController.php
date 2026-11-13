@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Conjunto;
 use App\Events\CodigoDeAccesoUsado;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Conjunto\VerificarEnPorteriaRequest;
+use App\Http\Resources\Domiciliario\DomiciliarioEnLaPorteriaResource;
 use App\Models\Domiciliary;
 use App\Services\AccesoAlConjunto;
 use App\Services\PulsoDelConjunto;
@@ -225,18 +226,9 @@ class PorteriaController extends Controller
      */
     private function ficha(Domiciliary $d, int $complexId): array
     {
-        return [
-            'domiciliary_id' => $d->domiciliary_id,
-            'name' => $d->user->name ?? null,
-            'document' => $d->document,
-            'phone' => $d->user->phone ?? null,
-            'qualification' => $d->qualification !== null ? (float) $d->qualification : null,
-            // Si se marcó disponible en su app. No impide entrar —ya tiene los
-            // pedidos encima— pero explica por qué a veces no aparece en la
-            // lista del tendero.
-            'available' => (bool) $d->available,
-            'activo' => (bool) $d->state,
-            'historial' => $this->pulso->historialEnElConjunto($complexId, (int) $d->domiciliary_id),
-        ];
+        return (new DomiciliarioEnLaPorteriaResource(
+            $d,
+            historial: $this->pulso->historialEnElConjunto($complexId, (int) $d->domiciliary_id),
+        ))->resolve();
     }
 }

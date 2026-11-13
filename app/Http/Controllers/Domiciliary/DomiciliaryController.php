@@ -9,6 +9,7 @@ use App\Http\Requests\Domiciliary\ActualizarDomiciliarioRequest;
 use App\Http\Requests\Domiciliary\CrearDomiciliarioRequest;
 use App\Http\Requests\Domiciliary\DomiciliariosDeUnNegocioRequest;
 use App\Http\Requests\Domiciliary\VerDomiciliarioRequest;
+use App\Http\Resources\Domiciliario\DomiciliarioDeLaFlotaResource;
 use App\Http\Resources\Usuario\DomiciliarioDelAltaResource;
 use App\Http\Resources\Usuario\UsuarioResource;
 use App\Models\Business;
@@ -60,32 +61,16 @@ class DomiciliaryController extends Controller
             $faltan = $papeles->faltantes($domiciliary);
             $efectivo = round($custodia->saldo($domiciliary->domiciliary_id), 2);
 
-            return [
-                'domiciliary_id' => $domiciliary->domiciliary_id,
-                // user_id del domiciliario: requerido para despachar una
-                // orden (transición 2 → 3 en orders/update)
-                'user_id' => $domiciliary->user_id,
-                'name' => $domiciliary->user ? $domiciliary->user->name : null,
-                'email' => $domiciliary->user ? $domiciliary->user->email : null,
-                'phone' => $domiciliary->user ? $domiciliary->user->phone : null,
-                'available' => $domiciliary->available,
-                'qualification' => $domiciliary->qualification,
-                'state' => $domiciliary->state,
-                'active_orders' => $enCurso,
-                'max_active_orders' => $maxSimultaneos,
+            return (new DomiciliarioDeLaFlotaResource(
+                $domiciliary,
+                enCurso: $enCurso,
+                maxSimultaneos: $maxSimultaneos,
                 // Mismas condiciones que valida orders/update al despachar.
-                'can_take' => $disponible && $enCurso < $maxSimultaneos && ! $faltan,
-                'papeles_faltantes' => $faltan,
-                'cash_on_hand' => $efectivo,
-                'cash_limit' => $tope,
-                /*
-                 * Cuánto le cabe todavía en efectivo. Se manda calculado y no
-                 * se deja al cliente: la app y el panel harían la misma resta
-                 * cada uno por su lado, y el día que el tope cambie de forma
-                 * habría que acordarse de los dos.
-                 */
-                'cash_room' => $tope === null ? null : max(0, round($tope - $efectivo, 2)),
-            ];
+                puedeTomar: $disponible && $enCurso < $maxSimultaneos && ! $faltan,
+                papelesFaltantes: $faltan,
+                efectivo: $efectivo,
+                tope: $tope,
+            ))->resolve();
         });
 
         return response()->json([
