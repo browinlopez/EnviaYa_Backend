@@ -48,7 +48,30 @@ function superficieViva(): array
 
         $verbos = array_values(array_diff($ruta->methods(), ['HEAD']));
 
-        $middleware = $ruta->gatherMiddleware();
+        /*
+         * EFECTIVO = lo reunido MENOS lo excluido, y esto es un arreglo con
+         * fecha: 13 de noviembre de 2026.
+         *
+         * `gatherMiddleware()` junta el de la ruta y el del controlador y NO
+         * resta `excludedMiddleware()`. Así que un
+         * `->withoutMiddleware('auth')` dejaba la ruta sin guardia EN
+         * EJECUCION y el congelado seguía diciendo que lo tenía: la prueba
+         * pasaba en verde con la puerta abierta.
+         *
+         * Lo destapó un sabotaje que NO falló: se le quitó el guardia a
+         * `DELETE /profile` --la baja de la cuenta-- y las tres pruebas
+         * siguieron verdes. Una prueba que no se rompe cuando debería es peor
+         * que no tenerla, porque se cita como garantía.
+         *
+         * Hoy nadie usa `withoutMiddleware` en este repositorio, así que al
+         * arreglarlo los dos archivos congelados no cambian ni una línea: el
+         * arreglo no es por lo que hay, es por lo que se puede escribir
+         * mañana en una línea y sin que nada chille.
+         */
+        $middleware = array_values(array_diff(
+            $ruta->gatherMiddleware(),
+            $ruta->excludedMiddleware()
+        ));
         sort($middleware);
 
         $filas[] = [

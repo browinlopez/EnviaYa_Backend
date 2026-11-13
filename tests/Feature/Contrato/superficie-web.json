@@ -1,0 +1,217 @@
+[
+    {
+        "verbo": "GET",
+        "uri": "/",
+        "nombre": null,
+        "middleware": [
+            "web"
+        ]
+    },
+    {
+        "verbo": "GET|POST",
+        "uri": "broadcasting/auth",
+        "nombre": null,
+        "middleware": [
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "confirm-password",
+        "nombre": "password.confirm",
+        "middleware": [
+            "auth",
+            "web"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "confirm-password",
+        "nombre": null,
+        "middleware": [
+            "auth",
+            "web"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "dashboard",
+        "nombre": "dashboard",
+        "middleware": [
+            "auth",
+            "web"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "email/verification-notification",
+        "nombre": "verification.send",
+        "middleware": [
+            "auth",
+            "throttle:6,1",
+            "web"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "forgot-password",
+        "nombre": "password.request",
+        "middleware": [
+            "guest",
+            "web"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "forgot-password",
+        "nombre": "password.email",
+        "middleware": [
+            "guest",
+            "web"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "laravel-verify-email",
+        "nombre": "verification.notice",
+        "middleware": [
+            "auth",
+            "web"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "laravel-verify-email/{id}/{hash}",
+        "nombre": "verification.verify",
+        "middleware": [
+            "auth",
+            "signed",
+            "throttle:6,1",
+            "web"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "login",
+        "nombre": "login",
+        "middleware": [
+            "guest",
+            "web"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "login",
+        "nombre": null,
+        "middleware": [
+            "guest",
+            "web"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "logout",
+        "nombre": "logout",
+        "middleware": [
+            "auth",
+            "web"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "password",
+        "nombre": "password.update",
+        "middleware": [
+            "auth",
+            "web"
+        ]
+    },
+    {
+        "verbo": "DELETE",
+        "uri": "profile",
+        "nombre": "profile.destroy",
+        "middleware": [
+            "auth",
+            "web"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "profile",
+        "nombre": "profile.edit",
+        "middleware": [
+            "auth",
+            "web"
+        ]
+    },
+    {
+        "verbo": "PATCH",
+        "uri": "profile",
+        "nombre": "profile.update",
+        "middleware": [
+            "auth",
+            "web"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "reset-password",
+        "nombre": "password.store",
+        "middleware": [
+            "guest",
+            "web"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "reset-password/{token}",
+        "nombre": "password.reset",
+        "middleware": [
+            "guest",
+            "web"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "sanctum/csrf-cookie",
+        "nombre": "sanctum.csrf-cookie",
+        "middleware": [
+            "web"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "storage/{path}",
+        "nombre": "storage.local",
+        "middleware": []
+    },
+    {
+        "verbo": "PUT",
+        "uri": "storage/{path}",
+        "nombre": "storage.local.upload",
+        "middleware": []
+    },
+    {
+        "verbo": "GET",
+        "uri": "up",
+        "nombre": null,
+        "middleware": []
+    },
+    {
+        "verbo": "GET",
+        "uri": "verify-email",
+        "nombre": "verify.email",
+        "middleware": [
+            "web"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "verify-email/reenviar",
+        "nombre": "verify.email.reenviar",
+        "middleware": [
+            "throttle:10,1",
+            "web"
+        ]
+    }
+]
