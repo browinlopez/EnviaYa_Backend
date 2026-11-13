@@ -78,13 +78,33 @@ antes de arreglar los sitios, para que hubiera algo que encontrar--:
     el medidor de antes, contra ese arbol      0 modelos pelados
     este, contra el mismo arbol                2
 
-Y en el repo de hoy, 5 candidatas -> 9. Las cuatro nuevas son cuerpos
-enteros: una es falso positivo (ver `CUERPOS_DECIDIDOS`) y tres son reales.
+Y en el repo de hoy, 5 candidatas -> 9 -> 1. El camino importa mas que el
+numero:
+
+    5   antes de cerrar los dos puntos ciegos
+    9   despues: cuatro cuerpos enteros que no se veian
+    3   despues de arreglar la PRECISION (abajo): cinco de las nueve eran
+        falsos positivos, uno por causa, y las cinco causas estan escritas
+    1   despues de mirar las tres reales y decidir dos
+
+LA PRECISION HUBO QUE ARREGLARLA, y es la mitad que suele faltar. Un detector
+que acierta tres de ocho entrena a la gente a no mirarlo, y entonces da igual
+lo que encuentre. Las cinco causas, cada una con su regla y su mitad de
+control en `CONTEXTO_NO_CRUDO`:
+
+    ->update() / ->delete()     devuelven un NUMERO de filas, no filas
+    ->map()                     la forma ya la da el cierre, no la tabla
+    (string) al frente          `$request->attributes->get(...)` tiene un
+                                `->get(` y parecia una consulta
+    $request->user() dentro     solo cuenta si ENCABEZA la asignacion; estaba
+                                marcando `guardar(..., $request->user()->id)`
+    ->select([...]) ajeno       vive en otro fichero y no se puede ver
+
+LO QUE QUEDA: UNA, y es una decision de producto, no un descuido. Ver
+`tests/Feature/Seguridad/LaCedulaDelDomiciliarioLaVeCualquieraTest.php`.
 
 SIGUE SIENDO UNA LISTA DE CANDIDATAS. El filtro es una heuristica sobre la
-ultima asignacion DENTRO del metodo, asi que un `->select([...])` que viva en
-un ayudante de otro fichero no se ve --paso, y esta escrito--. Se mira cada
-una antes de tocarla.
+ultima asignacion DENTRO del metodo. Se mira cada una antes de tocarla.
 
 EL TERCER PUNTO CIEGO YA NO LO ES, y era el mas grande de los tres. Durante
 tres versiones esto solo miraba `response()->json([...])`, y una forma de
@@ -185,6 +205,10 @@ CONTROL_NO_CRUDO = """[
     'data' => $datos,
     'promociones' => $lista,
     'conjuntos' => $conjuntos,
+    'count' => $cuantos,
+    'role' => $rol,
+    'changes' => $cambios,
+    'fichas' => $fichas,
 ]"""
 
 CONTEXTO_NO_CRUDO = """
@@ -193,6 +217,14 @@ $polilinea = implode(',', $puntos);
 $datos = $this->recolectar();
 $lista = Promotion::where('x', 1)->get()->map(fn ($p) => (new PromocionResource($p))->resolve());
 $conjuntos = ResidentialComplex::query()->get(['complex_id', 'name']);
+
+/* Los cuatro de abajo son los falsos positivos de la pasada anterior, uno por
+   causa. Estan aqui para que la causa quede probada y no vuelva: si alguien
+   simplifica una de las reglas, el control dice `crudo` y no se informa. */
+$cuantos = Notification::where('read', false)->update(['read' => true]);
+$rol = (string) $request->attributes->get('complex_role');
+$cambios = Ajustes::guardar(Arr::dot($datos), $request->user()->user_id ?? null);
+$fichas = CatalogUpload::where('x', 1)->get()->map(fn ($c) => $this->comoFicha($c));
 """
 
 
@@ -294,6 +326,25 @@ CUERPOS_DECIDIDOS = {
         'AyudasDeAdmin.php`, y esto solo lee la asignacion dentro del metodo. '
         'No publica una columna nueva sola. Para verlo habria que seguir la '
         'llamada a otro fichero, y eso ya no es un grep.',
+
+    'app/Http/Controllers/Order/MediosDePagoController.php':
+        'ES CUERPO ENTERO DE VERDAD, y se queda. Lo que publica son las dos '
+        'tablas de configuracion del pago, y se contaron las columnas: '
+        '`payment_methods` y `payment_forms` tienen TRES cada una --el id, el '
+        '`name` y el `state`-- y ninguna migracion les ha anadido nada desde '
+        '2025. No hay nada que se pueda filtrar porque no hay nada mas. '
+        'Enumerar tres claves cambiaria la forma de la respuesta que el '
+        'carrito de la app ya lee, a cambio de nada.',
+
+    'app/Http/Controllers/Admin/Api/ProductosApiController.php':
+        'ES CUERPO ENTERO DE VERDAD, y se queda por ahora. `products` tiene '
+        'seis columnas y las seis son del catalogo publico --nombre, '
+        'descripcion, categoria, imagen, estado--: no hay nada reservado que '
+        'se escape hoy. Y la ruta pide `modulo:productos` '
+        '(routes/api.php:989), asi que la lee el equipo, no cualquiera con '
+        'sesion. Queda dicho el riesgo que SI tiene: si manana se le anade al '
+        'producto un coste de compra o una nota interna, sale publicada sola. '
+        'Es distinto de `showDomiciliary`, donde el dato reservado ya esta.',
 }
 
 
@@ -351,7 +402,9 @@ DE_MODELO = re.compile(
     r'updateOrCreate|firstOrCreate)\b'
     r'|->\s*(first|firstOrFail|get|findOrFail|find|create|save|fresh)\s*\('
     r'|\bnew\s+[A-Z]\w*\s*\('
-    r'|\$request->user\s*\(\s*\))'
+    r')'
+    # `$request->user()` ya no va aqui: solo cuenta si encabeza la
+    # asignacion, y eso lo mira `DE_MODELO_AL_FRENTE`.
 )
 
 # Y lo que NO publica una tabla entera, aunque venga de una consulta. Las dos
@@ -372,8 +425,35 @@ NO_ES_MODELO = re.compile(
     # `->select([...])`-- asi que una columna nueva no se publica sola, que es
     # lo que esta categoria busca. `ResidentialComplexController:44`.
     r'|->\s*(get|first|select)\s*\(\s*\[\s*["\']'
+
+    # Lo que DEVUELVE UN NUMERO de filas tocadas, no filas. `->update()` y
+    # `->delete()` dan un entero, asi que `'count' => $cuantos` no publica
+    # ninguna tabla. Dos de los cinco falsos positivos de la pasada anterior
+    # eran esto: `NotificacionesController:71` y `SeguridadApiController:264`.
+    r'|->\s*(update|delete|increment|decrement|exists)\s*\('
+
+    # Y lo que YA tiene forma dada: un `->map()` convierte las filas en lo que
+    # diga el cierre, asi que lo que se publica es esa forma y no la tabla. La
+    # regla de `Resource` de arriba cubria el caso con Resource;
+    # `CargaDeCatalogoController:75` mapea a un metodo privado y se escapaba.
+    r'|->\s*map\s*\('
     r')'
 )
+
+# UN MOLDE DE ESCALAR AL FRENTE DE LA ASIGNACION. `$rol = (string) $algo;` es
+# una cadena, pase lo que pase a la derecha. Hacia falta porque
+# `$request->attributes->get('complex_role')` tiene un `->get(` y por eso
+# parecia una consulta: era el tercer falso positivo,
+# `MiConjuntoController:65`.
+ES_ESCALAR = re.compile(r'^\s*\(\s*(int|string|float|bool|array)\s*\)')
+
+# `$request->user()` SOLO cuenta si encabeza la asignacion.
+#
+# Estaba dentro de `DE_MODELO`, que busca en cualquier parte del lado derecho,
+# asi que `Ajustes::guardar(Arr::dot($datos), $request->user()->user_id)`
+# --donde lo que se guarda es un array de cambios-- salia como modelo
+# publicado. Era el cuarto falso positivo, `AjustesApiController:126`.
+DE_MODELO_AL_FRENTE = re.compile(r'^\s*\$request->user\s*\(\s*\)')
 
 
 # LAS RELACIONES QUE DECLARAN LOS MODELOS, leidas del codigo.
@@ -483,9 +563,12 @@ def viene_de_un_modelo(variable, trozo):
 
     # La ultima gana: es la que suele estar justo antes de la respuesta.
     for rhs in reversed(asignaciones):
-        if NO_ES_MODELO.search(rhs):
+        # Los dos descartes van PRIMERO, y el orden importa: los dos existen
+        # para tapar cosas que a `DE_MODELO` le parecen consultas.
+        if ES_ESCALAR.match(rhs) or NO_ES_MODELO.search(rhs):
             return False
-        if DE_MODELO.search(rhs):
+
+        if DE_MODELO.search(rhs) or DE_MODELO_AL_FRENTE.match(rhs):
             return True
 
         # Y una relacion declarada tambien saca un modelo de la base, aunque

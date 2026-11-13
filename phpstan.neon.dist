@@ -37,4 +37,16 @@ parameters:
     # Los 16 `property.notFound` que quedan son alias de `selectRaw`
     # (`$pedido->ganado`, `total_orders`, `items_count`): no son columnas ni
     # relaciones, y anotarlos seria describir la consulta en el modelo.
+    #
+    # Y LOS 28 `nullsafe.neverNull` SON COSMETICOS, comprobado. Son
+    # `$x?->name ?? 'respaldo'`, y la sospecha razonable era la contraria: que
+    # PHPStan creyera no-nula una relacion que en tiempo de ejecucion SI puede
+    # serlo, y que quitar el `?->` reventara. No es eso. `??` tiene semantica
+    # de `isset` en su lado izquierdo, asi que `$nulo->name ?? 'x'` da `'x'`
+    # sin aviso ninguno --probado-- y el `?->` no aporta nada.
+    #
+    # Asi que quitarlos es seguro y bajaria la linea base de 60 a unos 32.
+    # NO SE HACE: son doce ficheros de codigo publicado tocados para no
+    # cambiar ni una respuesta. Queda escrito para que no haya que volver a
+    # averiguar si es un fallo de verdad; no lo es.
     treatPhpDocTypesAsCertain: false
