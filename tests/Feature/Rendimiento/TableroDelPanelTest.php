@@ -55,12 +55,27 @@ function comoGerencia(): User
     return $user;
 }
 
-/** Las consultas de una petición, en texto plano y de una sola línea. */
+/**
+ * Las consultas de una petición, en texto plano, de una sola línea y SIN EL
+ * ENTRECOMILLADO DE IDENTIFICADORES.
+ *
+ * Lo de las comillas no es cosmética: SQLite escribe `"business"` y MySQL
+ * escribe `` `business` ``, así que una comparación exacta contra el SQL de
+ * un motor no casa NUNCA con el otro. Estas comprobaciones se escribieron
+ * sobre SQLite y, la primera vez que la suite corrió contra MySQL —13 de
+ * noviembre de 2026—, las tres de conteo exacto dieron 0 y fallaron sin que
+ * nada estuviera mal en el código.
+ *
+ * Quitando las comillas, la comparación sigue siendo EXACTA —que es la
+ * decisión importante de la prueba de abajo, y está razonada ahí— y además
+ * dice lo mismo en los dos motores.
+ */
 function consultasDe(callable $hacer): array
 {
     $vistas = [];
     DB::listen(function ($q) use (&$vistas) {
-        $vistas[] = preg_replace('/\s+/', ' ', $q->sql);
+        $limpia = preg_replace('/\s+/', ' ', $q->sql);
+        $vistas[] = str_replace(['"', '`'], '', (string) $limpia);
     });
 
     $hacer();
@@ -111,11 +126,11 @@ it('cada una de esas cifras se cuenta UNA vez', function () {
         return count(array_filter($consultas, fn (string $s) => $s === $sql));
     };
 
-    expect($exactas('select count(*) as aggregate from "business"'))->toBe(1);
-    expect($exactas('select count(*) as aggregate from "products"'))->toBe(1);
+    expect($exactas('select count(*) as aggregate from business'))->toBe(1);
+    expect($exactas('select count(*) as aggregate from products'))->toBe(1);
 
     // El área del usuario: la pedían el middleware de permisos y el servicio.
-    expect($exactas('select * from "areas" where "areas"."id" = ? limit 1'))->toBe(1);
+    expect($exactas('select * from areas where areas.id = ? limit 1'))->toBe(1);
 
     /*
      * La de los pedidos sin pago aprobado sí va por subcadena, porque su SQL
@@ -125,7 +140,7 @@ it('cada una de esas cifras se cuenta UNA vez', function () {
      */
     $conSubcadena = count(array_filter(
         $consultas,
-        fn (string $s) => str_contains($s, 'not exists (select 1 from "payments"'),
+        fn (string $s) => str_contains($s, 'not exists (select 1 from payments'),
     ));
     expect($conSubcadena)->toBe(1);
 });

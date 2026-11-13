@@ -186,9 +186,22 @@ it('no vuelve a pedir el negocio que el aviso del pedido ya habia cargado', func
      */
     $e = escenarioPedido();
 
+    /*
+     * SE QUITAN LAS COMILLAS DE LOS IDENTIFICADORES antes de buscar, y hace
+     * falta: SQLite escribe `"business"` y MySQL escribe `` `business` ``, así
+     * que esta subcadena no casaba NUNCA sobre MySQL. `$veces` se quedaba en 0
+     * y la prueba fallaba sin que nada estuviera mal en el código —lo destapó
+     * la primera corrida de la suite contra MySQL, el 13 de noviembre de
+     * 2026—.
+     *
+     * Lo que la prueba defiende no depende del motor: que esa fila no se pida
+     * dos veces en la misma petición.
+     */
     $veces = 0;
     DB::listen(function ($q) use (&$veces) {
-        if (str_contains($q->sql, 'from "business" where "business"."busines_id" in')) {
+        $sql = str_replace(['"', '`'], '', $q->sql);
+
+        if (str_contains($sql, 'from business where business.busines_id in')) {
             $veces++;
         }
     });
