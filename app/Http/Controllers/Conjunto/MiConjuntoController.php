@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Conjunto;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Conjunto\ActualizarMiConjuntoRequest;
 use App\Http\Requests\Conjunto\SubirFotoDelConjuntoRequest;
+use App\Http\Resources\Conjunto\ConjuntoResource;
 use App\Models\Buyer\ResidentialComplex;
 use App\Models\Conjunto\ComplexStaff;
 use App\Models\Rol;
@@ -91,22 +92,7 @@ class MiConjuntoController extends Controller
      */
     private function ficha($c): array
     {
-        return [
-            'complex_id' => (int) $c->complex_id,
-            'name' => $c->name,
-            'photo' => $c->photo,
-            'address' => $c->address,
-            'phone' => $c->phone,
-            'email' => $c->email,
-            'admin_name' => $c->admin_name,
-            'nit' => $c->nit,
-            'gate_notes' => $c->gate_notes,
-            'require_authorization' => (bool) $c->require_authorization,
-            'towers_count' => $c->towers_count,
-            'apartments_per_tower' => $c->apartments_per_tower,
-            'latitude' => $c->latitude !== null ? (float) $c->latitude : null,
-            'longitude' => $c->longitude !== null ? (float) $c->longitude : null,
-        ];
+        return (new ConjuntoResource($c))->resolve();
     }
 
     /* ---------------------- PERFIL Y AJUSTES ------------------------- */

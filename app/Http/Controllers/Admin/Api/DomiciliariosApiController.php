@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Admin\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\CrearDomiciliarioInternoRequest;
 use App\Http\Requests\Admin\FirmarAcuerdoDelDomiciliarioRequest;
+use App\Http\Resources\Domiciliario\ContratoFirmadoResource;
 use App\Models\User;
 use App\Services\ContratoService;
 use App\Services\MediaService;
@@ -158,14 +159,12 @@ class DomiciliariosApiController extends Controller
             return null;
         }
 
-        return [
-            'media_id' => (int) $archivo->id,
-            'name' => $archivo->original_name,
-            'size' => (int) $archivo->size_bytes,
-            'url' => app(MediaService::class)->url($archivo->object_key),
-            'signed_at' => $d->contract_signed_at,
-            'city' => $d->contract_city,
-        ];
+        return (new ContratoFirmadoResource(
+            $archivo,
+            url: app(MediaService::class)->url($archivo->object_key),
+            firmadoEl: $d->contract_signed_at,
+            ciudad: $d->contract_city,
+        ))->resolve();
     }
 
     /**
