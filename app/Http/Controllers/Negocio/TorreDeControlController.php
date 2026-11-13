@@ -214,8 +214,21 @@ class TorreDeControlController extends Controller
      * El desempate por `geolocation_id` es para los dos puntos que caen en el
      * mismo segundo: sin él, cuál de los dos sale queda al azar.
      *
+     * El tipo de abajo está escrito a la letra, y tiene que estarlo: los
+     * genéricos de `Collection` son INVARIANTES, así que `Collection<int,
+     * array>` NO acepta un `Collection<int, array{...}>` aunque la forma
+     * concreta sea un array. Decía `array` a secas y pasaba inadvertido
+     * mientras las relaciones no tenían tipo.
+     *
+     * `at` queda en `mixed` porque `optional()` borra el tipo de lo que
+     * envuelve. Se deja como está: cambiarlo a `?->` tocaría la línea que
+     * construye la respuesta del mapa, y no es lo que se vino a hacer.
+     *
+     * El `|null` del camino «sin posición» no va en el tipo porque el
+     * `filter()` del final se lo lleva.
+     *
      * @param  list<int>  $ids
-     * @return Collection<int, array>
+     * @return Collection<int, array{latitude: float, longitude: float, orderSales_id: int, at: mixed, hace_minutos: int|null}>
      */
     private function ultimaPosicion(array $ids): Collection
     {

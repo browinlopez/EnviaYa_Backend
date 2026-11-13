@@ -7,6 +7,7 @@ namespace App\Models\Business;
 use App\Models\Audit\Audit;
 use App\Models\Business;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CategoryBusiness extends Audit
 {
@@ -21,7 +22,8 @@ class CategoryBusiness extends Audit
     ];
 
     // RelaciÃ³n inversa con Business
-    public function businesses()
+    /** @return HasMany<Business, $this> */
+    public function businesses(): HasMany
     {
         return $this->hasMany(Business::class, 'type', 'id');
     }

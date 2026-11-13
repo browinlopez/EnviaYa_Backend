@@ -7,6 +7,7 @@ namespace App\Models\Operacion;
 use App\Models\Audit\Audit;
 use App\Models\Domiciliary;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Un depósito de efectivo declarado por un domiciliario.
@@ -54,12 +55,14 @@ class CashDeposit extends Audit
         'confirmed_at' => 'datetime',
     ];
 
-    public function domiciliary()
+    /** @return BelongsTo<Domiciliary, $this> */
+    public function domiciliary(): BelongsTo
     {
         return $this->belongsTo(Domiciliary::class, 'domiciliary_id', 'domiciliary_id');
     }
 
-    public function confirmadoPor()
+    /** @return BelongsTo<User, $this> */
+    public function confirmadoPor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'confirmed_by', 'user_id');
     }

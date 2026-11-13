@@ -6,6 +6,7 @@ namespace App\Models\Order;
 
 use App\Models\Domiciliary;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OrderGeolocation extends Model
 {
@@ -23,12 +24,14 @@ class OrderGeolocation extends Model
         'state',
     ];
 
-    public function domiciliary()
+    /** @return BelongsTo<Domiciliary, $this> */
+    public function domiciliary(): BelongsTo
     {
         return $this->belongsTo(Domiciliary::class, 'domiciliary_id', 'domiciliary_id');
     }
 
-    public function order()
+    /** @return BelongsTo<OrdersSales, $this> */
+    public function order(): BelongsTo
     {
         return $this->belongsTo(OrdersSales::class, 'orderSales_id', 'orderSales_id');
     }

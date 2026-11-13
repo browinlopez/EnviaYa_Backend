@@ -6,6 +6,7 @@ namespace App\Models\Operacion;
 
 use App\Models\Order\OrdersSales;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Un apunte del libro de crédito. El signo es lo que hace a lo USADO:
@@ -27,12 +28,14 @@ class StoreCreditMovement extends Model
 
     protected $casts = ['amount' => 'decimal:2'];
 
-    public function credit()
+    /** @return BelongsTo<StoreCredit, $this> */
+    public function credit(): BelongsTo
     {
         return $this->belongsTo(StoreCredit::class, 'store_credit_id');
     }
 
-    public function order()
+    /** @return BelongsTo<OrdersSales, $this> */
+    public function order(): BelongsTo
     {
         return $this->belongsTo(OrdersSales::class, 'order_id', 'orderSales_id');
     }

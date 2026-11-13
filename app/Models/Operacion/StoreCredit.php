@@ -7,6 +7,8 @@ namespace App\Models\Operacion;
 use App\Models\Business;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * El cupo que una tienda le da a un comprador. Lo usado NO vive acá: es la
@@ -24,17 +26,20 @@ class StoreCredit extends Model
         'credit_limit' => 'decimal:2',
     ];
 
-    public function business()
+    /** @return BelongsTo<Business, $this> */
+    public function business(): BelongsTo
     {
         return $this->belongsTo(Business::class, 'busines_id', 'busines_id');
     }
 
-    public function user()
+    /** @return BelongsTo<User, $this> */
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id', 'user_id');
     }
 
-    public function movements()
+    /** @return HasMany<StoreCreditMovement, $this> */
+    public function movements(): HasMany
     {
         return $this->hasMany(StoreCreditMovement::class, 'store_credit_id');
     }

@@ -7,6 +7,7 @@ namespace App\Models\Operacion;
 use App\Models\Domiciliary;
 use App\Models\Order\OrdersSales;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Un apunte del libro de efectivo de un domiciliario.
@@ -42,17 +43,20 @@ class CashMovement extends Model
 
     protected $casts = ['amount' => 'decimal:2'];
 
-    public function domiciliary()
+    /** @return BelongsTo<Domiciliary, $this> */
+    public function domiciliary(): BelongsTo
     {
         return $this->belongsTo(Domiciliary::class, 'domiciliary_id', 'domiciliary_id');
     }
 
-    public function order()
+    /** @return BelongsTo<OrdersSales, $this> */
+    public function order(): BelongsTo
     {
         return $this->belongsTo(OrdersSales::class, 'order_id', 'orderSales_id');
     }
 
-    public function deposit()
+    /** @return BelongsTo<CashDeposit, $this> */
+    public function deposit(): BelongsTo
     {
         return $this->belongsTo(CashDeposit::class, 'deposit_id');
     }

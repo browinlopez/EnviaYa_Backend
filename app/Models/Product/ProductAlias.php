@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models\Product;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Cómo llama una tienda a un producto del catálogo.
@@ -40,7 +41,8 @@ class ProductAlias extends Model
      */
     public const TODAS = 0;
 
-    public function product()
+    /** @return BelongsTo<Product, $this> */
+    public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class, 'products_id', 'products_id');
     }

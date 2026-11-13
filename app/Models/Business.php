@@ -14,6 +14,7 @@ use App\Models\Product\ProductBusiness;
 use App\Models\Reviews\BusinessReview;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -207,8 +208,10 @@ class Business extends Audit
      * lee `ExistenciasDelPedido` por `DB::table`, que no pasa por aquí; traer
      * una columna que nadie lee desde la relación es peso en cada consulta
      * del catálogo, que es la lectura de más tráfico de la plataforma.
+     *
+     * @return BelongsToMany<Product, $this>
      */
-    public function products()
+    public function products(): BelongsToMany
     {
         return $this->belongsToMany(
             Product::class,
@@ -225,12 +228,14 @@ class Business extends Audit
         ]);
     }
 
-    public function orders()
+    /** @return HasMany<OrdersSales, $this> */
+    public function orders(): HasMany
     {
         return $this->hasMany(OrdersSales::class, 'busines_id', 'busines_id');
     }
 
-    public function reviews()
+    /** @return HasMany<BusinessReview, $this> */
+    public function reviews(): HasMany
     {
         return $this->hasMany(
             BusinessReview::class,
@@ -239,23 +244,27 @@ class Business extends Audit
         );
     }
 
-    public function productBusinesses()
+    /** @return HasMany<ProductBusiness, $this> */
+    public function productBusinesses(): HasMany
     {
         return $this->hasMany(ProductBusiness::class, 'busines_id', 'busines_id');
     }
 
-    public function domiciliaries()
+    /** @return BelongsToMany<Domiciliary, $this> */
+    public function domiciliaries(): BelongsToMany
     {
         return $this->belongsToMany(Domiciliary::class, 'business_domiciliary', 'busines_id', 'domiciliary_id')
             ->withPivot('state');
     }
 
-    public function usersWhoFavorite()
+    /** @return BelongsToMany<User, $this> */
+    public function usersWhoFavorite(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'business_user_favorites', 'busines_id', 'user_id');
     }
 
-    public function category()
+    /** @return BelongsTo<CategoryBusiness, $this> */
+    public function category(): BelongsTo
     {
         return $this->belongsTo(CategoryBusiness::class, 'type', 'id');
     }

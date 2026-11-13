@@ -17,6 +17,7 @@ use App\Models\User\UserAddress;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class OrdersSales extends Audit
@@ -281,12 +282,22 @@ class OrdersSales extends Audit
         return $cambio > 0 ? $cambio : null;
     }
 
-    public function paymentIntents()
+    /** @return HasMany<PaymentIntent, $this> */
+    public function paymentIntents(): HasMany
     {
         return $this->hasMany(PaymentIntent::class, 'orderSales_id');
     }
 
-    public function paymentTransactions()
+    /**
+     * Los movimientos de la pasarela de ESTE pedido, pasando por el intento.
+     *
+     * Los genericos de `hasManyThrough` llevan TRES parametros y no dos: lo
+     * que se alcanza, por donde se pasa, y desde donde. Es la unica relacion
+     * del repositorio con esta forma, y por eso se escribio a mano.
+     *
+     * @return HasManyThrough<PaymentTransaction, PaymentIntent, $this>
+     */
+    public function paymentTransactions(): HasManyThrough
     {
         return $this->hasManyThrough(
             PaymentTransaction::class,
@@ -338,12 +349,14 @@ class OrdersSales extends Audit
         return $this->hasOne(Payment::class, 'orderSales_id', 'orderSales_id');
     }
 
-    public function paymentMethod()
+    /** @return BelongsTo<PaymentMethods, $this> */
+    public function paymentMethod(): BelongsTo
     {
         return $this->belongsTo(PaymentMethods::class, 'methods_id');
     }
 
-    public function paymentForm()
+    /** @return BelongsTo<PaymentForms, $this> */
+    public function paymentForm(): BelongsTo
     {
         return $this->belongsTo(PaymentForms::class, 'forms_id');
     }

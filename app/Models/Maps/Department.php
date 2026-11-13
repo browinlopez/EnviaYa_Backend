@@ -7,6 +7,7 @@ namespace App\Models\Maps;
 use App\Models\Audit\Audit;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Department extends Audit
 {
@@ -24,7 +25,8 @@ class Department extends Audit
         return $this->belongsTo(Country::class, 'country_id', 'id');
     }
 
-    public function municipalities()
+    /** @return HasMany<Municipality, $this> */
+    public function municipalities(): HasMany
     {
         return $this->hasMany(Municipality::class, 'department_id', 'id');
     }

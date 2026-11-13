@@ -8,6 +8,7 @@ use App\Models\Audit\Audit;
 use App\Models\User\UserAddress;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Municipality extends Audit
 {
@@ -25,7 +26,8 @@ class Municipality extends Audit
         return $this->belongsTo(Department::class, 'department_id', 'id');
     }
 
-    public function userAddresses()
+    /** @return HasMany<UserAddress, $this> */
+    public function userAddresses(): HasMany
     {
         return $this->hasMany(UserAddress::class, 'municipality_id', 'id');
     }

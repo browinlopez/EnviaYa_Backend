@@ -12,6 +12,9 @@ use App\Models\User\UserAddress;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -122,7 +125,8 @@ class User extends Authenticatable implements Auditable, MustVerifyEmail
     }
 
     // Relaciones
-    public function rolRelation()
+    /** @return BelongsTo<Rol, $this> */
+    public function rolRelation(): BelongsTo
     {
         return $this->belongsTo(Rol::class, 'rol', 'rol_id');
     }
@@ -168,47 +172,56 @@ class User extends Authenticatable implements Auditable, MustVerifyEmail
         return $this->belongsTo(Area::class, 'area_id');
     }
 
-    public function domiciliary()
+    /** @return HasOne<Domiciliary, $this> */
+    public function domiciliary(): HasOne
     {
         return $this->hasOne(Domiciliary::class, 'user_id', 'user_id');
     }
 
-    public function buyer()
+    /** @return HasOne<Buyer, $this> */
+    public function buyer(): HasOne
     {
         return $this->hasOne(Buyer::class, 'user_id', 'user_id');
     }
 
-    public function owner()
+    /** @return HasOne<Owner, $this> */
+    public function owner(): HasOne
     {
         return $this->hasOne(Owner::class, 'user_id', 'user_id');
     }
 
-    public function reviewsWritten()
+    /** @return HasMany<UserReview, $this> */
+    public function reviewsWritten(): HasMany
     {
         return $this->hasMany(UserReview::class, 'user_id', 'user_id');
     }
 
-    public function businessReviews()
+    /** @return HasMany<BusinessReview, $this> */
+    public function businessReviews(): HasMany
     {
         return $this->hasMany(BusinessReview::class, 'buyer_id', 'user_id');
     }
 
-    public function notifications()
+    /** @return HasMany<Notification, $this> */
+    public function notifications(): HasMany
     {
         return $this->hasMany(Notification::class, 'user_id', 'user_id');
     }
 
-    public function addresses()
+    /** @return HasMany<UserAddress, $this> */
+    public function addresses(): HasMany
     {
         return $this->hasMany(UserAddress::class, 'user_id', 'user_id');
     }
 
-    public function favoriteBusinesses()
+    /** @return BelongsToMany<Business, $this> */
+    public function favoriteBusinesses(): BelongsToMany
     {
         return $this->belongsToMany(Business::class, 'business_user_favorites', 'user_id', 'busines_id');
     }
 
-    public function affiliatedBusinesses()
+    /** @return BelongsToMany<Business, $this> */
+    public function affiliatedBusinesses(): BelongsToMany
     {
         return $this->belongsToMany(
             Business::class,
