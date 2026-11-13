@@ -47,36 +47,44 @@ mirar, y hay sitios que siguen pidiendo criterio. `AdsController` es uno: el
 veredicto de un cupon se arma con atributos del cupon, asi que sale como
 entidad, y es mas un si-o-no que una entidad.
 
-EL PUNTO CIEGO DE «MODELO PELADO», medido y escrito para que nadie lea esa
-lista como completa. Para saber si `'x' => $algo` publica una tabla hay que
-saber de donde sale `$algo`, y eso se averigua leyendo su asignacion. Un
+LOS DOS PUNTOS CIEGOS DE «MODELO PELADO», YA CERRADOS. Se dejan escritos
+porque el cierre de cada uno dependio de algo que no era obvio.
+
+EL PRIMERO: EL MODELO QUE VIENE DE UNA RELACION. Para saber si
+`'x' => $algo` publica una tabla hay que saber de donde sale `$algo`. Un
 modelo que viene de una CONSULTA se reconoce --`::find`, `->first()`,
-`new X(`--; uno que viene de una RELACION, no:
+`new X(`--; uno que viene de una RELACION tiene la misma forma que una cadena:
 
-    $domiciliary = $user->domiciliary;      // DomiciliaryController:190
-    $business = $pedido->business;
+    $domiciliary = $user->domiciliary;      // un modelo
+    $nombre = $user->name;                  // una cadena
 
-`$x->y` tiene la misma forma que `$nombre = $user->name`, que es una cadena,
-asi que no se puede separar sin saber que relaciones declara cada modelo. Dos
-sitios que SI publican el modelo entero se escapan por esto, comprobados a
-mano: `Domiciliary/DomiciliaryController.php:190` --`'domiciliary' =>
-$domiciliary`, al lado de un `'user' => new UsuarioResource($user)` que si
-esta migrado-- y `Business/ConsultaDeNegociosController.php:487`.
+Lo unico que las separa es saber que `domiciliary()` es una relacion
+declarada. Y eso no se podia saber hasta que las relaciones tuvieron TIPO DE
+RETORNO: eran 100 sin tipar de 152. Al tiparlas, `nombres_de_relacion()` puede
+leerlas del codigo --85 nombres distintos-- y la pregunta se vuelve un `in`.
 
-Y EL SEGUNDO PUNTO CIEGO, que aparecio recableando la octava tanda: esto
-busca `response()->json([...])` con lista de claves, asi que no ve el modelo
-devuelto COMO CUERPO ENTERO, sin lista ninguna:
+EL SEGUNDO: EL CUERPO ENTERO. Esto buscaba `response()->json([...])` con
+lista de claves, asi que no veia el modelo devuelto SIN lista ninguna:
 
-    return response()->json($f);            // FacturasApiController:265
+    return response()->json($f);
 
-Que es el caso extremo del mismo problema. Buscar eso es otra pasada --un
-`response()->json($variable)` a secas-- y se hace a mano con un grep mientras
-no este escrita.
+Que es el caso extremo del mismo problema, y el que menos se nota leyendo: no
+hay ni una clave escrita, asi que lo que se publica es «las columnas que tenga
+la tabla» y una migracion las saca solas. Lo busca `cuerpos_pelados()`.
 
-Asi que la lista de «modelo pelado» es de CANDIDATAS y esta por debajo de la
-cuenta real por los dos lados. De las once de hoy, mirando una a una, algo mas
-de la mitad son fugas de verdad; el resto son enteros y arrays que heredan una
-asignacion parecida. Se mira cada una antes de tocarla.
+LO QUE LOS DOS CIERRES CAMBIARON, medido como se debe --contra el arbol de
+antes de arreglar los sitios, para que hubiera algo que encontrar--:
+
+    el medidor de antes, contra ese arbol      0 modelos pelados
+    este, contra el mismo arbol                2
+
+Y en el repo de hoy, 5 candidatas -> 9. Las cuatro nuevas son cuerpos
+enteros: una es falso positivo (ver `CUERPOS_DECIDIDOS`) y tres son reales.
+
+SIGUE SIENDO UNA LISTA DE CANDIDATAS. El filtro es una heuristica sobre la
+ultima asignacion DENTRO del metodo, asi que un `->select([...])` que viva en
+un ayudante de otro fichero no se ve --paso, y esta escrito--. Se mira cada
+una antes de tocarla.
 
 EL TERCER PUNTO CIEGO YA NO LO ES, y era el mas grande de los tres. Durante
 tres versiones esto solo miraba `response()->json([...])`, y una forma de
@@ -274,6 +282,38 @@ def formas_del_fichero(s):
             continue
 
 
+# CUERPOS ENTEROS MIRADOS Y DECIDIDOS, aparte de `DECIDIDAS` a proposito: una
+# cosa es decidir sobre la forma de array de un fichero y otra sobre su
+# `response()->json($x)`. Con un solo diccionario, exonerar la primera taparia
+# la segunda, que es la de mas riesgo de las dos.
+CUERPOS_DECIDIDOS = {
+    'app/Http/Controllers/Admin/Api/PedidosApiController.php':
+        'FALSO POSITIVO, y marca un limite de este medidor. `$orden` sale de '
+        '`ordenesBase()`, que SI enumera sus columnas con un `->select([...])` '
+        '--veintidos, una a una-- pero vive en `app/Support/Consultas/'
+        'AyudasDeAdmin.php`, y esto solo lee la asignacion dentro del metodo. '
+        'No publica una columna nueva sola. Para verlo habria que seguir la '
+        'llamada a otro fichero, y eso ya no es un grep.',
+}
+
+
+def cuerpos_pelados(s):
+    """`response()->json($x)` donde `$x` sale de la base: (variable, posicion).
+
+    El segundo punto ciego, ya cerrado. No hay forma de array que medir --no
+    hay ni una clave escrita--, asi que esto no pasa por `clasificar()`: va
+    derecho al cubo de `crudo`, que es lo que es. Publica la tabla entera.
+
+    El filtro es el mismo `viene_de_un_modelo()` del resto, y hace la misma
+    falta: `response()->json($mensaje)` sobre una cadena no publica nada.
+    """
+    for m in CUERPO_PELADO.finditer(s):
+        variable = m.group(1)
+
+        if viene_de_un_modelo(variable, cuerpo_de_la_funcion(s, m.start())):
+            yield variable, m.start()
+
+
 MOLDE = r'(\(\s*(int|float|bool|string|array)\s*\)\s*)?'
 RESPALDO = r'(\s*\?\?\s*[^,]+)?'
 
@@ -334,6 +374,51 @@ NO_ES_MODELO = re.compile(
     r'|->\s*(get|first|select)\s*\(\s*\[\s*["\']'
     r')'
 )
+
+
+# LAS RELACIONES QUE DECLARAN LOS MODELOS, leidas del codigo.
+#
+# ESTO CIERRA EL PRIMER PUNTO CIEGO, y se pudo cerrar por algo que paso fuera
+# de aqui: hasta que las relaciones no tuvieron tipo de retorno no habia
+# manera de reconocerlas. `$x = $user->domiciliary;` tiene exactamente la
+# misma forma que `$x = $user->name;`, y una saca un modelo de la base y la
+# otra es una cadena. Lo unico que las separa es saber que `domiciliary()` es
+# una relacion declarada, y ahora las 152 lo dicen.
+def nombres_de_relacion():
+    rx = re.compile(r'public function (\w+)\s*\(\s*\)\s*:\s*'
+                    r'(BelongsToMany|BelongsTo|HasManyThrough|HasOneThrough|'
+                    r'HasMany|HasOne|MorphToMany|MorphMany|MorphOne|MorphTo)\b')
+
+    nombres = set()
+    modelos = os.path.join(RAIZ, 'app', 'Models')
+
+    for d, _, fs in os.walk(modelos):
+        for f in fs:
+            if f.endswith('.php'):
+                texto = io.open(os.path.join(d, f),
+                                encoding='utf-8', errors='replace').read()
+                nombres.update(m.group(1) for m in rx.finditer(texto))
+
+    return frozenset(nombres)
+
+
+RELACIONES = nombres_de_relacion()
+
+# `$user->domiciliary`, `$pedido?->business`: acceso pelado a una relacion.
+#
+# Exige que el lado derecho sea SOLO eso. `$user->domiciliary->name` no entra
+# --tiene dos flechas y lo que saca es una columna-- y tampoco
+# `$user->domiciliary()->count()`, que es un numero.
+POR_RELACION = re.compile(r'^\s*\$\w+\s*\??->\s*(\w+)\s*$')
+
+# EL CUERPO ENTERO: `response()->json($f)`, sin lista de claves ninguna.
+#
+# ESTO CIERRA EL SEGUNDO PUNTO CIEGO. Es el caso extremo del modelo pelado y
+# el que menos se ve: no hay ni una clave escrita, asi que lo que se publica
+# es «las columnas que tenga la tabla» y una migracion las saca solas. El
+# recorrido de `formas_del_fichero()` no lo veia porque busca formas de
+# ARRAY, y aqui no hay array. `FacturasApiController:265` era uno.
+CUERPO_PELADO = re.compile(r'response\(\)->json\s*\(\s*(\$\w+)\s*[,)]')
 
 
 def piezas_de(arg):
@@ -401,6 +486,13 @@ def viene_de_un_modelo(variable, trozo):
         if NO_ES_MODELO.search(rhs):
             return False
         if DE_MODELO.search(rhs):
+            return True
+
+        # Y una relacion declarada tambien saca un modelo de la base, aunque
+        # no se parezca a una consulta. Ver `RELACIONES`.
+        por_relacion = POR_RELACION.match(rhs)
+
+        if por_relacion and por_relacion.group(1) in RELACIONES:
             return True
 
     return False
@@ -480,26 +572,75 @@ class X {
 """
 
 
+# UNA VARIABLE QUE SALE DE UNA RELACION, y otra que sale de un atributo.
+#
+# Las dos mitades del control del primer punto ciego cerrado. La primera tiene
+# que dar `crudo`; la segunda NO, porque `$user->name` es una cadena y
+# marcarla seria cambiar un punto ciego por sesenta falsos positivos --que es
+# lo que paso la primera vez que se escribio la categoria `crudo`--.
+CONTEXTO_POR_RELACION = """$domiciliary = $user->domiciliary;"""
+CONTEXTO_POR_ATRIBUTO = """$nombre = $user->nombre_de_pila;"""
+CONTROL_RELACION = """[
+    'a' => $m->a,
+    'b' => $m->b,
+    'c' => $m->c,
+    'domiciliary' => $domiciliary,
+]"""
+CONTROL_ATRIBUTO = """[
+    'a' => $m->a,
+    'b' => $m->b,
+    'c' => $m->c,
+    'nombre' => $nombre,
+]"""
+
+# Y el cuerpo entero, con su mitad que NO tiene que salir: la misma forma
+# sobre una variable que no viene de la base.
+CONTROL_CUERPO = """<?php
+class X {
+    public function uno()
+    {
+        $f = Invoice::findOrFail($id);
+        return response()->json($f);
+    }
+
+    public function dos()
+    {
+        $texto = implode(',', $cosas);
+        return response()->json($texto);
+    }
+}
+"""
+
+
 def control():
-    """Las dos mitades del control. Devuelve que fallo, o None si todo bien.
+    """Las mitades del control. Devuelve que fallo, o None si todo bien.
 
     `extractor`      no encuentra las dos clases de forma del fichero
-    `clasificador`   no reparte bien los cuatro trozos sinteticos
+    `clasificador`   no reparte bien los trozos sinteticos
     """
     e = veredicto(*clasificar(CONTROL_ENTIDAD))
     i = veredicto(*clasificar(CONTROL_INFORME))
     c = veredicto(*clasificar(CONTROL_CRUDO, CONTEXTO_CRUDO))
     n = veredicto(*clasificar(CONTROL_NO_CRUDO, CONTEXTO_NO_CRUDO))
+    r = veredicto(*clasificar(CONTROL_RELACION, CONTEXTO_POR_RELACION))
+    a = veredicto(*clasificar(CONTROL_ATRIBUTO, CONTEXTO_POR_ATRIBUTO))
 
     de_donde = sorted(d for _, _, d in formas_del_fichero(CONTROL_EXTRACTOR))
 
-    print('CONTROL --- los cuatro trozos escritos a mano:')
+    cuerpos = [v for v, _ in cuerpos_pelados(CONTROL_CUERPO)]
+
+    print('CONTROL --- los trozos escritos a mano:')
     print('  %-9s con forma de entidad                  (entidad)' % (e or 'nada'))
     print('  %-9s con forma de informe                  (informe)' % (i or 'nada'))
     print('  %-9s tres claves y un MODELO pelado        (crudo)' % (c or 'nada'))
     print('  %-9s variables peladas que NO son modelos  (no crudo)' % (n or 'nada'))
+    print('  %-9s un modelo que viene de una RELACION   (crudo)' % (r or 'nada'))
+    print('  %-9s un atributo, que NO es un modelo      (no crudo)' % (a or 'nada'))
+    print('  %-9s el cuerpo entero, y solo el que es modelo'
+          % (','.join(cuerpos) or 'nada'))
     print('  %-9s las dos clases de forma del fichero de mentira'
           % (','.join(de_donde) or 'nada'))
+    print('  %-9d relaciones declaradas leidas de app/Models' % len(RELACIONES))
 
     # Se devuelve QUE fallo y no un si/no, porque los dos modos de fallo
     # piden mirar sitios distintos: si el clasificador reparte mal, se mira
@@ -514,6 +655,17 @@ def control():
     if not (e == 'entidad' and i == 'informe'
             and c == 'crudo' and n != 'crudo'):
         return 'clasificador'
+
+    # Los dos puntos ciegos cerrados, cada uno con sus DOS mitades: que vea lo
+    # que tiene que ver, y que no vea lo que no. Sin la segunda mitad, las dos
+    # pasarian marcando cualquier variable, que es un medidor peor que el
+    # ciego: el ciego calla, este llena el informe de falsos positivos y hace
+    # que nadie se lo crea.
+    if not (r == 'crudo' and a != 'crudo'):
+        return 'relaciones'
+
+    if cuerpos != ['$f']:
+        return 'cuerpo'
 
     return None
 
@@ -539,6 +691,23 @@ def main():
         print('EL CLASIFICADOR NO SEPARA. No distingue un trozo con forma de')
         print('entidad de uno con forma de informe, asi que su reparto de abajo')
         print('no significaria nada. Mirar `clasificar()`. No se informa.')
+        return 2
+
+    if fallo == 'relaciones':
+        print()
+        print('EL MODELO QUE VIENE DE UNA RELACION NO SE RECONOCE, o se')
+        print('reconoce de mas y marca cualquier atributo. Depende de leer los')
+        print('tipos de retorno de `app/Models`; si una relacion nueva no los')
+        print('lleva, no esta en la cuenta de arriba. Mirar `RELACIONES` y')
+        print('`POR_RELACION`. No se informa.')
+        return 2
+
+    if fallo == 'cuerpo':
+        print()
+        print('EL CUERPO ENTERO NO SE VE, o se ve de mas. `response()->json($x)`')
+        print('sin lista de claves es el caso de mas riesgo --publica las')
+        print('columnas que tenga la tabla-- y es el que menos se nota leyendo.')
+        print('Mirar `cuerpos_pelados()`. No se informa.')
         return 2
 
     print()
@@ -569,6 +738,13 @@ def main():
                     cubos[cual].append((rel, s.count('\n', 0, pos) + 1,
                                         fle, ind, calc, crudo, de_donde))
 
+            # El cuerpo entero no tiene forma de array que repartir: es
+            # `crudo` por definicion. Ver `cuerpos_pelados()`.
+            for _, pos in cuerpos_pelados(s):
+                cual = 'decidida' if rel in CUERPOS_DECIDIDOS else 'crudo'
+                cubos[cual].append((rel, s.count('\n', 0, pos) + 1,
+                                    0, 0, 0, 1, 'cuerpo'))
+
     rotulos = {
         'crudo': 'MODELO PELADO --- publica la tabla entera; lo primero por arreglar',
         'entidad': 'FORMAS DE ENTIDAD --- esto es lo que §04 quiere en un Resource',
@@ -586,7 +762,9 @@ def main():
             print('  %s:%d   [%s]' % (rel, linea, de_donde))
 
             if cual == 'decidida':
-                for trozo in DECIDIDAS[rel].split('. '):
+                motivo = DECIDIDAS.get(rel) or CUERPOS_DECIDIDOS[rel]
+
+                for trozo in motivo.split('. '):
                     print('        %s' % trozo.strip())
                 continue
 
