@@ -67,16 +67,19 @@ class Settlement extends Model
         'created_by' => 'integer',
     ];
 
+    /** @return HasMany<SettlementItem, $this> */
     public function items(): HasMany
     {
         return $this->hasMany(SettlementItem::class, 'settlement_id');
     }
 
+    /** @return BelongsTo<Business, $this> */
     public function business(): BelongsTo
     {
         return $this->belongsTo(Business::class, 'business_id', 'busines_id');
     }
 
+    /** @return BelongsTo<Domiciliary, $this> */
     public function domiciliary(): BelongsTo
     {
         return $this->belongsTo(Domiciliary::class, 'domiciliary_id', 'domiciliary_id');

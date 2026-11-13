@@ -35,6 +35,7 @@ class BannerEvent extends Model
         'day' => 'date',
     ];
 
+    /** @return BelongsTo<Banner, $this> */
     public function banner(): BelongsTo
     {
         return $this->belongsTo(Banner::class, 'banner_id');

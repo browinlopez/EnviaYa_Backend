@@ -176,3 +176,57 @@ it('ninguna relacion se queda sin tipo de retorno', function () {
 
     expect($sinTipo)->toBe([]);
 });
+
+it('ninguna relacion se queda sin genericos', function () {
+    /*
+     * UN TIPO SIN GENERICOS DICE «ES UNA RELACION» PERO NO A QUE.
+     *
+     * `public function campaign(): BelongsTo` sin `@return BelongsTo<AdCampaign,
+     * $this>` deja a PHPStan con un `Model` pelado, así que
+     * `$banner->campaign->advertiser` no se comprueba: el segundo salto pasa
+     * como `mixed` y cualquier nombre vale.
+     *
+     * LO QUE ESTO VALE, MEDIDO Y SIN ADORNOS: de los 60 avisos quitó UNO. No
+     * es por el número. Es que 130 relaciones llevaban genéricos y 23 no, y
+     * una comprobación que funciona en el 85% de los sitios es justo la que no
+     * se puede usar para nada: nadie sabe si el verde de una cadena de dos
+     * saltos significa «está bien» o «no se miró».
+     */
+    $raiz = base_path('app/Models');
+    $it = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($raiz, FilesystemIterator::SKIP_DOTS)
+    );
+
+    $tipos = 'BelongsToMany|BelongsTo|HasManyThrough|HasOneThrough|HasMany|HasOne'
+        .'|MorphToMany|MorphMany|MorphOne|MorphTo';
+
+    /* El docbloque de encima, si lo hay, y la firma. */
+    $rx = '~(/\*\*(?:[^*]|\*(?!/))*\*/\s*)?public function (\w+)\(\)\s*:\s*('.$tipos.')\b~';
+
+    $sinGenericos = [];
+    $conGenericos = 0;
+
+    foreach ($it as $fichero) {
+        if ($fichero->getExtension() !== 'php') {
+            continue;
+        }
+
+        preg_match_all($rx, file_get_contents($fichero->getPathname()), $m, PREG_SET_ORDER);
+
+        foreach ($m as $x) {
+            if (preg_match('~@return\s+\\\\?(?:'.$tipos.')\s*<~', $x[1] ?? '')) {
+                $conGenericos++;
+            } else {
+                $sinGenericos[] = basename($fichero->getPathname()).'::'.$x[2].'()';
+            }
+        }
+    }
+
+    /* CONTROL: que el patrón vea de verdad los genéricos. Si dejara de
+       reconocerlos contaría cero y la lista saldría con las 153, no vacía —así
+       que este control falla por el lado ruidoso, que es el bueno. Eran 153 al
+       escribirlo. */
+    expect($conGenericos)->toBeGreaterThan(100);
+
+    expect($sinGenericos)->toBe([]);
+});

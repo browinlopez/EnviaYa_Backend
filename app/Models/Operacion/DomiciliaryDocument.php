@@ -53,6 +53,7 @@ class DomiciliaryDocument extends Model
         'state' => 1,
     ];
 
+    /** @return BelongsTo<Domiciliary, $this> */
     public function domiciliary(): BelongsTo
     {
         return $this->belongsTo(Domiciliary::class, 'domiciliary_id', 'domiciliary_id');

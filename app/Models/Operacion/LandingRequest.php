@@ -129,6 +129,7 @@ class LandingRequest extends Model
         'accepted_at' => 'datetime',
     ];
 
+    /** @return BelongsTo<User, $this> */
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to', 'user_id');

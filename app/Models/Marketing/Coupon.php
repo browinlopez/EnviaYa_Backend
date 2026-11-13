@@ -77,11 +77,13 @@ class Coupon extends Model
         $this->attributes['code'] = strtoupper(trim((string) $valor));
     }
 
+    /** @return HasMany<CouponRedemption, $this> */
     public function redemptions(): HasMany
     {
         return $this->hasMany(CouponRedemption::class, 'coupon_id');
     }
 
+    /** @return BelongsTo<Advertiser, $this> */
     public function advertiser(): BelongsTo
     {
         return $this->belongsTo(Advertiser::class, 'advertiser_id');
