@@ -10,6 +10,7 @@ use App\Http\Requests\Domiciliary\CrearDomiciliarioRequest;
 use App\Http\Requests\Domiciliary\DomiciliariosDeUnNegocioRequest;
 use App\Http\Requests\Domiciliary\VerDomiciliarioRequest;
 use App\Http\Resources\Domiciliario\DomiciliarioDeLaFlotaResource;
+use App\Http\Resources\Domiciliario\MiFichaDeDomiciliarioResource;
 use App\Http\Resources\Usuario\DomiciliarioDelAltaResource;
 use App\Http\Resources\Usuario\UsuarioResource;
 use App\Models\Business;
@@ -148,7 +149,7 @@ class DomiciliaryController extends Controller
         // Solo puede editar el propio domiciliario o el dueño de un negocio al
         // que esté asignado. Antes cualquier sesión válida podía modificar a
         // cualquier usuario mandando su user_id.
-        if (! $this->puedeEditarDomiciliario($request->user(), $user)) {
+        if (! $this->puedeVerYEditarDomiciliario($request->user(), $user)) {
             return response()->json([
                 'message' => 'No tienes permiso para editar este domiciliario',
             ], 403);
@@ -204,10 +205,22 @@ class DomiciliaryController extends Controller
     }
 
     /**
-     * Un domiciliario puede editarse a sí mismo; un dueño de negocio puede
-     * editar a los domiciliarios asignados a alguno de sus negocios.
+     * Un domiciliario puede verse y editarse a sí mismo; un dueño de negocio
+     * puede ver y editar a los domiciliarios asignados a alguno de sus
+     * negocios.
+     *
+     * VER Y EDITAR LLEVAN LA MISMA REGLA, y se llamaba `puedeEditar…` porque
+     * solo se usaba para editar. Eso fue el fallo: `updateDomiciliary` se
+     * acotó —su comentario lo cuenta, «antes cualquier sesión válida podía
+     * modificar a cualquier usuario mandando su user_id»— y
+     * `showDomiciliary`, cuarenta líneas más abajo en este mismo archivo, se
+     * quedó sin acotar. Arreglar la escritura y olvidar la lectura deja la
+     * misma puerta abierta, solo que en modo consulta.
+     *
+     * El nombre lleva ahora las dos cosas para que se note cuando se añada un
+     * tercer método que toque a un domiciliario.
      */
-    private function puedeEditarDomiciliario($autenticado, User $objetivo): bool
+    private function puedeVerYEditarDomiciliario($autenticado, User $objetivo): bool
     {
         if (! $autenticado) {
             return false;
@@ -230,12 +243,75 @@ class DomiciliaryController extends Controller
             ->exists();
     }
 
-    // Obtener un domiciliario específico
+    /**
+     * La ficha de un domiciliario: la suya, o la de uno de su tienda.
+     *
+     * LO QUE ESTO ARREGLA. El `domiciliary_id` llegaba EN EL CUERPO de la
+     * petición y nada lo comparaba con quien preguntaba; encima del grupo
+     * `domiciliaries` solo hay `auth:sanctum`. Medido contra la pila HTTP: un
+     * COMPRADOR con sesión recibía 200, la cédula del domiciliario, su correo,
+     * su teléfono y —lo que menos se veía— el `email_verification_token` de su
+     * usuario, que es con lo que se verifica un correo.
+     *
+     * No era una fuga de diseño, era un olvido con fecha: `updateDomiciliary`
+     * se acotó por este mismo motivo y esta, cuarenta líneas más arriba en el
+     * archivo, no. Las dos usan ahora el mismo predicado.
+     *
+     * EL IDENTIFICADOR PASA A SER OPCIONAL, y eso es lo que hace que esto sea
+     * seguro de verdad y no solo comprobado: si no viene, el domiciliario se
+     * resuelve de LA SESIÓN, así que el cliente no tiene que mandar un número
+     * que el servidor ya sabe. La app dejó de mandarlo.
+     *
+     * SIGUE ACEPTÁNDOLO para no romper lo que ya está instalado: las versiones
+     * publicadas mandan el suyo, que es el mismo que resolvería la sesión, así
+     * que para ellas no cambia nada. Cuando llega uno ajeno es cuando responde
+     * 403, y antes respondía la ficha.
+     */
     public function showDomiciliary(VerDomiciliarioRequest $request)
     {
+        $autenticado = $request->user();
 
-        $domiciliary = Domiciliary::with('user', 'reviews')->find($request->domiciliary_id);
+        /*
+         * Sin identificador, el de la sesión. `?->` y no `->`: quien pregunta
+         * puede no ser domiciliario, y entonces no hay ficha propia que dar.
+         */
+        $id = $request->filled('domiciliary_id')
+            ? (int) $request->domiciliary_id
+            : $autenticado?->domiciliary?->domiciliary_id;
 
-        return response()->json($domiciliary);
+        if ($id === null) {
+            return response()->json([
+                'message' => 'Indica de qué domiciliario quieres la ficha.',
+            ], 422);
+        }
+
+        $domiciliary = Domiciliary::with('user', 'reviews')->find($id);
+
+        /*
+         * 404 y no `null` con 200, que es lo que hacía: `find()` sobre un id
+         * que no está devuelve `null` y `response()->json(null)` es un 200 con
+         * cuerpo `null`. La validación lo tapaba con un 422 mientras el campo
+         * era obligatorio; ahora que puede faltar, el camino existe.
+         */
+        if (! $domiciliary) {
+            return response()->json(['message' => 'El domiciliario no existe.'], 404);
+        }
+
+        /*
+         * `user_id` es nulable en `domiciliary`, así que una fila huérfana no
+         * tiene con quién compararse. Nadie la ve: sin usuario detrás no hay
+         * «es el propio» ni «es de mi tienda» que comprobar, y adivinar sería
+         * justo lo que esto viene a cerrar.
+         */
+        if ($domiciliary->user === null
+            || ! $this->puedeVerYEditarDomiciliario($autenticado, $domiciliary->user)) {
+            return response()->json([
+                'message' => 'No tienes permiso para ver este domiciliario',
+            ], 403);
+        }
+
+        return response()->json(
+            (new MiFichaDeDomiciliarioResource($domiciliary))->resolve()
+        );
     }
 }

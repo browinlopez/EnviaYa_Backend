@@ -21,10 +21,24 @@ class VerDomiciliarioRequest extends FormRequest
         return true;
     }
 
+    /**
+     * EL IDENTIFICADOR ES OPCIONAL, y el cambio es a propósito.
+     *
+     * Era `required`. Lo que hace el controlador si no viene es resolver el
+     * domiciliario de LA SESIÓN, que es lo que debió hacer siempre: el cliente
+     * no tiene por qué mandar un número que el servidor ya sabe, y mientras
+     * tuvo que mandarlo nada comprobaba que fuera el suyo —un comprador
+     * mandaba cualquiera y recibía la ficha entera—.
+     *
+     * `sometimes` y no `nullable`: si la clave viene, tiene que traer un
+     * entero que exista. Con `nullable`, un `domiciliary_id: null` explícito
+     * pasaría la validación y caería en el camino de la sesión, que es
+     * confundir «no lo mando» con «lo mando vacío».
+     */
     public function rules(): array
     {
         return [
-            'domiciliary_id' => 'required|integer|exists:domiciliary,domiciliary_id',
+            'domiciliary_id' => 'sometimes|integer|exists:domiciliary,domiciliary_id',
         ];
     }
 }
