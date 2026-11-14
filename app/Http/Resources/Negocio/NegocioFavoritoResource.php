@@ -92,6 +92,24 @@ class NegocioFavoritoResource extends JsonResource
             'NIT' => $b->NIT,
             'logo' => $b->logo ?? 'https://example.com/default-logo.png',
             'state' => (bool) $b->state,
+            /*
+             * `accepting_orders` SE AÑADE, 13 de noviembre de 2026.
+             *
+             * FALTABA, y era la única de las cuatro listas de negocio que no
+             * lo mandaba. `state` dice si la tienda existe y está activa;
+             * `accepting_orders` dice si AHORA MISMO está recibiendo pedidos
+             * —el interruptor que el tendero aprieta cuando se le acumula la
+             * cocina o cierra antes—. Sin esto, desde favoritos la app no
+             * podía saber que una tienda estaba en pausa: la pintaba abierta,
+             * la persona armaba el carrito y se enteraba al intentar pedir.
+             *
+             * Es ADITIVO: ninguna clave cambia ni desaparece, así que las
+             * versiones publicadas siguen leyendo lo mismo y la que lo use lo
+             * tendrá. Molde de verdad y no la columna cruda, por lo mismo que
+             * en `Business::accepting_orders`: una cadena «0» es VERDADERA en
+             * JavaScript.
+             */
+            'accepting_orders' => (bool) $b->accepting_orders,
             'type' => $b->type,
             'municipality' => $b->municipality ? [
                 'id' => $b->municipality->id,

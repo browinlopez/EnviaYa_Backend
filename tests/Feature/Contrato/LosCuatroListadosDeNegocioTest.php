@@ -90,7 +90,13 @@ function clavesDelListado(bool $conDescripcion): array
 /** @return array<int, string> */
 function clavesDeFavoritos(): array
 {
-    return array_keys((new NegocioFavoritoResource(
+    return array_keys(unFavoritoResuelto());
+}
+
+/** La forma de favoritos, resuelta: no solo sus claves. */
+function unFavoritoResuelto(): array
+{
+    return (new NegocioFavoritoResource(
         unNegocioParaElListado(),
         favoritoId: 7,
         reparto: [
@@ -100,7 +106,7 @@ function clavesDeFavoritos(): array
         ],
         productos: [],
         resenas: [],
-    ))->resolve());
+    ))->resolve();
 }
 
 it('los dos listados del catalogo difieren en UNA sola clave: description', function () {
@@ -126,25 +132,43 @@ it('favoritos le falta lo que le falta, y esta dicho cual es la consecuencia', f
     $catalogo = clavesDelListado(true);
     $favoritos = clavesDeFavoritos();
 
+    /* `accepting_orders` YA NO ESTA EN ESTA LISTA, y ese es el arreglo del 13
+       de noviembre de 2026: favoritos lo manda. Lo que sigue faltandole son
+       dos campos del catalogo que ahi SI tienen sentido y aqui no:
+       `delivery_time_minutes` --favoritos no calcula el tiempo-- y
+       `is_affiliated`, que es de la vitrina. */
     expect(array_values(array_diff($catalogo, $favoritos)))->toBe([
         'delivery_time_minutes',
-        'accepting_orders',
         'is_affiliated',
     ]);
     expect(array_values(array_diff($favoritos, $catalogo)))->toBe(['favorite_id']);
 });
 
-it('desde favoritos la app no puede saber si la tienda esta en pausa', function () {
-    /* La consecuencia de que falte `accepting_orders`, dicha aparte para que
-       se lea como lo que es. En la ficha y en los listados del catálogo ese
-       campo existe para poder decir «no está recibiendo pedidos ahora» y
-       apagar el carrito, en vez de dejar pedir para fallar al final. Desde la
-       lista de favoritos eso no se puede.
+it('desde favoritos la app SI puede saber si la tienda esta en pausa', function () {
+    /*
+     * ESTA PRUEBA DECIA LO CONTRARIO, y su propio texto decia que ponerse
+     * roja seria la senal de que la decision se habia tomado. Se tomo el 13
+     * de noviembre de 2026.
+     *
+     * Lo que estaba en juego: en la ficha y en los listados del catalogo
+     * `accepting_orders` existe para poder decir «no esta recibiendo pedidos
+     * ahora» y apagar el carrito, en vez de dejar pedir para fallar al final.
+     * Desde la lista de favoritos no se podia: la app pintaba la tienda
+     * abierta, la persona armaba el carrito y se enteraba al intentar pedir.
+     *
+     * No se borra la prueba: se le da la vuelta. Afirmar que el campo ESTA en
+     * las tres es lo que impide que vuelva a faltar en una, que es como
+     * falto.
+     */
+    foreach ([clavesDeFavoritos(), clavesDelListado(true), clavesDelListado(false)] as $claves) {
+        expect($claves)->toContain('accepting_orders');
+    }
 
-       Si algún día se añade, esta prueba se pone roja y hay que borrarla: será
-       la señal de que la decisión se tomó. */
-    expect(clavesDeFavoritos())->not->toContain('accepting_orders');
-    expect(clavesDelListado(true))->toContain('accepting_orders');
+    /* Y que llegue como BOOLEANO de verdad, no como la cadena «0» del motor:
+       en JavaScript «0» es verdadera, asi que una tienda en pausa se pintaria
+       abierta igual. Es el mismo molde que `Business::accepting_orders` lleva
+       en sus `casts` por el mismo motivo. */
+    expect(unFavoritoResuelto()['accepting_orders'])->toBeBool();
 });
 
 it('las tres publican el propietario por el mismo presentador', function () {

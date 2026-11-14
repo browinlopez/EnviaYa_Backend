@@ -72,8 +72,8 @@ class PedidoResource extends JsonResource
                 'latitude' => $pedido->business->latitude ? (float) $pedido->business->latitude : null,
                 'longitude' => $pedido->business->longitude ? (float) $pedido->business->longitude : null,
                 'phone' => $pedido->business->phone ?? null,
-                // `city` no existe como columna: ver NegocioDelPedidoResource.
-                'city' => null,
+                // La ciudad sale de `municipality`: ver NegocioDelPedidoResource.
+                'city' => $pedido->business->municipality?->name,
                 'state' => $pedido->business->state ?? null,
                 'logo' => $pedido->business->logo ?? null,
             ],
@@ -83,7 +83,18 @@ class PedidoResource extends JsonResource
                 'alias' => $pedido->address->alias?->name,
                 'municipality' => $pedido->address->municipality?->name,
                 'department' => $pedido->address->department?->name,
-                'country' => $pedido->address->country?->name,
+                /*
+                 * POR LA CADENA y no por `UserAddress::country()`, que esta
+                 * marcada `@deprecated Devuelve null siempre` en el propio
+                 * modelo: es un `hasOneThrough` y hacen falta TRES saltos.
+                 * 13 de noviembre de 2026.
+                 *
+                 * Cuesta UNA consulta mas, y aqui se paga sin discusion: esta
+                 * forma responde a UN pedido --no a una lista-- asi que es una
+                 * consulta por peticion. En la lista del domiciliario NO se
+                 * paga, y el motivo esta escrito alli.
+                 */
+                'country' => $pedido->address->municipality?->department?->country?->name,
                 'latitude' => $pedido->address->latitude ? (float) $pedido->address->latitude : null,
                 'longitude' => $pedido->address->longitude ? (float) $pedido->address->longitude : null,
             ] : null,

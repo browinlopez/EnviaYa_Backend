@@ -466,7 +466,7 @@ class OrderController extends Controller
                  * hacer lo mismo: ahi el modelo se serializa entero y cualquier
                  * relacion cargada de mas SI saldria en la respuesta.
                  */
-                'order' => new PedidoResource($order->loadMissing('details.product.category', 'business', 'address', 'promotions', 'payments')),
+                'order' => new PedidoResource($order->loadMissing('details.product.category', 'business.municipality', 'address.municipality.department.country', 'promotions', 'payments')),
                 'bold_reference_id' => $intent->bold_reference_id ?? null,
                 /*
                  * La app lee el QR / redirect de acá para el pago online.

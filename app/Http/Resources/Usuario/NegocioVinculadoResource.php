@@ -57,7 +57,22 @@ class NegocioVinculadoResource extends JsonResource
         'municipality_id',
         'type',
         'max_courier_cash',
-        'credit_debt_cap',
+        /*
+         * `credit_debt_cap` SE RETIRA, 13 de noviembre de 2026.
+         *
+         * Estaba en esta lista con el hallazgo escrito al lado: el
+         * repositorio documenta en `NegocioRequest` que «solo lo pone el
+         * equipo; EL PANEL DEL TENDERO NO LO RECIBE», y lo recibía —y el
+         * domiciliario también, de cada negocio con el que trabaja—.
+         *
+         * SE COMPROBÓ QUIÉN LO LEE ANTES DE QUITARLO, en los cuatro clientes:
+         * solo `EnviaYa_Admin`, en su editor de negocios, que es justo donde
+         * el equipo lo pone. Ni la app ni el panel del tendero lo leen; en
+         * Aliados solo aparece en un comentario que explica de quién es.
+         *
+         * `MiNegocioResource` ya lo retenía, así que la regla se cumplía en un
+         * sitio y se incumplía aquí. Ahora se cumple en los dos.
+         */
         'state',
         'accepting_orders',
         'accepting_changed_at',

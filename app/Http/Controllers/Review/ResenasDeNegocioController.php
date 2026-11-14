@@ -27,7 +27,7 @@ class ResenasDeNegocioController extends Controller
          * cuenta sobre reseñas ocultas y la ficha del negocio mostraba dos
          * notas distintas en la misma pantalla.
          */
-        $reviews = BusinessReview::with('business', 'buyer.user')
+        $reviews = BusinessReview::with('business.municipality', 'buyer.user')
             ->where('busines_id', $request->business_id)
             ->where('state', true)
             ->orderByRaw('created_at IS NULL, created_at DESC')

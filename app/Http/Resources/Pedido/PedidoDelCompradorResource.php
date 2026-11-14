@@ -73,7 +73,24 @@ class PedidoDelCompradorResource extends JsonResource
             // el negocio cobra el subtotal y el domiciliario el domicilio.
             'subtotal' => $order->subtotal,
             'domicilio' => $order->domicilio,
-            'domiciliary_fee' => $order->domiciliary_fee,
+            /*
+             * `domiciliary_fee` SE RETIRA DE AQUÍ, 13 de noviembre de 2026.
+             *
+             * El comprador paga `domicilio`; lo que de ahí se lleva el
+             * domiciliario es otra cifra, y mandarle las dos le decía el
+             * margen de cada entrega. No tenía para qué: ninguna pantalla de
+             * la app lo pintaba.
+             *
+             * COMPROBADO QUIÉN LO LEE, en los cuatro clientes antes de
+             * quitarlo: solo `EnviaYa_Admin` —pagos, pedidos y la ficha del
+             * domiciliario—, y eso llega por los endpoints de `/admin`, no por
+             * esta respuesta. La app no lo menciona en ningún sitio.
+             *
+             * Y había un trabajo hecho que esto contradecía: `conGanancia` en
+             * `PedidoDeLaAppResource` existe para que el DOMICILIARIO no vea
+             * sus propias ganancias en su app. Se le ocultaban a él y se le
+             * mandaban al comprador.
+             */
             /*
              * Con cuánto dijo el cliente que va a pagar, y cuánto cambio hay
              * que mandarle. La tienda es quien prepara el sencillo ANTES de
@@ -111,8 +128,8 @@ class PedidoDelCompradorResource extends JsonResource
                 'latitude' => $order->business->latitude !== null ? (float) $order->business->latitude : null,
                 'longitude' => $order->business->longitude !== null ? (float) $order->business->longitude : null,
                 'phone' => $order->business->phone,
-                // `city` no existe como columna: ver NegocioDelPedidoResource.
-                'city' => null,
+                // La ciudad sale de `municipality`: ver NegocioDelPedidoResource.
+                'city' => $order->business->municipality?->name,
                 'state' => $order->business->state,
                 'logo' => $order->business->logo,
             ],
@@ -133,13 +150,38 @@ class PedidoDelCompradorResource extends JsonResource
                 'alias' => $order->address->alias?->name,
                 'municipality' => $order->address->municipality?->name,
                 'department' => $order->address->department?->name,
-                'country' => $order->address->country?->name,
+                /*
+                 * POR LA CADENA Y NO POR `UserAddress::country()`, 13 de
+                 * noviembre de 2026. Esa relación está marcada `@deprecated
+                 * Devuelve null siempre` en el propio modelo: es un
+                 * `hasOneThrough` y hacen falta TRES saltos
+                 * —`municipality → department → country`—, así que devolvía
+                 * null. Medido sobre el historial de un comprador: nulo en
+                 * 683 de 683 pedidos.
+                 *
+                 * NO CUESTA UNA CONSULTA MÁS: `ConsultaDePedidosController`
+                 * ya precarga `address.municipality.department.country`
+                 * entera. Los datos estaban cargados y el Resource los
+                 * ignoraba para preguntarle a una relación rota. Es el mismo
+                 * recorrido que `DireccionResource` hace en la lista de
+                 * direcciones, donde el país SÍ salía.
+                 */
+                'country' => $order->address->municipality?->department?->country?->name,
                 'latitude' => $order->address->latitude !== null ? (float) $order->address->latitude : null,
                 'longitude' => $order->address->longitude !== null ? (float) $order->address->longitude : null,
             ] : null,
             'domiciliary' => $order->domiciliary ? [
                 'name' => $order->domiciliary->user->name,
-                'email' => $order->domiciliary->user->email,
+                /*
+                 * `email` SE RETIRA, 13 de noviembre de 2026. El teléfono se
+                 * entiende: hay que poder llamarlo cuando está en la puerta.
+                 * El correo no sirve para eso, y es el dato de contacto
+                 * personal de un trabajador puesto en manos de cada cliente
+                 * al que le reparte.
+                 *
+                 * Ninguna pantalla de la app lo leía; comprobado en los cuatro
+                 * clientes antes de quitarlo.
+                 */
                 'phone' => $order->domiciliary->user->phone,
                 'domiciliary_id' => $order->domiciliary->domiciliary_id,
                 'available' => $order->domiciliary->available,

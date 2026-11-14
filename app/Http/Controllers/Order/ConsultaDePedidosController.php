@@ -41,7 +41,7 @@ class ConsultaDePedidosController extends Controller
 
         $orders = OrdersSales::where('buyer_id', $buyer->buyer_id)
             ->confirmados()
-            ->with('details.product.category', 'business', 'promotions', 'payments', 'address.municipality.department.country', 'address.alias', 'domiciliary.user')
+            ->with('details.product.category', 'business.municipality', 'promotions', 'payments', 'address.municipality.department.country', 'address.alias', 'domiciliary.user')
             ->get();
 
         $formattedOrders = $orders->map(

@@ -195,22 +195,23 @@ it('una columna nueva en buyer, owner, domiciliary o business NO sale tampoco', 
     }
 });
 
-it('el tope de credito de la tienda sigue viajando al tendero Y al domiciliario', function () {
+it('el tope de credito de la tienda YA NO viaja al tendero ni al domiciliario', function () {
     /*
-     * ESTO NO ES UNA PRUEBA DE QUE ALGO FUNCIONE. Fija un hallazgo para que
-     * arreglarlo sea una decision.
+     * ESTA PRUEBA FIJABA UN HALLAZGO y decia que el dia que se quitara se
+     * pondria roja «y obliga a comprobar que ninguna pantalla lo estaba
+     * leyendo». Pasaron las dos cosas, el 13 de noviembre de 2026: se
+     * comprobaron los cuatro clientes --solo lo lee el editor de negocios de
+     * `EnviaYa_Admin`, que es donde el equipo lo pone-- y se quito.
      *
      * `credit_debt_cap` esta documentado en `NegocioRequest` con estas
      * palabras: «lo que la tienda puede fiar entre todos sus clientes y la
      * deuda que puede arrastrar con la plataforma. Solo lo pone el equipo; EL
-     * PANEL DEL TENDERO NO LO RECIBE».
+     * PANEL DEL TENDERO NO LO RECIBE». Lo recibia, y el domiciliario tambien,
+     * de cada negocio con el que trabaja.
      *
-     * Lo recibe. Y el domiciliario tambien, de cada negocio con el que
-     * trabaja, junto con `max_courier_cash`. Medido contra la base de
-     * desarrollo: 1000000.00.
-     *
-     * El dia que se quite, esta prueba se pone roja y obliga a comprobar que
-     * ninguna pantalla lo estaba leyendo.
+     * La prueba se queda al reves en vez de borrarse: lo que impide que
+     * vuelva es afirmar que NO esta, y el escenario --dos roles, dos caminos
+     * de carga-- es lo que hace que valga para los dos.
      */
     $tendero = unUsuarioDeRol(2);
     $ownerId = DB::table('owner')->insertGetId([
@@ -246,7 +247,12 @@ it('el tope de credito de la tienda sigue viajando al tendero Y al domiciliario'
         $negocios = $forma[$clave]['businesses'] ?? [];
 
         expect($negocios)->not->toBeEmpty();
-        expect((float) $negocios[0]['credit_debt_cap'])->toBe(750000.0);
+        expect($negocios[0])->not->toHaveKey('credit_debt_cap');
+
+        /* CONTROL, y hace falta: el negocio tiene el tope PUESTO en la base
+           --750000-- asi que su ausencia es la lista blanca haciendo su
+           trabajo, no un dato que falte. Y lo que si es suyo sigue llegando. */
+        expect($negocios[0])->toHaveKey('max_courier_cash');
     }
 });
 

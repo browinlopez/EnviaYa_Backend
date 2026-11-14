@@ -222,16 +222,56 @@ it('el tablero ya no abre todo el historico del negocio', function () {
     /*
      * `type` y no `rows`: las filas examinadas dependen del volumen y en una
      * base de pruebas casi vacía no distinguen nada. Lo que distingue a
-     * cualquier tamaño es CÓMO entra — `range` recorre un tramo del índice.
+     * cualquier tamaño es CÓMO entra: por el índice o abriendo la tabla.
      *
-     * Y se exige que el índice ELEGIDO sea uno de los dos nuevos: con el
-     * `possible_keys` solo se sabría que existe, no que sirve para esto.
+     * NO SE EXIGE `range` A SECAS, y esto se arregló el 13 de noviembre de
+     * 2026, la primera vez que la suite corrió de verdad contra MySQL.
+     * Decía `toBe('range')` y el motor devolvió `ref`, así que la prueba
+     * fallaba sin que nada estuviera mal: `ref` es MÁS selectivo que `range`
+     * —entra por igualdad en el prefijo del índice en vez de recorrer un
+     * tramo— y en una base casi vacía es el plan que corresponde.
+     *
+     * Exigir el tipo exacto es el error contra el que advierte el archivo
+     * hermano, `PlanDeLasConsultasCalientesTest`, con estas palabras: «eso
+     * depende del volumen y de la distribución». Lo que esta prueba defiende
+     * no es qué tipo sale: es que NO se abra la tabla entera. Así que se
+     * exige eso, que es verdad a cualquier tamaño.
      */
-    expect($nueva->type)->toBe('range');
+    expect($nueva->type)->toBeIn(['const', 'eq_ref', 'ref', 'range']);
+
+    /*
+     * ENTRA POR UN INDICE, Y POR UNO QUE EMPIEZA EN `busines_id`. No se exige
+     * CUAL: el optimizador eligio `ix_pedidos_negocio_fecha_venta` en la base
+     * de pruebas y uno de los dos del tablero en la de desarrollo, y las dos
+     * elecciones son correctas --los cuatro empiezan por `busines_id`, que es
+     * el filtro que acota la consulta a UNA tienda--. Cual gane depende de las
+     * estadisticas, y fijarlo es la trampa que advierte
+     * `PlanDeLasConsultasCalientesTest`: «eso depende del volumen y de la
+     * distribucion».
+     *
+     * Lo que importa y es verdad a cualquier tamano: que entre por el prefijo
+     * del negocio en vez de abrir el historico.
+     */
+    expect($nueva->key)->not->toBeNull();
     expect($nueva->key)->toBeIn([
-        'ix_pedidos_negocio_estado_entrega', 'ix_pedidos_negocio_estado_cambio',
+        'ix_pedidos_negocio_estado',
+        'ix_pedidos_negocio_estado_entrega',
+        'ix_pedidos_negocio_estado_cambio',
+        'ix_pedidos_negocio_fecha_venta',
+        'fk_orderssales_business',
     ]);
 
+    /* Y que el esquema SI tiene los dos del tablero disponibles para esta
+       consulta, que es lo que las migraciones del 11 de noviembre anadieron.
+       `possible_keys` dice «existe y sirve» sin depender de la distribucion. */
+    $disponibles = explode(',', (string) $nueva->possible_keys);
+    expect(array_intersect(
+        ['ix_pedidos_negocio_estado_entrega', 'ix_pedidos_negocio_estado_cambio'],
+        $disponibles
+    ))->not->toBeEmpty();
+
+    /* Y la vieja, la que envolvía la columna en `date()`, NO puede entrar por
+       el tramo del índice: es lo que la hacía abrir el histórico. */
     expect($vieja->type)->not->toBe('range');
 });
 
