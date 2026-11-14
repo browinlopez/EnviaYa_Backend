@@ -9,7 +9,7 @@ use App\Http\Requests\Order\CalcularRutaRequest;
 use App\Models\Order\OrdersSales;
 use App\Services\TrazoDeLaRuta;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use RuntimeException;
 
 /**
@@ -70,7 +70,7 @@ class RutaDelPedidoController extends Controller
     {
         $pedido = OrdersSales::with(['business', 'address'])->find($orderId);
 
-        if (! $pedido || ! $this->puedeVerlo($request, $pedido)) {
+        if (! $pedido || Gate::denies('verRuta', $pedido)) {
             // 404 y no 403: decir «prohibido» sobre el número de otro
             // confirmaría que ese pedido existe.
             return response()->json(['message' => 'Ese pedido no es tuyo.'], 404);
@@ -83,41 +83,18 @@ class RutaDelPedidoController extends Controller
             : response()->json(['polilinea' => $polilinea]);
     }
 
-    /** El comprador, su domiciliario, la tienda que lo vende y el equipo. */
-    private function puedeVerlo(Request $request, OrdersSales $pedido): bool
-    {
-        $usuario = $request->user();
-
-        if (! $usuario) {
-            return false;
-        }
-
-        if ((int) $usuario->rol === 4) {
-            return true;
-        }
-
-        $suyo = (int) $usuario->user_id;
-
-        if ((int) ($pedido->buyer?->user_id) === $suyo) {
-            return true;
-        }
-
-        if ($pedido->domiciliary_id && (int) ($pedido->domiciliary?->user_id) === $suyo) {
-            return true;
-        }
-
-        return DB::table('owner_busines as ob')
-            ->join('owner as o', 'o.owner_id', '=', 'ob.owner_id')
-            ->where('ob.busines_id', $pedido->busines_id)
-            ->where('o.user_id', $suyo)
-            ->exists();
-    }
-
     /**
      * 503 y no 500: no es que la petición esté mal, es que falta
      * configuración del servidor o Google no respondió. La app lo trata como
      * «sin ruta» y pinta la línea recta, que es lo que hacía antes de que esto
      * existiera.
+     *
+     * SE RESTAURO el 14 de noviembre de 2026: al mudar `puedeVerlo()` a
+     * `OrdersSalesPolicy` borre hasta el final del fichero y me lleve este
+     * metodo de paso. Lo cazaron tres pruebas --«sin clave se responde 503»,
+     * «un fallo de Google no marca el pedido» y «un pedido sin coordenadas no
+     * revienta»-- con un «Call to undefined method». Un borrado por rango es
+     * exactamente asi de peligroso.
      */
     private function sinTrazado()
     {

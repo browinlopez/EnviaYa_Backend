@@ -21,6 +21,7 @@ use App\Services\CustodiaDeEfectivo;
 use App\Services\PapelesDelDomiciliario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 
 class DomiciliaryController extends Controller
@@ -149,7 +150,10 @@ class DomiciliaryController extends Controller
         // Solo puede editar el propio domiciliario o el dueño de un negocio al
         // que esté asignado. Antes cualquier sesión válida podía modificar a
         // cualquier usuario mandando su user_id.
-        if (! $this->puedeVerYEditarDomiciliario($request->user(), $user)) {
+        /* La regla vive en `DomiciliaryPolicy::verYEditar`, por la puerta con
+           nombre: el objetivo puede no tener fila de domiciliario y la regla
+           dice que uno siempre puede verse a si mismo, incluso entonces. */
+        if (Gate::denies('ver-y-editar-domiciliario', [$user])) {
             return response()->json([
                 'message' => 'No tienes permiso para editar este domiciliario',
             ], 403);
@@ -204,44 +208,14 @@ class DomiciliaryController extends Controller
         return $propios->first();
     }
 
-    /**
-     * Un domiciliario puede verse y editarse a sí mismo; un dueño de negocio
-     * puede ver y editar a los domiciliarios asignados a alguno de sus
-     * negocios.
-     *
-     * VER Y EDITAR LLEVAN LA MISMA REGLA, y se llamaba `puedeEditar…` porque
-     * solo se usaba para editar. Eso fue el fallo: `updateDomiciliary` se
-     * acotó —su comentario lo cuenta, «antes cualquier sesión válida podía
-     * modificar a cualquier usuario mandando su user_id»— y
-     * `showDomiciliary`, cuarenta líneas más abajo en este mismo archivo, se
-     * quedó sin acotar. Arreglar la escritura y olvidar la lectura deja la
-     * misma puerta abierta, solo que en modo consulta.
-     *
-     * El nombre lleva ahora las dos cosas para que se note cuando se añada un
-     * tercer método que toque a un domiciliario.
+    /*
+     * `puedeVerYEditarDomiciliario()` SE MUDO a
+     * `App\Policies\DomiciliaryPolicy::verYEditar` el 14 de noviembre de
+     * 2026, sin cambiar una coma. §08 pide Policy por recurso; aqui era un
+     * metodo privado, o sea una regla de autorizacion que solo podia usar
+     * quien la escribio --y por eso `showDomiciliary` se quedo sin acotar
+     * mientras `updateDomiciliary` si lo estaba--.
      */
-    private function puedeVerYEditarDomiciliario($autenticado, User $objetivo): bool
-    {
-        if (! $autenticado) {
-            return false;
-        }
-
-        if ((int) $autenticado->user_id === (int) $objetivo->user_id) {
-            return true;
-        }
-
-        $domiciliary = $objetivo->domiciliary;
-
-        if (! $domiciliary || ! $autenticado->owner) {
-            return false;
-        }
-
-        $negociosPropios = $autenticado->owner->businesses->pluck('busines_id');
-
-        return $domiciliary->businesses()
-            ->whereIn('business.busines_id', $negociosPropios)
-            ->exists();
-    }
 
     /**
      * La ficha de un domiciliario: la suya, o la de uno de su tienda.
@@ -303,8 +277,7 @@ class DomiciliaryController extends Controller
          * «es el propio» ni «es de mi tienda» que comprobar, y adivinar sería
          * justo lo que esto viene a cerrar.
          */
-        if ($domiciliary->user === null
-            || ! $this->puedeVerYEditarDomiciliario($autenticado, $domiciliary->user)) {
+        if ($domiciliary->user === null || Gate::denies('ver', $domiciliary)) {
             return response()->json([
                 'message' => 'No tienes permiso para ver este domiciliario',
             ], 403);

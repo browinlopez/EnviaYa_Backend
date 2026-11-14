@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Models\Domiciliary;
+use App\Models\Order\OrdersSales;
+use App\Models\User;
+use App\Policies\DomiciliaryPolicy;
+use App\Policies\OrdersSalesPolicy;
 use App\Services\Push\PushApns;
 use App\Services\Push\PushEnRegistro;
 use App\Services\Push\PushFirebase;
@@ -16,6 +21,7 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
@@ -87,6 +93,60 @@ class AppServiceProvider extends ServiceProvider
          * doler es el CI y la máquina de quien lo escribe.
          */
         Model::preventLazyLoading(! app()->isProduction());
+
+        /*
+         * LAS POLICIES, REGISTRADAS A MANO AUNQUE NO HAGA FALTA.
+         *
+         * AQUI HABIA ESCRITO QUE EL DESCUBRIMIENTO AUTOMATICO NO LAS
+         * ENCONTRARIA, por vivir los modelos en subcarpeta de dominio. ES
+         * FALSO, y lo canto un sabotaje: comentando el registro, la prueba
+         * siguio en verde. El buscador de Laravel SUBE por el espacio de
+         * nombres --para `App\\Models\\Order\\OrdersSales` prueba
+         * `App\\Models\\Order\\Policies\\...`, luego
+         * `App\\Models\\Policies\\...` y luego
+         * `App\\Policies\\OrdersSalesPolicy`, que es donde estan--.
+         *
+         * Se dejan registradas por lo que SI es verdad: §08 pide saber que
+         * recurso tiene regla, y esta lista lo dice en dos lineas sin que
+         * nadie tenga que conocer el algoritmo del buscador. Es documentacion
+         * ejecutable, no una necesidad tecnica.
+         *
+         * SEGUNDA CAPA, NO SUSTITUTO: el middleware de grupo sigue donde esta
+         * y es la primera linea, por lo que razona `EXCEPCIONES.md` --el
+         * middleware falla cerrado; una Policy olvidada falla abierta--. Esto
+         * es la defensa en profundidad de §35.
+         */
+        Gate::policy(Domiciliary::class, DomiciliaryPolicy::class);
+        Gate::policy(OrdersSales::class, OrdersSalesPolicy::class);
+
+        /*
+         * Y DOS PUERTAS CON NOMBRE, para las reglas cuyo argumento NO es el
+         * modelo. §08 admite «Policy o Gate», y aquí hacen falta las dos:
+         *
+         *   · `ver-ubicacion-del-domiciliario` recibe un `domiciliary_id`,
+         *     que es lo único que trae la petición del seguimiento. Cargar el
+         *     modelo para que el Gate pudiera resolver la Policy sería una
+         *     consulta por nada en la pantalla que la app refresca mientras
+         *     reparte.
+         *   · `ver-y-editar-domiciliario` recibe el USUARIO objetivo, y el
+         *     objetivo puede no tener fila de domiciliario: la regla dice que
+         *     uno siempre puede verse a sí mismo, incluso entonces.
+         *
+         * LA LÓGICA NO SE DUPLICA: las dos delegan en los métodos de
+         * `DomiciliaryPolicy`, que es donde vive la regla. Esto solo les pone
+         * un nombre invocable desde cualquier parte.
+         */
+        Gate::define(
+            'ver-ubicacion-del-domiciliario',
+            fn (?User $usuario, int $domiciliaryId) => app(DomiciliaryPolicy::class)
+                ->verUbicacion($usuario, $domiciliaryId),
+        );
+
+        Gate::define(
+            'ver-y-editar-domiciliario',
+            fn (?User $usuario, User $objetivo) => app(DomiciliaryPolicy::class)
+                ->verYEditar($usuario, $objetivo),
+        );
 
         /*
          * El contador de consultas por peticion: UNA vez por trabajador, no
