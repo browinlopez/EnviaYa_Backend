@@ -1,8 +1,15 @@
 # Estado del backend frente al estándar
 
-**Medido el 13 de noviembre de 2026.** Laravel 12.72 · 1336 pruebas en verde y
-12 saltadas · PHPStan y Pint limpios · 493 clases cargan · `composer audit` en
-cero · OpenAPI al día.
+**Medido el 14 de noviembre de 2026.** Laravel 12.72 · 1348 pruebas en verde y
+12 saltadas · PHPStan y Pint limpios · 494 clases cargan · `composer audit` en
+cero · OpenAPI al día · **la suite corrida también sobre MySQL 8** (72 de 72) ·
+**el arnés recorrido entero tras los cambios de respuesta: 33 de 33 procesos**.
+
+> **Un solo hallazgo del arnés, y es operativo**: `php artisan backup:monitor`
+> sale con 1 —«The Laravel backups on the local disk are considered
+> unhealthy»— porque vigila el disco LOCAL. Está en el cron, así que falla
+> cada día en silencio. Se arregla poniendo `BACKUP_DISK=r2_respaldos` en
+> Dokploy, que ya estaba en la lista de pendientes de operación.
 
 Doce ramas de trabajo fusionadas, y el backend **arrancado y recorrido entero**:
 33 procesos, 1223 peticiones contra MySQL de verdad y la pasarela de verdad.
