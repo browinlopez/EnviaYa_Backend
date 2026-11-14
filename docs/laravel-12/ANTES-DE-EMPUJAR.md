@@ -1,7 +1,7 @@
 # Lo que falta y no está en el código
 
-**11 de noviembre de 2026.** Todo lo que se podía hacer desde el repositorio
-está hecho y commiteado. Lo de abajo son acciones en consolas que no controla
+**Actualizado el 14 de noviembre de 2026** (antes: 11 de noviembre). Todo lo
+que se podía hacer desde el repositorio está hecho y commiteado. Lo de abajo son acciones en consolas que no controla
 este repositorio: Dokploy, Cloudflare, Google Cloud y las tiendas de
 aplicaciones. Va aquí, con el valor exacto, para que no haya que reconstruir
 el razonamiento cada vez.
@@ -14,10 +14,24 @@ servidor todavía no sirve.
 
 ## 1 · Empujar
 
-Nada está empujado. Son **50 commits** en `validacion/integracion` sobre
-`Devs`, y `Devs` a su vez va **22 commits por delante de `origin/Devs`**: hasta
-que `Devs` suba, las catorce ramas de trabajo que cuelgan de ahí no tienen
-dónde apoyarse.
+Nada está empujado. Son **137 commits** en `validacion/integracion` sobre
+`Devs`, y `Devs` a su vez va **22 commits por delante de `origin/Devs`**: 159
+en total. Hasta que `Devs` suba, las ramas de trabajo que cuelgan de ahí no
+tienen dónde apoyarse.
+
+> **Eran 50 el 11 de noviembre.** Es mucho para una sola revisión, y conviene
+> decirlo: empujar por partes se revisa mejor que todo de golpe. Las ramas
+> están separadas por asunto y cada mensaje de commit cuenta su porqué, así
+> que se pueden subir en tandas —contrato y Resources, instrumentos y
+> detectores, seguridad, documentación— en vez de en un solo empujón.
+>
+> **Y dos cosas cambian lo que reciben las apps publicadas**, que no era el
+> caso el 11 de noviembre: se retiró `domiciliary_fee` y el correo del
+> domiciliario del historial del comprador, y `credit_debt_cap` del login.
+> Está comprobado contra el sistema en marcha —33 de 33 procesos del arnés, y
+> la forma de las respuestas comparada clave por clave con la de antes— pero
+> es lo primero que mirar si algo se ve raro después del despliegue. El
+> detalle está en `ESTADO.md`.
 
 **El webhook de Dokploy despliega solo** al llegar a GitHub, así que empujar
 *es* desplegar. Lo que sube incluye el arreglo de que **Bold estaba
@@ -218,9 +232,11 @@ nombres de los checks no existen y la regla se escribiría a ciegas.
 
 ## 7 · Lo que sigue abierto y es decisión, no tarea
 
-- **`JsonResource`: quedan ~288 endpoints.** La primera tanda está hecha y el
-  método está escrito en `ESTADO.md`. No se migra lo que no se pueda comparar
-  byte a byte.
+- ~~**`JsonResource`: quedan ~288 endpoints.**~~ **HECHO.** Quince tandas, 56
+  clases en `app/Http/Resources/`, y `scripts/formas_de_entidad.py` mide
+  **cero** formas de entidad por migrar y **cero** modelos pelados en
+  `app/Http`. Lo que queda son informes de agregados, donde un Resource sería
+  la ceremonia que §05 prohíbe.
 - **Los percentiles por ruta de §25** siguen necesitando días de uso real. La
   línea base del arnés sirve para comparar contra sí misma, no para decir
   cuánto tarda la plataforma.
@@ -228,3 +244,17 @@ nombres de los checks no existen y la regla se escribiría a ciegas.
   antes hay que comprobar con una báscula real si los modelos de las tiendas
   hablan BLE o Bluetooth clásico. Si es clásico, la función es solo Android.
 - **Protección de rama** en GitHub (§50), sin poner.
+- **Siete rutas sin llamante**, sin decidir: tres piden criterio —la baja de
+  cuenta, el crédito a medias y la contradicción de `bold/status/{ref}`— y
+  cuatro son duplicados o reemplazos. Están en `scripts/rutas-candidatas.json`,
+  cada una con su motivo.
+- **El andamiaje web de Breeze**: 25 rutas vivas —login, perfil, contraseña y
+  su propia verificación de correo por URL firmada— en un repositorio que
+  `AGENTS.md` describe como API sin Blade ni vistas. Son **dos mecanismos de
+  verificación de correo a la vez**. Ya están congeladas en
+  `superficie-web.json`, así que no cambian en silencio; lo que falta es
+  decidir si sobran.
+- **El formato de `EnviaYa_App`**: tiene `.prettierrc.json` y prettier
+  instalado, y **nada lo ejecuta** —ni script, ni hook, ni CI—, así que 320
+  ficheros no lo cumplen. O se engancha o se quita la configuración; una regla
+  que nadie aplica parece una regla.

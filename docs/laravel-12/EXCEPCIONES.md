@@ -99,7 +99,7 @@ Si aparece una tercera, que aparezca con su motivo escrito acá.
 | | |
 |---|---|
 | **Regla** | `03-limites-de-lineas.md`: controlador 15–35 líneas, revisar por encima de 50 |
-| **Realidad** | Mediana **149**; **105 de 115** controladores pasan de 50. El mayor es `Order/OrderController.php` con **994** |
+| **Realidad** | Mediana **149**; **105 de 115** controladores pasan de 50. El mayor es `Order/OrderController.php` con **987** (eran 994; la cuenta se mide, no se recuerda) |
 | **Motivo** | El propio §03 dice que son «umbrales orientativos, no bloqueos automáticos», y §00 pone el tamaño en el **último** lugar de las prioridades |
 | **Riesgo aceptado** | Bajo en general —solo 3 controladores pasan de 7 métodos públicos, o sea que no son cajones de sastre— y alto en los tres grandes |
 | **Revisión** | `OrderController` (994 líneas) cuando se toque el flujo de pedidos; no antes y no como PR de limpieza suelto |
