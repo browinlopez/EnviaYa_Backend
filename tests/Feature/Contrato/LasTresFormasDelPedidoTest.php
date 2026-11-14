@@ -6,9 +6,13 @@ use App\Http\Resources\Pedido\PedidoDelCompradorResource;
 use App\Http\Resources\Pedido\PedidoResource;
 use App\Http\Resources\Pedido\RenglonDelPedidoResource;
 use App\Models\Business;
+use App\Models\Maps\Country;
+use App\Models\Maps\Department;
+use App\Models\Maps\Municipality;
 use App\Models\Order\OrdersSales;
 use App\Models\Order\OrdersSalesDetail;
 use App\Models\Product\Product;
+use App\Models\User\UserAddress;
 use Illuminate\Database\Eloquent\Collection as Eloquentes;
 
 /**
@@ -79,6 +83,17 @@ function unPedidoConSuNegocio(): OrdersSales
         'state' => 4,
     ], true);
 
+    /*
+     * EL NEGOCIO LLEVA SU MUNICIPIO, desde el 13 de noviembre de 2026: es de
+     * donde sale ahora `business.city`. Y se pone como RELACION CARGADA, que
+     * es como llega en produccion --los controladores precargan
+     * `business.municipality`-- porque con `preventLazyLoading` activo leerla
+     * sin cargar lanza.
+     */
+    $m = new Municipality;
+    $m->setRawAttributes(['id' => 1, 'name' => 'Bogotá', 'department_id' => 1], true);
+    $b->setRelation('municipality', $m);
+
     $o->setRelation('business', $b);
     $o->setRelation('address', null);
     $o->setRelation('domiciliary', null);
@@ -100,24 +115,43 @@ it('la forma del tendero es un subconjunto estricto de la del comprador', functi
        que mirarlo: las dos salen del mismo pedido. */
     expect(array_values(array_diff($tendero, $comprador)))->toBe([]);
 
-    /* Y la del comprador tiene ocho más, que es lo que la hace la mayor. */
-    expect(count($comprador) - count($tendero))->toBe(8);
+    /* Y la del comprador tiene SIETE más. Eran ocho hasta el 13 de noviembre
+       de 2026, cuando se le quitó `domiciliary_fee` al comprador; el tendero
+       nunca la tuvo, así que lo que cambia es la cuenta y NO la relación de
+       subconjunto, que es lo que esta prueba defiende. */
+    expect(count($comprador) - count($tendero))->toBe(7);
 });
 
-it('el comprador recibe lo que gana el domiciliario por su pedido', function () {
+it('el comprador YA NO recibe lo que gana el domiciliario, ni su correo', function () {
     $publicado = (new PedidoDelCompradorResource(unPedidoConSuNegocio()))->resolve();
 
-    /* MEDIDO, NO ARREGLADO. El comprador paga `domicilio`; `domiciliary_fee`
-       es lo que de ahí se lleva el domiciliario, así que mandarle las dos le
-       dice el margen de cada entrega. Hay trabajo hecho para que el
-       domiciliario no vea sus propias ganancias en su app; el comprador sí
-       las ve.
+    /*
+     * ESTA PRUEBA DECIA LO CONTRARIO, y su propio texto decia que ponerse
+     * roja seria la senal de que se habia decidido. Se decidio el 13 de
+     * noviembre de 2026.
+     *
+     * El comprador paga `domicilio`; `domiciliary_fee` es lo que de ahi se
+     * lleva el domiciliario, asi que mandarle las dos le decia el margen de
+     * cada entrega. Y habia trabajo hecho que esto contradecia: `conGanancia`
+     * en `PedidoDeLaAppResource` existe para que el DOMICILIARIO no vea sus
+     * propias ganancias en su app. Se le ocultaban a el y se le mandaban al
+     * comprador.
+     *
+     * Antes de quitarlo se comprobo quien lo lee en los cuatro clientes: solo
+     * `EnviaYa_Admin`, y por los endpoints de `/admin`, no por esta respuesta.
+     *
+     * Y EL CORREO DEL DOMICILIARIO TAMBIEN SE FUE. El telefono se entiende
+     * --hay que poder llamarlo cuando esta en la puerta-- pero el correo no
+     * sirve para eso: era el dato de contacto personal de un trabajador en
+     * manos de cada cliente al que le reparte.
+     */
+    expect($publicado)->not->toHaveKey('domiciliary_fee');
+    expect($publicado['domiciliary'] ?? [])->not->toHaveKey('email');
 
-       Quitarlo cambia lo que recibe una app publicada, así que es una
-       decisión de producto. Si se toma, esta prueba se pone roja y hay que
-       borrarla: será la señal de que se decidió. */
-    expect($publicado)->toHaveKey('domiciliary_fee', '1500.00');
+    /* CONTROL: lo que el comprador SI tiene que ver sigue ahi. Sin esto, «no
+       recibe la ganancia» seria verdad tambien con una respuesta vacia. */
     expect($publicado)->toHaveKey('domicilio', '2000.00');
+    expect($publicado)->toHaveKey('total');
 });
 
 it('el renglon publica trece claves, y las cinco ultimas son las del peso', function () {
@@ -158,7 +192,7 @@ it('el renglon publica trece claves, y las cinco ultimas son las del peso', func
     expect((new RenglonDelPedidoResource($d))->resolve()['qty_final'])->toBe('0.540');
 });
 
-it('la clave city publica null porque esa columna no existe', function () {
+it('la clave city YA trae la ciudad, que sale del municipio', function () {
     $publicado = (new PedidoDelCompradorResource(unPedidoConSuNegocio()))->resolve();
 
     /* `business.city` NO EXISTE como columna de `business`. La tabla tiene
@@ -171,12 +205,17 @@ it('la clave city publica null porque esa columna no existe', function () {
        no estaba declarada con su tipo, no podía comprobar el campo: el aviso
        no existía, no es que estuviera silenciado.
 
-       SE CONSERVA LA CLAVE, con `null` explícito en el código: la salida es la
-       misma que hoy y quitarla obligaría a la app a defenderse de un
-       `undefined` donde hoy recibe un nulo. Esta prueba está para que nadie
-       lea `'city'` en la respuesta y crea que trae la ciudad. */
+       YA NO ES NULA. Desde el 13 de noviembre de 2026 sale de
+       `municipality->name`, que es de donde salía la ciudad en los listados de
+       negocio desde siempre. La clave no cambia ni se renombra: lo que cambia
+       es que dice algo.
+
+       Esta prueba decía `toBeNull()` y pasaba. Ojo: después del arreglo SEGUÍA
+       pasando, porque el negocio del escenario no traía municipio y `?->name`
+       da null igual. Un verde vacío. Por eso el escenario lleva ahora su
+       municipio cargado, como llega en producción. */
     expect($publicado['business'])->toHaveKey('city');
-    expect($publicado['business']['city'])->toBeNull();
+    expect($publicado['business']['city'])->toBe('Bogotá');
 
     /* La ciudad de verdad, cuando haga falta, sale de acá. En este pedido la
        dirección es nula —es un pedido de recogida— así que lo que se fija es
@@ -192,4 +231,62 @@ it('CONTROL: el negocio de la prueba SI trae lo que de verdad existe', function 
 
     expect($publicado['business']['name'])->toBe('Tienda Ana');
     expect($publicado['business']['phone'])->toBe('3009999999');
+});
+
+it('el pais de la direccion YA NO es nulo en el historial del comprador', function () {
+    /*
+     * EL HALLAZGO QUE ESTO CIERRA. `delivery_address.country` era nulo en 683
+     * de 683 pedidos, medido sobre el historial de un comprador real. El
+     * municipio y el departamento salían; el país no había salido nunca.
+     *
+     * La causa: `UserAddress::country()` es un `hasOneThrough` y hacen falta
+     * TRES saltos —`municipality → department → country`—, así que la relación
+     * devolvía null. Su propio docbloque lo decía: «@deprecated Devuelve null
+     * siempre».
+     *
+     * Y NO COSTÓ UNA CONSULTA: `ConsultaDePedidosController` ya precargaba
+     * `address.municipality.department.country` entera. Los datos estaban
+     * cargados y el Resource los ignoraba para preguntarle a una relación
+     * rota. Es el mismo recorrido que `DireccionResource` hacía en la lista de
+     * direcciones, donde el país SÍ salía.
+     *
+     * EN LA LISTA DEL DOMICILIARIO SIGUE SIENDO NULO, y eso es una decisión
+     * escrita en `PedidoDeLaAppResource`: allí la cadena cuesta una consulta
+     * más por petición, en la pantalla que su app refresca mientras reparte,
+     * para devolver siempre «Colombia». Se paga donde es gratis.
+     */
+    $pais = new Country;
+    $pais->setRawAttributes(['id' => 1, 'name' => 'Colombia', 'iso_code' => 'CO'], true);
+
+    $depto = new Department;
+    $depto->setRawAttributes(['id' => 1, 'name' => 'Cundinamarca', 'country_id' => 1], true);
+    $depto->setRelation('country', $pais);
+
+    $muni = new Municipality;
+    $muni->setRawAttributes(['id' => 1, 'name' => 'Bogotá', 'department_id' => 1], true);
+    $muni->setRelation('department', $depto);
+
+    $dir = new UserAddress;
+    $dir->setRawAttributes([
+        'address_id' => 9,
+        'address' => 'Calle 1 #2-3',
+        'street' => 'Apto 301',
+        'latitude' => '4.60',
+        'longitude' => '-74.08',
+    ], true);
+    $dir->setRelation('municipality', $muni);
+    $dir->setRelation('department', $depto);
+    $dir->setRelation('alias', null);
+
+    $pedido = unPedidoConSuNegocio();
+    $pedido->setRelation('address', $dir);
+
+    $publicado = (new PedidoDelCompradorResource($pedido))->resolve();
+
+    expect($publicado['delivery_address']['country'])->toBe('Colombia');
+
+    /* CONTROL: los tres niveles salen, no solo el que se arregló. Sin esto,
+       «el país sale» pasaría también con una dirección a medio construir. */
+    expect($publicado['delivery_address']['municipality'])->toBe('Bogotá');
+    expect($publicado['delivery_address']['department'])->toBe('Cundinamarca');
 });

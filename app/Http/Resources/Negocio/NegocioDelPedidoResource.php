@@ -36,23 +36,29 @@ class NegocioDelPedidoResource extends JsonResource
             'phone' => $negocio->phone,
             /*
             * `city` NO EXISTE como columna de `business`. La tabla tiene
-            * `municipality_id`, y la ciudad de verdad sale de ahi. Esta
-            * clave ha estado publicando `null` desde que se escribio, en
-            * CINCO respuestas distintas, y lo destapo PHPStan al tipar el
-            * recurso: mientras la relacion no estaba declarada, no podia
-            * comprobar el campo.
+            * `municipality_id`, y la ciudad de verdad sale de ahi. Esta clave
+            * estuvo publicando `null` desde que se escribio, en CINCO
+            * respuestas distintas, y lo destapo PHPStan al tipar el recurso:
+            * mientras la relacion no estaba declarada, no podia comprobar el
+            * campo.
             *
-            * Se deja la clave, con `null` explicito: la salida es la
-            * misma que hoy --`null` de las dos maneras-- y quitarla del
-            * todo obligaria a la app a defenderse de un `undefined`
-            * donde hoy recibe un nulo. Lo que cambia es que ya no
-            * finge leer una columna que no hay.
+            * YA NO. Desde el 13 de noviembre de 2026 sale de
+            * `municipality->name`, que es de donde salia la ciudad en los
+            * listados de negocio desde siempre. El campo pasa de mentir a
+            * decir algo.
             *
-            * Si algun dia la ciudad hace falta de verdad, sale de
-            * `municipality->name`, que ya viaja en varias de estas
-            * respuestas.
+            * ES ADITIVO EN LA PRACTICA: la clave ya estaba y su tipo
+            * declarado era `string|null`, asi que una app que la leyera
+            * recibia nulo y ahora recibe texto. No se quita nada ni se
+            * renombra nada.
+            *
+            * CUESTA UNA PRECARGA, y hay que ponerla donde falte: el
+            * `business` de estas respuestas tiene que venir con su
+            * `municipality`. Con `preventLazyLoading` activo fuera de
+            * produccion, el sitio que se olvide LANZA en las pruebas en vez
+            * de gastar una consulta por fila en silencio.
             */
-            'city' => null,
+            'city' => $negocio->municipality?->name,
             'qualification' => $negocio->qualification,
             'state' => $negocio->state,
             'logo' => $negocio->logo,

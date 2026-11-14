@@ -47,8 +47,8 @@ class NegocioDeLaResenaResource extends JsonResource
             'razon_social' => $b->razonSocial_DCD,
             'NIT' => $b->NIT,
             'logo' => $b->logo,
-            // `city` no existe como columna: ver NegocioDelPedidoResource.
-            'city' => null,
+            // La ciudad sale de `municipality`: ver NegocioDelPedidoResource.
+            'city' => $b->municipality?->name,
             'state' => $b->state,
         ];
     }

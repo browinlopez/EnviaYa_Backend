@@ -70,14 +70,29 @@ it('el panel del tendero NO recibe el tope de credito, como dice la regla', func
     expect($publicado)->toHaveKey('max_courier_cash', 200000.0);
 });
 
-it('pero el login SI lo manda, y por eso la regla se cumple a medias', function () {
+it('y el login tampoco lo manda ya: la regla se cumple en los dos sitios', function () {
+    /*
+     * ESTA PRUEBA DECIA LO CONTRARIO, y su propio texto decia que ponerse
+     * roja seria la senal de que la decision se habia tomado. Se tomo el 13
+     * de noviembre de 2026.
+     *
+     * `NegocioRequest` documenta el tope de credito asi: «solo lo pone el
+     * equipo; EL PANEL DEL TENDERO NO LO RECIBE». Se cumplia en
+     * `MiNegocioResource` y se incumplia en el login, que es la misma tienda
+     * por otra puerta.
+     *
+     * Antes de quitarlo se comprobo quien lo lee en los cuatro clientes:
+     * solo el editor de negocios de `EnviaYa_Admin`, que es justo donde el
+     * equipo lo pone.
+     */
     $publicado = (new NegocioVinculadoResource(unaTiendaPropia()))->resolve();
 
-    /* La misma tienda, en la respuesta del login. MEDIDO, NO ARREGLADO: va
-       con lista blanca escrita, así que no es una columna que se publique
-       sola; es una decisión pendiente. Si se toma y se quita, esta prueba se
-       pone roja y hay que borrarla: será la señal. */
-    expect($publicado)->toHaveKey('credit_debt_cap');
+    expect($publicado)->not->toHaveKey('credit_debt_cap');
+
+    /* CONTROL: la lista blanca sigue publicando lo que SI es del tendero. Sin
+       esto, «no manda el tope» seria verdad tambien con una respuesta vacia. */
+    expect($publicado)->toHaveKey('max_courier_cash');
+    expect($publicado)->toHaveKey('accepting_orders');
 });
 
 it('el producto de la tienda lleva las CUATRO claves de configuracion del peso', function () {

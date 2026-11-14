@@ -83,7 +83,13 @@ class PedidoDeLaAppResource extends JsonResource
     public static function relaciones(): array
     {
         return [
-            'business',
+            /*
+             * `.municipality` desde el 13 de noviembre de 2026: `toArray()`
+             * publica `business.city`, que antes era un `null` escrito a mano
+             * --la columna no existe-- y ahora sale de `municipality->name`.
+             * Es UNA consulta mas por peticion, no por pedido.
+             */
+            'business.municipality',
             /*
              * `.category` Y NO SOLO `.product`: `toArray()` lee
              * `$detail->product->category?->name`, y sin esto la categoría se
@@ -250,8 +256,8 @@ class PedidoDeLaAppResource extends JsonResource
                 'latitude' => $order->business->latitude !== null ? (float) $order->business->latitude : null,
                 'longitude' => $order->business->longitude !== null ? (float) $order->business->longitude : null,
                 'phone' => $order->business->phone,
-                // `city` no existe como columna: ver NegocioDelPedidoResource.
-                'city' => null,
+                // La ciudad sale de `municipality`: ver NegocioDelPedidoResource.
+                'city' => $order->business->municipality?->name,
                 'state' => $order->business->state,
                 'logo' => $order->business->logo,
             ],
@@ -274,8 +280,25 @@ class PedidoDeLaAppResource extends JsonResource
                 'alias' => $order->address->alias?->name,
                 'municipality' => $order->address->municipality?->name,
                 'department' => $order->address->department?->name,
-                // Siempre null, y a proposito: ver `UserAddress::country()`.
-                // Sigue viajando porque las apps publicadas leen la clave.
+                /*
+                 * NULL AQUI, Y A PROPOSITO, aunque desde el 13 de noviembre de
+                 * 2026 las OTRAS DOS formas del pedido si traen el pais.
+                 *
+                 * Donde se arreglo fue donde el dato ya estaba cargado --el
+                 * historial del comprador, que precarga la cadena entera-- y
+                 * donde se responde UN pedido --el panel del tendero--. Esta
+                 * es la LISTA del domiciliario, y aqui la cadena
+                 * `municipality->department->country` cuesta una consulta mas
+                 * por peticion, en la pantalla que su app refresca mientras
+                 * reparte, para devolver siempre «Colombia».
+                 *
+                 * Medido: ningun cliente lee esta clave --se comprobo en los
+                 * cuatro-- y la plataforma opera en un solo pais. Se paga donde
+                 * es gratis y no donde cuesta; si algun dia opera en dos
+                 * paises, este comentario es el sitio donde empezar.
+                 *
+                 * La clave sigue viajando porque las apps publicadas la leen.
+                 */
                 'country' => null,
                 'latitude' => $order->address->latitude !== null ? (float) $order->address->latitude : null,
                 'longitude' => $order->address->longitude !== null ? (float) $order->address->longitude : null,
