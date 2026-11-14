@@ -273,16 +273,46 @@ def webhook(paso):
 
 # --------------------------------------------------- comandos programados
 
-@proceso('Comandos programados: los siete del cron')
+@proceso('Comandos programados: los del cron, uno por uno')
 def programados(paso):
+    # EL NOMBRE NO LLEVA NUMERO, a proposito. Decia «los siete» y al sacar
+    # `backup:monitor` de la lista pasaron a ser cinco, asi que el nombre
+    # quedo mintiendo el mismo dia. Un numero en un rotulo se queda viejo sin
+    # que nada avise; la cuenta de verdad la imprime el paso de abajo, que la
+    # lee del planificador.
     cod, salida = artisan('schedule:list')
     if cod != 0:
         raise Fallo('schedule:list fallo: ' + salida[-200:])
     n = len([l for l in salida.splitlines() if 'artisan' in l])
     paso('el planificador declara %d tareas' % n)
 
+    # `backup:monitor` NO VA EN ESTA LISTA, y quitarlo es el arreglo del 14 de
+    # noviembre de 2026.
+    #
+    # El mensaje de este bucle afirma dos cosas de cualquier comando que salga
+    # con codigo distinto de cero: que es un fallo, y que es SILENCIOSO. Para
+    # `backup:monitor` las dos son falsas, y me engañaron a mi:
+    #
+    #   · Su salida 1 no es una averia: es un INFORME SOBRE LOS DATOS. Dice
+    #     «no hay copia de menos de un dia» --`MaximumAgeInDays => 1`-- y en
+    #     una maquina de desarrollo, donde el planificador no corre, esa es la
+    #     respuesta CORRECTA. Aqui la ultima copia era del 12 y se corrio el
+    #     14: dos dias. El comando hizo su trabajo.
+    #   · No es silencioso. `config/backup.php` manda
+    #     `UnhealthyBackupWasFoundNotification` por correo a
+    #     `gerencia@vecipaya.com`, y el diseño incluye un latido diario a
+    #     proposito para que la AUSENCIA de correo sea la señal si el cron
+    #     entero muere. Eso esta razonado en ese archivo.
+    #
+    # Donde si se comprueba es en el proceso de la copia, DESPUES de hacer
+    # una: alli su salida significa algo --«acabo de copiar, el monitor tiene
+    # que decir que esta sana»-- y si dijera que no, seria un hallazgo de
+    # verdad: querria decir que el monitor y la copia no miran el mismo sitio.
+    #
+    # Un informe que afirma de mas es peor que uno corto: se cita como si
+    # fuera cierto.
     for cmd in (('resumen:diario',), ('liquidaciones:diarias',), ('auditoria:podar',),
-                ('ubicaciones:podar',), ('backup:clean',), ('backup:monitor',)):
+                ('ubicaciones:podar',), ('backup:clean',)):
         cod, salida = artisan(*cmd)
         ultimas = ' | '.join([l.strip() for l in salida.strip().splitlines() if l.strip()][-2:])
         if cod != 0:
@@ -306,7 +336,31 @@ def respaldo(paso):
     paso('backup:run -> salida 0 (%s)' % ultimas[:120])
 
     cod, salida = artisan('backup:monitor')
-    paso('backup:monitor -> salida %s' % cod)
+    ultimas = ' | '.join([l.strip() for l in salida.strip().splitlines() if l.strip()][-2:])
+    paso('backup:monitor -> salida %s (%s)' % (cod, ultimas[:90]))
+
+    #
+    # AQUI SI ES UNA ASERCION, y es la unica forma honesta de comprobar este
+    # comando: acabamos de hacer una copia en la linea de arriba, asi que el
+    # monitor TIENE que decir que esta sana. Si dice que no, el hallazgo es
+    # real y es del tipo que importa: querria decir que la copia y el monitor
+    # no miran el mismo sitio --distinto disco, o distinto nombre de
+    # carpeta-- y entonces la vigilancia no vigila nada.
+    #
+    # Fuera de aqui su salida no se juzga: en una maquina donde el
+    # planificador no corre, «no hay copia de menos de un dia» es la respuesta
+    # correcta y no un fallo del backend. El porque completo esta en el
+    # proceso de los comandos programados.
+    #
+    if cod != 0:
+        hallazgo('php artisan backup:monitor',
+                 'Se acaba de hacer una copia con `backup:run` y el monitor sigue '
+                 'diciendo que no esta sana (salida %s). Eso no es antiguedad: es que '
+                 'la copia y el monitor no miran el mismo sitio. Comprobar que '
+                 '`backup.backup.destination.disks` y '
+                 '`backup.monitor_backups[].disks` salgan los dos de BACKUP_DISK, y '
+                 'que los dos `name` coincidan. Ultimo: %s' % (cod, ultimas[:200]))
+        paso('backup:monitor -> salida %s  <-- MIRAR' % cod)
 
 
 # ------------------------------------------------------------ mantenimiento

@@ -3,13 +3,39 @@
 **Medido el 14 de noviembre de 2026.** Laravel 12.72 · 1348 pruebas en verde y
 12 saltadas · PHPStan y Pint limpios · 494 clases cargan · `composer audit` en
 cero · OpenAPI al día · **la suite corrida también sobre MySQL 8** (72 de 72) ·
-**el arnés recorrido entero tras los cambios de respuesta: 33 de 33 procesos**.
+**el arnés recorrido entero tras los cambios de respuesta: 33 de 33
+procesos, CERO hallazgos**.
 
-> **Un solo hallazgo del arnés, y es operativo**: `php artisan backup:monitor`
-> sale con 1 —«The Laravel backups on the local disk are considered
-> unhealthy»— porque vigila el disco LOCAL. Está en el cron, así que falla
-> cada día en silencio. Se arregla poniendo `BACKUP_DISK=r2_respaldos` en
-> Dokploy, que ya estaba en la lista de pendientes de operación.
+> **Y UN HALLAZGO QUE NO LO ERA, dejado escrito porque el error fue de lectura
+> y esos se repiten.** La primera corrida del 14 de noviembre señaló
+> `php artisan backup:monitor` —salida 1, «backups considered unhealthy»— y se
+> reportó como «está en el cron, así que falla cada día en silencio, se
+> arregla con `BACKUP_DISK` en Dokploy». **Las tres cosas eran falsas**, y se
+> comprobaron una por una:
+>
+> - La causa no era el disco. `backup.php` ya saca el disco vigilado de
+>   `env('BACKUP_DISK')` —el mismo al que se copia— y lo tiene razonado al
+>   lado. La causa era la EDAD: la última copia de esta máquina era del 12 y
+>   se corrió el 14, y el umbral es `MaximumAgeInDays => 1`. En una máquina de
+>   desarrollo, donde el planificador no corre, «no hay copia de menos de un
+>   día» es la respuesta CORRECTA.
+> - No falla cada día: las tres tareas están programadas en
+>   `routes/console.php` y en el servidor el planificador sí corre.
+> - No es silencioso: `UnhealthyBackupWasFoundNotification` va por correo a
+>   `gerencia@vecipaya.com`, y el diseño incluye un latido diario a propósito
+>   para que la AUSENCIA de correo sea la señal si el cron entero muere.
+>
+> Lo que sí se arregló es el arnés, que es quien lo afirmaba: su bucle de
+> comandos del cron decía «falla cada día en silencio» de CUALQUIER salida
+> distinta de cero. `backup:monitor` sale de ese bucle y pasa al proceso de la
+> copia, DESPUÉS de hacer una, donde su salida sí significa algo: «acabo de
+> copiar, el monitor tiene que decir que está sana». Si dijera que no, el
+> hallazgo sería real —la copia y el monitor no mirarían el mismo sitio— y se
+> comprobó rompiéndolo: apuntando el monitor a otra carpeta, salta y nombra la
+> causa.
+>
+> Un informe que afirma de más es peor que uno corto: se cita como si fuera
+> cierto, y en este caso lo citó quien lo escribió.
 
 Doce ramas de trabajo fusionadas, y el backend **arrancado y recorrido entero**:
 33 procesos, 1223 peticiones contra MySQL de verdad y la pasarela de verdad.
