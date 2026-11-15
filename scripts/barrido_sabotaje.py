@@ -45,6 +45,36 @@ LISTA_POR_DEFECTO = os.path.join(
 )
 # El cerrojo vive junto a la lista, no en la raiz: ahi no se cuela en un commit
 # por un `git add .` distraido.
+# El diario de veredictos. Junto al cerrojo y, como el, fuera del commit: es
+# estado de una corrida, no del repositorio.
+DIARIO_RUTA = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), ".barrido-resultados.json"
+)
+
+
+def leer_diario():
+    """Lo apuntado en corridas anteriores: {etiqueta: [veredicto, dano]}."""
+    if not os.path.exists(DIARIO_RUTA):
+        return {}
+    try:
+        return json.load(io.open(DIARIO_RUTA, encoding="utf-8"))
+    except (ValueError, OSError):
+        # Un diario a medio escribir --un `kill` justo ahi-- no para el
+        # barrido: se vuelve a medir todo, que es lo seguro.
+        print("  (el diario no se pudo leer: se mide todo de nuevo)")
+        return {}
+
+
+def apuntar(etq, veredicto, dano):
+    """Apunta un veredicto EN CUANTO se sabe. Si esto no estuviera, un `kill`
+    se llevaria por delante hasta 45 mediciones de 80 segundos cada una."""
+    d = leer_diario()
+    d[etq] = [veredicto, dano]
+    io.open(DIARIO_RUTA, "w", encoding="utf-8", newline="\n").write(
+        json.dumps(d, ensure_ascii=False, indent=1) + "\n"
+    )
+
+
 CERROJO_RUTA = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), ".barrido-en-marcha"
 )
@@ -384,7 +414,31 @@ def main():
     desprotegidas = []
     errores = []
 
+    # LO QUE YA SE MIDIO EN CORRIDAS ANTERIORES.
+    #
+    # Con `--continuar` se salta; sin el, se mide todo de nuevo y el diario se
+    # reescribe. Por omision NO se continua: una corrida limpia tiene que ser
+    # lo que pasa si no se pide otra cosa, porque un veredicto viejo sobre
+    # codigo nuevo es peor que no tener veredicto.
+    hechas = leer_diario() if "--continuar" in sys.argv else {}
+    if hechas:
+        print("Continuando: %d ya medidas, se saltan.\n" % len(hechas))
+    elif os.path.exists(DIARIO_RUTA) and "--continuar" not in sys.argv:
+        os.remove(DIARIO_RUTA)
+
+    for etq_v, (ver_v, dano_v) in hechas.items():
+        if ver_v == "PASA":
+            desprotegidas.append((etq_v, dano_v))
+        elif ver_v == "ERROR":
+            errores.append(etq_v)
+
     for i, (etq, rel, viejo, nuevo, dano) in enumerate(MUTACIONES, 1):
+        if etq in hechas:
+            print(f"[{i:>2}/{len(MUTACIONES)}] {hechas[etq][0]:<6} {etq}"
+                  "  (de una corrida anterior)")
+            sys.stdout.flush()
+            continue
+
         p = os.path.join(RAIZ, *rel.split("/"))
         s = leer(p)
 
@@ -401,6 +455,10 @@ def main():
         finally:
             escribir(p, s)          # lo primero, y barato
             restaurar_con_git(rel)  # y que quede igual al commit, no «parecido»
+
+        # ANTES DE IMPRIMIR, no despues: lo que se apunta es lo que
+        # sobrevive si el sistema mata el proceso en el siguiente segundo.
+        apuntar(etq, veredicto, dano)
 
         print(f"[{i:>2}/{len(MUTACIONES)}] {veredicto:<6} {etq}  ({time.time()-t:.0f}s)  {resumen}")
 
