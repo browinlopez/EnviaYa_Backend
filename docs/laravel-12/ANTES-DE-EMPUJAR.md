@@ -1,6 +1,6 @@
 # Lo que falta y no está en el código
 
-**Actualizado el 14 de noviembre de 2026** (antes: 11 de noviembre). Todo lo
+**Actualizado el 15 de noviembre de 2026** (antes: 14 de noviembre). Todo lo
 que se podía hacer desde el repositorio está hecho y commiteado. Lo de abajo son acciones en consolas que no controla
 este repositorio: Dokploy, Cloudflare, Google Cloud y las tiendas de
 aplicaciones. Va aquí, con el valor exacto, para que no haya que reconstruir
@@ -14,12 +14,12 @@ servidor todavía no sirve.
 
 ## 1 · Empujar
 
-Nada está empujado. Medido el **14 de noviembre de 2026**: son **157 commits**
+Nada está empujado. Medido el **15 de noviembre de 2026**: son **160 commits**
 en `validacion/integracion` sobre `Devs`, y `Devs` a su vez va **22 commits por
-delante de `origin/Devs`**: **179** en total. Hasta que `Devs` suba, las ramas
+delante de `origin/Devs`**: **182** en total. Hasta que `Devs` suba, las ramas
 de trabajo que cuelgan de ahí no tienen dónde apoyarse.
 
-> **Eran 50 el 11 de noviembre y 137 el 13.** La cuenta se mide, no se
+> **Eran 50 el 11 de noviembre, 137 el 13 y 179 el 14.** La cuenta se mide, no se
 > recuerda: este párrafo ya decía 50 cuando eran 137.
 >
 > Y 179 es mucho para una sola revisión, así que conviene
@@ -44,7 +44,7 @@ ciegas que nunca se desplegó—, así que esto arregla cobros, no los rompe.
 Se comprueba que el despliegue entró pidiendo una ruta nueva: por ejemplo
 `GET /v1/negocio/domiciliarios/rendimiento`, que antes no existía.
 
-### Antes de empujar, las cuatro puertas y una mas
+### Antes de empujar, las cuatro puertas y dos mas
 
 ```
 vendor/bin/pint --test
@@ -67,6 +67,32 @@ dinero, permisos o un estado, y cuando se añade una constante de esas --que
 entonces se añade también a `scripts/barrido-mutaciones.json`--. La primera
 vez encontró tres agujeros con 1361 pruebas en verde; el por qué está en la
 sexta lección de `ESTADO.md`.
+
+Y la sexta, que tampoco es una puerta y tarda dos segundos:
+
+```
+python scripts/cifras_del_registro.py --control                 # que no este ciego
+python scripts/cifras_del_registro.py --salida-de-pest pest.txt # las 25 cifras
+```
+
+Remide las **25 cifras** que `ESTADO.md`, `EXCEPCIONES.md` y este documento
+afirman, y dice cuáles ya no describen el repositorio. Existe porque esto ha
+pasado **tres veces**, y dos están confesadas aquí dentro: «este párrafo ya
+decía 50 cuando eran 137» y «esta fila decía "no existe", que era verdad
+cuando se escribió». La tercera fue el 15 de noviembre: siete a la vez.
+
+**No va al CI a propósito.** Un paso que no bloquea y que nadie lee es
+decoración --es exactamente lo que le pasó al formato de la app-- y bloquear
+no sirve, porque una cifra vieja a veces es correcta: «se midió el 9 de
+noviembre» fecha una decisión y tiene que seguir diciendo lo de entonces. Lo
+decide quien lee. Se corre al tocar estos tres documentos y antes de empujar.
+
+El `--control` no es opcional: mete texto con las cifras cambiadas a propósito
+y exige cazarlas todas. Si un patrón deja de encajar porque alguien reescribió
+la frase, el informe diría «cuadra» estando ciego, que es el fallo que este
+repositorio ya ha visto en un detector. Pasó al escribirlo: el control pasó y
+la corrida de verdad encontró un patrón ciego, porque el control traía su
+propia redacción. Hacen falta los dos.
 
 ---
 

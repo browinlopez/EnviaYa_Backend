@@ -1,8 +1,11 @@
 # Excepciones y decisiones del backend frente al estándar
 
 > Registro del repositorio `EnviaYa_Backend` (§20 del estándar).
-> **Medido el 9 de noviembre de 2026** sobre Laravel 12.66, 115 controladores,
-> 54 servicios, 70 modelos y 1022 pruebas.
+> **Medido el 15 de noviembre de 2026** sobre Laravel 12.72, 113 controladores,
+> 52 servicios, 70 modelos, 10 objetos de consulta y 1373 pruebas.
+> *(El 9 de noviembre: 12.66, 115 controladores, 54 servicios, 70 modelos y 1022
+> pruebas. Esta cabecera se quedó seis días diciendo las de entonces, que es
+> justo lo que el registro existe para que no pase.)*
 >
 > Cada fila dice qué regla no se cumple, **por qué**, qué riesgo se acepta y
 > cuándo se revisa. Una excepción nueva entra aquí por PR.
@@ -20,7 +23,7 @@ de cumplimiento hoy, es que **la cifra solo pueda bajar**.
 | | |
 |---|---|
 | **Regla** | `AGENTS.md` §3 y `02-estructura-de-carpetas.md`: las clases de negocio nuevas van en `app/Modules/<Modulo>/…` |
-| **Realidad** | Estructura por capas con subcarpeta de dominio: `app/Http/Controllers/Negocio/`, `app/Services/`, `app/Models/Order/`. 115 controladores en ~20 carpetas de dominio |
+| **Realidad** | Estructura por capas con subcarpeta de dominio: `app/Http/Controllers/Negocio/`, `app/Services/`, `app/Models/Order/`. 113 controladores en ~20 carpetas de dominio |
 | **Motivo** | **Se midió antes de decidir: 70 de los 115 controladores (60 %) usan modelos de otro dominio.** `User`, `Business`, `Domiciliary` y `OrdersSales` los usa casi todo. Con ese acoplamiento, `app/Modules/` no produce módulos: produce un `app/Shared/Models/` con la mayoría de los modelos dentro y unos envoltorios delgados encima — el cajón que §00 llama anti-patrón, pagando antes un diff de ~240 archivos |
 | **Decisión** | **9 de noviembre de 2026: no se crea `app/Modules/`.** Se cumplen dentro de la estructura actual las reglas que sí muerden —`FormRequest`, una responsabilidad por archivo, límites de línea—, que es lo que §02 («si una estructura existente ya es consistente, adapta progresivamente») y §20.1 («no big-bang») permiten expresamente |
 | **Riesgo aceptado** | La carpeta por tipo técnico sigue siendo el anti-patrón de §00. Se mitiga porque el segundo nivel **sí** es de dominio |
@@ -91,7 +94,7 @@ Si aparece una tercera, que aparezca con su motivo escrito acá.
 | **Realidad** | **Medido el 14 de noviembre de 2026: `app/Http/Resources/` tiene 56 clases.** Esta fila decia «no existe», que era verdad cuando se escribio y dejo de serlo sin que nadie la actualizara. `scripts/formas_de_entidad.py` mide **0 formas de entidad por migrar** en `app/Http`: lo que se arma a mano a dia de hoy son informes de agregados, donde un Resource seria la ceremonia que §05 prohibe |
 | **Motivo** | Mismo argumento que arriba, con un agravante: la forma de la respuesta **es el contrato** que consumen la app, tres paneles y las versiones ya publicadas en las tiendas. Reescribirla a ciegas rompe clientes que no se pueden actualizar |
 | **Riesgo aceptado** | No hay un sitio único donde ver qué campos expone un endpoint; esconder un campo nuevo es fácil de olvidar |
-| **Alternativa adoptada** | Mismo trinquete. Y las pruebas del contrato público siguen siendo la red: **1361 pruebas**, varias de ellas **de ausencia** (que un campo NO viaje) |
+| **Alternativa adoptada** | Mismo trinquete. Y las pruebas del contrato público siguen siendo la red: **1373 pruebas**, varias de ellas **de ausencia** (que un campo NO viaje) |
 | **Revisión** | Cada PR |
 
 ### Los archivos son más grandes que los objetivos
@@ -161,16 +164,19 @@ decisión. Mezclar idiomas era el problema, no la solución.
 
 ---
 
-## 3 · Lo que conviene adoptar ya
+## 3 · Lo que convenía adoptar, y ya está adoptado
 
-No son excepciones: son reglas del estándar que este repositorio **puede
-cumplir hoy** y todavía no cumple.
+No son excepciones: eran reglas del estándar que este repositorio **podía
+cumplir hoy** y no cumplía. **Las tres están hechas**, y la tabla se queda
+como historia de la adopción en vez de borrarse: dice cuánto costó cada una
+y en qué paso del CI vive ahora, que es lo que hace falta el día que una se
+caiga.
 
 | Regla | Estado medido | Coste |
 |---|---|---|
-| ~~`12` — Pint~~ | **Hecho** (9 nov. 2026): 506 archivos formateados, 106 imports sin usar fuera | Falta `pint --test` en el CI |
+| ~~`12` — Pint~~ | **Hecho** (9 nov. 2026): 506 archivos formateados, 106 imports sin usar fuera | **Hecho**: `pint --test` es un paso de `pruebas.yml` |
 | ~~`AGENTS.md` — `env()` solo en `config/`~~ | **Hecho**. Eran dos, no tres: `ClaveDeSemilla` ya usaba `config()` y solo lo nombraba en un comentario. `ZonaHorariaDeLaBase` leía `DB_TIMEZONE` directo —con la config en caché habría dicho «sin poner» justo donde sí estaba puesta— y `ReverbClient` resultó **código muerto**: nadie lo nombraba desde 2025. Borrado, y con él `app/Helper/` | — |
-| `12` — análisis estático | No hay PHPStan/Larastan | El estándar dice «no asumir que existen ni agregarlos a espaldas del equipo». Decisión pendiente |
+| ~~`12` — análisis estático~~ | **Hecho**: PHPStan 2.3.5 + Larastan en **nivel 5** sobre `app/`, `database/`, `routes/` y `tests/`, con una línea base de **44 entradas** que solo se regenera para que baje, nunca para que suba. Esta fila decía «No hay PHPStan/Larastan … Decisión pendiente» y dejó de ser verdad sin que nadie la tocara | **Hecho**: es un paso de `pruebas.yml` |
 
 ---
 
@@ -189,7 +195,7 @@ Conviene decirlo, porque el registro no es solo una lista de culpas:
   llave secreta está vacía y lo deja escrito en el registro, en vez de aceptar
   una firma HMAC que cualquiera podría calcular. Es la ruta que marca pedidos
   como pagados.
-- **Pruebas por funcionalidad** (§11): 1022 en Pest, con casos de error,
+- **Pruebas por funcionalidad** (§11): 1373 en Pest, con casos de error,
   permisos y límites — incluidas pruebas de que un campo **no** viaja.
 - **Nada de `catch (\Throwable)` para devolver 200** con `success: false`.
 
@@ -374,7 +380,8 @@ Lo nuevo de verdad no son los documentos: es que trae **herramientas**.
 | Qué | Dónde | Resultado al correrlo aquí |
 |---|---|---|
 | `check_module_boundaries.py` | `scripts/` | *«Sin `app/Modules/`: no aplica»*. Degrada bien, que es lo correcto para la decisión de §1 de este registro |
-| `check_file_sizes.py` | `scripts/` | **113 archivos** por encima del objetivo. Coincide con lo medido en §1 |
+| `check_file_sizes.py` | `scripts/` | **148 archivos** por encima del objetivo (decía 113: es la cifra que `cifras_del_registro.py` cazó el 15 de noviembre). Coincide con lo medido en §1 |
+| `cifras_del_registro.py` | `scripts/` | **Nuestro, no del estándar.** Remide las 25 cifras que estos tres documentos afirman y dice cuáles ya no describen el repositorio. No es una puerta: una cifra vieja a veces fecha una decisión a propósito. Trae `--control`, porque un patrón que deja de encajar diría «cuadra» estando ciego |
 | `phpstan.neon.dist`, `pint.json`, CI, CODEOWNERS | `tooling/` | **Plantillas, no configuración.** Su propio README dice «NO se instalan automáticamente» |
 
 ### Cuatro cosas que aprendimos convirtiendo, y que valen más que el contador
