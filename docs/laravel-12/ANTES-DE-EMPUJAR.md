@@ -74,10 +74,10 @@ Y la sexta, que tampoco es una puerta y tarda dos segundos:
 
 ```
 python scripts/cifras_del_registro.py --control                 # que no este ciego
-python scripts/cifras_del_registro.py --salida-de-pest pest.txt # las 25 cifras
+python scripts/cifras_del_registro.py --salida-de-pest pest.txt # las 29 cifras
 ```
 
-Remide las **25 cifras** que `ESTADO.md`, `EXCEPCIONES.md` y este documento
+Remide las **29 cifras** que `ESTADO.md`, `EXCEPCIONES.md` y este documento
 afirman, y dice cuáles ya no describen el repositorio. Existe porque esto ha
 pasado **tres veces**, y dos están confesadas aquí dentro: «este párrafo ya
 decía 50 cuando eran 137» y «esta fila decía "no existe", que era verdad
@@ -189,7 +189,14 @@ se tocan desde el repositorio:
 ## 4 · La OTA, **después** de empujar
 
 La app declara **1.0.12**, Play sirve **1.0.11** e iOS sigue en **1.0.9**.
-Hay 1 commit de la app sin empujar, en `tendero/paridad-con-el-panel`.
+Sin empujar, medido el 15 de noviembre: la app va **5 commits** por delante de
+`origin/Browin_IOS` --que es su rama de verdad; contra `origin/main` saldrían 157
+y ese número no significa nada--, el panel **8** sobre su propia rama ya
+empujada, y la landing **1** sobre `origin/main`.
+
+> **Y el `master` del panel tiene 2 commits que la rama local no tiene.** Eso
+> no es cosa de empujar sino de traer: hay que integrarlos antes, o el merge
+> los pisa. Este párrafo decía «1 commit de la app» cuando eran 5.
 
 ```bash
 node scripts/publicar-ota.mjs      # en EnviaYa_App
@@ -298,7 +305,10 @@ nombres de los checks no existen y la regla se escribiría a ciegas.
 - **La báscula Bluetooth** sigue fuera: es lo único que obliga a compilar, y
   antes hay que comprobar con una báscula real si los modelos de las tiendas
   hablan BLE o Bluetooth clásico. Si es clásico, la función es solo Android.
-- **Protección de rama** en GitHub (§50), sin poner.
+- **Protección de rama** en GitHub (§50), sin poner. **Comprobado con `gh` el
+  15 de noviembre**, no supuesto: `branches/main/protection` y
+  `branches/Devs/protection` devuelven las dos *«Branch not protected»*. Y la
+  rama por omisión del repositorio es `main`, mientras el trabajo va a `Devs`.
 - **Siete rutas sin llamante**, sin decidir: tres piden criterio —la baja de
   cuenta, el crédito a medias y la contradicción de `bold/status/{ref}`— y
   cuatro son duplicados o reemplazos. Están en `scripts/rutas-candidatas.json`,
@@ -309,7 +319,9 @@ nombres de los checks no existen y la regla se escribiría a ciegas.
   verificación de correo a la vez**. Ya están congeladas en
   `superficie-web.json`, así que no cambian en silencio; lo que falta es
   decidir si sobran.
-- **El formato de `EnviaYa_App`**: tiene `.prettierrc.json` y prettier
-  instalado, y **nada lo ejecuta** —ni script, ni hook, ni CI—, así que 320
-  ficheros no lo cumplen. O se engancha o se quita la configuración; una regla
-  que nadie aplica parece una regla.
+- ~~**El formato de `EnviaYa_App`**: nada lo ejecuta.~~ **HECHO.**
+  `scripts/formato.mjs` con trinquete —base de **285** ficheros heredados, que
+  solo puede bajar—, enganchado en `package.json` (`formato`, `verificar`) y
+  en `ci.yml`. Corrido hoy: *«0 nuevos sin formatear (285 en la base, de
+  285)»*. Lleva control de ceguera: si la base tiene ficheros y la medición
+  devuelve cero, sale 2 por sospechoso en vez de verde.
