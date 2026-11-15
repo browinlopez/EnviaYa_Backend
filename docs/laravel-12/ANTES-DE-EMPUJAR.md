@@ -41,9 +41,9 @@ servidor todavía no sirve.
 > Esa es la decisión que queda, y los números de abajo se miden contra
 > `origin/Devs`, que es la rama que despliega.
 
-Nada está desplegado. Medido el **15 de noviembre de 2026**: son **167 commits**
+Nada está desplegado. Medido el **15 de noviembre de 2026**: son **168 commits**
 en `validacion/integracion` sobre `Devs`, y `Devs` a su vez va **22 commits por
-delante de `origin/Devs`**: **189** en total. La cuenta **incluye el commit que la escribe**: si no, cada
+delante de `origin/Devs`**: **190** en total. La cuenta **incluye el commit que la escribe**: si no, cada
 marcador la deja corta en uno y el verificador avisa para siempre de un
 desajuste que es de construccion. Hasta que `Devs` suba, las ramas
 de trabajo que cuelgan de ahí no tienen dónde apoyarse.
@@ -216,14 +216,28 @@ se tocan desde el repositorio:
 ## 4 · La OTA, **después** de empujar
 
 La app declara **1.0.12**, Play sirve **1.0.11** e iOS sigue en **1.0.9**.
-Sin empujar, medido el 15 de noviembre: la app va **5 commits** por delante de
-`origin/Browin_IOS` --que es su rama de verdad; contra `origin/main` saldrían 157
-y ese número no significa nada--, el panel **8** sobre su propia rama ya
-empujada, y la landing **1** sobre `origin/main`.
+**Empujado, todo: 4 de 4 con su HEAD exactamente en `origin/refactor-total`.**
+Lo que queda es desplegar, y eso se mide sobre la rama que despliega, que es
+distinta en cada repositorio: la app **5 commits** sobre `origin/Browin_IOS`
+--su rama de verdad; contra `origin/main` saldrían 157, que es un número que
+asusta y no significa nada--, el panel **10** sobre `origin/master`, y la
+landing **1** sobre `origin/main`. La app no tiene webhook: sale por OTA, aparte.
 
-> **Y el `master` del panel tiene 2 commits que la rama local no tiene.** Eso
-> no es cosa de empujar sino de traer: hay que integrarlos antes, o el merge
-> los pisa. Este párrafo decía «1 commit de la app» cuando eran 5.
+> **Aquí decía que el `master` del panel tenía 2 commits por traer, o un merge
+> los pisaba. Era falso, las dos mitades.** Al ir a traerlos:
+> `git log HEAD..origin/master --no-merges` daba **cero** --eran los dos merges
+> de los PR #1 y #2 hechos en GitHub, y sus tres padres reales ya eran
+> antepasados de la rama-- y el merge resultó en un árbol **idéntico**, mismo
+> objeto, cero ficheros distintos.
+>
+> El error fue de lectura, y es fácil de repetir: `git diff HEAD origin/master`
+> mostraba 507 inserciones y leí eso como «master tiene 507 líneas que no
+> tenemos». Son las versiones **viejas** de ficheros que esta rama ya cambió, y
+> aparecen como inserciones porque el diff va de aquí hacia allá. En el otro
+> sentido había 24.163 borrados: la báscula, el contrato con el backend y sus
+> pruebas. **Mover la rama a master habría sido la pérdida; traer master no era
+> nada.** Se hizo igual, por la topología: ahora la rama desciende de
+> `origin/master` y llevarla allí es un avance limpio.
 
 ```bash
 node scripts/publicar-ota.mjs      # en EnviaYa_App

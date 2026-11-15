@@ -197,6 +197,16 @@ def _vecino(nombre):
     return ruta if os.path.isdir(os.path.join(ruta, ".git")) else None
 
 
+def _correr_en(ruta, orden, timeout=60):
+    """Como `_correr`, pero en la ruta que se le diga y no en RAIZ."""
+    try:
+        r = subprocess.run(orden, cwd=ruta, capture_output=True, text=True,
+                           encoding="utf-8", errors="replace", timeout=timeout)
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    return _sin_color(r.stdout) if r.returncode == 0 else ""
+
+
 def _commits_en(nombre, rango):
     ruta = _vecino(nombre)
     if ruta is None:
@@ -211,24 +221,50 @@ def _commits_en(nombre, rango):
     return int(s) if r.returncode == 0 and s.isdigit() else NO_MEDIBLE
 
 
-def app_sin_empujar():
-    """Contra `origin/Browin_IOS`, que es la rama de verdad de la app. Contra
-    `origin/main` saldrian 157, y ese numero no significa nada."""
+# «SIN EMPUJAR» YA NO MIDE NADA, y «sin desplegar» si.
+#
+# Desde el 15 de noviembre de 2026 los cuatro repositorios estan al dia en la
+# rama `refactor-total`, asi que lo que falta por empujar es cero en todos. Lo
+# que decide si hay gente usando codigo nuevo es cuanto falta sobre la rama
+# que DESPLIEGA, y esa es distinta en cada uno:
+#
+#   backend   origin/Devs           webhook de Dokploy
+#   panel     origin/master         webhook de Dokploy
+#   app       origin/Browin_IOS     no tiene webhook: sale por OTA, aparte
+#   landing   origin/main
+#
+# La de la app importa elegirla bien: contra `origin/main` saldrian 157, que
+# es un numero que asusta y no significa nada.
+
+
+def app_sin_desplegar():
     return _commits_en("EnviaYa_App", "origin/Browin_IOS..HEAD")
 
 
-def panel_sin_empujar():
-    return _commits_en("EnviaYa_Aliados", "@{u}..HEAD")
+def panel_sin_desplegar():
+    return _commits_en("EnviaYa_Aliados", "origin/master..HEAD")
 
 
-def panel_por_traer():
-    """Lo que `origin/master` del panel tiene y la rama local no. No es cosa
-    de empujar sino de traer, y un merge sin esto los pisa."""
-    return _commits_en("EnviaYa_Aliados", "HEAD..origin/master")
-
-
-def landing_sin_empujar():
+def landing_sin_desplegar():
     return _commits_en("EnviaYa_Landing", "origin/main..HEAD")
+
+
+def repos_al_dia_en_refactor_total():
+    """Cuantos de los cuatro tienen su HEAD exactamente en
+    `origin/refactor-total`. Es el numero que dice si la rama de referencia
+    sigue siendo la referencia o se quedo atras en alguno."""
+    n = 0
+    for nombre in ("EnviaYa_Backend", "EnviaYa_Aliados", "EnviaYa_App",
+                   "EnviaYa_Landing"):
+        ruta = _vecino(nombre) if nombre != "EnviaYa_Backend" else RAIZ
+        if ruta is None:
+            return NO_MEDIBLE
+        aqui = _correr_en(ruta, ["git", "rev-parse", "HEAD"]).strip()
+        alla = _correr_en(
+            ruta, ["git", "ls-remote", "--heads", "origin", "refactor-total"])
+        if aqui and alla.strip().startswith(aqui):
+            n += 1
+    return n
 
 
 def commits_sobre_devs():
@@ -279,14 +315,18 @@ AFIRMACIONES = [
      r"`check_file_sizes.py` \| `scripts/` \| \*\*(\d+) archivos\*\*",
      archivos_sobre_el_objetivo),
 
-    ("ANTES-DE-EMPUJAR.md", "la app sin empujar",
-     r"la app va \*\*(\d+) commits\*\* por", app_sin_empujar),
-    ("ANTES-DE-EMPUJAR.md", "el panel sin empujar",
-     r"el panel \*\*(\d+)\*\* sobre su propia rama", panel_sin_empujar),
-    ("ANTES-DE-EMPUJAR.md", "el panel por traer",
-     r"del panel tiene (\d+) commits que la rama local", panel_por_traer),
-    ("ANTES-DE-EMPUJAR.md", "la landing sin empujar",
-     r"la landing \*\*(\d+)\*\* sobre `origin/main`", landing_sin_empujar),
+    ("ANTES-DE-EMPUJAR.md", "la app sin desplegar",
+     r"la app \*\*(\d+) commits\*\* sobre `origin/Browin_IOS`", app_sin_desplegar),
+    ("ANTES-DE-EMPUJAR.md", "el panel sin desplegar",
+     r"el panel \*\*(\d+)\*\* sobre `origin/master`", panel_sin_desplegar),
+    ("ANTES-DE-EMPUJAR.md", "la landing sin desplegar",
+     # El salto de linea del markdown cae donde quiera, y aqui cayo entre
+     # `la` y `landing`. Segunda vez que pasa, asi que todos los patrones
+     # de prosa toleran el espacio en blanco intercalado.
+     r"la\s*landing \*\*(\d+)\*\* sobre `origin/main`", landing_sin_desplegar),
+    ("ANTES-DE-EMPUJAR.md", "repos al dia en refactor-total",
+     r"(\d+) de 4 con su HEAD exactamente en `origin/refactor-total`",
+     repos_al_dia_en_refactor_total),
 
     ("ESTADO.md", "clases que cargan",
      r"\*\*(\d+)\*\* clases cargan", clases_que_cargan),
@@ -406,8 +446,8 @@ CONTROL = {
         u"Nada est\u00e1 empujado. Medido el **1 de enero**: son **7 commits**\n"
         u"en `validacion/integracion` sobre `Devs`, y `Devs` a su vez va "
         u"**7 commits por\ndelante de `origin/Devs`**: **7** en total.\n"
-        u"la app va **7 commits** por delante, el panel **7** sobre su propia rama"
-        u" y la landing **7** sobre `origin/main`. Y el master del panel tiene 7 commits que la rama local no tiene.\n"
+        u"la app **7 commits** sobre `origin/Browin_IOS`, el panel **7** sobre `origin/master`"
+        u" y la landing **7** sobre `origin/main`. Los cuatro: 7 de 4 con su HEAD exactamente en `origin/refactor-total`.\n"
         u"Remide las **7 cifras** que `ESTADO.md` afirma.\n"
     ),
 }
