@@ -188,6 +188,49 @@ def _commits(rango):
     return int(s) if s.isdigit() else NO_MEDIBLE
 
 
+def _vecino(nombre):
+    """La ruta del repo hermano, con el envoltorio que usa este arbol de
+    trabajo: `Desarrollo EnviaYa/EnviaYa_X/EnviaYa_X`. Devuelve None si no
+    esta, y entonces la cifra se informa como no medida en vez de como cero."""
+    base = os.path.dirname(os.path.dirname(RAIZ))
+    ruta = os.path.join(base, nombre, nombre)
+    return ruta if os.path.isdir(os.path.join(ruta, ".git")) else None
+
+
+def _commits_en(nombre, rango):
+    ruta = _vecino(nombre)
+    if ruta is None:
+        return NO_MEDIBLE
+    try:
+        r = subprocess.run(["git", "rev-list", "--count", rango], cwd=ruta,
+                           capture_output=True, text=True, encoding="utf-8",
+                           errors="replace", timeout=60)
+    except (OSError, subprocess.SubprocessError):
+        return NO_MEDIBLE
+    s = r.stdout.strip()
+    return int(s) if r.returncode == 0 and s.isdigit() else NO_MEDIBLE
+
+
+def app_sin_empujar():
+    """Contra `origin/Browin_IOS`, que es la rama de verdad de la app. Contra
+    `origin/main` saldrian 157, y ese numero no significa nada."""
+    return _commits_en("EnviaYa_App", "origin/Browin_IOS..HEAD")
+
+
+def panel_sin_empujar():
+    return _commits_en("EnviaYa_Aliados", "@{u}..HEAD")
+
+
+def panel_por_traer():
+    """Lo que `origin/master` del panel tiene y la rama local no. No es cosa
+    de empujar sino de traer, y un merge sin esto los pisa."""
+    return _commits_en("EnviaYa_Aliados", "HEAD..origin/master")
+
+
+def landing_sin_empujar():
+    return _commits_en("EnviaYa_Landing", "origin/main..HEAD")
+
+
 def commits_sobre_devs():
     return _commits("Devs..HEAD")
 
@@ -235,6 +278,15 @@ AFIRMACIONES = [
     ("EXCEPCIONES.md", "archivos sobre el objetivo de lineas",
      r"`check_file_sizes.py` \| `scripts/` \| \*\*(\d+) archivos\*\*",
      archivos_sobre_el_objetivo),
+
+    ("ANTES-DE-EMPUJAR.md", "la app sin empujar",
+     r"la app va \*\*(\d+) commits\*\* por", app_sin_empujar),
+    ("ANTES-DE-EMPUJAR.md", "el panel sin empujar",
+     r"el panel \*\*(\d+)\*\* sobre su propia rama", panel_sin_empujar),
+    ("ANTES-DE-EMPUJAR.md", "el panel por traer",
+     r"del panel tiene (\d+) commits que la rama local", panel_por_traer),
+    ("ANTES-DE-EMPUJAR.md", "la landing sin empujar",
+     r"la landing \*\*(\d+)\*\* sobre `origin/main`", landing_sin_empujar),
 
     ("ESTADO.md", "clases que cargan",
      r"\*\*(\d+)\*\* clases cargan", clases_que_cargan),
@@ -354,6 +406,8 @@ CONTROL = {
         u"Nada est\u00e1 empujado. Medido el **1 de enero**: son **7 commits**\n"
         u"en `validacion/integracion` sobre `Devs`, y `Devs` a su vez va "
         u"**7 commits por\ndelante de `origin/Devs`**: **7** en total.\n"
+        u"la app va **7 commits** por delante, el panel **7** sobre su propia rama"
+        u" y la landing **7** sobre `origin/main`. Y el master del panel tiene 7 commits que la rama local no tiene.\n"
         u"Remide las **7 cifras** que `ESTADO.md` afirma.\n"
     ),
 }
