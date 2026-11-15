@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\CrearProductoDelCatalogoRequest;
+use App\Queries\ProductosDelPanel;
 use App\Services\MediaService;
 use App\Support\Consultas\AyudasDeAdmin;
 use App\Support\ListadoPaginado;
@@ -16,39 +17,22 @@ class ProductosApiController extends Controller
 {
     use AyudasDeAdmin;
 
+    /**
+     * El listado del catalogo.
+     *
+     * LA CONSULTA VIVE EN `App\Queries\ProductosDelPanel`, que es lo que §12
+     * pide. Aqui queda lo que si es del controlador: traducir la peticion a
+     * filtros, pedirle a `ListadoPaginado` la pagina, pasar las filas por el
+     * presentador de imagenes y responder.
+     */
     public function products(Request $request, MediaService $medios)
     {
-        // El producto vive en `products` y su precio/existencias en
-        // `products_business`: la misma referencia puede aparecer varias
-        // veces, una por tienda, y cada fila es una oferta distinta.
-        // Las unidades vendidas van por subconsulta: unir el detalle de
-        // pedidos aquí duplicaría cada renglón una vez por tienda que ofrece
-        // el mismo producto.
-        $q = DB::table('products as p')
-            ->leftJoin('products_business as pb', 'pb.products_id', '=', 'p.products_id')
-            ->leftJoin('business as b', 'b.busines_id', '=', 'pb.busines_id')
-            ->leftJoin('category as c', 'c.category_id', '=', 'p.category_id')
-            ->select([
-                'p.products_id', 'p.name', 'p.description', 'p.image', 'p.state',
-                'pb.busines_products_id', 'pb.price', 'pb.amount', 'pb.qualification',
-                'b.busines_id', 'b.name as business_name', 'c.name as category_name',
-            ])
-            ->selectSub(
-                DB::table('orderssales_detail')
-                    ->selectRaw('COALESCE(SUM(amount), 0)')
-                    ->whereColumn('orderssales_detail.product_id', 'p.products_id'),
-                'sold',
-            );
+        $catalogo = new ProductosDelPanel;
 
-        if ($categoria = trim((string) $request->query('category', ''))) {
-            $q->where('c.name', $categoria);
-        }
-
-        // El join a `business` ya estaba —se usa para el nombre y para
-        // ordenar—, así que filtrar por negocio no cuesta una consulta más.
-        if ($negocio = (int) $request->query('business_id')) {
-            $q->where('b.busines_id', $negocio);
-        }
+        $q = $catalogo->listado(
+            categoria: trim((string) $request->query('category', '')) ?: null,
+            negocio: ((int) $request->query('business_id')) ?: null,
+        );
 
         $r = ListadoPaginado::responder(
             $request,
@@ -63,7 +47,7 @@ class ProductosApiController extends Controller
             ],
             ordenPorDefecto: 'name',
             direccionPorDefecto: 'asc',
-            resumen: fn ($f) => $this->resumenDeProductos($f),
+            resumen: fn ($f) => $catalogo->resumen($f),
         );
 
         $r['data'] = $this->conImagenPrincipal(
@@ -73,53 +57,10 @@ class ProductosApiController extends Controller
         return response()->json($r);
     }
 
-    /**
-     * Desglose por categoría, agregado en la base.
-     *
-     * La pantalla lo usa para su selector. Estaba resolviéndolo en el navegador
-     * recorriendo el catálogo entero — es decir, pedía las 755 ofertas ADEMÁS
-     * de la página, y con eso la paginación no ahorraba nada. Son unas decenas
-     * de filas: se calculan con un GROUP BY y se traen aparte.
-     */
+    /** El desglose por categoria para el selector de la pantalla. */
     public function productCategories()
     {
-        return response()->json(
-            DB::table('products as p')
-                ->leftJoin('products_business as pb', 'pb.products_id', '=', 'p.products_id')
-                ->join('category as c', 'c.category_id', '=', 'p.category_id')
-                ->groupBy('c.category_id', 'c.name')
-                ->orderByDesc(DB::raw('COUNT(*)'))
-                ->get([
-                    DB::raw('c.name as name'),
-                    DB::raw('COUNT(*) as items'),
-                    DB::raw('SUM(CASE WHEN pb.amount = 0 THEN 1 ELSE 0 END) as agotados'),
-                    DB::raw('COALESCE(SUM(pb.price * pb.amount), 0) as valor'),
-                ])
-        );
-    }
-
-    /**
-     * Indicadores del catálogo, sobre todo lo filtrado.
-     *
-     * "Referencias" cuenta OFERTAS y no productos distintos: la misma
-     * referencia en tres tiendas son tres filas con tres precios y tres
-     * existencias, y es lo que se está mirando en la tabla.
-     */
-    private function resumenDeProductos($q): array
-    {
-        $r = ListadoPaginado::soloAgregados($q, "
-            COUNT(*) as total,
-            COALESCE(SUM(pb.price * pb.amount), 0) as inventario,
-            SUM(CASE WHEN pb.amount = 0 THEN 1 ELSE 0 END) as agotados,
-            SUM(CASE WHEN p.image IS NULL OR p.image = '' THEN 1 ELSE 0 END) as sin_imagen
-        ");
-
-        return [
-            'total' => (int) ($r->total ?? 0),
-            'inventario' => round((float) ($r->inventario ?? 0), 2),
-            'agotados' => (int) ($r->agotados ?? 0),
-            'sinImagen' => (int) ($r->sin_imagen ?? 0),
-        ];
+        return response()->json((new ProductosDelPanel)->porCategoria());
     }
 
     /**
@@ -167,7 +108,7 @@ class ProductosApiController extends Controller
 
     public function showProduct($id)
     {
-        $producto = DB::table('products')->where('products_id', $id)->first();
+        $producto = (new ProductosDelPanel)->ficha($id);
         abort_if(! $producto, 404, 'El producto no existe.');
 
         return response()->json($producto);

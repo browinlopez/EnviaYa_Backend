@@ -10,6 +10,7 @@ use App\Http\Resources\Operacion\DepositoResource;
 use App\Models\Domiciliary;
 use App\Models\Operacion\CashDeposit;
 use App\Models\Operacion\CashMovement;
+use App\Queries\EfectivoDeLaOperacion;
 use App\Services\CustodiaDeEfectivo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -110,43 +111,21 @@ class EfectivoController extends Controller
     /* ----------------------------- LADO PANEL ---------------------------- */
 
     /** Los depósitos declarados, para revisarlos contra el extracto. */
+    /** Los depositos declarados. La consulta vive en `Queries/EfectivoDeLaOperacion`. */
     public function index(Request $request)
     {
-        $q = CashDeposit::query()
-            ->leftJoin('domiciliary as d', 'd.domiciliary_id', '=', 'cash_deposits.domiciliary_id')
-            ->leftJoin('user as u', 'u.user_id', '=', 'd.user_id')
-            ->select([
-                'cash_deposits.*',
-                'u.name as domiciliary_name',
-            ]);
-
-        if ($estado = $request->query('state')) {
-            $q->where('cash_deposits.state', $estado);
-        }
-
-        if ($domi = $request->query('domiciliary_id')) {
-            $q->where('cash_deposits.domiciliary_id', $domi);
-        }
-
         return response()->json([
-            'data' => $q->latest('cash_deposits.created_at')->limit(200)->get(),
+            'data' => (new EfectivoDeLaOperacion)->depositos(
+                estado: $request->query('state'),
+                domiciliario: ((int) $request->query('domiciliary_id')) ?: null,
+            ),
         ]);
     }
 
-    /** Quién debe cuánto, ahora mismo. Es la pregunta que antes no se podía hacer. */
+    /** Quien debe cuanto, ahora mismo. Es la pregunta que antes no se podia hacer. */
     public function saldos()
     {
-        $saldos = CashMovement::query()
-            ->join('domiciliary as d', 'd.domiciliary_id', '=', 'cash_movements.domiciliary_id')
-            ->leftJoin('user as u', 'u.user_id', '=', 'd.user_id')
-            ->groupBy('cash_movements.domiciliary_id', 'u.name')
-            ->havingRaw('SUM(cash_movements.amount) <> 0')
-            ->orderByRaw('SUM(cash_movements.amount) DESC')
-            ->get([
-                'cash_movements.domiciliary_id',
-                'u.name',
-                DB::raw('SUM(cash_movements.amount) as balance'),
-            ]);
+        $saldos = (new EfectivoDeLaOperacion)->saldos();
 
         return response()->json([
             'data' => $saldos,

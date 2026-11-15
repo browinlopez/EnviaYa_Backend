@@ -6,7 +6,7 @@ namespace App\Http\Controllers\Negocio;
 
 use App\Http\Controllers\Controller;
 use App\Models\Domiciliary;
-use App\Models\Operacion\CashDeposit;
+use App\Queries\EfectivoDeLaTienda;
 use App\Services\CustodiaDeEfectivo;
 use Illuminate\Http\Request;
 use RuntimeException;
@@ -35,17 +35,15 @@ class EfectivoDeLaTiendaController extends Controller
     {
         $negocioId = (int) $request->attributes->get('busines_id');
 
-        $flota = Domiciliary::with('user')
-            ->whereHas('businesses', fn ($q) => $q->where('business.busines_id', $negocioId)->where('business_domiciliary.state', 1))
-            ->get();
+        /* LAS CUATRO CONSULTAS VIVEN EN `Queries/EfectivoDeLaTienda`, que es
+           lo que §12 pide. Aqui queda el armado de la respuesta, que es
+           presentacion y no lectura. */
+        $lee = new EfectivoDeLaTienda;
+
+        $flota = $lee->flota($negocioId);
         $ids = $flota->pluck('domiciliary_id')->map(fn ($id) => (int) $id)->all();
 
-        $ultimas = CashDeposit::where('busines_id', $negocioId)
-            ->where('canal', CashDeposit::MOSTRADOR)
-            ->where('state', CashDeposit::CONFIRMADA)
-            ->selectRaw('domiciliary_id, MAX(confirmed_at) as ultima')
-            ->groupBy('domiciliary_id')
-            ->pluck('ultima', 'domiciliary_id');
+        $ultimas = $lee->ultimaEntregaPorDomiciliario($negocioId);
 
         /*
          * LOS DOS NÚMEROS DE TODA LA FLOTA, ANTES DEL RECORRIDO.
@@ -74,18 +72,7 @@ class EfectivoDeLaTiendaController extends Controller
             'ultima_entrega' => $ultimas[$d->domiciliary_id] ?? null,
         ])->sortByDesc('pendiente')->values();
 
-        $entregas = CashDeposit::where('cash_deposits.busines_id', $negocioId)
-            ->where('cash_deposits.canal', CashDeposit::MOSTRADOR)
-            ->leftJoin('domiciliary as d', 'd.domiciliary_id', '=', 'cash_deposits.domiciliary_id')
-            ->leftJoin('user as u', 'u.user_id', '=', 'd.user_id')
-            ->leftJoin('user as r', 'r.user_id', '=', 'cash_deposits.confirmed_by')
-            ->latest('cash_deposits.confirmed_at')
-            ->limit(100)
-            ->get([
-                'cash_deposits.id', 'cash_deposits.domiciliary_id', 'cash_deposits.amount',
-                'cash_deposits.notes', 'cash_deposits.confirmed_at', 'cash_deposits.settlement_id',
-                'u.name as domiciliario', 'r.name as recibio',
-            ])
+        $entregas = $lee->entregasEnMostrador($negocioId)
             ->map(fn ($e) => [
                 'id' => (int) $e->id,
                 'domiciliary_id' => (int) $e->domiciliary_id,
@@ -98,13 +85,7 @@ class EfectivoDeLaTiendaController extends Controller
                 'en_corte' => $e->settlement_id !== null,
             ]);
 
-        $consignaciones = $ids === [] ? collect() : CashDeposit::whereIn('cash_deposits.domiciliary_id', $ids)
-            ->where('cash_deposits.canal', CashDeposit::CONSIGNACION)
-            ->leftJoin('domiciliary as d', 'd.domiciliary_id', '=', 'cash_deposits.domiciliary_id')
-            ->leftJoin('user as u', 'u.user_id', '=', 'd.user_id')
-            ->latest('cash_deposits.created_at')
-            ->limit(50)
-            ->get(['cash_deposits.*', 'u.name as domiciliario'])
+        $consignaciones = $lee->consignaciones($ids)
             ->map(fn ($c) => [
                 'id' => (int) $c->id,
                 'domiciliario' => $c->domiciliario,
