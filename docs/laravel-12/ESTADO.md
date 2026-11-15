@@ -1,8 +1,8 @@
 # Estado del backend frente al estándar
 
-**Medido el 14 de noviembre de 2026.** Laravel 12.72 · 1348 pruebas en verde y
-12 saltadas · PHPStan y Pint limpios · 494 clases cargan · `composer audit` en
-cero · OpenAPI al día · **la suite corrida también sobre MySQL 8** (72 de 72) ·
+**Medido el 14 de noviembre de 2026.** Laravel 12.72 · 1352 pruebas en verde y
+12 saltadas · PHPStan y Pint limpios (línea base 57 avisos, desde 503) · 494
+clases cargan · `composer audit` en cero · OpenAPI al día · **la suite corrida también sobre MySQL 8** (72 de 72) ·
 **el arnés recorrido entero tras los cambios de respuesta: 33 de 33
 procesos, CERO hallazgos**.
 
@@ -150,7 +150,9 @@ y sin un solo error. Ahora lo vigila `colas:comprobar --avisar`, a diario.
 | Duración de la suite | 630 s | **48 s** | las pruebas ya no llaman a un Reverb real |
 | Forma de la respuesta en `JsonResource` | 0 | **55 clases** | quince tandas. `scripts/formas_de_entidad.py` mide **0 formas de entidad por migrar** en `app/Http`: lo que queda son informes de agregados, donde un Resource sería la ceremonia que §05 prohíbe |
 | Relaciones de Eloquent tipadas | 52 | **153 de 153** | con genéricos las 153. Dos pruebas lo fijan: que toda relación declarada se construya, y que ninguna nueva se quede sin tipo ni sin genéricos |
-| Pruebas | 1026 | **1336** | 12 saltadas, y es honesto decir cuáles: 9 son de `EXPLAIN` y `for update`, que solo significan algo en MySQL. Que los **92 índices con nombre existan** sí se comprueba en cada corrida y en cualquier motor |
+| Autorización por registro en `Policies` | 0 | **2 clases + 2 Gates** | §08 pide «Policy o Gate por recurso **y prueba de denegación**». Las cuatro reglas estaban en métodos privados; de ahí que `showDomiciliary` se quedara sin acotar mientras `updateDomiciliary` sí lo estaba |
+| Consultas complejas en `Queries/` | 0 | **9 clases** | §12 lo exige y la carpeta no existía. Se midieron los candidatos —§21 §4 dice cuándo NO hacerlo— y eran nueve controladores con seis o más uniones y agrupaciones. Hoy: ninguno |
+| Pruebas | 1026 | **1352** | 12 saltadas, y es honesto decir cuáles: 9 son de `EXPLAIN` y `for update`, que solo significan algo en MySQL. Que los **92 índices con nombre existan** sí se comprueba en cada corrida y en cualquier motor |
 | Procesos recorridos de punta a punta | 0 | **33** | `scripts/arnes/`, contra el servidor en marcha |
 | Avisos de `composer audit` | 20 | **0** | bloqueante en el CI |
 
@@ -178,6 +180,8 @@ noviembre:
 | `dd()` / `dump()` | ninguno vivo. El que queda está dentro de un `/* */` |
 | `catch (\Throwable)` que silencia | uno solo, y registra el motivo y responde 500, que es justo lo que §09 pide |
 | alcance global que exponga registros de otros | cerrado el 13 de noviembre; era `showDomiciliary`. Ver abajo |
+| **Policy o Gate por recurso (§08)** | **cerrado el 14 de noviembre.** Las cuatro reglas de autorización por registro estaban en métodos privados de cuatro controladores; están en `app/Policies/` con su prueba de denegación. NO sustituyen al middleware: son la segunda capa de §35 |
+| **consultas complejas en `Queries/` (§12)** | **cerrado el 14 de noviembre.** La carpeta no existía, y eso no era una excepción documentada: era un hueco mudo. Nueve clases, 1105 líneas, y ningún controlador queda con seis o más uniones y agrupaciones |
 
 ### El incumplimiento que había, ARREGLADO el 13 de noviembre de 2026
 

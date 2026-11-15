@@ -108,7 +108,27 @@ Si aparece una tercera, que aparezca con su motivo escrito acá.
 
 ## 2 · Decisiones: reglas que aquí **no** son deuda
 
-### Autorización por middleware, no por Policy
+### Autorización por middleware, no por Policy — YA NO ES UNA EXCEPCIÓN
+
+> **14 de noviembre de 2026: cerrada.** Las cuatro reglas de autorización por
+> registro --que vivían en métodos privados de cuatro controladores-- están en
+> `app/Policies/DomiciliaryPolicy` y `app/Policies/OrdersSalesPolicy`, con las
+> dos puertas con nombre que hacen falta para las reglas cuyo argumento no es
+> el modelo. Su prueba de denegación está en
+> `tests/Feature/Seguridad/LasPoliciesEstanRegistradasTest.php`.
+>
+> **EL ARGUMENTO DE ABAJO SIGUE VALIENDO Y POR ESO EL MIDDLEWARE NO SE
+> QUITÓ.** Las Policies son la SEGUNDA capa, que es lo que §35 llama defensa
+> en profundidad. El middleware falla cerrado; una Policy olvidada falla
+> abierta. Quitarlo porque «ya hay Policy» sería cambiar una garantía por una
+> costumbre.
+>
+> Y lo que el argumento de abajo no vio: una regla en un método PRIVADO no la
+> puede usar un segundo sitio, así que el tercero la escribe otra vez. Ya
+> pasó --`updateDomiciliary` estaba acotado y `showDomiciliary`, cuarenta
+> líneas más abajo, no-- y es lo que este cambio cierra.
+
+#### El razonamiento original, que se conserva
 
 `08-seguridad-y-autorizacion.md` pide Policy o Gate por recurso. Aquí la
 autorización vive en middleware (`negocio`, `admin`, `modulo:<área>`) y **el
