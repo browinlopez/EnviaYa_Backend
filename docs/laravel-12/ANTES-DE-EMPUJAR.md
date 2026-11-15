@@ -14,9 +14,36 @@ servidor todavía no sirve.
 
 ## 1 · Empujar
 
-Nada está empujado. Medido el **15 de noviembre de 2026**: son **166 commits**
+> **ESTÁ EN GITHUB, EN `refactor-total`, Y NO ESTÁ DESPLEGADO.** Las dos
+> cosas a la vez, el 15 de noviembre de 2026. Por petición expresa, el trabajo
+> de los cuatro repositorios se subió a una rama `refactor-total` para tenerlo
+> en un sitio y poder partir de ahi:
+>
+> | repositorio | rama remota, en el primer empuje | commits |
+> |---|---|---|
+> | `EnviaYa_Backend` | `refactor-total` → `c51a071` | 188 sobre `origin/Devs` |
+> | `Vecipaya_Aliados` | `refactor-total` → `702c779` | 8 |
+> | `EnviaYa_App` | `refactor-total` → `731a6da` | 5 |
+> | `Vecipaya_Landing` | `refactor-total` → `e8ca4f0` | 1 |
+>
+> Esos son los SHA del **primer** empuje: la rama del backend sigue avanzando
+> con lo que se commitee despues, asi que no hay que leerlos como su punta.
+>
+> **Y no despliega nada**, comprobado y no supuesto: `Devs`, `main` y `master`
+> siguen exactamente donde estaban --backend `Devs` en `92ecb00`, panel
+> `master` en `7e36883`-- y `gh run list --branch refactor-total` no devuelve
+> ninguna ejecución en ninguno de los dos repositorios con CI. El workflow
+> filtra `branches: [Devs, main, master]`, así que **en `refactor-total` las
+> puertas no corren**: lleva las que se corrieron en local, no un verde de
+> GitHub. Si se quiere ese verde, hay que añadir la rama a ese filtro.
+>
+> Lo que sigue abajo --empujar de verdad, o sea desplegar-- **no ha pasado**.
+> Esa es la decisión que queda, y los números de abajo se miden contra
+> `origin/Devs`, que es la rama que despliega.
+
+Nada está desplegado. Medido el **15 de noviembre de 2026**: son **167 commits**
 en `validacion/integracion` sobre `Devs`, y `Devs` a su vez va **22 commits por
-delante de `origin/Devs`**: **188** en total. La cuenta **incluye el commit que la escribe**: si no, cada
+delante de `origin/Devs`**: **189** en total. La cuenta **incluye el commit que la escribe**: si no, cada
 marcador la deja corta en uno y el verificador avisa para siempre de un
 desajuste que es de construccion. Hasta que `Devs` suba, las ramas
 de trabajo que cuelgan de ahí no tienen dónde apoyarse.
