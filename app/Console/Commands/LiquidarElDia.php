@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Models\Order\OrdersSales;
 use App\Services\LiquidacionService;
 use App\Support\FiltroDeFechas;
 use Illuminate\Console\Command;
@@ -71,7 +72,7 @@ class LiquidarElDia extends Command
             $destinatarios = FiltroDeFechas::unDia(
                 DB::table('orderssales'), 'sale_date', $fecha
             )
-                ->where('state', 4)
+                ->where('state', OrdersSales::ENTREGADO)
                 ->whereNotNull($columna)
                 ->distinct()
                 ->pluck($columna);

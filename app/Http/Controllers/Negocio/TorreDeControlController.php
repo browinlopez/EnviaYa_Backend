@@ -51,10 +51,12 @@ class TorreDeControlController extends Controller
      * pantalla de ruido. Fuera de la ventana se devuelve `null`, que la
      * pantalla cuenta como «sin posición».
      */
+    /*
+     * LOS ESTADOS VIENEN DE `OrdersSales`, no de una copia privada.
+     * Estaban declarados aqui y en otras ocho clases: la misma decision
+     * tomada nueve veces. Ver la cabecera de esas constantes en el modelo.
+     */
     private const HORAS_DE_POSICION = 12;
-
-    /** El estado del pedido que significa «lo lleva encima». */
-    private const EN_CAMINO = 3;
 
     public function __construct(private CustodiaDeEfectivo $custodia) {}
 
@@ -149,7 +151,7 @@ class TorreDeControlController extends Controller
 
         return OrdersSales::where('busines_id', $businessId)
             ->whereIn('domiciliary_id', $ids)
-            ->where('state', self::EN_CAMINO)
+            ->where('state', OrdersSales::EN_CAMINO)
             ->with(['buyer.user', 'address', 'details.product:products_id,name,image'])
             ->get()
             ->map(fn (OrdersSales $o) => [

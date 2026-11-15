@@ -109,9 +109,9 @@ class ConsultaDePedidosController extends Controller
                    * entregado tiene su fecha; el cancelado, la de su último
                    * cambio.
                    */
-                    ->orWhere(fn ($q2) => $q2->where('state', 4)
+                    ->orWhere(fn ($q2) => $q2->where('state', OrdersSales::ENTREGADO)
                         ->where($this->cerradoHoy('delivery_date')))
-                    ->orWhere(fn ($q2) => $q2->where('state', 5)
+                    ->orWhere(fn ($q2) => $q2->where('state', OrdersSales::CANCELADO)
                         ->where($this->cerradoHoy('updated_at')));
             })
             // La lista la declara el presentador, que es quien las lee: esta

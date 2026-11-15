@@ -35,10 +35,11 @@ use Illuminate\Support\Facades\DB;
  */
 class HistorialDePedidosController extends Controller
 {
-    /** Estados que cuentan como cerrados. */
-    private const ENTREGADO = 4;
-
-    private const CANCELADO = 5;
+    /*
+     * LOS ESTADOS VIENEN DE `OrdersSales`, no de una copia privada.
+     * Estaban declarados aqui y en otras ocho clases: la misma decision
+     * tomada nueve veces. Ver la cabecera de esas constantes en el modelo.
+     */
 
     private const DIAS_MAXIMOS = 92;
 
@@ -52,15 +53,15 @@ class HistorialDePedidosController extends Controller
 
         $base = fn () => OrdersSales::where('busines_id', $businessId)
             ->confirmados()
-            ->whereIn('state', [self::ENTREGADO, self::CANCELADO])
+            ->whereIn('state', [OrdersSales::ENTREGADO, OrdersSales::CANCELADO])
             ->whereBetween('sale_date', [$desde, $hasta]);
 
         $consulta = $base();
 
         if (($datos['estado'] ?? 'todos') === 'entregados') {
-            $consulta->where('state', self::ENTREGADO);
+            $consulta->where('state', OrdersSales::ENTREGADO);
         } elseif (($datos['estado'] ?? 'todos') === 'cancelados') {
-            $consulta->where('state', self::CANCELADO);
+            $consulta->where('state', OrdersSales::CANCELADO);
         }
 
         /*
@@ -114,7 +115,7 @@ class HistorialDePedidosController extends Controller
          * Los filtros acotan la TABLA, que es donde se busca un pedido
          * concreto.
          */
-        $entregados = (clone $base())->where('state', self::ENTREGADO);
+        $entregados = (clone $base())->where('state', OrdersSales::ENTREGADO);
 
         return response()->json([
             'periodo' => [
@@ -124,7 +125,7 @@ class HistorialDePedidosController extends Controller
             'totales' => [
                 'pedidos' => (int) (clone $base())->count(),
                 'entregados' => (int) (clone $entregados)->count(),
-                'cancelados' => (int) (clone $base())->where('state', self::CANCELADO)->count(),
+                'cancelados' => (int) (clone $base())->where('state', OrdersSales::CANCELADO)->count(),
                 // Sin el domicilio: ese dinero es del domiciliario, no de la
                 // tienda. Es la misma regla que la cifra «Ventas hoy».
                 'vendido' => (float) (clone $entregados)->sum(DB::raw('subtotal - discount')),

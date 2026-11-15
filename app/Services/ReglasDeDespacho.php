@@ -59,7 +59,7 @@ class ReglasDeDespacho
 
         $enCurso = OrdersSales::where('domiciliary_id', $domiciliary->domiciliary_id)
             ->confirmados()
-            ->where('state', 3)
+            ->where('state', OrdersSales::EN_CAMINO)
             ->where('orderSales_id', '!=', $order->orderSales_id)
             ->count();
 

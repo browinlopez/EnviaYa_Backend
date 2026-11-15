@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\CrearDomiciliarioInternoRequest;
 use App\Http\Requests\Admin\FirmarAcuerdoDelDomiciliarioRequest;
 use App\Http\Resources\Domiciliario\ContratoFirmadoResource;
+use App\Models\Order\OrdersSales;
 use App\Models\User;
 use App\Services\ContratoService;
 use App\Services\MediaService;
@@ -99,7 +100,7 @@ class DomiciliariosApiController extends Controller
             ->get();
 
         $d->recent_deliveries = $pedidos()
-            ->where('o.state', self::ENTREGADO)
+            ->where('o.state', OrdersSales::ENTREGADO)
             ->orderByDesc('o.delivery_date')
             ->limit(10)
             ->get();
@@ -124,7 +125,7 @@ class DomiciliariosApiController extends Controller
         // marcas: estimar los que faltan inventaría un dato.
         $d->avg_minutes = DB::table('orderssales')
             ->where('domiciliary_id', $id)
-            ->where('state', self::ENTREGADO)
+            ->where('state', OrdersSales::ENTREGADO)
             ->whereNotNull('dispatched_at')
             ->whereNotNull('delivery_date')
             /*

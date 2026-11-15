@@ -49,8 +49,16 @@ class CancelacionDelPedido
 
     public const TIENDA = 'tienda';
 
-    /** El estado de un pedido cancelado. */
-    public const CANCELADO = 5;
+    /**
+     * El estado de un pedido cancelado.
+     *
+     * APUNTA AL MODELO y no repite el 5: era la tercera copia del mismo
+     * numero. Se conserva el nombre aqui porque
+     * `CancelacionDelPedidoController` la usa como
+     * `CancelacionDelPedido::CANCELADO`, y renombrar eso seria cambiar una
+     * duplicacion por un cambio de API interna.
+     */
+    public const CANCELADO = OrdersSales::CANCELADO;
 
     public function __construct(
         private readonly ExistenciasDelPedido $existencias,
@@ -99,11 +107,11 @@ class CancelacionDelPedido
                 ->lockForUpdate()
                 ->first();
 
-            if (! $fresco || (int) $fresco->state === self::CANCELADO) {
+            if (! $fresco || (int) $fresco->state === OrdersSales::CANCELADO) {
                 return false;
             }
 
-            $fresco->state = self::CANCELADO;
+            $fresco->state = OrdersSales::CANCELADO;
             $fresco->save();
 
             $this->existencias->devolver($fresco);
@@ -113,7 +121,7 @@ class CancelacionDelPedido
 
             DB::table('status_history')->insert([
                 'order_id' => $fresco->orderSales_id,
-                'status_history' => self::CANCELADO,
+                'status_history' => OrdersSales::CANCELADO,
                 'motivo' => $motivo,
                 'state' => 1,
                 'created_by' => $porQuien,

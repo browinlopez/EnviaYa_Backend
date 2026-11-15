@@ -46,6 +46,11 @@ use Illuminate\Support\Facades\DB;
 class FichaDelDomiciliarioController extends Controller
 {
     /** Los que el tendero reconoce, con el nombre que usa al pedirlos. */
+    /*
+     * LOS ESTADOS VIENEN DE `OrdersSales`, no de una copia privada.
+     * Estaban declarados aqui y en otras ocho clases: la misma decision
+     * tomada nueve veces. Ver la cabecera de esas constantes en el modelo.
+     */
     private const ROTULOS = [
         'cedula' => ['Cédula', 'Las dos caras'],
         'licencia' => ['Licencia de conducción', 'Categoría A2 para moto'],
@@ -75,7 +80,7 @@ class FichaDelDomiciliarioController extends Controller
         $encima = OrdersSales::with('buyer.user')
             ->where('domiciliary_id', $d->domiciliary_id)
             ->where('busines_id', $negocioId)
-            ->where('state', 3)
+            ->where('state', OrdersSales::EN_CAMINO)
             ->orderByDesc('dispatched_at')
             ->get();
 
@@ -134,9 +139,6 @@ class FichaDelDomiciliarioController extends Controller
         ]);
     }
 
-    /** El estado de un pedido cancelado. */
-    private const CANCELADO = 5;
-
     /**
      * La vista de detalle del domiciliario.
      *
@@ -155,7 +157,7 @@ class FichaDelDomiciliarioController extends Controller
             ->limit(200)
             ->get();
 
-        $entregados = $pedidos->where('state', 4)->filter(fn ($o) => $o->delivery_date);
+        $entregados = $pedidos->where('state', OrdersSales::ENTREGADO)->filter(fn ($o) => $o->delivery_date);
 
         $lunes = now()->startOfWeek();
         $lunesPasado = $lunes->copy()->subWeek();
@@ -260,7 +262,7 @@ class FichaDelDomiciliarioController extends Controller
                         'fecha' => $o->delivery_date]);
                 }
             }
-            if ((int) $o->state === self::CANCELADO) {
+            if ((int) $o->state === OrdersSales::CANCELADO) {
                 $eventos->push(['tipo' => 'operacion', 'icono' => 'cancelado',
                     'texto' => "Pedido #{$n} cancelado", 'fecha' => $o->updated_at ?? $o->dispatched_at ?? $o->sale_date]);
             }
@@ -297,7 +299,7 @@ class FichaDelDomiciliarioController extends Controller
     {
         $base = fn () => OrdersSales::where('domiciliary_id', $domiciliaryId)
             ->where('busines_id', $negocioId)
-            ->where('state', 4);
+            ->where('state', OrdersSales::ENTREGADO);
 
         $fila = $base()->first([
             DB::raw('COUNT(orderSales_id) as entregas'),

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Order\OrdersSales;
 use App\Services\Ajustes;
 use App\Services\ResumenDelPanel;
 use App\Support\Consultas\AyudasDeAdmin;
@@ -30,7 +31,7 @@ class AdminApiController extends Controller
             ->get(['orderSales_id', 'state', 'total', 'subtotal', 'domicilio', 'domiciliary_fee', 'sale_date', 'payment_state']);
 
         $enPeriodo = fn ($o) => Carbon::parse($o->sale_date)->gte($desde);
-        $entregadas = $ordenes->where('state', self::ENTREGADO);
+        $entregadas = $ordenes->where('state', OrdersSales::ENTREGADO);
 
         $actual = $entregadas->filter($enPeriodo);
         $previo = $entregadas->reject($enPeriodo);

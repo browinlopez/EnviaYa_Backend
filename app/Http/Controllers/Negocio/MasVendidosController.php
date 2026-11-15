@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Negocio;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Negocio\MasVendidosRequest;
+use App\Models\Order\OrdersSales;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -21,7 +22,11 @@ use Illuminate\Support\Facades\DB;
  */
 class MasVendidosController extends Controller
 {
-    private const ENTREGADO = 4;
+    /*
+     * LOS ESTADOS VIENEN DE `OrdersSales`, no de una copia privada.
+     * Estaban declarados aqui y en otras ocho clases: la misma decision
+     * tomada nueve veces. Ver la cabecera de esas constantes en el modelo.
+     */
 
     public function index(MasVendidosRequest $request)
     {
@@ -39,7 +44,7 @@ class MasVendidosController extends Controller
                 $j->on('pb.products_id', '=', 'd.product_id')->where('pb.busines_id', '=', $negocioId);
             })
             ->where('o.busines_id', $negocioId)
-            ->where('o.state', self::ENTREGADO)
+            ->where('o.state', OrdersSales::ENTREGADO)
             ->where('o.sale_date', '>=', now()->subDays($dias)->startOfDay())
             ->groupBy('d.product_id', 'p.name', 'p.image', 'pb.price')
             ->orderByDesc('unidades')

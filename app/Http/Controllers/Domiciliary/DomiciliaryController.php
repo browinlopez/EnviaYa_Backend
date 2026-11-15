@@ -15,6 +15,7 @@ use App\Http\Resources\Usuario\DomiciliarioDelAltaResource;
 use App\Http\Resources\Usuario\UsuarioResource;
 use App\Models\Business;
 use App\Models\Domiciliary;
+use App\Models\Order\OrdersSales;
 use App\Models\User;
 use App\Services\Ajustes;
 use App\Services\CustodiaDeEfectivo;
@@ -36,7 +37,7 @@ class DomiciliaryController extends Controller
         // Pedidos que cada domiciliario lleva encima ahora mismo, para que el
         // tendero vea a quién puede despacharle antes de intentarlo.
         $business->domiciliaries->loadCount([
-            'orders as active_orders' => fn ($q) => $q->where('state', 3),
+            'orders as active_orders' => fn ($q) => $q->where('state', OrdersSales::EN_CAMINO),
         ]);
 
         $maxSimultaneos = (int) Ajustes::valor('operacion.entregas_simultaneas');

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Models\Order\OrdersSales;
 use App\Services\FacturaService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -35,7 +36,7 @@ class EmitirFacturasPendientes extends Command
     public function handle(FacturaService $facturas): int
     {
         $q = DB::table('orderssales as o')
-            ->where('o.state', 4)
+            ->where('o.state', OrdersSales::ENTREGADO)
             ->whereNotExists(fn ($sub) => $sub
                 ->from('invoices as i')
                 ->whereColumn('i.orderSales_id', 'o.orderSales_id'))

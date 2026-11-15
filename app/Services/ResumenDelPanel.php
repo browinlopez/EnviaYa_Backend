@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Models\Area;
 use App\Models\Operacion\DomiciliaryDocument;
+use App\Models\Order\OrdersSales;
 use App\Support\Consultas\AyudasDeAdmin;
 use App\Support\FiltroDeFechas;
 use Carbon\Carbon;
@@ -118,7 +119,7 @@ class ResumenDelPanel
         return DB::table('business as b')
             ->leftJoin('orderssales as o', function ($j) use ($desde) {
                 $j->on('o.busines_id', '=', 'b.busines_id')
-                    ->where('o.state', '=', self::ENTREGADO)
+                    ->where('o.state', '=', OrdersSales::ENTREGADO)
                     ->where('o.sale_date', '>=', $desde);
             })
             ->groupBy('b.busines_id', 'b.name', 'b.logo', 'b.qualification')

@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\CrearPropietarioRequest;
+use App\Models\Order\OrdersSales;
 use App\Queries\PropietariosDelPanel;
 use App\Support\Consultas\AyudasDeAdmin;
 use Illuminate\Http\Request;
@@ -21,7 +22,7 @@ class PropietariosApiController extends Controller
     public function owners()
     {
         return response()->json(
-            (new PropietariosDelPanel(self::ENTREGADO))->listado()
+            (new PropietariosDelPanel(OrdersSales::ENTREGADO))->listado()
         );
     }
 
@@ -29,7 +30,7 @@ class PropietariosApiController extends Controller
     public function ownerOptions()
     {
         return response()->json(
-            (new PropietariosDelPanel(self::ENTREGADO))->opcionesDeLaFicha()
+            (new PropietariosDelPanel(OrdersSales::ENTREGADO))->opcionesDeLaFicha()
         );
     }
 

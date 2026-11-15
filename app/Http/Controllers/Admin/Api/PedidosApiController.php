@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Order\OrdersSales;
 use App\Services\Ajustes;
 use App\Support\Consultas\AyudasDeAdmin;
 use App\Support\ListadoPaginado;
@@ -99,7 +100,7 @@ class PedidosApiController extends Controller
 
         match ($request->query('state_group')) {
             'activos' => $q->whereIn('o.state', self::ACTIVOS),
-            'entregados' => $q->where('o.state', self::ENTREGADO),
+            'entregados' => $q->where('o.state', OrdersSales::ENTREGADO),
             'sin_pago' => $q->whereNotExists(fn ($sub) => $this->pagoAprobado($sub)),
             'atencion' => $q->whereIn('o.state', self::ACTIVOS)
                 ->where(fn ($sub) => $sub
@@ -112,7 +113,7 @@ class PedidosApiController extends Controller
     /** Indicadores de la pantalla, sobre TODO lo filtrado. */
     private function resumenDePedidos($q): array
     {
-        $entregado = self::ENTREGADO;
+        $entregado = OrdersSales::ENTREGADO;
         $activos = implode(',', self::ACTIVOS);
         $limite = Carbon::now()->subHours($this->horasEstancado())->toDateTimeString();
 
