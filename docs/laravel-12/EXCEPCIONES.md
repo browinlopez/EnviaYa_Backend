@@ -381,6 +381,7 @@ Lo nuevo de verdad no son los documentos: es que trae **herramientas**.
 |---|---|---|
 | `check_module_boundaries.py` | `scripts/` | *«Sin `app/Modules/`: no aplica»*. Degrada bien, que es lo correcto para la decisión de §1 de este registro |
 | `check_file_sizes.py` | `scripts/` | **148 archivos** por encima del objetivo (decía 113: es la cifra que `cifras_del_registro.py` cazó el 15 de noviembre). Coincide con lo medido en §1 |
+| `barrido-pendientes.json` | `scripts/` | **Nuestro.** Las **57** constantes que deciden dinero, permiso o estado y que el barrido todavía no toca, en tres grupos que piden tres cosas distintas: **10 muertas** (nadie en `app/` las nombra — sabotearlas daría hallazgos falsos), **21 sin ninguna prueba** (ahí no hace falta medir, la respuesta ya se sabe) y **26 con prueba** (ahí sí, porque tener prueba no es que la cace). `barrido_sabotaje.py --comprobar` la valida |
 | `cifras_del_registro.py` | `scripts/` | **Nuestro, no del estándar.** Remide las 29 cifras que estos tres documentos afirman y dice cuáles ya no describen el repositorio. No es una puerta: una cifra vieja a veces fecha una decisión a propósito. Trae `--control`, porque un patrón que deja de encajar diría «cuadra» estando ciego |
 | `phpstan.neon.dist`, `pint.json`, CI, CODEOWNERS | `tooling/` | **Plantillas, no configuración.** Su propio README dice «NO se instalan automáticamente» |
 

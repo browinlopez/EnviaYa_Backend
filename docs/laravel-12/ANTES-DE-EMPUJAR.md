@@ -97,6 +97,24 @@ entonces se añade también a `scripts/barrido-mutaciones.json`--. La primera
 vez encontró tres agujeros con 1361 pruebas en verde; el por qué está en la
 sexta lección de `ESTADO.md`.
 
+**Lo que le falta por barrer está medido, en `scripts/barrido-pendientes.json`.**
+De las 131 constantes públicas de `app/`, 43 están barridas y **57 de las
+restantes deciden** dinero, un permiso o un estado. Eso corrige algo que este
+repositorio vino diciendo —«son etiquetas y plazos que no deciden nada»— y que
+con la lista delante era falso: entre ellas están las parejas de cuatro
+agujeros reales (`DEVUELTA` junto a `APLICADA`, los dos `AJUSTE` junto a
+`RECAUDO`, `APROBADA` junto a `PAGADA`, `KILO` y `GRAMO` junto a `LIBRA`).
+
+Y la división en tres grupos cambia el trabajo, porque **la mitad de lo que
+parecía barrido no lo es**:
+
+| grupo | cuántas | qué pide |
+|---|---|---|
+| muertas | **10** | Nadie en `app/` las nombra. Sabotearlas no puede fallar ninguna prueba, así que el barrido diría «sin defensa» cuando están muertas: **hallazgos falsos**. Piden decidir si se borran o si falta el código que debería usarlas |
+| sin prueba | **21** | Las usa `app/` y ninguna prueba las nombra. Aquí no hace falta medir: la respuesta ya se sabe. Falta la prueba |
+| con prueba | **26** | **La tercera pasada son estas.** Es lo único que no se puede saber leyendo: que exista una prueba no significa que cace un cambio, y es justo lo que las dos pasadas anteriores encontraron |
+
+
 Y la sexta, que tampoco es una puerta y tarda dos segundos:
 
 ```
