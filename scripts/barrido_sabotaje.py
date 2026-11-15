@@ -16,12 +16,17 @@ esta midiendo.
 Lee la salida asi: FALLA = defendido. PASA = nadie lo vigila.
 """
 import io
+import os
 import re
 import subprocess
 import sys
 import time
 
-RAIZ = r"C:\Users\Usuario\Documents\GitHub\Desarrollo EnviaYa\EnviaYa_Backend\EnviaYa_Backend"
+# La raiz del repositorio, deducida de donde vive este fichero: `scripts/` esta
+# dentro de ella. Estaba escrita a mano, con la ruta absoluta de una maquina
+# concreta, que es inservible para cualquier otra persona y rompe el script en
+# cuanto alguien clona el repositorio en otro sitio.
+RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # (etiqueta, fichero, texto original, texto saboteado, que error representa)
 #
@@ -203,7 +208,7 @@ def main():
     errores = []
 
     for i, (etq, rel, viejo, nuevo, dano) in enumerate(MUTACIONES, 1):
-        p = RAIZ + "\\" + rel.replace("/", "\\")
+        p = os.path.join(RAIZ, *rel.split("/"))
         s = leer(p)
 
         if s.count(viejo) != 1:
