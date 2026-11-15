@@ -14,9 +14,9 @@ servidor todavía no sirve.
 
 ## 1 · Empujar
 
-Nada está empujado. Medido el **15 de noviembre de 2026**: son **163 commits**
+Nada está empujado. Medido el **15 de noviembre de 2026**: son **166 commits**
 en `validacion/integracion` sobre `Devs`, y `Devs` a su vez va **22 commits por
-delante de `origin/Devs`**: **185** en total. La cuenta **incluye el commit que la escribe**: si no, cada
+delante de `origin/Devs`**: **188** en total. La cuenta **incluye el commit que la escribe**: si no, cada
 marcador la deja corta en uno y el verificador avisa para siempre de un
 desajuste que es de construccion. Hasta que `Devs` suba, las ramas
 de trabajo que cuelgan de ahí no tienen dónde apoyarse.
