@@ -332,7 +332,18 @@ def main():
         # su prueba, y la lista sigue diciendo lo de antes. Se comprueba aqui
         # porque es el sitio donde ya se valida la lista hermana, y porque no
         # ejecuta nada.
-        problemas += comprobar_pendientes()
+        #
+        # SOLO CON LA LISTA PERMANENTE. `comprobar_pendientes` valida la
+        # PAREJA `barrido-mutaciones.json` + `barrido-pendientes.json`: su
+        # comprobacion de «no esta en las dos listas» no significa nada contra
+        # una lista de paso. Con `--lista`, una lista generada desde los
+        # propios pendientes --como la de la tercera pasada-- daba 42 avisos
+        # de algo que es correcto por construccion.
+        if "--lista" in sys.argv:
+            print("")
+            print("  (lista de paso: no se comprueban los pendientes)")
+        else:
+            problemas += comprobar_pendientes()
 
         print("")
         print("  " + str(len(MUTACIONES)) + " mutaciones, "

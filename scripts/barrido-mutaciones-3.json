@@ -1,0 +1,350 @@
+{
+ "_": [
+  "TERCERA PASADA DEL BARRIDO: las 46 que quedan.",
+  "",
+  "Generada el 15 de noviembre de 2026 desde `barrido-pendientes.json`,",
+  "grupos `sin_prueba` y `con_prueba`. Se barren LAS DOS, y no solo las",
+  "`con_prueba`, porque la clasificacion por nombre se equivoca: sabotear",
+  "`Pqrs::ABIERTO` --que ninguna prueba nombra-- tumba dos pruebas, porque",
+  "`Pqrs::ESTADOS` se construye desde ella. Grep no es sabotaje.",
+  "",
+  "Cada mutacion hace que el valor COLISIONE con el de otra constante de",
+  "su clase, o le quita el ultimo elemento si es una lista. Es la forma",
+  "que encontro los siete agujeros anteriores: lo que el codigo nunca",
+  "comprueba es que dos estados no valgan lo mismo.",
+  "",
+  "El `dano` dice lo verificable --con que colisiona-- y no la",
+  "consecuencia de negocio, que no esta trazada todavia. Cuando el barrido",
+  "senale una, se traza esa y se escribe entonces.",
+  "",
+  "",
+  "",
+  "Las cuatro que el generador no supo mutar van a mano, con el motivo",
+  "dicho en su `dano`: dos valen lo mismo entre si, una es una",
+  "referencia a otra clase y la cuarta es un array de un solo elemento."
+ ],
+ "mutaciones": [
+  {
+   "etiqueta": "AccesoBiometricoController::HABILIDAD",
+   "fichero": "app/Http/Controllers/Auth/AccesoBiometricoController.php",
+   "viejo": "public const HABILIDAD = 'biometrico';",
+   "nuevo": "public const HABILIDAD = 'sesion';",
+   "dano": "la habilidad del token cambia de nombre. El generador no supo mutarla porque su unica hermana vale lo mismo, asi que va a mano"
+  },
+  {
+   "etiqueta": "AccesoBiometricoController::NOMBRE_TOKEN",
+   "fichero": "app/Http/Controllers/Auth/AccesoBiometricoController.php",
+   "viejo": "public const NOMBRE_TOKEN = 'biometrico';",
+   "nuevo": "public const NOMBRE_TOKEN = 'sesion';",
+   "dano": "el token biometrico pasa a llamarse como uno de sesion: dejan de distinguirse al revocar"
+  },
+  {
+   "etiqueta": "AdCampaign::ACTIVA",
+   "fichero": "app/Models/Marketing/AdCampaign.php",
+   "viejo": "public const ACTIVA = 1;",
+   "nuevo": "public const ACTIVA = 0;",
+   "dano": "pasa a valer lo mismo que AdCampaign::BORRADOR: los dos se confunden"
+  },
+  {
+   "etiqueta": "AdCampaign::BORRADOR",
+   "fichero": "app/Models/Marketing/AdCampaign.php",
+   "viejo": "public const BORRADOR = 0;",
+   "nuevo": "public const BORRADOR = 1;",
+   "dano": "pasa a valer lo mismo que AdCampaign::ACTIVA: los dos se confunden"
+  },
+  {
+   "etiqueta": "AdCampaign::FINALIZADA",
+   "fichero": "app/Models/Marketing/AdCampaign.php",
+   "viejo": "public const FINALIZADA = 3;",
+   "nuevo": "public const FINALIZADA = 0;",
+   "dano": "pasa a valer lo mismo que AdCampaign::BORRADOR: los dos se confunden"
+  },
+  {
+   "etiqueta": "CancelacionDelPedido::CANCELADO",
+   "fichero": "app/Services/CancelacionDelPedido.php",
+   "viejo": "public const CANCELADO = OrdersSales::CANCELADO;",
+   "nuevo": "public const CANCELADO = OrdersSales::ENTREGADO;",
+   "dano": "cancelar un pedido lo deja ENTREGADO. No tiene hermana escalar con la que colisionar, asi que se apunta al estado de al lado"
+  },
+  {
+   "etiqueta": "CancelacionDelPedido::COMPRADOR",
+   "fichero": "app/Services/CancelacionDelPedido.php",
+   "viejo": "public const COMPRADOR = 'comprador';",
+   "nuevo": "public const COMPRADOR = 'tienda';",
+   "dano": "pasa a valer lo mismo que CancelacionDelPedido::TIENDA: los dos se confunden"
+  },
+  {
+   "etiqueta": "CancelacionDelPedido::TIENDA",
+   "fichero": "app/Services/CancelacionDelPedido.php",
+   "viejo": "public const TIENDA = 'tienda';",
+   "nuevo": "public const TIENDA = 'comprador';",
+   "dano": "pasa a valer lo mismo que CancelacionDelPedido::COMPRADOR: los dos se confunden"
+  },
+  {
+   "etiqueta": "CashDeposit::CONSIGNACION",
+   "fichero": "app/Models/Operacion/CashDeposit.php",
+   "viejo": "public const CONSIGNACION = 'consignacion';",
+   "nuevo": "public const CONSIGNACION = 'pendiente';",
+   "dano": "pasa a valer lo mismo que CashDeposit::PENDIENTE: los dos se confunden"
+  },
+  {
+   "etiqueta": "CashDeposit::ESTADOS",
+   "fichero": "app/Models/Operacion/CashDeposit.php",
+   "viejo": "public const ESTADOS = [self::PENDIENTE, self::CONFIRMADA, self::RECHAZADA];",
+   "nuevo": "public const ESTADOS = [self::PENDIENTE, self::CONFIRMADA];",
+   "dano": "la lista pierde self::RECHAZADA: deja de ser un valor valido"
+  },
+  {
+   "etiqueta": "CashDeposit::PENDIENTE",
+   "fichero": "app/Models/Operacion/CashDeposit.php",
+   "viejo": "public const PENDIENTE = 'pendiente';",
+   "nuevo": "public const PENDIENTE = 'confirmada';",
+   "dano": "pasa a valer lo mismo que CashDeposit::CONFIRMADA: los dos se confunden"
+  },
+  {
+   "etiqueta": "Coupon::TIPOS",
+   "fichero": "app/Models/Marketing/Coupon.php",
+   "viejo": "public const TIPOS = [self::TIPO_PORCENTAJE, self::TIPO_FIJO, self::TIPO_ENVIO_GRATIS];",
+   "nuevo": "public const TIPOS = [self::TIPO_PORCENTAJE, self::TIPO_FIJO];",
+   "dano": "la lista pierde self::TIPO_ENVIO_GRATIS: deja de ser un valor valido"
+  },
+  {
+   "etiqueta": "Coupon::TIPO_FIJO",
+   "fichero": "app/Models/Marketing/Coupon.php",
+   "viejo": "public const TIPO_FIJO = 'fixed';",
+   "nuevo": "public const TIPO_FIJO = 'percent';",
+   "dano": "pasa a valer lo mismo que Coupon::TIPO_PORCENTAJE: los dos se confunden"
+  },
+  {
+   "etiqueta": "CouponService::DEVUELTO",
+   "fichero": "app/Services/CouponService.php",
+   "viejo": "public const DEVUELTO = 0;",
+   "nuevo": "public const DEVUELTO = 1;",
+   "dano": "pasa a valer lo mismo que CouponService::APLICADO: los dos se confunden"
+  },
+  {
+   "etiqueta": "DocumentosDelDomiciliarioController::TIPOS",
+   "fichero": "app/Http/Controllers/Negocio/DocumentosDelDomiciliarioController.php",
+   "viejo": "public const TIPOS = ['cedula', 'licencia', 'soat', 'tecnomecanica', 'arl', 'eps'];",
+   "nuevo": "public const TIPOS = ['cedula', 'licencia', 'soat', 'tecnomecanica', 'arl'];",
+   "dano": "la lista pierde 'eps': deja de ser un valor valido"
+  },
+  {
+   "etiqueta": "FacturaService::EMITIDA",
+   "fichero": "app/Services/FacturaService.php",
+   "viejo": "public const EMITIDA = 1;",
+   "nuevo": "public const EMITIDA = 0;",
+   "dano": "pasa a valer lo mismo que FacturaService::ANULADA: los dos se confunden"
+  },
+  {
+   "etiqueta": "LandingRequest::DESCARTADA",
+   "fichero": "app/Models/Operacion/LandingRequest.php",
+   "viejo": "public const DESCARTADA = 3;",
+   "nuevo": "public const DESCARTADA = 0;",
+   "dano": "pasa a valer lo mismo que LandingRequest::NUEVA: los dos se confunden"
+  },
+  {
+   "etiqueta": "LandingRequest::EN_GESTION",
+   "fichero": "app/Models/Operacion/LandingRequest.php",
+   "viejo": "public const EN_GESTION = 1;",
+   "nuevo": "public const EN_GESTION = 0;",
+   "dano": "pasa a valer lo mismo que LandingRequest::NUEVA: los dos se confunden"
+  },
+  {
+   "etiqueta": "LandingRequest::NUEVA",
+   "fichero": "app/Models/Operacion/LandingRequest.php",
+   "viejo": "public const NUEVA = 0;",
+   "nuevo": "public const NUEVA = 1;",
+   "dano": "pasa a valer lo mismo que LandingRequest::EN_GESTION: los dos se confunden"
+  },
+  {
+   "etiqueta": "OrdersSales::ACTIVOS",
+   "fichero": "app/Models/Order/OrdersSales.php",
+   "viejo": "public const ACTIVOS = [self::NUEVO, self::PREPARANDO, self::EN_CAMINO];",
+   "nuevo": "public const ACTIVOS = [self::NUEVO, self::PREPARANDO];",
+   "dano": "la lista pierde self::EN_CAMINO: deja de ser un valor valido"
+  },
+  {
+   "etiqueta": "OrdersSales::CANCELADO",
+   "fichero": "app/Models/Order/OrdersSales.php",
+   "viejo": "public const CANCELADO = 5;",
+   "nuevo": "public const CANCELADO = 1;",
+   "dano": "pasa a valer lo mismo que OrdersSales::NUEVO: los dos se confunden"
+  },
+  {
+   "etiqueta": "OrdersSales::EN_CAMINO",
+   "fichero": "app/Models/Order/OrdersSales.php",
+   "viejo": "public const EN_CAMINO = 3;",
+   "nuevo": "public const EN_CAMINO = 1;",
+   "dano": "pasa a valer lo mismo que OrdersSales::NUEVO: los dos se confunden"
+  },
+  {
+   "etiqueta": "OrdersSales::NUEVO",
+   "fichero": "app/Models/Order/OrdersSales.php",
+   "viejo": "public const NUEVO = 1;",
+   "nuevo": "public const NUEVO = 2;",
+   "dano": "pasa a valer lo mismo que OrdersSales::PREPARANDO: los dos se confunden"
+  },
+  {
+   "etiqueta": "OrdersSales::PAGO_RECHAZADO",
+   "fichero": "app/Models/Order/OrdersSales.php",
+   "viejo": "public const PAGO_RECHAZADO = 'rejected';",
+   "nuevo": "public const PAGO_RECHAZADO = 'pending_online';",
+   "dano": "pasa a valer lo mismo que OrdersSales::ESPERANDO_PAGO: los dos se confunden"
+  },
+  {
+   "etiqueta": "OrdersSales::PESADO",
+   "fichero": "app/Models/Order/OrdersSales.php",
+   "viejo": "public const PESADO = 2;",
+   "nuevo": "public const PESADO = 1;",
+   "dano": "pasa a valer lo mismo que OrdersSales::NUEVO: los dos se confunden"
+  },
+  {
+   "etiqueta": "OrdersSales::POR_PESAR",
+   "fichero": "app/Models/Order/OrdersSales.php",
+   "viejo": "public const POR_PESAR = 1;",
+   "nuevo": "public const POR_PESAR = 2;",
+   "dano": "pasa a valer lo mismo que OrdersSales::PREPARANDO: los dos se confunden"
+  },
+  {
+   "etiqueta": "OrdersSales::PREPARANDO",
+   "fichero": "app/Models/Order/OrdersSales.php",
+   "viejo": "public const PREPARANDO = 2;",
+   "nuevo": "public const PREPARANDO = 1;",
+   "dano": "pasa a valer lo mismo que OrdersSales::NUEVO: los dos se confunden"
+  },
+  {
+   "etiqueta": "PagoEnLinea::CREDITO_DE_TIENDA",
+   "fichero": "app/Services/PagoEnLinea.php",
+   "viejo": "public const CREDITO_DE_TIENDA = [CreditoDeTienda::METODO];",
+   "nuevo": "public const CREDITO_DE_TIENDA = [];",
+   "dano": "la lista se queda vacia: el credito de la tienda deja de reconocerse como tal. Es un array de un solo elemento, asi que vaciarlo es la unica mutacion posible"
+  },
+  {
+   "etiqueta": "Pqrs::ABIERTO",
+   "fichero": "app/Models/Operacion/Pqrs.php",
+   "viejo": "public const ABIERTO = 0;",
+   "nuevo": "public const ABIERTO = 1;",
+   "dano": "pasa a valer lo mismo que Pqrs::EN_GESTION: los dos se confunden"
+  },
+  {
+   "etiqueta": "Pqrs::CERRADO",
+   "fichero": "app/Models/Operacion/Pqrs.php",
+   "viejo": "public const CERRADO = 3;",
+   "nuevo": "public const CERRADO = 0;",
+   "dano": "pasa a valer lo mismo que Pqrs::ABIERTO: los dos se confunden"
+  },
+  {
+   "etiqueta": "Pqrs::EN_GESTION",
+   "fichero": "app/Models/Operacion/Pqrs.php",
+   "viejo": "public const EN_GESTION = 1;",
+   "nuevo": "public const EN_GESTION = 0;",
+   "dano": "pasa a valer lo mismo que Pqrs::ABIERTO: los dos se confunden"
+  },
+  {
+   "etiqueta": "Promotion::BORRADOR",
+   "fichero": "app/Models/Promotion.php",
+   "viejo": "public const BORRADOR = 0;",
+   "nuevo": "public const BORRADOR = 1;",
+   "dano": "pasa a valer lo mismo que Promotion::ENVIADA: los dos se confunden"
+  },
+  {
+   "etiqueta": "Promotion::ENVIADA",
+   "fichero": "app/Models/Promotion.php",
+   "viejo": "public const ENVIADA = 1;",
+   "nuevo": "public const ENVIADA = 0;",
+   "dano": "pasa a valer lo mismo que Promotion::BORRADOR: los dos se confunden"
+  },
+  {
+   "etiqueta": "Promotion::NXM",
+   "fichero": "app/Models/Promotion.php",
+   "viejo": "public const NXM = 'nxm';",
+   "nuevo": "public const NXM = 'ninguno';",
+   "dano": "pasa a valer lo mismo que Promotion::SIN_DESCUENTO: los dos se confunden"
+  },
+  {
+   "etiqueta": "Promotion::TIPOS",
+   "fichero": "app/Models/Promotion.php",
+   "viejo": "public const TIPOS = [self::SIN_DESCUENTO, self::PORCENTAJE, self::NXM];",
+   "nuevo": "public const TIPOS = [self::SIN_DESCUENTO, self::PORCENTAJE];",
+   "dano": "la lista pierde self::NXM: deja de ser un valor valido"
+  },
+  {
+   "etiqueta": "PushCampaign::BORRADOR",
+   "fichero": "app/Models/Marketing/PushCampaign.php",
+   "viejo": "public const BORRADOR = 0;",
+   "nuevo": "public const BORRADOR = 1;",
+   "dano": "pasa a valer lo mismo que PushCampaign::PROGRAMADA: los dos se confunden"
+  },
+  {
+   "etiqueta": "PushCampaign::CANCELADA",
+   "fichero": "app/Models/Marketing/PushCampaign.php",
+   "viejo": "public const CANCELADA = 3;",
+   "nuevo": "public const CANCELADA = 0;",
+   "dano": "pasa a valer lo mismo que PushCampaign::BORRADOR: los dos se confunden"
+  },
+  {
+   "etiqueta": "PushCampaign::ENVIADA",
+   "fichero": "app/Models/Marketing/PushCampaign.php",
+   "viejo": "public const ENVIADA = 2;",
+   "nuevo": "public const ENVIADA = 0;",
+   "dano": "pasa a valer lo mismo que PushCampaign::BORRADOR: los dos se confunden"
+  },
+  {
+   "etiqueta": "PushCampaign::PROGRAMADA",
+   "fichero": "app/Models/Marketing/PushCampaign.php",
+   "viejo": "public const PROGRAMADA = 1;",
+   "nuevo": "public const PROGRAMADA = 0;",
+   "dano": "pasa a valer lo mismo que PushCampaign::BORRADOR: los dos se confunden"
+  },
+  {
+   "etiqueta": "RedencionDePromociones::DEVUELTA",
+   "fichero": "app/Services/RedencionDePromociones.php",
+   "viejo": "public const DEVUELTA = 0;",
+   "nuevo": "public const DEVUELTA = 1;",
+   "dano": "pasa a valer lo mismo que RedencionDePromociones::APLICADA: los dos se confunden"
+  },
+  {
+   "etiqueta": "SafetyIncident::ABIERTO",
+   "fichero": "app/Models/Operacion/SafetyIncident.php",
+   "viejo": "public const ABIERTO = 0;",
+   "nuevo": "public const ABIERTO = 1;",
+   "dano": "pasa a valer lo mismo que SafetyIncident::EN_INVESTIGACION: los dos se confunden"
+  },
+  {
+   "etiqueta": "SafetyIncident::EN_INVESTIGACION",
+   "fichero": "app/Models/Operacion/SafetyIncident.php",
+   "viejo": "public const EN_INVESTIGACION = 1;",
+   "nuevo": "public const EN_INVESTIGACION = 0;",
+   "dano": "pasa a valer lo mismo que SafetyIncident::ABIERTO: los dos se confunden"
+  },
+  {
+   "etiqueta": "UnidadDeVenta::GRAMO",
+   "fichero": "app/Support/UnidadDeVenta.php",
+   "viejo": "public const GRAMO = 'gramo';",
+   "nuevo": "public const GRAMO = 'unidad';",
+   "dano": "pasa a valer lo mismo que UnidadDeVenta::UNIDAD: los dos se confunden"
+  },
+  {
+   "etiqueta": "UnidadDeVenta::KILO",
+   "fichero": "app/Support/UnidadDeVenta.php",
+   "viejo": "public const KILO = 'kg';",
+   "nuevo": "public const KILO = 'unidad';",
+   "dano": "pasa a valer lo mismo que UnidadDeVenta::UNIDAD: los dos se confunden"
+  },
+  {
+   "etiqueta": "UnidadDeVenta::TODAS",
+   "fichero": "app/Support/UnidadDeVenta.php",
+   "viejo": "public const TODAS = [self::UNIDAD, self::KILO, self::LIBRA, self::GRAMO];",
+   "nuevo": "public const TODAS = [self::UNIDAD, self::KILO, self::LIBRA];",
+   "dano": "la lista pierde self::GRAMO: deja de ser un valor valido"
+  },
+  {
+   "etiqueta": "VisitantesController::CLASES",
+   "fichero": "app/Http/Controllers/Conjunto/VisitantesController.php",
+   "viejo": "public const CLASES = ['visitante', 'servicio', 'domicilio_externo'];",
+   "nuevo": "public const CLASES = ['visitante', 'servicio'];",
+   "dano": "la lista pierde 'domicilio_externo': deja de ser un valor valido"
+  }
+ ]
+}
