@@ -404,3 +404,92 @@ it('las entregas del domiciliario cuentan también las que fueron a crédito', f
     // Y ya no se le dice cuánto gana, ni acá ni en ningún otro campo.
     expect($r->json())->not->toHaveKey('total_income');
 });
+
+/* ------------------------------------------- lo que el barrido encontro -- */
+
+/**
+ * ESTAS DOS SALIERON DE UN BARRIDO DE SABOTAJE, el 14 de noviembre de 2026.
+ *
+ * Se cambiaron a mano quince constantes que deciden dinero o permisos, una por
+ * una, corriendo la suite entera con cada cambio. Doce las cazo alguna prueba.
+ * Tres no, y dos eran de aqui: `OrdersSales::A_CREDITO` y
+ * `OrdersSales::SIN_PAGO`. Con DIECIOCHO pruebas cubriendo el credito.
+ *
+ * POR QUE NO LAS VIO NINGUNA, que es lo que hay que aprender:
+ *
+ *  1. La prueba del valor dice
+ *     `expect($pedido->payment_state)->toBe(OrdersSales::A_CREDITO)`. Compara
+ *     la constante CONTRA SI MISMA: si alguien le cambia el valor, cambian los
+ *     dos lados y la prueba sigue pasando. No es una prueba del valor, es una
+ *     prueba de que el servidor escribio lo que la constante dice.
+ *
+ *  2. `credEntregado()` --el ayudante del que cuelga la liquidacion-- inserta
+ *     `payment_state => 'paid'` A MANO, que es un estado que el flujo real NO
+ *     produce al crear un pedido a credito. Asi que «EL EJEMPLO» prueba la
+ *     aritmetica del corte, pero nunca que un pedido a credito de verdad
+ *     sobreviva al filtro `confirmados()`.
+ *
+ * Y UNA CORRECCION, porque el barrido lo dijo mal primero: el dano NO es que
+ * el pedido se caiga de la liquidacion. Al entregar, `CobroContraEntrega` pone
+ * `payment_state = 'paid'` y el corte identifica el credito por `methods_id`,
+ * asi que a esa altura ya no depende de esta constante. El dano es ANTES: con
+ * `A_CREDITO` dentro de `SIN_PAGO` --o valiendo lo mismo que
+ * `ESPERANDO_PAGO`-- el pedido queda invisible para `confirmados()`, o sea
+ * para la tienda, el domiciliario, el historial y las reglas de despacho.
+ * El cliente gasta su cupo en un pedido que nadie prepara.
+ */
+it('el valor de A_CREDITO es contrato: se comprueba con el literal', function () {
+    /*
+     * CON EL LITERAL Y NO CON LA CONSTANTE. El valor viaja a la columna
+     * `payment_state` de la base y sale en las respuestas publicadas, asi que
+     * cambiarlo es cambiar datos ya escritos y clientes ya instalados.
+     */
+    expect(OrdersSales::A_CREDITO)->toBe('store_credit');
+
+    // Y que no se confunda con ninguno de los otros estados de pago.
+    expect(OrdersSales::A_CREDITO)
+        ->not->toBe(OrdersSales::ESPERANDO_PAGO)
+        ->and(OrdersSales::A_CREDITO)->not->toBe(OrdersSales::PAGO_RECHAZADO);
+
+    /* Y los dos que SI son «sin pago», tambien con literales: son los dos que
+       `confirmados()` esconde, y la lista no puede crecer sin que se note. */
+    expect(OrdersSales::SIN_PAGO)->toBe(['pending_online', 'rejected']);
+    expect(OrdersSales::SIN_PAGO)->not->toContain(OrdersSales::A_CREDITO);
+});
+
+it('un pedido a credito recien hecho SI lo ve la tienda', function () {
+    /*
+     * LA PRUEBA QUE FALTABA, y es de integracion a proposito: el pedido se crea
+     * por la ruta de verdad --`credPedir` hace el POST-- asi que su
+     * `payment_state` lo escribe `ArmadoDelPedido` y no un `insert` del
+     * ayudante.
+     *
+     * Se comprueba contra el scope `confirmados()` porque es el filtro que
+     * comparten los SIETE sitios donde la tienda y el domiciliario miran sus
+     * pedidos: la ficha del negocio, el historial, la lista del repartidor,
+     * la consulta del comprador y las reglas de despacho. Si el pedido pasa el
+     * scope, pasa en los siete.
+     */
+    $e = credEscenario();
+    app(CreditoDeTienda::class)->asignar($e['negocio'], (int) $e['comprador']->user_id, 50000);
+
+    $r = credPedir($e, 2)->assertCreated();
+    $id = (int) ($r->json('order.order_id') ?? $r->json('order.orderSales_id'));
+
+    // Primero: nacio a credito de verdad, no 'paid' ni esperando pasarela.
+    expect(DB::table('orderssales')->where('orderSales_id', $id)->value('payment_state'))
+        ->toBe('store_credit');
+
+    // Y lo importante: NO esta escondido.
+    expect(OrdersSales::confirmados()->where('orderSales_id', $id)->exists())->toBeTrue();
+
+    /*
+     * CONTROL: que el scope esconda algo de verdad. Sin esto, «el pedido se ve»
+     * tambien seria cierto con un `confirmados()` que no filtrara nada, y la
+     * prueba pasaria estando ciega.
+     */
+    DB::table('orderssales')->where('orderSales_id', $id)
+        ->update(['payment_state' => OrdersSales::ESPERANDO_PAGO]);
+
+    expect(OrdersSales::confirmados()->where('orderSales_id', $id)->exists())->toBeFalse();
+});
