@@ -31,7 +31,7 @@ de cumplimiento hoy, es que **la cifra solo pueda bajar**.
 | | |
 |---|---|
 | **Regla** | `04-capas-http.md`: validar con `FormRequest`, trabajar con `validated()` |
-| **Realidad** | Eran **173 llamadas a `->validate(`** contra **2** `FormRequest`. Al 10 de noviembre de 2026, medido: **69 `$request->validate(` y 107 `FormRequest`** (más 3 `Validator::make(` y 2 `validateWithBag(`, que son otra cosa: salida con bolsa y validación armada a mano) |
+| **Realidad** | Eran **173 llamadas a `->validate(`** contra **2** `FormRequest`. Al **14 de noviembre de 2026**, medido: **39 `$request->validate(` y 120 `FormRequest`** (más 3 `Validator::make(` y 2 `validateWithBag(`, que son otra cosa: salida con bolsa y validación armada a mano). El 10 de noviembre eran 69 y 107: el trinquete aprieta solo, porque cada endpoint tocado estrena el suyo |
 | **Motivo** | Convertir 173 validaciones de una vez es exactamente el PR gigante que el estándar desaconseja, y cada una es una regla de negocio que hay que releer, no mover |
 | **Riesgo aceptado** | La regla vive pegada al flujo: no se reusa, no se prueba aparte y la misma entidad se valida distinto en dos endpoints |
 | **Alternativa adoptada** | **Trinquete**: todo endpoint nuevo o tocado estrena su `FormRequest`. El contador de `->validate(` es la métrica y solo baja |
@@ -88,10 +88,10 @@ Si aparece una tercera, que aparezca con su motivo escrito acá.
 | | |
 |---|---|
 | **Regla** | `04-capas-http.md` y `09-contratos-api-y-errores.md`: `JsonResource` para la salida |
-| **Realidad** | `app/Http/Resources/` **no existe**. La respuesta se construye como array en el controlador; dos modelos tienen `toApi()` |
+| **Realidad** | **Medido el 14 de noviembre de 2026: `app/Http/Resources/` tiene 56 clases.** Esta fila decia «no existe», que era verdad cuando se escribio y dejo de serlo sin que nadie la actualizara. `scripts/formas_de_entidad.py` mide **0 formas de entidad por migrar** en `app/Http`: lo que se arma a mano a dia de hoy son informes de agregados, donde un Resource seria la ceremonia que §05 prohibe |
 | **Motivo** | Mismo argumento que arriba, con un agravante: la forma de la respuesta **es el contrato** que consumen la app, tres paneles y las versiones ya publicadas en las tiendas. Reescribirla a ciegas rompe clientes que no se pueden actualizar |
 | **Riesgo aceptado** | No hay un sitio único donde ver qué campos expone un endpoint; esconder un campo nuevo es fácil de olvidar |
-| **Alternativa adoptada** | Mismo trinquete. Y las pruebas del contrato público siguen siendo la red: 1022 pruebas, varias de ellas **de ausencia** (que un campo NO viaje) |
+| **Alternativa adoptada** | Mismo trinquete. Y las pruebas del contrato público siguen siendo la red: **1361 pruebas**, varias de ellas **de ausencia** (que un campo NO viaje) |
 | **Revisión** | Cada PR |
 
 ### Los archivos son más grandes que los objetivos
@@ -99,10 +99,10 @@ Si aparece una tercera, que aparezca con su motivo escrito acá.
 | | |
 |---|---|
 | **Regla** | `03-limites-de-lineas.md`: controlador 15–35 líneas, revisar por encima de 50 |
-| **Realidad** | Mediana **149**; **105 de 115** controladores pasan de 50. El mayor es `Order/OrderController.php` con **987** (eran 994; la cuenta se mide, no se recuerda) |
+| **Realidad** | **Medido el 14 de noviembre de 2026:** mediana **138**; **96 de 113** controladores pasan de 50. El mayor es `Order/OrderController.php` con **935**. Ha ido 994 -> 987 -> 935 sin que fuera el objetivo de ningun cambio: baja porque las consultas se fueron a `Queries/` y la autorizacion a `Policies/`, que es como §03 dice que tiene que bajar --«revisar cohesion», no partir metodos por un numero-- |
 | **Motivo** | El propio §03 dice que son «umbrales orientativos, no bloqueos automáticos», y §00 pone el tamaño en el **último** lugar de las prioridades |
 | **Riesgo aceptado** | Bajo en general —solo 3 controladores pasan de 7 métodos públicos, o sea que no son cajones de sastre— y alto en los tres grandes |
-| **Revisión** | `OrderController` (994 líneas) cuando se toque el flujo de pedidos; no antes y no como PR de limpieza suelto |
+| **Revisión** | `OrderController` (935 líneas) cuando se toque el flujo de pedidos; no antes y no como PR de limpieza suelto |
 
 ---
 
