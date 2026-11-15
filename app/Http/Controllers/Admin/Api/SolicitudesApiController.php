@@ -6,15 +6,15 @@ namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ActualizarSolicitudRequest;
+use App\Http\Requests\Admin\FiltrarSolicitudesRequest;
 use App\Models\Operacion\LandingRequest;
 use App\Models\Operacion\Pqrs;
 use App\Support\FiltroDeFechas;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class SolicitudesApiController extends Controller
 {
-    public function solicitudes(Request $request)
+    public function solicitudes(FiltrarSolicitudesRequest $request)
     {
         $q = LandingRequest::query()
             ->leftJoin('user as a', 'a.user_id', '=', 'landing_requests.assigned_to')

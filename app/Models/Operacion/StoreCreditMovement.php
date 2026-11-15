@@ -22,6 +22,16 @@ class StoreCreditMovement extends Model
 
     public const ABONO = 'abono';
 
+    /**
+     * HOY NO LO ESCRIBE NADIE, igual que su gemelo en `CashMovement`.
+     *
+     * Se queda por lo mismo: el saldo del credito es `sum('amount')` sobre
+     * TODOS los tipos --el signo lleva el significado-- asi que una fila
+     * de ajuste cuenta en el saldo en cuanto exista. Lo que el tipo decide
+     * es la IDEMPOTENCIA: `reversar` busca por tipo si ya se devolvio. Si
+     * este valor colisionara con `CONSUMO` o `REVERSO`, cancelar un pedido
+     * a credito dejaria de devolver el cupo.
+     */
     public const AJUSTE = 'ajuste';
 
     protected $fillable = ['store_credit_id', 'type', 'amount', 'order_id', 'notes', 'comprobante_media_id', 'created_by'];

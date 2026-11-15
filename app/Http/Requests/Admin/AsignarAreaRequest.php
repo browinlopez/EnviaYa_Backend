@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\Area;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -25,7 +26,7 @@ class AsignarAreaRequest extends FormRequest
     {
         return [
             'area_id' => 'sometimes|nullable|integer|exists:areas,id',
-            'access_level' => 'sometimes|in:gestor,consulta',
+            'access_level' => 'sometimes|in:'.implode(',', Area::NIVELES),
         ];
     }
 }

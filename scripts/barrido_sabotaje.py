@@ -178,6 +178,25 @@ def restaurar_con_git(rel):
     subprocess.run(["git", "checkout", "--", rel],
                    cwd=RAIZ, capture_output=True, text=True, shell=True)
 
+def tests_que_la_nombran(clase, const):
+    """Los ficheros de `tests/` que escriben `Clase::CONST`.
+
+    Se cuenta midiendo y no leyendo el JSON: ver el comentario de
+    `comprobar_pendientes`."""
+    aguja = clase + "::" + const
+    patron = re.compile(r"\b" + re.escape(aguja) + r"\b")
+    fuera = []
+    base = os.path.join(RAIZ, "tests")
+    for d, _, fs in os.walk(base):
+        for f in fs:
+            if not f.endswith(".php"):
+                continue
+            p = os.path.join(d, f)
+            if patron.search(leer(p)):
+                fuera.append(os.path.relpath(p, RAIZ))
+    return fuera
+
+
 def comprobar_pendientes():
     """Valida `barrido-pendientes.json` contra el codigo. Devuelve cuantos
     problemas encontro, e imprime cada uno."""
@@ -238,15 +257,35 @@ def comprobar_pendientes():
                       + "  dice " + f["valor"] + ", es " + valor)
                 problemas += 1
 
-            # Y que el grupo siga siendo el suyo: si a una de `sin_prueba` le
-            # escribieron su prueba, deja de estar sin prueba.
-            if grupo == "sin_prueba" and f["tests"]:
-                print("  GRUPO EQUIVOCADO    " + etiqueta
-                      + "  esta en sin_prueba y la lista le pone pruebas")
+            # Y que el grupo siga siendo el suyo.
+            #
+            # SE RECUENTA EN `tests/`, no se cree el campo del JSON. Antes
+            # comparaba el grupo con el propio `tests` de la fila, o sea la
+            # lista contra si misma: una fila que dijera `sin_prueba` con su
+            # `tests` vacio cuadraba aunque le hubieran escrito la prueba ese
+            # mismo dia. Pasó: se escribieron pruebas para varias filas de
+            # `sin_prueba` y esto no dijo nada.
+            nombrada = tests_que_la_nombran(f["clase"], f["const"])
+
+            if nombrada and not f["tests"]:
+                print("  YA TIENE PRUEBA     " + etiqueta
+                      + "  la nombran " + str(len(nombrada))
+                      + ", y la lista dice ninguna")
                 problemas += 1
-            if grupo == "con_prueba" and not f["tests"]:
+            if not nombrada and f["tests"]:
+                print("  YA NO TIENE PRUEBA  " + etiqueta
+                      + "  la lista le pone " + str(len(f["tests"]))
+                      + ", y no la nombra ninguna")
+                problemas += 1
+
+            if grupo == "sin_prueba" and nombrada:
                 print("  GRUPO EQUIVOCADO    " + etiqueta
-                      + "  esta en con_prueba y la lista no le pone ninguna")
+                      + "  esta en sin_prueba y la nombran "
+                      + str(len(nombrada)) + " pruebas")
+                problemas += 1
+            if grupo == "con_prueba" and not nombrada:
+                print("  GRUPO EQUIVOCADO    " + etiqueta
+                      + "  esta en con_prueba y no la nombra ninguna")
                 problemas += 1
 
     print("")

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\Marketing\AdCampaign;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -67,7 +68,7 @@ class CampanaRequest extends FormRequest
             // descubre tarde y sin mensaje.
             'ends_at' => "{$regla}|date|after_or_equal:starts_at",
             'budget' => 'sometimes|numeric|min:0',
-            'state' => 'sometimes|integer|in:0,1,2,3',
+            'state' => 'sometimes|integer|in:'.implode(',', AdCampaign::ESTADOS),
         ];
     }
 }

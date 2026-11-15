@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\Operacion\LandingRequest;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -24,7 +25,7 @@ class ActualizarSolicitudRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'state' => 'sometimes|integer|in:0,1,2,3',
+            'state' => 'sometimes|integer|in:'.implode(',', LandingRequest::ESTADOS),
             'assigned_to' => 'sometimes|nullable|integer|exists:user,user_id',
             'resolution' => 'sometimes|nullable|string',
         ];

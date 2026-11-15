@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Order;
 
+use App\Models\Order\OrdersSales;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -25,7 +26,7 @@ class MoverPedidoRequest extends FormRequest
     {
         return [
             'order_id' => 'required|integer',
-            'state' => 'required|integer|in:2,3,4',
+            'state' => 'required|integer|in:'.implode(',', OrdersSales::DESTINOS_AL_MOVER),
             'user_id' => 'nullable|integer|exists:user,user_id',
         ];
     }

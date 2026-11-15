@@ -98,8 +98,10 @@ vez encontró tres agujeros con 1361 pruebas en verde; el por qué está en la
 sexta lección de `ESTADO.md`.
 
 **Lo que le falta por barrer está medido, en `scripts/barrido-pendientes.json`.**
-De las 131 constantes públicas de `app/`, 43 están barridas y **57 de las
-restantes deciden** dinero, un permiso o un estado. Eso corrige algo que este
+De las **137** constantes públicas de `app/`, **51** están barridas y **50 de las
+restantes deciden** --eran 131 y 43 por la mañana: subieron porque las seis
+listas de estados que las validaciones escribían a mano pasaron a ser
+constantes, más dos nuevas, menos una que sobraba-- dinero, un permiso o un estado. Eso corrige algo que este
 repositorio vino diciendo —«son etiquetas y plazos que no deciden nada»— y que
 con la lista delante era falso: entre ellas están las parejas de cuatro
 agujeros reales (`DEVUELTA` junto a `APLICADA`, los dos `AJUSTE` junto a
@@ -110,19 +112,19 @@ parecía barrido no lo es**:
 
 | grupo | cuántas | qué pide |
 |---|---|---|
-| muertas | **10** | Nadie en `app/` las nombra. Sabotearlas no puede fallar ninguna prueba, así que el barrido diría «sin defensa» cuando están muertas: **hallazgos falsos**. Piden decidir si se borran o si falta el código que debería usarlas |
-| sin prueba | **21** | Las usa `app/` y ninguna prueba las nombra. Aquí no hace falta medir: la respuesta ya se sabe. Falta la prueba |
-| con prueba | **26** | **La tercera pasada son estas.** Es lo único que no se puede saber leyendo: que exista una prueba no significa que cace un cambio, y es justo lo que las dos pasadas anteriores encontraron |
+| muertas | **4** | Nadie en `app/` las nombra. Sabotearlas no puede fallar ninguna prueba, así que el barrido diría «sin defensa» cuando están muertas: **hallazgos falsos**. Piden decidir si se borran o si falta el código que debería usarlas |
+| sin prueba | **22** | Las usa `app/` y ninguna prueba las nombra. Aquí no hace falta medir: la respuesta ya se sabe. Falta la prueba |
+| con prueba | **24** | **La tercera pasada son estas.** Es lo único que no se puede saber leyendo: que exista una prueba no significa que cace un cambio, y es justo lo que las dos pasadas anteriores encontraron |
 
 
 Y la sexta, que tampoco es una puerta y tarda dos segundos:
 
 ```
 python scripts/cifras_del_registro.py --control                 # que no este ciego
-python scripts/cifras_del_registro.py --salida-de-pest pest.txt # las 29 cifras
+python scripts/cifras_del_registro.py --salida-de-pest pest.txt # las 30 cifras
 ```
 
-Remide las **29 cifras** que `ESTADO.md`, `EXCEPCIONES.md` y este documento
+Remide las **30 cifras** que `ESTADO.md`, `EXCEPCIONES.md` y este documento
 afirman, y dice cuáles ya no describen el repositorio. Existe porque esto ha
 pasado **tres veces**, y dos están confesadas aquí dentro: «este párrafo ya
 decía 50 cuando eran 137» y «esta fila decía "no existe", que era verdad

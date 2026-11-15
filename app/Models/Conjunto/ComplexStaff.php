@@ -25,8 +25,6 @@ class ComplexStaff extends Audit
 
     public const CELADOR = 'celador';
 
-    public const ROLES = [self::DUENO, self::CELADOR];
-
     /** Los identificadores de la tabla `rol`, que no es autoincremental. */
     public const ROL_DUENO = 5;
 

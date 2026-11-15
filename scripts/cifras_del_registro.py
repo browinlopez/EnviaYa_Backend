@@ -173,6 +173,18 @@ def clases_que_cargan():
     return int(m.group(1)) if m else NO_MEDIBLE
 
 
+def constantes_publicas():
+    """Cuantas `public const` declara `app/`.
+
+    La afirmacion de `ANTES-DE-EMPUJAR.md` sobre cuantas hay y cuantas estan
+    barridas es la que decide si una tercera pasada del barrido tiene sentido,
+    y la escribi mal una vez: puse 130 de memoria cuando eran 137."""
+    n = 0
+    for t in _texto_de_app():
+        n += len(re.findall(r"public const \w+", t))
+    return n
+
+
 def archivos_sobre_el_objetivo():
     """Lo mide `check_file_sizes.py` y no una cuenta paralela: los limites
     por carpeta viven en ese script, y dos cuentas que pueden discrepar son
@@ -328,6 +340,10 @@ AFIRMACIONES = [
      r"(\d+) de 4 con su HEAD exactamente en `origin/refactor-total`",
      repos_al_dia_en_refactor_total),
 
+    ("ANTES-DE-EMPUJAR.md", "constantes publicas de app/",
+     r"De las \*\*(\d+)\*\* constantes p.blicas de `app/`",
+     constantes_publicas),
+
     ("ESTADO.md", "clases que cargan",
      r"\*\*(\d+)\*\* clases cargan", clases_que_cargan),
     ("ESTADO.md", "avisos de la linea base",
@@ -449,6 +465,7 @@ CONTROL = {
         u"la app **7 commits** sobre `origin/Browin_IOS`, el panel **7** sobre `origin/master`"
         u" y la landing **7** sobre `origin/main`. Los cuatro: 7 de 4 con su HEAD exactamente en `origin/refactor-total`.\n"
         u"Remide las **7 cifras** que `ESTADO.md` afirma.\n"
+        u"De las **7** constantes publicas de `app/`, 7 estan barridas.\n"
     ),
 }
 

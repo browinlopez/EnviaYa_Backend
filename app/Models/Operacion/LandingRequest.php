@@ -28,6 +28,10 @@ class LandingRequest extends Model
 
     public const DESCARTADA = 3;
 
+    /** El vocabulario completo: lo pide `ActualizarSolicitudRequest`, que
+     * antes escribia `in:0,1,2,3` a mano. */
+    public const ESTADOS = [self::NUEVA, self::EN_GESTION, self::ATENDIDA, self::DESCARTADA];
+
     /** Los tipos que acepta el enum de la tabla. */
     public const TIPOS = [
         'comercio',

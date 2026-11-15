@@ -6,16 +6,16 @@ namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ActualizarLiquidacionRequest;
+use App\Http\Requests\Admin\FiltrarLiquidacionesRequest;
 use App\Http\Requests\Admin\GenerarLiquidacionRequest;
 use App\Models\Operacion\Settlement;
 use App\Services\LiquidacionService;
 use App\Support\FiltroDeFechas;
-use Illuminate\Http\Request;
 use RuntimeException;
 
 class OperacionApiController extends Controller
 {
-    public function liquidaciones(Request $request)
+    public function liquidaciones(FiltrarLiquidacionesRequest $request)
     {
         $q = Settlement::query()
             ->leftJoin('business as b', 'b.busines_id', '=', 'settlements.business_id')

@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\CampanaRequest;
+use App\Http\Requests\Admin\FiltrarCampanasRequest;
 use App\Http\Resources\Marketing\CampanaResource;
 use App\Models\Marketing\AdCampaign;
 use App\Models\Marketing\Banner;
@@ -14,7 +15,7 @@ use Illuminate\Support\Facades\DB;
 
 class CampanasApiController extends Controller
 {
-    public function campaigns(Request $request)
+    public function campaigns(FiltrarCampanasRequest $request)
     {
         $q = AdCampaign::with('advertiser:id,name')->orderByDesc('starts_at');
 

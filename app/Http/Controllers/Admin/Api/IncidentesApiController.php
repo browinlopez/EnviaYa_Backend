@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\FiltrarIncidentesRequest;
 use App\Http\Requests\Admin\IncidenteRequest;
 use App\Models\Operacion\Pqrs;
 use App\Models\Operacion\SafetyIncident;
@@ -13,7 +14,7 @@ use Illuminate\Http\Request;
 
 class IncidentesApiController extends Controller
 {
-    public function incidentes(Request $request)
+    public function incidentes(FiltrarIncidentesRequest $request)
     {
         $q = SafetyIncident::query()
             ->leftJoin('domiciliary as d', 'd.domiciliary_id', '=', 'safety_incidents.domiciliary_id')

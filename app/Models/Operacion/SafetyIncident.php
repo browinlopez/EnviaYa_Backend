@@ -21,6 +21,10 @@ class SafetyIncident extends Model
 
     public const CERRADO = 2;
 
+    /** El vocabulario completo: lo pide `IncidenteRequest`, que antes
+     * escribia `in:0,1,2` a mano. */
+    public const ESTADOS = [self::ABIERTO, self::EN_INVESTIGACION, self::CERRADO];
+
     protected $fillable = [
         'domiciliary_id',
         'order_id',
