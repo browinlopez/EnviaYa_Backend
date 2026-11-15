@@ -1,6 +1,6 @@
 # Estado del backend frente al estándar
 
-**Medido el 14 de noviembre de 2026.** Laravel 12.72 · 1365 pruebas en verde y
+**Medido el 14 de noviembre de 2026.** Laravel 12.72 · 1373 pruebas en verde y
 12 saltadas · PHPStan y Pint limpios (línea base 57 avisos, desde 503) · 494
 clases cargan · `composer audit` en cero · OpenAPI al día · **la suite corrida también sobre MySQL 8** (72 de 72) ·
 **el arnés recorrido entero tras los cambios de respuesta: 33 de 33
@@ -152,7 +152,7 @@ y sin un solo error. Ahora lo vigila `colas:comprobar --avisar`, a diario.
 | Relaciones de Eloquent tipadas | 52 | **153 de 153** | con genéricos las 153. Dos pruebas lo fijan: que toda relación declarada se construya, y que ninguna nueva se quede sin tipo ni sin genéricos |
 | Autorización por registro en `Policies` | 0 | **2 clases + 2 Gates** | §08 pide «Policy o Gate por recurso **y prueba de denegación**». Las cuatro reglas estaban en métodos privados; de ahí que `showDomiciliary` se quedara sin acotar mientras `updateDomiciliary` sí lo estaba |
 | Consultas complejas en `Queries/` | 0 | **10 clases** | §12 lo exige y la carpeta no existía. Se midieron los candidatos —§21 §4 dice cuándo NO hacerlo— y eran nueve controladores con seis o más uniones y agrupaciones. Hoy: ninguno. La décima salió de deshacer `Support/Consultas/AyudasDeAdmin`, que era un **segundo hogar** para lo mismo |
-| Pruebas | 1026 | **1365** | 12 saltadas, y es honesto decir cuáles: 9 son de `EXPLAIN` y `for update`, que solo significan algo en MySQL. Que los **92 índices con nombre existan** sí se comprueba en cada corrida y en cualquier motor |
+| Pruebas | 1026 | **1373** | 12 saltadas, y es honesto decir cuáles: 9 son de `EXPLAIN` y `for update`, que solo significan algo en MySQL. Que los **92 índices con nombre existan** sí se comprueba en cada corrida y en cualquier motor |
 | Procesos recorridos de punta a punta | 0 | **33** | `scripts/arnes/`, contra el servidor en marcha |
 | Avisos de `composer audit` | 20 | **0** | bloqueante en el CI |
 
@@ -872,7 +872,8 @@ o permisos --una por una, corriendo las 1361 pruebas con cada cambio-- y se
 conto cuales cazaba alguna. Esta en `scripts/barrido_sabotaje.py`, con la
 lista en `scripts/barrido-mutaciones.json`.
 
-**Tres de las quince primeras no las veia nadie**, y las tres podian cobrar
+**Siete de las cuarenta y cuatro no las veia nadie** --tres de las quince
+primeras y cuatro de las treinta siguientes--, y las tres podian cobrar
 mal: `CashMovement::RECAUDO`, `OrdersSales::A_CREDITO` y
 `OrdersSales::SIN_PAGO`. Con 1361 pruebas en verde, once cubriendo el efectivo
 y dieciocho el credito.
