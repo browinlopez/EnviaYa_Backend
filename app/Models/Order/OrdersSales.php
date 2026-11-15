@@ -175,6 +175,25 @@ class OrdersSales extends Audit
     ];
 
     /**
+     * A DONDE SE PUEDE MOVER UN PEDIDO desde el panel o la app.
+     *
+     * No son todos los estados, y las dos ausencias son deliberadas:
+     *
+     *   NUEVO      es el estado inicial. Un pedido no "vuelve" a nuevo: eso
+     *              seria deshacer que la tienda lo acepto.
+     *   CANCELADO  tiene su propio camino --`OrderController::cancel`--, que
+     *              devuelve inventario, el uso de la promocion y el cupo de
+     *              credito. Llegar ahi por "mover de estado" se saltaria las
+     *              tres devoluciones.
+     *
+     * Existe porque `MoverPedidoRequest` escribia `in:2,3,4`: tres numeros a
+     * mano al lado de tres constantes que dicen lo mismo. Que una transicion
+     * concreta sea legal AHORA lo sigue decidiendo `ReglasDeDespacho`; esto
+     * solo es el vocabulario que la validacion acepta.
+     */
+    public const DESTINOS_AL_MOVER = [self::PREPARANDO, self::EN_CAMINO, self::ENTREGADO];
+
+    /**
      * LOS PEDIDOS QUE TODAVÍA ESTÁN PASANDO: ni entregados ni cancelados.
      *
      * Era la DÉCIMA declaración de estados, encontrada al mover

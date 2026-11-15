@@ -101,7 +101,7 @@ class MediosApiController extends Controller
            antes de entrar al metodo e invertiria las dos respuestas. */
         $request->validate([
             'file' => 'required|file|max:8192|mimes:jpg,jpeg,png,webp,gif,pdf',
-            'tipo' => 'sometimes|string|in:logo,galeria,documentos',
+            'tipo' => 'sometimes|string|in:'.implode(',', MediaService::TIPOS),
         ]);
 
         $tipo = $request->input('tipo', 'galeria');

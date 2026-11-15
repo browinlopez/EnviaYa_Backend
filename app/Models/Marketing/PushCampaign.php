@@ -21,6 +21,20 @@ class PushCampaign extends Model
 
     public const CANCELADA = 3;
 
+    /**
+     * Los estados que se pueden PONER a mano desde el panel.
+     *
+     * `ENVIADA` no esta, y no es un olvido: la pone el proceso que manda
+     * los avisos cuando los ha mandado. Si se pudiera escribir a mano, se
+     * daria por enviada una campana que nadie recibio.
+     *
+     * Por eso esta constante NO es la lista completa de estados: es
+     * exactamente lo que `CampanaPushRequest` valida, que escribia
+     * `in:0,1,3` a mano. La diferencia con las demas se descubrio al
+     * comparar las dos listas antes de cablearlas.
+     */
+    public const ESTADOS_A_MANO = [self::BORRADOR, self::PROGRAMADA, self::CANCELADA];
+
     protected $fillable = [
         'title',
         'body',

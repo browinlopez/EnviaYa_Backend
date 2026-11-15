@@ -8,14 +8,14 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ActualizarPqrsRequest;
 use App\Http\Requests\Admin\AnotarEnPqrsRequest;
 use App\Http\Requests\Admin\CrearPqrsRequest;
+use App\Http\Requests\Admin\FiltrarPqrsRequest;
 use App\Models\Operacion\Pqrs;
 use App\Models\Operacion\PqrsNote;
 use App\Support\FiltroDeFechas;
-use Illuminate\Http\Request;
 
 class PqrsApiController extends Controller
 {
-    public function pqrs(Request $request)
+    public function pqrs(FiltrarPqrsRequest $request)
     {
         $q = Pqrs::query()
             ->leftJoin('user as u', 'u.user_id', '=', 'pqrs.user_id')

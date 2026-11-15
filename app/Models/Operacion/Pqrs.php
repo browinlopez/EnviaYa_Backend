@@ -25,6 +25,10 @@ class Pqrs extends Model
 
     public const CERRADO = 3;
 
+    /** El vocabulario completo: lo pide `ActualizarPqrsRequest`, que antes
+     * escribia `in:0,1,2,3` a mano. */
+    public const ESTADOS = [self::ABIERTO, self::EN_GESTION, self::RESUELTO, self::CERRADO];
+
     /**
      * Plazo de respuesta en días hábiles aproximados, por prioridad.
      *

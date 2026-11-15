@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Operacion;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Operacion\FiltrarDepositosRequest;
 use App\Http\Requests\Operacion\ResolverDepositoRequest;
 use App\Http\Resources\Operacion\DepositoResource;
 use App\Models\Domiciliary;
@@ -112,7 +113,7 @@ class EfectivoController extends Controller
 
     /** Los depósitos declarados, para revisarlos contra el extracto. */
     /** Los depositos declarados. La consulta vive en `Queries/EfectivoDeLaOperacion`. */
-    public function index(Request $request)
+    public function index(FiltrarDepositosRequest $request)
     {
         return response()->json([
             'data' => (new EfectivoDeLaOperacion)->depositos(

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\Operacion\Pqrs;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -25,7 +26,7 @@ class ActualizarPqrsRequest extends FormRequest
     {
         return [
             'priority' => 'sometimes|in:baja,media,alta',
-            'state' => 'sometimes|integer|in:0,1,2,3',
+            'state' => 'sometimes|integer|in:'.implode(',', Pqrs::ESTADOS),
             'assigned_to' => 'sometimes|nullable|integer|exists:user,user_id',
             'resolution' => 'sometimes|nullable|string',
         ];

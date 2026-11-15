@@ -25,6 +25,10 @@ class Settlement extends Model
 
     public const ANULADA = 3;
 
+    /** El vocabulario completo: lo pide `ActualizarLiquidacionRequest`,
+     * que antes escribia `in:0,1,2,3` a mano. */
+    public const ESTADOS = [self::BORRADOR, self::APROBADA, self::PAGADA, self::ANULADA];
+
     protected $fillable = [
         'type',
         'business_id',

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\Marketing\PushCampaign;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -63,7 +64,7 @@ class CampanaPushRequest extends FormRequest
             'link_value' => 'sometimes|nullable|string|max:500',
             'segment' => 'sometimes|nullable|array',
             'scheduled_at' => 'sometimes|nullable|date',
-            'state' => 'sometimes|integer|in:0,1,3',
+            'state' => 'sometimes|integer|in:'.implode(',', PushCampaign::ESTADOS_A_MANO),
         ];
     }
 }

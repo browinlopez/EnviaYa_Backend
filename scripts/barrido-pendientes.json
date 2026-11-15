@@ -41,50 +41,34 @@
   "que escribir y 10 constantes que decidir.",
   "",
   "Cada fila lleva donde se usa y que pruebas la nombran, medido, para no",
-  "volver a contarlo. Los campos `app` y `tests` son [fichero, veces]."
+  "volver a contarlo. Los campos `app` y `tests` son [fichero, veces].",
+  "",
+  "REMEDIDO EL 15 DE NOVIEMBRE, DESPUES DE ACTUAR SOBRE LOS TRES GRUPOS.",
+  "Las cifras de arriba son las del primer reparto y se dejan para que se",
+  "vea el movimiento. Lo de ahora: 50 barridas (eran 43) y 51 pendientes.",
+  "",
+  "Que cambio, y por que no fue barriendo:",
+  "",
+  "  Nueve validaciones redeclaraban el vocabulario como literales",
+  "  --`'state' => 'in:0,1,2,3'` al lado de las constantes que dicen lo",
+  "  mismo-- y seis listados mas lo metian en el `where` SIN lista blanca.",
+  "  Esa era la causa de que las constantes estuvieran muertas: quien las",
+  "  necesitaba escribio los numeros. Cablear la lista blanca las resucito y",
+  "  cerro los filtros con el mismo cambio.",
+  "",
+  "  `ComplexStaff::ROLES` se borro: sus dos constantes se usan en seis",
+  "  sitios, pero la lista no la puede necesitar nadie --no hay endpoint que",
+  "  reciba un rol como dato-- y `AGENTS.md` §5 prohibe la abstraccion por",
+  "  costumbre.",
+  "",
+  "  Los dos `AJUSTE` siguen sin que `app/` los escriba, y se quedan con el",
+  "  motivo encima: su valor vive en una columna, asi que lo que deciden es",
+  "  que un ajuste NO se cuente como recaudo. El dia que haya endpoint para",
+  "  ajustar un descuadre, lo usara.",
+  "",
+  "Y estas ya no existen en el codigo: ComplexStaff::ROLES"
  ],
  "muertas": [
-  {
-   "clase": "AdCampaign",
-   "const": "BORRADOR",
-   "fichero": "app/Models/Marketing/AdCampaign.php",
-   "valor": "0",
-   "self": 0,
-   "app": [],
-   "tests": []
-  },
-  {
-   "clase": "AdCampaign",
-   "const": "FINALIZADA",
-   "fichero": "app/Models/Marketing/AdCampaign.php",
-   "valor": "3",
-   "self": 0,
-   "app": [],
-   "tests": []
-  },
-  {
-   "clase": "AdCampaign",
-   "const": "PAUSADA",
-   "fichero": "app/Models/Marketing/AdCampaign.php",
-   "valor": "2",
-   "self": 0,
-   "app": [],
-   "tests": [
-    [
-     "tests/Feature/Marketing/AdsPublicTest.php",
-     1
-    ]
-   ]
-  },
-  {
-   "clase": "CashDeposit",
-   "const": "ESTADOS",
-   "fichero": "app/Models/Operacion/CashDeposit.php",
-   "valor": "[self::PENDIENTE, self::CONFIRMADA, self::RECHAZADA]",
-   "self": 0,
-   "app": [],
-   "tests": []
-  },
   {
    "clase": "CashMovement",
    "const": "AJUSTE",
@@ -98,24 +82,6 @@
      3
     ]
    ]
-  },
-  {
-   "clase": "ComplexStaff",
-   "const": "ROLES",
-   "fichero": "app/Models/Conjunto/ComplexStaff.php",
-   "valor": "[self::DUENO, self::CELADOR]",
-   "self": 0,
-   "app": [],
-   "tests": []
-  },
-  {
-   "clase": "Coupon",
-   "const": "TIPOS",
-   "fichero": "app/Models/Marketing/Coupon.php",
-   "valor": "[self::TIPO_PORCENTAJE, self::TIPO_FIJO, self::TIPO_ENVIO_GRATIS]",
-   "self": 0,
-   "app": [],
-   "tests": []
   },
   {
    "clase": "OrdersSales",
@@ -184,6 +150,24 @@
    "tests": []
   },
   {
+   "clase": "AdCampaign",
+   "const": "BORRADOR",
+   "fichero": "app/Models/Marketing/AdCampaign.php",
+   "valor": "0",
+   "self": 1,
+   "app": [],
+   "tests": []
+  },
+  {
+   "clase": "AdCampaign",
+   "const": "FINALIZADA",
+   "fichero": "app/Models/Marketing/AdCampaign.php",
+   "valor": "3",
+   "self": 1,
+   "app": [],
+   "tests": []
+  },
+  {
    "clase": "CancelacionDelPedido",
    "const": "COMPRADOR",
    "fichero": "app/Services/CancelacionDelPedido.php",
@@ -206,6 +190,20 @@
    "app": [
     [
      "app/Http/Controllers/Negocio/CancelacionDelPedidoController.php",
+     1
+    ]
+   ],
+   "tests": []
+  },
+  {
+   "clase": "Coupon",
+   "const": "TIPOS",
+   "fichero": "app/Models/Marketing/Coupon.php",
+   "valor": "[self::TIPO_PORCENTAJE, self::TIPO_FIJO, self::TIPO_ENVIO_GRATIS]",
+   "self": 0,
+   "app": [
+    [
+     "app/Http/Requests/Admin/CuponRequest.php",
      1
     ]
    ],
@@ -254,24 +252,10 @@
   },
   {
    "clase": "LandingRequest",
-   "const": "ATENDIDA",
-   "fichero": "app/Models/Operacion/LandingRequest.php",
-   "valor": "2",
-   "self": 1,
-   "app": [
-    [
-     "app/Http/Controllers/Admin/Api/SolicitudesApiController.php",
-     2
-    ]
-   ],
-   "tests": []
-  },
-  {
-   "clase": "LandingRequest",
    "const": "EN_GESTION",
    "fichero": "app/Models/Operacion/LandingRequest.php",
    "valor": "1",
-   "self": 0,
+   "self": 1,
    "app": [
     [
      "app/Http/Controllers/Admin/Api/SolicitudesApiController.php",
@@ -285,7 +269,7 @@
    "const": "ABIERTO",
    "fichero": "app/Models/Operacion/Pqrs.php",
    "valor": "0",
-   "self": 0,
+   "self": 1,
    "app": [
     [
      "app/Http/Controllers/Admin/Api/PqrsApiController.php",
@@ -299,7 +283,7 @@
    "const": "CERRADO",
    "fichero": "app/Models/Operacion/Pqrs.php",
    "valor": "3",
-   "self": 1,
+   "self": 2,
    "app": [],
    "tests": []
   },
@@ -308,7 +292,7 @@
    "const": "EN_GESTION",
    "fichero": "app/Models/Operacion/Pqrs.php",
    "valor": "1",
-   "self": 0,
+   "self": 1,
    "app": [
     [
      "app/Http/Controllers/Admin/Api/PqrsApiController.php",
@@ -350,7 +334,7 @@
    "const": "CANCELADA",
    "fichero": "app/Models/Marketing/PushCampaign.php",
    "valor": "3",
-   "self": 0,
+   "self": 1,
    "app": [
     [
      "app/Http/Controllers/Admin/Api/MarketingApiController.php",
@@ -361,24 +345,10 @@
   },
   {
    "clase": "PushCampaign",
-   "const": "ENVIADA",
-   "fichero": "app/Models/Marketing/PushCampaign.php",
-   "valor": "2",
-   "self": 0,
-   "app": [
-    [
-     "app/Http/Controllers/Admin/Api/MarketingApiController.php",
-     1
-    ]
-   ],
-   "tests": []
-  },
-  {
-   "clase": "PushCampaign",
    "const": "PROGRAMADA",
    "fichero": "app/Models/Marketing/PushCampaign.php",
    "valor": "1",
-   "self": 1,
+   "self": 2,
    "app": [],
    "tests": []
   },
@@ -387,7 +357,7 @@
    "const": "ABIERTO",
    "fichero": "app/Models/Operacion/SafetyIncident.php",
    "valor": "0",
-   "self": 0,
+   "self": 1,
    "app": [
     [
      "app/Http/Controllers/Admin/Api/IncidentesApiController.php",
@@ -401,7 +371,7 @@
    "const": "EN_INVESTIGACION",
    "fichero": "app/Models/Operacion/SafetyIncident.php",
    "valor": "1",
-   "self": 0,
+   "self": 1,
    "app": [
     [
      "app/Http/Controllers/Admin/Api/IncidentesApiController.php",
@@ -431,7 +401,7 @@
    "const": "ACTIVA",
    "fichero": "app/Models/Marketing/AdCampaign.php",
    "valor": "1",
-   "self": 1,
+   "self": 2,
    "app": [
     [
      "app/Http/Controllers/Admin/Api/MarketingApiController.php",
@@ -493,6 +463,25 @@
   },
   {
    "clase": "CashDeposit",
+   "const": "ESTADOS",
+   "fichero": "app/Models/Operacion/CashDeposit.php",
+   "valor": "[self::PENDIENTE, self::CONFIRMADA, self::RECHAZADA]",
+   "self": 0,
+   "app": [
+    [
+     "app/Http/Requests/Operacion/FiltrarDepositosRequest.php",
+     2
+    ]
+   ],
+   "tests": [
+    [
+     "tests/Feature/Panel/ElFiltroDeEstadoTieneListaBlancaTest.php",
+     3
+    ]
+   ]
+  },
+  {
+   "clase": "CashDeposit",
    "const": "PENDIENTE",
    "fichero": "app/Models/Operacion/CashDeposit.php",
    "valor": "'pendiente'",
@@ -511,30 +500,11 @@
    ]
   },
   {
-   "clase": "CashDeposit",
-   "const": "RECHAZADA",
-   "fichero": "app/Models/Operacion/CashDeposit.php",
-   "valor": "'rechazada'",
-   "self": 1,
-   "app": [
-    [
-     "app/Services/CustodiaDeEfectivo.php",
-     2
-    ]
-   ],
-   "tests": [
-    [
-     "tests/Feature/Pedidos/CustodiaDeEfectivoTest.php",
-     1
-    ]
-   ]
-  },
-  {
    "clase": "LandingRequest",
    "const": "DESCARTADA",
    "fichero": "app/Models/Operacion/LandingRequest.php",
    "valor": "3",
-   "self": 1,
+   "self": 2,
    "app": [
     [
      "app/Http/Controllers/Admin/Api/SolicitudesApiController.php",
@@ -553,7 +523,7 @@
    "const": "NUEVA",
    "fichero": "app/Models/Operacion/LandingRequest.php",
    "valor": "0",
-   "self": 0,
+   "self": 1,
    "app": [
     [
      "app/Http/Controllers/Admin/Api/SolicitudesApiController.php",
@@ -654,7 +624,7 @@
    "const": "EN_CAMINO",
    "fichero": "app/Models/Order/OrdersSales.php",
    "valor": "3",
-   "self": 2,
+   "self": 3,
    "app": [
     [
      "app/Http/Controllers/Domiciliary/DomiciliaryController.php",
@@ -800,7 +770,7 @@
    "const": "PREPARANDO",
    "fichero": "app/Models/Order/OrdersSales.php",
    "valor": "2",
-   "self": 2,
+   "self": 3,
    "app": [],
    "tests": [
     [
@@ -828,25 +798,6 @@
     [
      "tests/Feature/Pedidos/MediosQueSeCobranTest.php",
      1
-    ]
-   ]
-  },
-  {
-   "clase": "Pqrs",
-   "const": "RESUELTO",
-   "fichero": "app/Models/Operacion/Pqrs.php",
-   "valor": "2",
-   "self": 1,
-   "app": [
-    [
-     "app/Http/Controllers/Admin/Api/PqrsApiController.php",
-     4
-    ]
-   ],
-   "tests": [
-    [
-     "tests/Feature/Operacion/OperacionModulosTest.php",
-     2
     ]
    ]
   },
@@ -917,12 +868,31 @@
    "const": "BORRADOR",
    "fichero": "app/Models/Marketing/PushCampaign.php",
    "valor": "0",
-   "self": 1,
+   "self": 2,
    "app": [],
    "tests": [
     [
      "tests/Feature/Push/NotificacionesTest.php",
      1
+    ]
+   ]
+  },
+  {
+   "clase": "PushCampaign",
+   "const": "ENVIADA",
+   "fichero": "app/Models/Marketing/PushCampaign.php",
+   "valor": "2",
+   "self": 0,
+   "app": [
+    [
+     "app/Http/Controllers/Admin/Api/MarketingApiController.php",
+     1
+    ]
+   ],
+   "tests": [
+    [
+     "tests/Feature/Panel/ElFiltroDeEstadoTieneListaBlancaTest.php",
+     2
     ]
    ]
   },
@@ -937,52 +907,6 @@
     [
      "tests/Feature/Marketing/PromocionUsosTest.php",
      3
-    ]
-   ]
-  },
-  {
-   "clase": "SafetyIncident",
-   "const": "CERRADO",
-   "fichero": "app/Models/Operacion/SafetyIncident.php",
-   "valor": "2",
-   "self": 0,
-   "app": [
-    [
-     "app/Http/Controllers/Admin/Api/IncidentesApiController.php",
-     2
-    ]
-   ],
-   "tests": [
-    [
-     "tests/Feature/Operacion/OperacionModulosTest.php",
-     2
-    ]
-   ]
-  },
-  {
-   "clase": "Settlement",
-   "const": "APROBADA",
-   "fichero": "app/Models/Operacion/Settlement.php",
-   "valor": "1",
-   "self": 0,
-   "app": [
-    [
-     "app/Http/Controllers/Admin/Api/OperacionApiController.php",
-     2
-    ],
-    [
-     "database/seeders/DemoSeeder.php",
-     2
-    ]
-   ],
-   "tests": [
-    [
-     "tests/Feature/Credito/CreditoDeTiendaTest.php",
-     3
-    ],
-    [
-     "tests/Feature/Operacion/OperacionModulosTest.php",
-     1
     ]
    ]
   },

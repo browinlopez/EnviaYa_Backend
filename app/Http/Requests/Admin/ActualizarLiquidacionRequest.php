@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\Operacion\Settlement;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -24,7 +25,7 @@ class ActualizarLiquidacionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'state' => 'sometimes|integer|in:0,1,2,3',
+            'state' => 'sometimes|integer|in:'.implode(',', Settlement::ESTADOS),
             'payment_reference' => 'sometimes|nullable|string|max:100',
             'notes' => 'sometimes|nullable|string|max:500',
         ];

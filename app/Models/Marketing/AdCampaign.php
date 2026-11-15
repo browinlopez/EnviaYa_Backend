@@ -26,6 +26,15 @@ class AdCampaign extends Model
 
     public const FINALIZADA = 3;
 
+    /**
+     * El vocabulario completo, para quien tenga que validarlo.
+     *
+     * Existe porque `CampanaRequest` escribia `in:0,1,2,3` a mano: dos
+     * fuentes de verdad del mismo vocabulario, y por eso las tres
+     * constantes de arriba que no usa el scope estaban muertas.
+     */
+    public const ESTADOS = [self::BORRADOR, self::ACTIVA, self::PAUSADA, self::FINALIZADA];
+
     protected $fillable = [
         'advertiser_id',
         'name',

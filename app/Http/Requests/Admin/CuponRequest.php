@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\Marketing\Coupon;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -61,7 +62,7 @@ class CuponRequest extends FormRequest
         return [
             'code' => "{$regla}|string|max:40|{$unico}",
             'description' => 'sometimes|nullable|string|max:255',
-            'type' => 'sometimes|in:percent,fixed,free_shipping',
+            'type' => 'sometimes|in:'.implode(',', Coupon::TIPOS),
             'value' => "{$regla}|numeric|min:0",
             'max_discount' => 'sometimes|nullable|numeric|min:0',
             'min_order' => 'sometimes|numeric|min:0',

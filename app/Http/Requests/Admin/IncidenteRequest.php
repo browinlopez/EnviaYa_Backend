@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\Operacion\SafetyIncident;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -67,7 +68,7 @@ class IncidenteRequest extends FormRequest
             'location' => 'sometimes|nullable|string|max:255',
             'description' => "{$regla}|string",
             'actions' => 'sometimes|nullable|string',
-            'state' => 'sometimes|integer|in:0,1,2',
+            'state' => 'sometimes|integer|in:'.implode(',', SafetyIncident::ESTADOS),
         ];
     }
 }

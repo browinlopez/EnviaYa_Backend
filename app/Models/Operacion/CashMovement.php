@@ -29,6 +29,20 @@ class CashMovement extends Model
 
     public const CONSIGNACION = 'consignacion';
 
+    /**
+     * HOY NO LO ESCRIBE NADIE, y aun asi importa.
+     *
+     * No hay endpoint para ajustar a mano un descuadre: la funcion no
+     * esta hecha. Pero el valor vive en `cash_movements.type`, y
+     * `pendientesConLaTienda()` filtra por `type = RECAUDO`, asi que lo
+     * que decide esta constante es que un ajuste NO se cuente como plata
+     * recaudada. El dia que se cambiara a 'recaudo' se le cobraria al
+     * domiciliario un descuadre perdonado.
+     *
+     * Por eso `CustodiaDeEfectivoTest` la fija con su literal y comprueba
+     * que los tres tipos sean distintos: es lo unico que el resto del
+     * codigo necesita de ellos.
+     */
     public const AJUSTE = 'ajuste';
 
     protected $fillable = [
