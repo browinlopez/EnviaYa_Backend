@@ -1,0 +1,1041 @@
+{
+ "_": [
+  "LO QUE EL BARRIDO DE SABOTAJE TODAVIA NO HA TOCADO, y en que estado.",
+  "",
+  "Medido el 15 de noviembre de 2026. De las 131 constantes publicas de",
+  "`app/`, 43 estan en `barrido-mutaciones.json` y 88 no. De esas 88, 57",
+  "deciden dinero, un permiso o un estado del que depende si un pedido",
+  "avanza; las otras 31 son rotulos, limites y configuracion.",
+  "",
+  "ESTA LISTA CORRIGE ALGO QUE DIJE VARIAS VECES. Venia diciendo que lo que",
+  "quedaba «son etiquetas, plazos y nombres de disco que no deciden nada».",
+  "Con la lista delante son 57 las que deciden, y entre ellas estan las",
+  "parejas directas de agujeros ya encontrados: `RedencionDePromociones::",
+  "DEVUELTA` junto a `APLICADA`, los dos `AJUSTE` junto a `RECAUDO`,",
+  "`Settlement::APROBADA` junto a `PAGADA`, y `UnidadDeVenta::KILO` y",
+  "`GRAMO` junto a `LIBRA`. Las cuatro primeras SI eran agujeros.",
+  "",
+  "Y LA DIVISION EN TRES NO ES COSMETICA: cambia que hay que hacer con cada",
+  "grupo, y la mitad del trabajo que pensaba que era barrer no lo es.",
+  "",
+  "  muertas        Nadie en `app/` las nombra. Sabotearlas no puede fallar",
+  "                 ninguna prueba, asi que el barrido las dira «sin",
+  "                 defensa» cuando lo que pasa es que estan muertas. Serian",
+  "                 hallazgos FALSOS, y un instrumento que los da se deja de",
+  "                 leer. No van al barrido: lo que piden es decidir si se",
+  "                 borran o si falta el codigo que deberia usarlas.",
+  "",
+  "  sin_prueba     Las usa `app/` y NINGUNA prueba las nombra. Aqui el",
+  "                 barrido no hace falta para saber la respuesta: ya se",
+  "                 sabe. Lo que falta es la prueba, no la medicion.",
+  "",
+  "  con_prueba     Las usa `app/` y alguna prueba las nombra. AQUI es donde",
+  "                 el barrido aporta, y es lo unico que no se puede saber",
+  "                 leyendo: que exista una prueba no significa que cace un",
+  "                 cambio. Las dos pasadas anteriores encontraron",
+  "                 justamente eso --la tautologia de `toBe(CONST)` y la",
+  "                 guarda defensiva que tapa el defecto-- en constantes que",
+  "                 SI tenian pruebas.",
+  "",
+  "Asi que la tercera pasada son 26, no 57. Y antes de ella hay 21 pruebas",
+  "que escribir y 10 constantes que decidir.",
+  "",
+  "Cada fila lleva donde se usa y que pruebas la nombran, medido, para no",
+  "volver a contarlo. Los campos `app` y `tests` son [fichero, veces]."
+ ],
+ "muertas": [
+  {
+   "clase": "AdCampaign",
+   "const": "BORRADOR",
+   "fichero": "app/Models/Marketing/AdCampaign.php",
+   "valor": "0",
+   "self": 0,
+   "app": [],
+   "tests": []
+  },
+  {
+   "clase": "AdCampaign",
+   "const": "FINALIZADA",
+   "fichero": "app/Models/Marketing/AdCampaign.php",
+   "valor": "3",
+   "self": 0,
+   "app": [],
+   "tests": []
+  },
+  {
+   "clase": "AdCampaign",
+   "const": "PAUSADA",
+   "fichero": "app/Models/Marketing/AdCampaign.php",
+   "valor": "2",
+   "self": 0,
+   "app": [],
+   "tests": [
+    [
+     "tests/Feature/Marketing/AdsPublicTest.php",
+     1
+    ]
+   ]
+  },
+  {
+   "clase": "CashDeposit",
+   "const": "ESTADOS",
+   "fichero": "app/Models/Operacion/CashDeposit.php",
+   "valor": "[self::PENDIENTE, self::CONFIRMADA, self::RECHAZADA]",
+   "self": 0,
+   "app": [],
+   "tests": []
+  },
+  {
+   "clase": "CashMovement",
+   "const": "AJUSTE",
+   "fichero": "app/Models/Operacion/CashMovement.php",
+   "valor": "'ajuste'",
+   "self": 0,
+   "app": [],
+   "tests": [
+    [
+     "tests/Feature/Pedidos/CustodiaDeEfectivoTest.php",
+     3
+    ]
+   ]
+  },
+  {
+   "clase": "ComplexStaff",
+   "const": "ROLES",
+   "fichero": "app/Models/Conjunto/ComplexStaff.php",
+   "valor": "[self::DUENO, self::CELADOR]",
+   "self": 0,
+   "app": [],
+   "tests": []
+  },
+  {
+   "clase": "Coupon",
+   "const": "TIPOS",
+   "fichero": "app/Models/Marketing/Coupon.php",
+   "valor": "[self::TIPO_PORCENTAJE, self::TIPO_FIJO, self::TIPO_ENVIO_GRATIS]",
+   "self": 0,
+   "app": [],
+   "tests": []
+  },
+  {
+   "clase": "OrdersSales",
+   "const": "ESTADOS",
+   "fichero": "app/Models/Order/OrdersSales.php",
+   "valor": "[ self::NUEVO, self::PREPARANDO, self::EN_CAMINO, self::ENTREGADO, self::CANCELADO, ]",
+   "self": 0,
+   "app": [],
+   "tests": [
+    [
+     "tests/Feature/Contrato/LosCincoEstadosDelPedidoTest.php",
+     3
+    ]
+   ]
+  },
+  {
+   "clase": "OrdersSales",
+   "const": "SIN_PESAJE",
+   "fichero": "app/Models/Order/OrdersSales.php",
+   "valor": "0",
+   "self": 0,
+   "app": [],
+   "tests": [
+    [
+     "tests/Feature/Pedidos/VenderPorPesoTest.php",
+     1
+    ]
+   ]
+  },
+  {
+   "clase": "StoreCreditMovement",
+   "const": "AJUSTE",
+   "fichero": "app/Models/Operacion/StoreCreditMovement.php",
+   "valor": "'ajuste'",
+   "self": 0,
+   "app": [],
+   "tests": []
+  }
+ ],
+ "sin_prueba": [
+  {
+   "clase": "AccesoBiometricoController",
+   "const": "HABILIDAD",
+   "fichero": "app/Http/Controllers/Auth/AccesoBiometricoController.php",
+   "valor": "'biometrico'",
+   "self": 1,
+   "app": [],
+   "tests": []
+  },
+  {
+   "clase": "AccesoBiometricoController",
+   "const": "NOMBRE_TOKEN",
+   "fichero": "app/Http/Controllers/Auth/AccesoBiometricoController.php",
+   "valor": "'biometrico'",
+   "self": 2,
+   "app": [
+    [
+     "app/Http/Controllers/Auth/AuthController.php",
+     1
+    ],
+    [
+     "app/Http/Middleware/SoloParaCambiarPorSesion.php",
+     1
+    ]
+   ],
+   "tests": []
+  },
+  {
+   "clase": "CancelacionDelPedido",
+   "const": "COMPRADOR",
+   "fichero": "app/Services/CancelacionDelPedido.php",
+   "valor": "'comprador'",
+   "self": 0,
+   "app": [
+    [
+     "app/Http/Controllers/Order/OrderController.php",
+     1
+    ]
+   ],
+   "tests": []
+  },
+  {
+   "clase": "CancelacionDelPedido",
+   "const": "TIENDA",
+   "fichero": "app/Services/CancelacionDelPedido.php",
+   "valor": "'tienda'",
+   "self": 3,
+   "app": [
+    [
+     "app/Http/Controllers/Negocio/CancelacionDelPedidoController.php",
+     1
+    ]
+   ],
+   "tests": []
+  },
+  {
+   "clase": "Coupon",
+   "const": "TIPO_FIJO",
+   "fichero": "app/Models/Marketing/Coupon.php",
+   "valor": "'fixed'",
+   "self": 1,
+   "app": [],
+   "tests": []
+  },
+  {
+   "clase": "CouponService",
+   "const": "DEVUELTO",
+   "fichero": "app/Services/CouponService.php",
+   "valor": "0",
+   "self": 1,
+   "app": [],
+   "tests": []
+  },
+  {
+   "clase": "DocumentosDelDomiciliarioController",
+   "const": "TIPOS",
+   "fichero": "app/Http/Controllers/Negocio/DocumentosDelDomiciliarioController.php",
+   "valor": "['cedula', 'licencia', 'soat', 'tecnomecanica', 'arl', 'eps']",
+   "self": 1,
+   "app": [],
+   "tests": []
+  },
+  {
+   "clase": "FacturaService",
+   "const": "EMITIDA",
+   "fichero": "app/Services/FacturaService.php",
+   "valor": "1",
+   "self": 1,
+   "app": [
+    [
+     "app/Http/Controllers/Admin/Api/FacturasApiController.php",
+     2
+    ]
+   ],
+   "tests": []
+  },
+  {
+   "clase": "LandingRequest",
+   "const": "ATENDIDA",
+   "fichero": "app/Models/Operacion/LandingRequest.php",
+   "valor": "2",
+   "self": 1,
+   "app": [
+    [
+     "app/Http/Controllers/Admin/Api/SolicitudesApiController.php",
+     2
+    ]
+   ],
+   "tests": []
+  },
+  {
+   "clase": "LandingRequest",
+   "const": "EN_GESTION",
+   "fichero": "app/Models/Operacion/LandingRequest.php",
+   "valor": "1",
+   "self": 0,
+   "app": [
+    [
+     "app/Http/Controllers/Admin/Api/SolicitudesApiController.php",
+     2
+    ]
+   ],
+   "tests": []
+  },
+  {
+   "clase": "Pqrs",
+   "const": "ABIERTO",
+   "fichero": "app/Models/Operacion/Pqrs.php",
+   "valor": "0",
+   "self": 0,
+   "app": [
+    [
+     "app/Http/Controllers/Admin/Api/PqrsApiController.php",
+     2
+    ]
+   ],
+   "tests": []
+  },
+  {
+   "clase": "Pqrs",
+   "const": "CERRADO",
+   "fichero": "app/Models/Operacion/Pqrs.php",
+   "valor": "3",
+   "self": 1,
+   "app": [],
+   "tests": []
+  },
+  {
+   "clase": "Pqrs",
+   "const": "EN_GESTION",
+   "fichero": "app/Models/Operacion/Pqrs.php",
+   "valor": "1",
+   "self": 0,
+   "app": [
+    [
+     "app/Http/Controllers/Admin/Api/PqrsApiController.php",
+     2
+    ]
+   ],
+   "tests": []
+  },
+  {
+   "clase": "Promotion",
+   "const": "BORRADOR",
+   "fichero": "app/Models/Promotion.php",
+   "valor": "0",
+   "self": 0,
+   "app": [
+    [
+     "app/Services/PromocionesDeLaTienda.php",
+     1
+    ]
+   ],
+   "tests": []
+  },
+  {
+   "clase": "Promotion",
+   "const": "TIPOS",
+   "fichero": "app/Models/Promotion.php",
+   "valor": "[self::SIN_DESCUENTO, self::PORCENTAJE, self::NXM]",
+   "self": 0,
+   "app": [
+    [
+     "app/Http/Requests/Negocio/GuardarPromocionRequest.php",
+     1
+    ]
+   ],
+   "tests": []
+  },
+  {
+   "clase": "PushCampaign",
+   "const": "CANCELADA",
+   "fichero": "app/Models/Marketing/PushCampaign.php",
+   "valor": "3",
+   "self": 0,
+   "app": [
+    [
+     "app/Http/Controllers/Admin/Api/MarketingApiController.php",
+     2
+    ]
+   ],
+   "tests": []
+  },
+  {
+   "clase": "PushCampaign",
+   "const": "ENVIADA",
+   "fichero": "app/Models/Marketing/PushCampaign.php",
+   "valor": "2",
+   "self": 0,
+   "app": [
+    [
+     "app/Http/Controllers/Admin/Api/MarketingApiController.php",
+     1
+    ]
+   ],
+   "tests": []
+  },
+  {
+   "clase": "PushCampaign",
+   "const": "PROGRAMADA",
+   "fichero": "app/Models/Marketing/PushCampaign.php",
+   "valor": "1",
+   "self": 1,
+   "app": [],
+   "tests": []
+  },
+  {
+   "clase": "SafetyIncident",
+   "const": "ABIERTO",
+   "fichero": "app/Models/Operacion/SafetyIncident.php",
+   "valor": "0",
+   "self": 0,
+   "app": [
+    [
+     "app/Http/Controllers/Admin/Api/IncidentesApiController.php",
+     1
+    ]
+   ],
+   "tests": []
+  },
+  {
+   "clase": "SafetyIncident",
+   "const": "EN_INVESTIGACION",
+   "fichero": "app/Models/Operacion/SafetyIncident.php",
+   "valor": "1",
+   "self": 0,
+   "app": [
+    [
+     "app/Http/Controllers/Admin/Api/IncidentesApiController.php",
+     1
+    ]
+   ],
+   "tests": []
+  },
+  {
+   "clase": "VisitantesController",
+   "const": "CLASES",
+   "fichero": "app/Http/Controllers/Conjunto/VisitantesController.php",
+   "valor": "['visitante', 'servicio', 'domicilio_externo']",
+   "self": 0,
+   "app": [
+    [
+     "app/Http/Requests/Conjunto/RegistrarVisitanteRequest.php",
+     1
+    ]
+   ],
+   "tests": []
+  }
+ ],
+ "con_prueba": [
+  {
+   "clase": "AdCampaign",
+   "const": "ACTIVA",
+   "fichero": "app/Models/Marketing/AdCampaign.php",
+   "valor": "1",
+   "self": 1,
+   "app": [
+    [
+     "app/Http/Controllers/Admin/Api/MarketingApiController.php",
+     2
+    ]
+   ],
+   "tests": [
+    [
+     "tests/Feature/Marketing/AdsPublicTest.php",
+     1
+    ],
+    [
+     "tests/Feature/Marketing/MarketingAdminTest.php",
+     1
+    ]
+   ]
+  },
+  {
+   "clase": "CancelacionDelPedido",
+   "const": "CANCELADO",
+   "fichero": "app/Services/CancelacionDelPedido.php",
+   "valor": "OrdersSales::CANCELADO",
+   "self": 0,
+   "app": [
+    [
+     "app/Http/Controllers/Negocio/CancelacionDelPedidoController.php",
+     1
+    ],
+    [
+     "app/Services/CancelacionDelPedido.php",
+     1
+    ]
+   ],
+   "tests": [
+    [
+     "tests/Feature/Contrato/LosCincoEstadosDelPedidoTest.php",
+     2
+    ]
+   ]
+  },
+  {
+   "clase": "CashDeposit",
+   "const": "CONSIGNACION",
+   "fichero": "app/Models/Operacion/CashDeposit.php",
+   "valor": "'consignacion'",
+   "self": 0,
+   "app": [
+    [
+     "app/Queries/EfectivoDeLaTienda.php",
+     1
+    ]
+   ],
+   "tests": [
+    [
+     "tests/Feature/Rendimiento/EfectivoDeLaFlotaTest.php",
+     1
+    ]
+   ]
+  },
+  {
+   "clase": "CashDeposit",
+   "const": "PENDIENTE",
+   "fichero": "app/Models/Operacion/CashDeposit.php",
+   "valor": "'pendiente'",
+   "self": 1,
+   "app": [
+    [
+     "app/Services/CustodiaDeEfectivo.php",
+     1
+    ]
+   ],
+   "tests": [
+    [
+     "tests/Feature/Pedidos/EfectivoEndpointsTest.php",
+     1
+    ]
+   ]
+  },
+  {
+   "clase": "CashDeposit",
+   "const": "RECHAZADA",
+   "fichero": "app/Models/Operacion/CashDeposit.php",
+   "valor": "'rechazada'",
+   "self": 1,
+   "app": [
+    [
+     "app/Services/CustodiaDeEfectivo.php",
+     2
+    ]
+   ],
+   "tests": [
+    [
+     "tests/Feature/Pedidos/CustodiaDeEfectivoTest.php",
+     1
+    ]
+   ]
+  },
+  {
+   "clase": "LandingRequest",
+   "const": "DESCARTADA",
+   "fichero": "app/Models/Operacion/LandingRequest.php",
+   "valor": "3",
+   "self": 1,
+   "app": [
+    [
+     "app/Http/Controllers/Admin/Api/SolicitudesApiController.php",
+     1
+    ]
+   ],
+   "tests": [
+    [
+     "tests/Feature/Solicitudes/SolicitudesWebTest.php",
+     1
+    ]
+   ]
+  },
+  {
+   "clase": "LandingRequest",
+   "const": "NUEVA",
+   "fichero": "app/Models/Operacion/LandingRequest.php",
+   "valor": "0",
+   "self": 0,
+   "app": [
+    [
+     "app/Http/Controllers/Admin/Api/SolicitudesApiController.php",
+     2
+    ]
+   ],
+   "tests": [
+    [
+     "tests/Feature/Solicitudes/SolicitudesWebTest.php",
+     1
+    ]
+   ]
+  },
+  {
+   "clase": "OrdersSales",
+   "const": "ACTIVOS",
+   "fichero": "app/Models/Order/OrdersSales.php",
+   "valor": "[self::NUEVO, self::PREPARANDO, self::EN_CAMINO]",
+   "self": 0,
+   "app": [
+    [
+     "app/Http/Controllers/Admin/Api/AdminApiController.php",
+     2
+    ],
+    [
+     "app/Http/Controllers/Admin/Api/DomiciliariosApiController.php",
+     3
+    ],
+    [
+     "app/Http/Controllers/Admin/Api/PedidosApiController.php",
+     3
+    ],
+    [
+     "app/Http/Controllers/Order/ConsultaDePedidosController.php",
+     1
+    ],
+    [
+     "app/Queries/PedidosDelPanel.php",
+     2
+    ],
+    [
+     "app/Services/ResumenDeArea.php",
+     1
+    ],
+    [
+     "app/Services/ResumenDelPanel.php",
+     1
+    ]
+   ],
+   "tests": [
+    [
+     "tests/Feature/Contrato/ElPanelSabeQuienPagoTest.php",
+     5
+    ]
+   ]
+  },
+  {
+   "clase": "OrdersSales",
+   "const": "CANCELADO",
+   "fichero": "app/Models/Order/OrdersSales.php",
+   "valor": "5",
+   "self": 1,
+   "app": [
+    [
+     "app/Http/Controllers/Negocio/FichaDelDomiciliarioController.php",
+     1
+    ],
+    [
+     "app/Http/Controllers/Negocio/HistorialDePedidosController.php",
+     3
+    ],
+    [
+     "app/Http/Controllers/Order/ConsultaDePedidosController.php",
+     1
+    ],
+    [
+     "app/Services/CancelacionDelPedido.php",
+     4
+    ],
+    [
+     "app/Services/PulsoDelConjunto.php",
+     1
+    ]
+   ],
+   "tests": [
+    [
+     "tests/Feature/Contrato/ElPanelSabeQuienPagoTest.php",
+     1
+    ],
+    [
+     "tests/Feature/Contrato/LosCincoEstadosDelPedidoTest.php",
+     2
+    ]
+   ]
+  },
+  {
+   "clase": "OrdersSales",
+   "const": "EN_CAMINO",
+   "fichero": "app/Models/Order/OrdersSales.php",
+   "valor": "3",
+   "self": 2,
+   "app": [
+    [
+     "app/Http/Controllers/Domiciliary/DomiciliaryController.php",
+     1
+    ],
+    [
+     "app/Http/Controllers/Domiciliary/PedidosDelDomiciliarioController.php",
+     2
+    ],
+    [
+     "app/Http/Controllers/Negocio/FichaDelDomiciliarioController.php",
+     1
+    ],
+    [
+     "app/Http/Controllers/Negocio/TorreDeControlController.php",
+     1
+    ],
+    [
+     "app/Services/AccesoAlConjunto.php",
+     1
+    ],
+    [
+     "app/Services/PulsoDelConjunto.php",
+     1
+    ],
+    [
+     "app/Services/ReglasDeDespacho.php",
+     1
+    ]
+   ],
+   "tests": [
+    [
+     "tests/Feature/Contrato/ElPanelSabeQuienPagoTest.php",
+     1
+    ],
+    [
+     "tests/Feature/Contrato/LosCincoEstadosDelPedidoTest.php",
+     1
+    ]
+   ]
+  },
+  {
+   "clase": "OrdersSales",
+   "const": "NUEVO",
+   "fichero": "app/Models/Order/OrdersSales.php",
+   "valor": "1",
+   "self": 2,
+   "app": [],
+   "tests": [
+    [
+     "tests/Feature/Contrato/ElPanelSabeQuienPagoTest.php",
+     1
+    ],
+    [
+     "tests/Feature/Contrato/LosCincoEstadosDelPedidoTest.php",
+     1
+    ]
+   ]
+  },
+  {
+   "clase": "OrdersSales",
+   "const": "PAGO_RECHAZADO",
+   "fichero": "app/Models/Order/OrdersSales.php",
+   "valor": "'rejected'",
+   "self": 1,
+   "app": [
+    [
+     "app/Http/Controllers/Payment/BoldWebhookController.php",
+     1
+    ],
+    [
+     "app/Http/Controllers/Payment/PaymentController.php",
+     1
+    ]
+   ],
+   "tests": [
+    [
+     "tests/Feature/Credito/CreditoDeTiendaTest.php",
+     1
+    ],
+    [
+     "tests/Feature/Pedidos/CobroConPasarelaTest.php",
+     1
+    ],
+    [
+     "tests/Feature/Pedidos/PedidoSoloSiSePagaTest.php",
+     1
+    ],
+    [
+     "tests/Feature/Pedidos/WebhookDeBoldTest.php",
+     2
+    ]
+   ]
+  },
+  {
+   "clase": "OrdersSales",
+   "const": "PESADO",
+   "fichero": "app/Models/Order/OrdersSales.php",
+   "valor": "2",
+   "self": 0,
+   "app": [
+    [
+     "app/Http/Controllers/Negocio/PesajeDelPedidoController.php",
+     2
+    ]
+   ],
+   "tests": [
+    [
+     "tests/Feature/Pedidos/VenderPorPesoTest.php",
+     1
+    ]
+   ]
+  },
+  {
+   "clase": "OrdersSales",
+   "const": "POR_PESAR",
+   "fichero": "app/Models/Order/OrdersSales.php",
+   "valor": "1",
+   "self": 0,
+   "app": [
+    [
+     "app/Http/Controllers/Negocio/PesajeDelPedidoController.php",
+     1
+    ],
+    [
+     "app/Http/Controllers/Order/OrderController.php",
+     1
+    ],
+    [
+     "app/Services/ArmadoDelPedido.php",
+     1
+    ]
+   ],
+   "tests": [
+    [
+     "tests/Feature/Pedidos/VenderPorPesoTest.php",
+     4
+    ]
+   ]
+  },
+  {
+   "clase": "OrdersSales",
+   "const": "PREPARANDO",
+   "fichero": "app/Models/Order/OrdersSales.php",
+   "valor": "2",
+   "self": 2,
+   "app": [],
+   "tests": [
+    [
+     "tests/Feature/Contrato/ElPanelSabeQuienPagoTest.php",
+     1
+    ],
+    [
+     "tests/Feature/Contrato/LosCincoEstadosDelPedidoTest.php",
+     1
+    ]
+   ]
+  },
+  {
+   "clase": "PagoEnLinea",
+   "const": "CREDITO_DE_TIENDA",
+   "fichero": "app/Services/PagoEnLinea.php",
+   "valor": "[CreditoDeTienda::METODO]",
+   "self": 1,
+   "app": [],
+   "tests": [
+    [
+     "tests/Feature/Pedidos/ConCuantoPagaTest.php",
+     1
+    ],
+    [
+     "tests/Feature/Pedidos/MediosQueSeCobranTest.php",
+     1
+    ]
+   ]
+  },
+  {
+   "clase": "Pqrs",
+   "const": "RESUELTO",
+   "fichero": "app/Models/Operacion/Pqrs.php",
+   "valor": "2",
+   "self": 1,
+   "app": [
+    [
+     "app/Http/Controllers/Admin/Api/PqrsApiController.php",
+     4
+    ]
+   ],
+   "tests": [
+    [
+     "tests/Feature/Operacion/OperacionModulosTest.php",
+     2
+    ]
+   ]
+  },
+  {
+   "clase": "Promotion",
+   "const": "ENVIADA",
+   "fichero": "app/Models/Promotion.php",
+   "valor": "1",
+   "self": 1,
+   "app": [
+    [
+     "app/Http/Controllers/Business/ConsultaDeNegociosController.php",
+     1
+    ],
+    [
+     "app/Services/DescuentoPorPromocion.php",
+     1
+    ],
+    [
+     "app/Services/PromocionesDeLaTienda.php",
+     1
+    ]
+   ],
+   "tests": [
+    [
+     "tests/Feature/Marketing/PromocionUsosTest.php",
+     1
+    ],
+    [
+     "tests/Feature/Negocio/DescuentoPorPromocionTest.php",
+     1
+    ],
+    [
+     "tests/Feature/Negocios/LaEtiquetaDePromocionNoVaAlPesoTest.php",
+     1
+    ]
+   ]
+  },
+  {
+   "clase": "Promotion",
+   "const": "NXM",
+   "fichero": "app/Models/Promotion.php",
+   "valor": "'nxm'",
+   "self": 2,
+   "app": [
+    [
+     "app/Http/Controllers/Negocio/PromocionesController.php",
+     1
+    ],
+    [
+     "app/Http/Requests/Negocio/GuardarPromocionRequest.php",
+     2
+    ]
+   ],
+   "tests": [
+    [
+     "tests/Feature/Contrato/LaNovenaTandaNoCambiaLaFormaTest.php",
+     1
+    ],
+    [
+     "tests/Feature/Negocio/DescuentoPorPromocionTest.php",
+     3
+    ]
+   ]
+  },
+  {
+   "clase": "PushCampaign",
+   "const": "BORRADOR",
+   "fichero": "app/Models/Marketing/PushCampaign.php",
+   "valor": "0",
+   "self": 1,
+   "app": [],
+   "tests": [
+    [
+     "tests/Feature/Push/NotificacionesTest.php",
+     1
+    ]
+   ]
+  },
+  {
+   "clase": "RedencionDePromociones",
+   "const": "DEVUELTA",
+   "fichero": "app/Services/RedencionDePromociones.php",
+   "valor": "0",
+   "self": 1,
+   "app": [],
+   "tests": [
+    [
+     "tests/Feature/Marketing/PromocionUsosTest.php",
+     3
+    ]
+   ]
+  },
+  {
+   "clase": "SafetyIncident",
+   "const": "CERRADO",
+   "fichero": "app/Models/Operacion/SafetyIncident.php",
+   "valor": "2",
+   "self": 0,
+   "app": [
+    [
+     "app/Http/Controllers/Admin/Api/IncidentesApiController.php",
+     2
+    ]
+   ],
+   "tests": [
+    [
+     "tests/Feature/Operacion/OperacionModulosTest.php",
+     2
+    ]
+   ]
+  },
+  {
+   "clase": "Settlement",
+   "const": "APROBADA",
+   "fichero": "app/Models/Operacion/Settlement.php",
+   "valor": "1",
+   "self": 0,
+   "app": [
+    [
+     "app/Http/Controllers/Admin/Api/OperacionApiController.php",
+     2
+    ],
+    [
+     "database/seeders/DemoSeeder.php",
+     2
+    ]
+   ],
+   "tests": [
+    [
+     "tests/Feature/Credito/CreditoDeTiendaTest.php",
+     3
+    ],
+    [
+     "tests/Feature/Operacion/OperacionModulosTest.php",
+     1
+    ]
+   ]
+  },
+  {
+   "clase": "UnidadDeVenta",
+   "const": "GRAMO",
+   "fichero": "app/Support/UnidadDeVenta.php",
+   "valor": "'gramo'",
+   "self": 4,
+   "app": [],
+   "tests": [
+    [
+     "tests/Feature/Pedidos/VenderPorPesoTest.php",
+     1
+    ]
+   ]
+  },
+  {
+   "clase": "UnidadDeVenta",
+   "const": "KILO",
+   "fichero": "app/Support/UnidadDeVenta.php",
+   "valor": "'kg'",
+   "self": 3,
+   "app": [],
+   "tests": [
+    [
+     "tests/Feature/Pedidos/VenderPorPesoTest.php",
+     1
+    ]
+   ]
+  },
+  {
+   "clase": "UnidadDeVenta",
+   "const": "TODAS",
+   "fichero": "app/Support/UnidadDeVenta.php",
+   "valor": "[self::UNIDAD, self::KILO, self::LIBRA, self::GRAMO]",
+   "self": 1,
+   "app": [
+    [
+     "app/Http/Requests/Negocio/ActualizarProductoRequest.php",
+     1
+    ],
+    [
+     "app/Http/Requests/Negocio/AgregarProductoRequest.php",
+     1
+    ]
+   ],
+   "tests": [
+    [
+     "tests/Feature/Pedidos/VenderPorPesoTest.php",
+     2
+    ]
+   ]
+  }
+ ]
+}

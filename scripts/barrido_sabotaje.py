@@ -178,6 +178,82 @@ def restaurar_con_git(rel):
     subprocess.run(["git", "checkout", "--", rel],
                    cwd=RAIZ, capture_output=True, text=True, shell=True)
 
+def comprobar_pendientes():
+    """Valida `barrido-pendientes.json` contra el codigo. Devuelve cuantos
+    problemas encontro, e imprime cada uno."""
+    ruta = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        "barrido-pendientes.json")
+    if not os.path.exists(ruta):
+        print("")
+        print("  (sin barrido-pendientes.json: no se comprueba)")
+        return 0
+
+    try:
+        datos = json.load(io.open(ruta, encoding="utf-8"))
+    except ValueError as e:
+        print("")
+        print("  barrido-pendientes.json no es JSON valido: " + str(e))
+        return 1
+
+    # Nada puede estar en las dos listas: una constante o se barre o esta
+    # pendiente, y en las dos a la vez significa que alguien movio una y se
+    # dejo la otra.
+    barridas = set()
+    for etq, _rel, _v, _n, _d in MUTACIONES:
+        m = re.search(r"(\w+)::(\w+)", etq)
+        if m:
+            barridas.add(m.groups())
+
+    problemas = 0
+    filas = 0
+    for grupo in ("muertas", "sin_prueba", "con_prueba"):
+        for f in datos.get(grupo, []):
+            filas += 1
+            clave = (f["clase"], f["const"])
+            etiqueta = "%s::%s" % clave
+
+            if clave in barridas:
+                print("  EN LAS DOS LISTAS   " + etiqueta)
+                problemas += 1
+
+            fichero = os.path.join(RAIZ, *f["fichero"].split("/"))
+            if not os.path.exists(fichero):
+                print("  FALTA EL FICHERO    " + etiqueta
+                      + "  (" + f["fichero"] + ")")
+                problemas += 1
+                continue
+
+            # Que siga declarada, y con el valor que la lista dice.
+            texto = leer(fichero)
+            decl = re.search(r"public const " + f["const"]
+                             + r"\s*=\s*(.*?);", texto, re.S)
+            if decl is None:
+                print("  YA NO EXISTE        " + etiqueta
+                      + "  -- borrada, o renombrada")
+                problemas += 1
+                continue
+            valor = " ".join(decl.group(1).split())
+            if valor != f["valor"]:
+                print("  CAMBIO DE VALOR     " + etiqueta
+                      + "  dice " + f["valor"] + ", es " + valor)
+                problemas += 1
+
+            # Y que el grupo siga siendo el suyo: si a una de `sin_prueba` le
+            # escribieron su prueba, deja de estar sin prueba.
+            if grupo == "sin_prueba" and f["tests"]:
+                print("  GRUPO EQUIVOCADO    " + etiqueta
+                      + "  esta en sin_prueba y la lista le pone pruebas")
+                problemas += 1
+            if grupo == "con_prueba" and not f["tests"]:
+                print("  GRUPO EQUIVOCADO    " + etiqueta
+                      + "  esta en con_prueba y la lista no le pone ninguna")
+                problemas += 1
+
+    print("")
+    print("  " + str(filas) + " pendientes comprobadas")
+    return problemas
+
+
 def main():
     print("BARRIDO DE SABOTAJE -", len(MUTACIONES), "mutaciones")
     # Que lista corrio: con dos --la completa y una por zona-- un informe que
@@ -207,6 +283,17 @@ def main():
             if n != 1:
                 print("  CASA " + str(n) + " VECES      " + etq)
                 problemas += 1
+
+        # Y LA OTRA LISTA, la de lo que todavia no se barre.
+        #
+        # `barrido-pendientes.json` dice, de cada constante sin barrer, si
+        # esta muerta, si ninguna prueba la nombra, o si alguna si. Son 57
+        # filas escritas a mano y envejecen como cualquier otra cosa escrita:
+        # se borra una constante, se le cambia el valor, se le escribe por fin
+        # su prueba, y la lista sigue diciendo lo de antes. Se comprueba aqui
+        # porque es el sitio donde ya se valida la lista hermana, y porque no
+        # ejecuta nada.
+        problemas += comprobar_pendientes()
 
         print("")
         print("  " + str(len(MUTACIONES)) + " mutaciones, "
