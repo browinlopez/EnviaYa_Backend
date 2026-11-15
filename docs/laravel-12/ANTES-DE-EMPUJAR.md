@@ -41,9 +41,9 @@ servidor todavía no sirve.
 > Esa es la decisión que queda, y los números de abajo se miden contra
 > `origin/Devs`, que es la rama que despliega.
 
-Nada está desplegado. Medido el **15 de noviembre de 2026**: son **168 commits**
+Nada está desplegado. Medido el **15 de noviembre de 2026**: son **171 commits**
 en `validacion/integracion` sobre `Devs`, y `Devs` a su vez va **22 commits por
-delante de `origin/Devs`**: **190** en total. La cuenta **incluye el commit que la escribe**: si no, cada
+delante de `origin/Devs`**: **193** en total. La cuenta **incluye el commit que la escribe**: si no, cada
 marcador la deja corta en uno y el verificador avisa para siempre de un
 desajuste que es de construccion. Hasta que `Devs` suba, las ramas
 de trabajo que cuelgan de ahí no tienen dónde apoyarse.
