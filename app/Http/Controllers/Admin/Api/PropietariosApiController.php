@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\CrearPropietarioRequest;
+use App\Queries\PropietariosDelPanel;
 use App\Support\Consultas\AyudasDeAdmin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -16,68 +17,20 @@ class PropietariosApiController extends Controller
 {
     use AyudasDeAdmin;
 
+    /** El listado del panel. La consulta vive en `Queries/PropietariosDelPanel`. */
     public function owners()
     {
-        $propietarios = DB::table('owner as o')
-            ->leftJoin('user as u', 'u.user_id', '=', 'o.user_id')
-            // `document_types` usa `id` como llave y guarda el rótulo en
-            // `name_es` / `name_en`; no tiene columna `name`.
-            ->leftJoin('document_types as dt', 'dt.id', '=', 'o.document_type_id')
-            ->orderBy('u.name')
-            ->get([
-                'o.owner_id', 'o.user_id', 'o.document_type_id', 'o.document_number',
-                'o.birthdate', 'o.contact_secondary', 'o.notes', 'o.state', 'o.profile_photo',
-                'u.name', 'u.email', 'u.phone', 'u.address',
-                'u.state as account_state',
-                'dt.code as document_type',
-            ]);
-
-        // Los negocios se traen en una sola consulta y se reparten en
-        // memoria: un join dejaría una fila por negocio y habría que
-        // desduplicar el propietario.
-        $negocios = DB::table('owner_busines as ob')
-            ->leftJoin('business as b', 'b.busines_id', '=', 'ob.busines_id')
-            ->leftJoin('orderssales as o', function ($j) {
-                $j->on('o.busines_id', '=', 'b.busines_id')->where('o.state', '=', self::ENTREGADO);
-            })
-            ->groupBy('ob.owner_id', 'b.busines_id', 'b.name')
-            ->get([
-                'ob.owner_id', 'b.busines_id', 'b.name',
-                DB::raw('COALESCE(SUM(o.total), 0) as revenue'),
-            ])
-            ->groupBy('owner_id');
-
         return response()->json(
-            $propietarios->map(function ($p) use ($negocios) {
-                $suyos = $negocios[$p->owner_id] ?? collect();
-                $p->businesses = $suyos->values();
-                $p->businesses_count = $suyos->count();
-                $p->business_ids = $suyos->pluck('busines_id')->filter()->values();
-                $p->revenue = round($suyos->sum('revenue'), 2);
-
-                return $p;
-            })
+            (new PropietariosDelPanel(self::ENTREGADO))->listado()
         );
     }
 
     /** Tipos de documento y negocios libres, para los selectores de la ficha. */
     public function ownerOptions()
     {
-        return response()->json([
-            'document_types' => DB::table('document_types')
-                ->orderBy('id')
-                ->get(['id', 'code', DB::raw('name_es as name')]),
-            'businesses' => DB::table('business as b')
-                ->leftJoin('owner_busines as ob', 'ob.busines_id', '=', 'b.busines_id')
-                ->leftJoin('owner as o', 'o.owner_id', '=', 'ob.owner_id')
-                ->leftJoin('user as u', 'u.user_id', '=', 'o.user_id')
-                ->orderBy('b.name')
-                ->get([
-                    'b.busines_id', 'b.name', 'b.address', 'b.state',
-                    'ob.owner_id as current_owner_id',
-                    'u.name as current_owner_name',
-                ]),
-        ]);
+        return response()->json(
+            (new PropietariosDelPanel(self::ENTREGADO))->opcionesDeLaFicha()
+        );
     }
 
     /**
