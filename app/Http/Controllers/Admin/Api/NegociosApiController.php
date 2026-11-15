@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\NegocioRequest;
+use App\Queries\NegociosDelPanel;
 use App\Services\BusinessMediaService;
 use App\Services\MediaService;
 use App\Support\Consultas\AyudasDeAdmin;
@@ -16,66 +17,23 @@ class NegociosApiController extends Controller
 {
     use AyudasDeAdmin;
 
+    /**
+     * El listado del panel.
+     *
+     * LA CONSULTA VIVE EN `App\Queries\NegociosDelPanel`, que es lo que §12
+     * pide --«consultas complejas en `Queries/`»-- y lo que §21 concreta para
+     * un listado con varias relaciones y agregados. Aqui quedan las tres
+     * decisiones que SI son del controlador: que estado cuenta como venta,
+     * pasar las filas por el presentador de imagenes, y responder.
+     *
+     * `self::ENTREGADO` se pasa en vez de leerse dentro de la Query para no
+     * crear una TERCERA copia del numero: ya vive como constante privada en
+     * `OrdersSales` y en el rasgo `AyudasDeAdmin`. Unificarlas es otro
+     * trabajo; duplicarlo una vez mas, no.
+     */
     public function businesses(MediaService $medios)
     {
-        /*
-         * Los agregados van en subconsultas y NO en joins.
-         *
-         * Unir `products_business` y `orderssales` a la vez produce un
-         * producto cartesiano: cada pedido se repite una vez por producto del
-         * negocio. Los COUNT(DISTINCT) sobrevivían, pero SUM() no tiene
-         * DISTINCT y las ventas salían multiplicadas por el número de
-         * productos (con 186 productos, $53.000 se mostraban como
-         * $9.858.000).
-         */
-        $filas = DB::table('business as b')
-            ->orderBy('b.name')
-            ->leftJoin('municipalities as m', 'm.id', '=', 'b.municipality_id')
-            ->leftJoin('departments as dp', 'dp.id', '=', 'm.department_id')
-                // `business.type` guarda el ID de la categoría de negocio.
-            ->leftJoin('category_business as cb', 'cb.id', '=', 'b.type')
-            ->select([
-                'b.busines_id', 'b.name', 'b.phone', 'b.address', 'b.qualification',
-                'b.razonSocial_DCD', 'b.NIT', 'b.logo', 'b.description',
-                'b.latitude', 'b.longitude', 'b.type', 'b.state',
-                // El editor se siembra con esta fila: sin el tope, guardar
-                // cualquier otro cambio lo mandaba vacío y lo borraba.
-                'b.credit_debt_cap',
-                'b.municipality_id', 'm.name as municipality_name',
-                'dp.id as department_id', 'dp.name as department_name',
-                'cb.name as type_name',
-            ])
-                // El dueño en subconsulta: unir `owner_busines` repetiría la
-                // fila del negocio si alguna vez tuviera dos vínculos.
-            ->selectSub(
-                DB::table('owner_busines as ob')
-                    ->join('owner as o', 'o.owner_id', '=', 'ob.owner_id')
-                    ->join('user as u', 'u.user_id', '=', 'o.user_id')
-                    ->selectRaw('u.name')
-                    ->whereColumn('ob.busines_id', 'b.busines_id')
-                    ->limit(1),
-                'owner_name',
-            )
-            ->selectSub(
-                DB::table('products_business')
-                    ->selectRaw('COUNT(*)')
-                    ->whereColumn('products_business.busines_id', 'b.busines_id'),
-                'products_count',
-            )
-            ->selectSub(
-                DB::table('orderssales')
-                    ->selectRaw('COUNT(*)')
-                    ->whereColumn('orderssales.busines_id', 'b.busines_id'),
-                'orders_count',
-            )
-            ->selectSub(
-                DB::table('orderssales')
-                    ->selectRaw('COALESCE(SUM(total), 0)')
-                    ->whereColumn('orderssales.busines_id', 'b.busines_id')
-                    ->where('state', self::ENTREGADO),
-                'revenue',
-            )
-            ->get();
+        $filas = (new NegociosDelPanel(self::ENTREGADO))->listado();
 
         return response()->json(
             $this->conImagenPrincipal($filas, 'negocios', 'busines_id', 'logo', $medios)
@@ -84,52 +42,17 @@ class NegociosApiController extends Controller
 
     public function showBusiness($id)
     {
-        $negocio = DB::table('business as b')
-            ->leftJoin('municipalities as m', 'm.id', '=', 'b.municipality_id')
-            ->leftJoin('departments as dp', 'dp.id', '=', 'm.department_id')
-            ->leftJoin('category_business as cb', 'cb.id', '=', 'b.type')
-            ->where('b.busines_id', $id)
-            ->first([
-                'b.*',
-                'm.name as municipality_name',
-                'dp.id as department_id',
-                'dp.name as department_name',
-                'cb.name as type_name',
-            ]);
+        $negocio = (new NegociosDelPanel(self::ENTREGADO))->ficha($id);
         abort_if(! $negocio, 404, 'El negocio no existe.');
 
         return response()->json($negocio);
     }
 
-    /**
-     * Catálogo de departamentos con sus municipios.
-     *
-     * Va en una sola respuesta (32 departamentos, 110 municipios) porque el
-     * formulario necesita ambos niveles a la vez para encadenar los
-     * selectores, y pedirlos por separado obligaría a una segunda petición
-     * cada vez que se cambia de departamento.
-     */
+    /** El catalogo para los selectores encadenados del formulario. */
     public function locations()
     {
-        $municipios = DB::table('municipalities')
-            ->orderBy('name')
-            ->get(['id', 'name', 'department_id'])
-            ->groupBy('department_id');
-
         return response()->json(
-            DB::table('departments')
-                ->orderBy('name')
-                ->get(['id', 'name'])
-                ->map(function ($d) use ($municipios) {
-                    $d->municipalities = ($municipios[$d->id] ?? collect())
-                        ->map(fn ($m) => ['id' => $m->id, 'name' => $m->name])
-                        ->values();
-
-                    return $d;
-                })
-                // Un departamento sin municipios cargados no sirve para elegir.
-                ->filter(fn ($d) => count($d->municipalities) > 0)
-                ->values()
+            (new NegociosDelPanel(self::ENTREGADO))->departamentosConMunicipios()
         );
     }
 
