@@ -9,6 +9,7 @@ use App\Http\Requests\Admin\AnularFacturaRequest;
 use App\Http\Requests\Admin\AnularFacturasEnLoteRequest;
 use App\Http\Resources\Comprobante\FacturaResource;
 use App\Models\Invoice\Invoice;
+use App\Models\Order\OrdersSales;
 use App\Services\FacturaService;
 use App\Support\ListadoPaginado;
 use Illuminate\Database\Query\Builder;
@@ -143,7 +144,7 @@ class FacturasApiController extends Controller
     private function entregasSinComprobante(Request $request): Builder
     {
         $q = DB::table('orderssales as o')
-            ->where('o.state', 4)
+            ->where('o.state', OrdersSales::ENTREGADO)
             ->whereNotExists(fn ($sub) => $sub
                 ->from('invoices as i')
                 ->whereColumn('i.orderSales_id', 'o.orderSales_id'));

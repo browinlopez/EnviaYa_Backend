@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\NegocioRequest;
+use App\Models\Order\OrdersSales;
 use App\Queries\NegociosDelPanel;
 use App\Services\BusinessMediaService;
 use App\Services\MediaService;
@@ -26,14 +27,14 @@ class NegociosApiController extends Controller
      * decisiones que SI son del controlador: que estado cuenta como venta,
      * pasar las filas por el presentador de imagenes, y responder.
      *
-     * `self::ENTREGADO` se pasa en vez de leerse dentro de la Query para no
+     * `OrdersSales::ENTREGADO` se pasa en vez de leerse dentro de la Query para no
      * crear una TERCERA copia del numero: ya vive como constante privada en
      * `OrdersSales` y en el rasgo `AyudasDeAdmin`. Unificarlas es otro
      * trabajo; duplicarlo una vez mas, no.
      */
     public function businesses(MediaService $medios)
     {
-        $filas = (new NegociosDelPanel(self::ENTREGADO))->listado();
+        $filas = (new NegociosDelPanel(OrdersSales::ENTREGADO))->listado();
 
         return response()->json(
             $this->conImagenPrincipal($filas, 'negocios', 'busines_id', 'logo', $medios)
@@ -42,7 +43,7 @@ class NegociosApiController extends Controller
 
     public function showBusiness($id)
     {
-        $negocio = (new NegociosDelPanel(self::ENTREGADO))->ficha($id);
+        $negocio = (new NegociosDelPanel(OrdersSales::ENTREGADO))->ficha($id);
         abort_if(! $negocio, 404, 'El negocio no existe.');
 
         return response()->json($negocio);
@@ -52,7 +53,7 @@ class NegociosApiController extends Controller
     public function locations()
     {
         return response()->json(
-            (new NegociosDelPanel(self::ENTREGADO))->departamentosConMunicipios()
+            (new NegociosDelPanel(OrdersSales::ENTREGADO))->departamentosConMunicipios()
         );
     }
 

@@ -48,7 +48,7 @@ class LiquidacionService
         return DB::transaction(function () use ($tipo, $destinatarioId, $desde, $hasta, $creadoPor, $columna) {
             $pedidos = DB::table('orderssales as o')
                 ->where("o.{$columna}", $destinatarioId)
-                ->where('o.state', 4) // entregado
+                ->where('o.state', OrdersSales::ENTREGADO) // entregado
                 /*
                  * Y CON EL PAGO CONFIRMADO.
                  *

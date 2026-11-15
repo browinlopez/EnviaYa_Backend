@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\Order\OrdersSales;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,7 +21,6 @@ class GeneradorDeReportes
      * Se declara aca y no se importa del controlador a proposito: el servicio
      * tiene que poder usarse sin el.
      */
-    private const ENTREGADO = 4;
 
     /* ------------------------- VENTANA Y FILTROS ----------------------- */
 
@@ -32,6 +32,11 @@ class GeneradorDeReportes
      * periodo vacío — es un error de dedo, no una consulta legítima.
      *
      * @return array{desde:Carbon, hasta:Carbon, dias:int, desde_antes:Carbon, hasta_antes:Carbon}
+     */
+    /*
+     * LOS ESTADOS VIENEN DE `OrdersSales`, no de una copia privada.
+     * Estaban declarados aqui y en otras ocho clases: la misma decision
+     * tomada nueve veces. Ver la cabecera de esas constantes en el modelo.
      */
     public function ventanaDelReporte(Request $request): array
     {
@@ -200,12 +205,12 @@ class GeneradorDeReportes
     {
         $totales = fn (bool $antes) => $this->cifrasFinancieras(
             $this->pedidosDelPeriodo($v, $f, $antes)
-                ->where('o.state', self::ENTREGADO)
+                ->where('o.state', OrdersSales::ENTREGADO)
                 ->get(['o.total', 'o.subtotal', 'o.domicilio', 'o.domiciliary_fee', 'o.discount', 'o.sale_date'])
         );
 
         $actual = $this->pedidosDelPeriodo($v, $f)
-            ->where('o.state', self::ENTREGADO)
+            ->where('o.state', OrdersSales::ENTREGADO)
             ->get(['o.total', 'o.subtotal', 'o.domicilio', 'o.domiciliary_fee', 'o.discount', 'o.sale_date']);
 
         $porDia = $actual->groupBy(fn ($o) => Carbon::parse($o->sale_date)->toDateString());
@@ -257,7 +262,7 @@ class GeneradorDeReportes
         $detalle = fn (bool $antes) => $this->pedidosDelPeriodo($v, $f, $antes)
             ->join('orderssales_detail as od', 'od.orderSales_id', '=', 'o.orderSales_id')
             ->leftJoin('products as p', 'p.products_id', '=', 'od.product_id')
-            ->where('o.state', self::ENTREGADO);
+            ->where('o.state', OrdersSales::ENTREGADO);
 
         $productos = $detalle(false)
             ->groupBy('p.products_id', 'p.name')
@@ -286,7 +291,7 @@ class GeneradorDeReportes
             ])->first();
 
             $pedidos = $this->pedidosDelPeriodo($v, $f, $antes)
-                ->where('o.state', self::ENTREGADO)
+                ->where('o.state', OrdersSales::ENTREGADO)
                 ->count();
 
             $unidades = (int) ($filas->units ?? 0);
@@ -325,8 +330,8 @@ class GeneradorDeReportes
             $serie[] = [
                 'date' => $d->toDateString(),
                 'label' => $d->format('d M'),
-                'delivered' => $delDia->where('state', self::ENTREGADO)->count(),
-                'cancelled' => $delDia->where('state', '!=', self::ENTREGADO)->count(),
+                'delivered' => $delDia->where('state', OrdersSales::ENTREGADO)->count(),
+                'cancelled' => $delDia->where('state', '!=', OrdersSales::ENTREGADO)->count(),
             ];
         }
 
@@ -335,7 +340,7 @@ class GeneradorDeReportes
         $repartidores = $this->pedidosDelPeriodo($v, $f)
             ->join('domiciliary as d', 'd.domiciliary_id', '=', 'o.domiciliary_id')
             ->leftJoin('user as u', 'u.user_id', '=', 'd.user_id')
-            ->where('o.state', self::ENTREGADO)
+            ->where('o.state', OrdersSales::ENTREGADO)
             ->groupBy('d.domiciliary_id', 'u.name')
             ->orderByDesc(DB::raw('COUNT(o.orderSales_id)'))
             ->get([
@@ -388,7 +393,7 @@ class GeneradorDeReportes
 
     private function cifrasOperacionales($ordenes, ?int $repartidores): array
     {
-        $entregadas = $ordenes->where('state', self::ENTREGADO);
+        $entregadas = $ordenes->where('state', OrdersSales::ENTREGADO);
 
         // Solo cuentan los pedidos con las dos marcas: estimar las que faltan
         // inventaría datos.
@@ -450,10 +455,10 @@ class GeneradorDeReportes
                 DB::raw('m.name as municipality'),
                 DB::raw('cb.name as type_name'),
                 DB::raw('COUNT(o.orderSales_id) as orders'),
-                DB::raw('SUM(CASE WHEN o.state = '.self::ENTREGADO.' THEN 1 ELSE 0 END) as delivered'),
+                DB::raw('SUM(CASE WHEN o.state = '.OrdersSales::ENTREGADO.' THEN 1 ELSE 0 END) as delivered'),
                 DB::raw('SUM(CASE WHEN o.state = 5 THEN 1 ELSE 0 END) as cancelled'),
-                DB::raw('COALESCE(SUM(CASE WHEN o.state = '.self::ENTREGADO.' THEN o.total ELSE 0 END), 0) as revenue'),
-                DB::raw('COALESCE(SUM(CASE WHEN o.state = '.self::ENTREGADO.' THEN o.subtotal ELSE 0 END), 0) as subtotal'),
+                DB::raw('COALESCE(SUM(CASE WHEN o.state = '.OrdersSales::ENTREGADO.' THEN o.total ELSE 0 END), 0) as revenue'),
+                DB::raw('COALESCE(SUM(CASE WHEN o.state = '.OrdersSales::ENTREGADO.' THEN o.subtotal ELSE 0 END), 0) as subtotal'),
                 DB::raw('COUNT(DISTINCT o.buyer_id) as buyers'),
             ])
             ->map(function ($n) {
@@ -472,7 +477,7 @@ class GeneradorDeReportes
             ->values();
 
         $ingresoAnterior = (float) $this->pedidosDelPeriodo($v, $f, true)
-            ->where('o.state', self::ENTREGADO)
+            ->where('o.state', OrdersSales::ENTREGADO)
             ->sum('o.total');
 
         $activos = $filas->where('orders', '>', 0)->count();

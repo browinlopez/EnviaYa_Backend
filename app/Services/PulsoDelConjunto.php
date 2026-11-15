@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\Conjunto\ComplexStaff;
+use App\Models\Order\OrdersSales;
 use App\Support\FiltroDeFechas;
 use App\Support\SqlPortable;
 use Carbon\CarbonImmutable;
@@ -159,7 +160,7 @@ class PulsoDelConjunto
                 ->count(),
             'dia_semana_pasada' => $hoy->subWeek()->locale('es')->isoFormat('dddd'),
             'en_camino' => (int) (clone $this->pedidos($complexId))
-                ->where('o.state', 3)->count(),
+                ->where('o.state', OrdersSales::EN_CAMINO)->count(),
         ];
     }
 
@@ -402,7 +403,7 @@ class PulsoDelConjunto
             'ultima' => $ultima,
             'pedidos_entregados' => (int) $this->pedidos($complexId)
                 ->where('o.domiciliary_id', $domiciliaryId)
-                ->where('o.state', 4)
+                ->where('o.state', OrdersSales::ENTREGADO)
                 ->count(),
         ];
     }
@@ -434,8 +435,8 @@ class PulsoDelConjunto
             ],
             'totales' => [
                 'pedidos' => (int) $pedidos()->count(),
-                'entregados' => (int) $pedidos()->where('o.state', 4)->count(),
-                'cancelados' => (int) $pedidos()->where('o.state', 5)->count(),
+                'entregados' => (int) $pedidos()->where('o.state', OrdersSales::ENTREGADO)->count(),
+                'cancelados' => (int) $pedidos()->where('o.state', OrdersSales::CANCELADO)->count(),
                 'entradas' => (int) $entradas()->count(),
                 'domiciliarios' => (int) $entradas()->distinct()->count('e.domiciliary_id'),
                 // Cuánto se movió el edificio, no cuánto ganó nadie: acá el

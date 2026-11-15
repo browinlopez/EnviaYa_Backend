@@ -124,8 +124,55 @@ class OrdersSales extends Audit
      * aceptar y preparar es de la tienda y se mide aparte.
      */
 
-    /** Estado 4: entregado. */
-    private const ENTREGADO = 4;
+    /* =====================================================================
+       LOS CINCO ESTADOS DE UN PEDIDO, EN UN SOLO SITIO.
+
+       ESTO ESTABA REPARTIDO EN NUEVE DECLARACIONES, y el 14 de noviembre de
+       2026 se juntó. `ENTREGADO = 4` vivía como constante PRIVADA en seis
+       clases distintas --este modelo, `PedidosDelDomiciliarioController`,
+       `HistorialDePedidosController`, `MasVendidosController`,
+       `GeneradorDeReportes` y el rasgo `AyudasDeAdmin`--, `CANCELADO = 5` en
+       tres y `EN_CAMINO = 3` en dos. Y además había `4` escrito a pelo en
+       cinco ficheros más.
+
+       Privada en seis sitios no es encapsulación: es la misma decisión tomada
+       seis veces, y el día que un estado cambie de número habrá que acordarse
+       de las seis. Lo mismo que pasaba con la ciudad del negocio y con las
+       tres listas de `MediaService`.
+
+       VAN EN EL MODELO y no en un catálogo aparte porque son datos DEL
+       PEDIDO, que es lo que §07 dice que describe un modelo. Y son públicas
+       porque el problema era justamente que no lo fueran.
+
+       LOS NOMBRES NO SE INVENTARON: salen de `ESTADOS_DE_PEDIDO` en
+       `EnviaYa_Aliados/src/lib/constants.js`, que es el vocabulario con el
+       que el panel los pinta. Dos nombres para lo mismo habría sido cambiar
+       una duplicación por otra.
+       ===================================================================== */
+
+    /** Recién creado: el cliente espera que la tienda lo acepte. */
+    public const NUEVO = 1;
+
+    /** Aceptado por la tienda, en preparación. */
+    public const PREPARANDO = 2;
+
+    /** Despachado: lo lleva un domiciliario. */
+    public const EN_CAMINO = 3;
+
+    /** Entregado. Es la transición que mueve dinero. */
+    public const ENTREGADO = 4;
+
+    /** Cancelado. La fila NO se borra: ver `CancelacionDelPedido`. */
+    public const CANCELADO = 5;
+
+    /** Los cinco, para recorrerlos o validarlos. */
+    public const ESTADOS = [
+        self::NUEVO,
+        self::PREPARANDO,
+        self::EN_CAMINO,
+        self::ENTREGADO,
+        self::CANCELADO,
+    ];
 
     /**
      * Un pago en línea que todavía no se ha confirmado.

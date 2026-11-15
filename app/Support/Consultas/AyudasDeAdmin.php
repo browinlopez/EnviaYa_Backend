@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Support\Consultas;
 
+use App\Models\Order\OrdersSales;
 use App\Models\User;
 use App\Services\MediaService;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +22,11 @@ use Illuminate\Support\Facades\DB;
  */
 trait AyudasDeAdmin
 {
-    private const ENTREGADO = 4;
+    /*
+     * LOS ESTADOS VIENEN DE `OrdersSales`, no de una copia privada.
+     * Estaban declarados aqui y en otras ocho clases: la misma decision
+     * tomada nueve veces. Ver la cabecera de esas constantes en el modelo.
+     */
 
     private const ACTIVOS = [1, 2, 3];
 
@@ -165,7 +170,7 @@ trait AyudasDeAdmin
                 'u.state as account_active',
             ])
             ->selectSub(
-                $deOrdenes(fn ($q) => $q->selectRaw('COUNT(*)')->where('state', self::ENTREGADO)),
+                $deOrdenes(fn ($q) => $q->selectRaw('COUNT(*)')->where('state', OrdersSales::ENTREGADO)),
                 'deliveries',
             )
             ->selectSub(
@@ -175,7 +180,7 @@ trait AyudasDeAdmin
             ->selectSub(
                 $deOrdenes(
                     fn ($q) => $q->selectRaw('COALESCE(SUM(domiciliary_fee), 0)')
-                        ->where('state', self::ENTREGADO),
+                        ->where('state', OrdersSales::ENTREGADO),
                 ),
                 'earnings',
             )

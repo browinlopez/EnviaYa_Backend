@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Domiciliary;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Domiciliary\IngresosDelDomiciliarioRequest;
 use App\Models\Domiciliary;
+use App\Models\Order\OrdersSales;
 use App\Services\AccesoAlConjunto;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -50,7 +51,7 @@ class IngresosDelDomiciliarioController extends Controller
         $porDia = function (Carbon $desde, Carbon $hasta) use ($domiciliary_id) {
             $filas = DB::table('orderssales')
                 ->where('domiciliary_id', $domiciliary_id)
-                ->where('state', 4)
+                ->where('state', OrdersSales::ENTREGADO)
                 ->whereBetween('delivery_date', [$desde, $hasta])
                 ->get(['delivery_date']);
 
@@ -101,7 +102,7 @@ class IngresosDelDomiciliarioController extends Controller
     ========================== */
         $totalEntregas = DB::table('orderssales')
             ->where('domiciliary_id', $domiciliary_id)
-            ->where('state', 4)
+            ->where('state', OrdersSales::ENTREGADO)
             ->count();
 
         /*

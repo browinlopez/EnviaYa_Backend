@@ -136,7 +136,7 @@ class AccesoAlConjunto
             ->leftJoin('business as b', 'b.busines_id', '=', 'orderssales.busines_id')
             ->where('orderssales.domiciliary_id', $domiciliario->domiciliary_id)
             // En camino: ya lo recogió y todavía no lo entregó.
-            ->where('orderssales.state', 3)
+            ->where('orderssales.state', OrdersSales::EN_CAMINO)
             ->where('ua.complex_id', $complexId)
             ->get([
                 'orderssales.orderSales_id',

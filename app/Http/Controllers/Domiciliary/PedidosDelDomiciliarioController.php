@@ -26,11 +26,12 @@ use Illuminate\Http\Request;
 class PedidosDelDomiciliarioController extends Controller
 {
     /** `orderssales.state`: 2 listo para recoger · 3 en camino · 4 entregado. */
+    /*
+     * LOS ESTADOS VIENEN DE `OrdersSales`, no de una copia privada.
+     * Estaban declarados aqui y en otras ocho clases: la misma decision
+     * tomada nueve veces. Ver la cabecera de esas constantes en el modelo.
+     */
     private const POR_TOMAR = 2;
-
-    private const EN_CAMINO = 3;
-
-    private const ENTREGADO = 4;
 
     /*
      * SIN CONSTRUCTOR. Aqui se inyectaba el presentador para llamar a su
@@ -61,7 +62,7 @@ class PedidosDelDomiciliarioController extends Controller
          * —y llamarlo si no encuentro el timbre—.
          */
         $mios = OrdersSales::where('domiciliary_id', $domiciliary->domiciliary_id)
-            ->whereIn('state', [self::EN_CAMINO, self::ENTREGADO])
+            ->whereIn('state', [OrdersSales::EN_CAMINO, OrdersSales::ENTREGADO])
             ->confirmados()
             ->with($this->relaciones())
             ->get();
@@ -118,8 +119,8 @@ class PedidosDelDomiciliarioController extends Controller
             // nombre `orders` para no tener que tocar el hook.
             'orders' => $pedidos,
             'resumen' => [
-                'en_camino' => $mios->where('state', self::EN_CAMINO)->count(),
-                'entregados' => $mios->where('state', self::ENTREGADO)->count(),
+                'en_camino' => $mios->where('state', OrdersSales::EN_CAMINO)->count(),
+                'entregados' => $mios->where('state', OrdersSales::ENTREGADO)->count(),
                 'por_tomar' => $porTomar->count(),
             ],
         ]);
