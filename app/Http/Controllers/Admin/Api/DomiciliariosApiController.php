@@ -10,9 +10,9 @@ use App\Http\Requests\Admin\FirmarAcuerdoDelDomiciliarioRequest;
 use App\Http\Resources\Domiciliario\ContratoFirmadoResource;
 use App\Models\Order\OrdersSales;
 use App\Models\User;
+use App\Queries\PedidosDelPanel;
 use App\Services\ContratoService;
 use App\Services\MediaService;
-use App\Support\Consultas\AyudasDeAdmin;
 use App\Support\SqlPortable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,11 +20,9 @@ use Illuminate\Support\Facades\Hash;
 
 class DomiciliariosApiController extends Controller
 {
-    use AyudasDeAdmin;
-
     public function domiciliaries(Request $request)
     {
-        return response()->json($this->resumenDomiciliarios(
+        return response()->json((new PedidosDelPanel)->resumenDomiciliarios(
             (int) $request->query('business_id') ?: null,
         ));
     }
@@ -89,13 +87,15 @@ class DomiciliariosApiController extends Controller
      */
     public function showDomiciliary($id)
     {
-        $d = $this->resumenDomiciliarios()->firstWhere('domiciliary_id', (int) $id);
+        $panel = new PedidosDelPanel;
+
+        $d = $panel->resumenDomiciliarios()->firstWhere('domiciliary_id', (int) $id);
         abort_if(! $d, 404, 'El domiciliario no existe.');
 
-        $pedidos = fn () => $this->ordenesBase()->where('o.domiciliary_id', $id);
+        $pedidos = fn () => $panel->ordenesBase()->where('o.domiciliary_id', $id);
 
         $d->active_orders = $pedidos()
-            ->whereIn('o.state', self::ACTIVOS)
+            ->whereIn('o.state', OrdersSales::ACTIVOS)
             ->orderBy('o.sale_date')
             ->get();
 
@@ -251,7 +251,7 @@ class DomiciliariosApiController extends Controller
 
             $huerfanos = DB::table('orderssales')
                 ->where('domiciliary_id', $id)
-                ->whereIn('state', self::ACTIVOS)
+                ->whereIn('state', OrdersSales::ACTIVOS)
                 ->count();
 
             DB::transaction(function () use ($bloquear, $domiciliario, $id) {
@@ -296,7 +296,7 @@ class DomiciliariosApiController extends Controller
         if (array_key_exists('available', $datos) && ! $datos['available']) {
             $activos = DB::table('orderssales')
                 ->where('domiciliary_id', $id)
-                ->whereIn('state', self::ACTIVOS)
+                ->whereIn('state', OrdersSales::ACTIVOS)
                 ->count();
 
             if ($activos > 0) {

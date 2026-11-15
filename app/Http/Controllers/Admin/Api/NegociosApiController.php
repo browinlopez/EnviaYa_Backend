@@ -10,13 +10,13 @@ use App\Models\Order\OrdersSales;
 use App\Queries\NegociosDelPanel;
 use App\Services\BusinessMediaService;
 use App\Services\MediaService;
-use App\Support\Consultas\AyudasDeAdmin;
+use App\Support\ImagenPrincipalEnLaFila;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class NegociosApiController extends Controller
 {
-    use AyudasDeAdmin;
+    use ImagenPrincipalEnLaFila;
 
     /**
      * El listado del panel.
@@ -27,10 +27,12 @@ class NegociosApiController extends Controller
      * decisiones que SI son del controlador: que estado cuenta como venta,
      * pasar las filas por el presentador de imagenes, y responder.
      *
-     * `OrdersSales::ENTREGADO` se pasa en vez de leerse dentro de la Query para no
-     * crear una TERCERA copia del numero: ya vive como constante privada en
-     * `OrdersSales` y en el rasgo `AyudasDeAdmin`. Unificarlas es otro
-     * trabajo; duplicarlo una vez mas, no.
+     * `OrdersSales::ENTREGADO` se pasa en vez de leerse dentro de la Query
+     * para no crear una copia mas del numero. Cuando esto se escribio, el
+     * mismo 4 vivia como constante PRIVADA en seis clases y el comentario
+     * decia que unificarlas era otro trabajo: ese trabajo ya se hizo --los
+     * cinco estados son publicos en el modelo-- y por eso aqui se pasa la
+     * constante y no un literal.
      */
     public function businesses(MediaService $medios)
     {

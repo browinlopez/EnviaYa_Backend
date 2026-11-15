@@ -175,6 +175,22 @@ class OrdersSales extends Audit
     ];
 
     /**
+     * LOS PEDIDOS QUE TODAVÍA ESTÁN PASANDO: ni entregados ni cancelados.
+     *
+     * Era la DÉCIMA declaración de estados, encontrada al mover
+     * `AyudasDeAdmin`: vivía como `private const ACTIVOS = [1, 2, 3]` en el
+     * rasgo --y por tanto en sus diez consumidores-- más dos literales
+     * sueltos, en `ConsultaDePedidosController` y en `ResumenDeArea`.
+     *
+     * Va con las constantes y no con los tres números: `[1, 2, 3]` escrito a
+     * mano no dice QUÉ tienen en común esos tres, y era justo lo que hacía
+     * que las copias pasaran desapercibidas. Una lista de constantes es lo
+     * más cerca que deja llegar PHP: una expresión constante no puede llamar
+     * a `array_diff`, así que los tres hay que nombrarlos.
+     */
+    public const ACTIVOS = [self::NUEVO, self::PREPARANDO, self::EN_CAMINO];
+
+    /**
      * Un pago en línea que todavía no se ha confirmado.
      *
      * Mientras el pedido esté así NO es un pedido: es un intento de compra.

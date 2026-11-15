@@ -8,7 +8,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\CrearPropietarioRequest;
 use App\Models\Order\OrdersSales;
 use App\Queries\PropietariosDelPanel;
-use App\Support\Consultas\AyudasDeAdmin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -16,8 +15,6 @@ use Illuminate\Validation\Rule;
 
 class PropietariosApiController extends Controller
 {
-    use AyudasDeAdmin;
-
     /** El listado del panel. La consulta vive en `Queries/PropietariosDelPanel`. */
     public function owners()
     {

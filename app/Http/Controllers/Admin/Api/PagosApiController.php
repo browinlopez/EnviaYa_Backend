@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
-use App\Support\Consultas\AyudasDeAdmin;
+use App\Models\Payment\Payment;
 use App\Support\ListadoPaginado;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -13,8 +13,6 @@ use Illuminate\Support\Facades\DB;
 
 class PagosApiController extends Controller
 {
-    use AyudasDeAdmin;
-
     /** Cobros que no entraron. Se cuentan aparte de los pendientes. */
     private const PAGO_FALLIDO = ['rejected', 'failed', 'cancelled'];
 
@@ -85,7 +83,7 @@ class PagosApiController extends Controller
         };
 
         match ($request->query('status_group')) {
-            'aprobados' => $q->whereIn('p.status', self::PAGO_OK),
+            'aprobados' => $q->whereIn('p.status', Payment::COBRADOS),
             'pendientes' => $q->where('p.status', 'like', 'pending%'),
             'fallidos' => $q->whereIn('p.status', self::PAGO_FALLIDO),
             default => null,
@@ -101,7 +99,7 @@ class PagosApiController extends Controller
      */
     private function resumenDePagos($q): array
     {
-        $ok = "'".implode("','", self::PAGO_OK)."'";
+        $ok = "'".implode("','", Payment::COBRADOS)."'";
         $efectivo = self::EFECTIVO;
 
         $r = ListadoPaginado::soloAgregados($q, "

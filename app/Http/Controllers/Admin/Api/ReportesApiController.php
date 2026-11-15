@@ -6,7 +6,6 @@ namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\GeneradorDeReportes;
-use App\Support\Consultas\AyudasDeAdmin;
 use Illuminate\Http\Request;
 
 class ReportesApiController extends Controller
@@ -14,8 +13,6 @@ class ReportesApiController extends Controller
     public function __construct(
         private readonly GeneradorDeReportes $reportes,
     ) {}
-
-    use AyudasDeAdmin;
 
     /**
      * EL DESGLOSE POR NEGOCIO DE UNA CIFRA.
