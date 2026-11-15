@@ -98,7 +98,7 @@ vez encontró tres agujeros con 1361 pruebas en verde; el por qué está en la
 sexta lección de `ESTADO.md`.
 
 **Lo que le falta por barrer está medido, en `scripts/barrido-pendientes.json`.**
-De las **137** constantes públicas de `app/`, **51** están barridas y **50 de las
+De las **137** constantes públicas de `app/`, **79** están barridas y **22 de las
 restantes deciden** --eran 131 y 43 por la mañana: subieron porque las seis
 listas de estados que las validaciones escribían a mano pasaron a ser
 constantes, más dos nuevas, menos una que sobraba-- dinero, un permiso o un estado. Eso corrige algo que este
@@ -113,8 +113,55 @@ parecía barrido no lo es**:
 | grupo | cuántas | qué pide |
 |---|---|---|
 | muertas | **4** | Nadie en `app/` las nombra. Sabotearlas no puede fallar ninguna prueba, así que el barrido diría «sin defensa» cuando están muertas: **hallazgos falsos**. Piden decidir si se borran o si falta el código que debería usarlas |
-| sin prueba | **22** | Las usa `app/` y ninguna prueba las nombra. Aquí no hace falta medir: la respuesta ya se sabe. Falta la prueba |
-| con prueba | **24** | **La tercera pasada son estas.** Es lo único que no se puede saber leyendo: que exista una prueba no significa que cace un cambio, y es justo lo que las dos pasadas anteriores encontraron |
+| sin prueba | **10** | Las usa `app/` y ninguna prueba **las nombra**. Eso NO es «nadie las defiende»: ver el aviso de abajo |
+| con prueba | **8** | Las que el barrido no alcanzó a medir antes de que lo mataran |
+
+### La tercera pasada: 28 de 46, y seis sin defensa
+
+Corrida el **15 de noviembre de 2026**. Midió **28 de las 46** y el sistema la
+mató por memoria en la 29. **Es la tercera vez que pasa** —también la segunda
+pasada—, y un `kill` se salta el `finally`: dejó `Pqrs::ABIERTO = 1` en el
+árbol y el cerrojo puesto con el PID de un proceso ya muerto. Detectado,
+comprobado que era el único cambio, restaurado.
+
+**Veintidós defendidas y seis sin una sola prueba que las cazara:**
+
+| constante | qué decide |
+|---|---|
+| `AccesoBiometricoController::NOMBRE_TOKEN` | **La más grave.** `borrarLosBiometricos()` borra por `name`, así que con el nombre cambiado «desactivar el acceso con huella» contesta **éxito** y el token sigue sirviendo: quien apagó la opción porque perdió el teléfono cree que lo cerró |
+| `AccesoBiometricoController::HABILIDAD` | La habilidad guardada en `personal_access_tokens.abilities`. **Hoy no decide nada** —nadie llama a `tokenCan()`, se buscó en todo `app/`— y se vigila por el día que alguien la compruebe. Decirlo importa: afirmar que «concede un permiso» sería describir código que no existe |
+| `CashDeposit::CONSIGNACION` | El canal choca con un estado: `EfectivoDeLaTienda` busca `'pendiente'` en la columna del canal y **el panel del tendero deja de ver los depósitos de plataforma** |
+| `Coupon::TIPO_FIJO` | La lista blanca deja de aceptar `'fixed'`: **no se pueden crear cupones de monto fijo**. Las filas viejas siguen bien, porque `descuentoPara` compara con el valor guardado —la primera lectura fue otra y hubo que trazarla |
+| `Coupon::TIPOS` | El envío gratis sale del vocabulario: ese cupón no se puede crear |
+| `DocumentosDelDomiciliarioController::TIPOS` | Un papel sale de la lista y **no se puede subir**: el domiciliario no entrega su EPS y en el panel queda como si no la tuviera |
+
+Las seis tienen prueba, en `tests/Feature/Contrato/VocabularioGuardadoEnColumnasTest.php`,
+y las seis están **probadas rompiéndolas**: 6 de 6 cazadas. Todas se afirman
+con **literales**, porque esos valores viven en columnas de filas que ya
+existen —`personal_access_tokens.name`, `cash_deposits.canal`,
+`coupons.type`, `domiciliary_documents.type`— y afirmarlos contra su propia
+constante sería la tautología de siempre.
+
+**Y el barrido ya puede continuar donde lo dejaron**, que es el arreglo que
+faltaba después de tres muertes: apunta cada veredicto en
+`scripts/.barrido-resultados.json` **en cuanto lo sabe**, y `--continuar`
+salta lo ya medido. Se pierde, como mucho, la mutación que estaba corriendo.
+Por omisión **no** continúa: un veredicto viejo sobre código nuevo es peor que
+no tener veredicto.
+
+```
+python scripts/barrido_sabotaje.py --lista scripts/barrido-mutaciones-3.json --continuar
+```
+
+> **«Ninguna prueba la nombra» no es «ninguna prueba la defiende», y este
+> registro lo dijo mal.** Iba a escribir 22 pruebas para el grupo `sin_prueba`
+> y antes lo comprobé: sabotear `Pqrs::ABIERTO` —que ninguna prueba nombra—
+> tumba dos pruebas, porque `Pqrs::ESTADOS` se construye desde ella y la
+> prueba afirma el array con literales. **Grep no es sabotaje.** De las 22 que
+> clasifiqué así, el barrido confirmó defendidas a varias: `CouponService::DEVUELTO`,
+> `FacturaService::EMITIDA`, `LandingRequest::EN_GESTION`,
+> `CancelacionDelPedido::COMPRADOR` y `::TIENDA`. Escribirles pruebas habría
+> sido trabajo redundante.
 
 
 Y la sexta, que tampoco es una puerta y tarda dos segundos:
