@@ -14,12 +14,15 @@ servidor todavía no sirve.
 
 ## 1 · Empujar
 
-Nada está empujado. Son **137 commits** en `validacion/integracion` sobre
-`Devs`, y `Devs` a su vez va **22 commits por delante de `origin/Devs`**: 159
-en total. Hasta que `Devs` suba, las ramas de trabajo que cuelgan de ahí no
-tienen dónde apoyarse.
+Nada está empujado. Medido el **14 de noviembre de 2026**: son **157 commits**
+en `validacion/integracion` sobre `Devs`, y `Devs` a su vez va **22 commits por
+delante de `origin/Devs`**: **179** en total. Hasta que `Devs` suba, las ramas
+de trabajo que cuelgan de ahí no tienen dónde apoyarse.
 
-> **Eran 50 el 11 de noviembre.** Es mucho para una sola revisión, y conviene
+> **Eran 50 el 11 de noviembre y 137 el 13.** La cuenta se mide, no se
+> recuerda: este párrafo ya decía 50 cuando eran 137.
+>
+> Y 179 es mucho para una sola revisión, así que conviene
 > decirlo: empujar por partes se revisa mejor que todo de golpe. Las ramas
 > están separadas por asunto y cada mensaje de commit cuenta su porqué, así
 > que se pueden subir en tandas —contrato y Resources, instrumentos y
@@ -40,6 +43,30 @@ ciegas que nunca se desplegó—, así que esto arregla cobros, no los rompe.
 
 Se comprueba que el despliegue entró pidiendo una ruta nueva: por ejemplo
 `GET /v1/negocio/domiciliarios/rendimiento`, que antes no existía.
+
+### Antes de empujar, las cuatro puertas y una mas
+
+```
+vendor/bin/pint --test
+vendor/bin/phpstan analyse --memory-limit=1G
+vendor/bin/pest
+python scripts/arnes/correr.py          # con el servidor en marcha
+```
+
+Y la quinta, que **no** es una puerta porque tarda 40 minutos y no da verde ni
+rojo sino una lista:
+
+```
+python scripts/barrido_sabotaje.py --comprobar   # valida la lista, no ejecuta
+python scripts/barrido_sabotaje.py               # las 40 minutos
+```
+
+Sabotea una por una las constantes que deciden dinero o permisos y dice cuáles
+**no** caza ninguna prueba. No se corre en cada cambio: se corre al tocar
+dinero, permisos o un estado, y cuando se añade una constante de esas --que
+entonces se añade también a `scripts/barrido-mutaciones.json`--. La primera
+vez encontró tres agujeros con 1361 pruebas en verde; el por qué está en la
+sexta lección de `ESTADO.md`.
 
 ---
 

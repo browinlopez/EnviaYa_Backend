@@ -2,6 +2,8 @@
 
 use App\Http\Resources\Pedido\PedidoDeLaAppResource;
 use App\Models\Order\OrdersSales;
+use App\Services\CreditoDeTienda;
+use App\Services\PagoEnLinea;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -148,4 +150,91 @@ test('el domiciliario recibe con cuánto paga y cuánto cambio llevar', function
     expect($ficha)->toHaveKeys(['cash_tendered', 'change_due'])
         ->and((float) $ficha['cash_tendered'])->toBe(50000.0)
         ->and($ficha['change_due'])->toBe(round(50000 - (float) $orden->total, 2));
+});
+
+/* ----------------------------- lo que el segundo barrido encontro -------- */
+
+/**
+ * EL CREDITO DE LA TIENDA NO ES UN PAGO CONTRA ENTREGA.
+ *
+ * Del barrido del 14 de noviembre de 2026: anadiendo el metodo 7 --el credito
+ * de la tienda-- a `PagoEnLinea::CONTRA_ENTREGA` pasaban las 1365 pruebas.
+ *
+ * POR QUE NO LO VEIA NINGUNA: la prueba de «un pago que no es efectivo» usa
+ * `metodoQueNoEsEfectivo()`, que inventa el metodo **6**. El 6 sigue quedando
+ * fuera con el sabotaje puesto, asi que el caso del credito --el unico otro
+ * medio que se paga en la puerta sin pasarela-- no lo pisaba nadie.
+ *
+ * EL DANO: `cash_tendered` es «con cuanto va a pagar el cliente», y de ahi
+ * sale lo que el domiciliario ve en su pantalla: «paga con $50.000, lleva
+ * $38.000 de cambio». En un pedido a credito no hay nada que cobrar --la
+ * tienda le cobra al comprador por fuera-- asi que esa instruccion le diria al
+ * domiciliario que recoja plata que no le corresponde.
+ */
+test('un pedido a credito de la tienda no guarda con cuanto paga', function () {
+    $e = escenarioPedido();
+
+    DB::table('payment_methods')->insertOrIgnore([
+        'methods_id' => CreditoDeTienda::METODO,
+        'name' => 'Crédito de la tienda',
+        'state' => 1,
+    ]);
+
+    /*
+     * EL CUPO SE MONTA DE VERDAD, y no es decoracion.
+     *
+     * La primera version de esta prueba dejaba el credito sin asignar y
+     * envolvia la comprobacion en un `if ($orden && ...)`. El pedido se
+     * rechazaba por cupo, el `if` no entraba y la prueba pasaba con DOS
+     * aserciones --las del control-- sin haber mirado nunca un pedido a
+     * credito. Una prueba que se salta su propia comprobacion cuando el
+     * escenario no cuaja no es una prueba: es un hueco que se ve verde.
+     */
+    DB::table('business')->where('busines_id', $e['businessId'])
+        ->update(['credit_debt_cap' => 100000]);
+    DB::table('business_user_affiliations')->insert([
+        'user_id' => $e['user']->user_id,
+        'busines_id' => $e['businessId'],
+    ]);
+    app(CreditoDeTienda::class)
+        ->asignar($e['businessId'], (int) $e['user']->user_id, 50000);
+
+    $this->postJson('/v1/orders/orders', cuerpoPedido($e, [
+        'methods_id' => CreditoDeTienda::METODO,
+        'cash_tendered' => 50000,
+    ]))->assertSuccessful();
+
+    $orden = OrdersSales::latest('orderSales_id')->first();
+
+    // Y que el pedido sea DE VERDAD a credito, no otro que ande por ahi.
+    expect((int) $orden->methods_id)->toBe(CreditoDeTienda::METODO);
+    expect($orden->cash_tendered)->toBeNull();
+
+    /* CONTROL: que el campo SI se guarde cuando toca. Sin esto, «no se guarda»
+       tambien seria cierto con un `cash_tendered` que nunca se guardara, y la
+       prueba pasaria estando ciega. */
+    $e2 = escenarioPedido();
+    $this->postJson('/v1/orders/orders', cuerpoPedido($e2, [
+        'cash_tendered' => 50000,
+    ]))->assertSuccessful();
+
+    expect((float) OrdersSales::latest('orderSales_id')->first()->cash_tendered)->toBe(50000.0);
+});
+
+test('solo el efectivo se cobra en la puerta', function () {
+    /*
+     * CON LITERALES. De estas listas sale como se cobra cada pedido, asi que
+     * meter un medio en la lista equivocada es cobrar mal.
+     */
+    expect(PagoEnLinea::CONTRA_ENTREGA)->toBe([1]);
+    expect(PagoEnLinea::CON_PASARELA)->toBe([2, 4, 5]);
+
+    // Y las tres listas no se solapan: un medio se cobra de UNA manera.
+    $contra = PagoEnLinea::CONTRA_ENTREGA;
+    $pasarela = PagoEnLinea::CON_PASARELA;
+    $credito = PagoEnLinea::CREDITO_DE_TIENDA;
+
+    expect(array_intersect($contra, $pasarela))->toBe([]);
+    expect(array_intersect($contra, $credito))->toBe([]);
+    expect(array_intersect($pasarela, $credito))->toBe([]);
 });

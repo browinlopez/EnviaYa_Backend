@@ -4,6 +4,7 @@ use App\Models\Order\OrdersSales;
 use App\Models\Order\OrdersSalesDetail;
 use App\Models\Rol;
 use App\Models\User;
+use App\Support\UnidadDeVenta;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
@@ -471,4 +472,73 @@ test('no se da por pesado un pedido al que le faltan productos', function () {
 
     // Y el pedido sigue sin poder salir.
     expect((int) $orden->fresh()->weighing_state)->toBe(OrdersSales::POR_PESAR);
+});
+
+/* ----------------------------- lo que el segundo barrido encontro -------- */
+
+/**
+ * LA LIBRA ES UNA UNIDAD DE VERDAD, y no la vigilaba nadie.
+ *
+ * Del barrido de sabotaje del 14 de noviembre de 2026: poniendo
+ * `UnidadDeVenta::LIBRA = 'kg'` pasaban las 1365 pruebas, con catorce de este
+ * fichero cubriendo el peso.
+ *
+ * POR QUE NO LO VEIA NINGUNA: todas prueban con `kg`, que es el valor por
+ * defecto del ayudante `productoAlPeso()`. La libra solo aparecia en el
+ * metodo que pluraliza la etiqueta, y eso no lo mira ninguna prueba.
+ *
+ * EL DANO, comprobado leyendo el codigo y no de memoria --dos veces esta
+ * semana lo dije mal de cabeza--: con `LIBRA = 'kg'`, `AL_PESO` se queda en
+ * `['kg', 'kg', 'gramo']` y la cadena `'libra'` deja de estar dentro. Entonces
+ * `esPeso('libra')` da FALSO, y una oferta que la tienda ya tiene configurada
+ * por libras **deja de venderse al peso**: `EconomiaDelPedido` la cobra como
+ * una unidad --el precio de una libra, una vez, pase lo que pase-- y el pedido
+ * no nace por pesar. Ademas `TODAS` deja de admitir `'libra'`, asi que el
+ * tendero tampoco puede volver a configurarla.
+ */
+test('una oferta por LIBRAS se vende al peso, no como unidad', function () {
+    $e = escenarioPedido();
+    $queso = productoAlPeso($e, 'libra', 12000);
+
+    // Dos libras de queso a 12.000 la libra.
+    $this->postJson('/v1/orders/orders', cuerpoPedido($e, [
+        'products' => [porCantidad($queso, 2)],
+    ]))->assertSuccessful();
+
+    $orden = OrdersSales::latest('orderSales_id')->first();
+
+    /*
+     * 24.000 y no 12.000. Si la libra dejara de contar como peso, esta linea
+     * se cobraria como UNA unidad --12.000-- y el cliente pagaria la mitad de
+     * lo que se lleva.
+     */
+    expect((float) $orden->subtotal)->toBe(24000.0);
+
+    // Y el pedido tiene que nacer POR PESAR: una oferta al peso hay que pesarla.
+    expect((int) $orden->weighing_state)->toBe(OrdersSales::POR_PESAR);
+});
+
+test('las cuatro unidades de venta valen lo que la base ya tiene escrito', function () {
+    /*
+     * CON LITERALES. Los valores estan en la columna `products_business.sale_unit`
+     * de ofertas ya configuradas y viajan en las respuestas del catalogo:
+     * cambiarlos deja esas filas sin clasificar.
+     *
+     * Y `AL_PESO` tiene que llevar las tres, porque de esa lista cuelga si un
+     * producto se pesa, si el pedido se puede despachar y como se le cobra.
+     */
+    expect(UnidadDeVenta::UNIDAD)->toBe('unidad');
+    expect(UnidadDeVenta::KILO)->toBe('kg');
+    expect(UnidadDeVenta::LIBRA)->toBe('libra');
+    expect(UnidadDeVenta::GRAMO)->toBe('gramo');
+
+    expect(UnidadDeVenta::AL_PESO)->toBe(['kg', 'libra', 'gramo']);
+    expect(UnidadDeVenta::TODAS)->toBe(['unidad', 'kg', 'libra', 'gramo']);
+
+    // Las cuatro distintas: es lo unico que el resto del codigo necesita.
+    expect(count(array_unique(UnidadDeVenta::TODAS)))->toBe(4);
+
+    // Y la que se vende por unidades NO se pesa.
+    expect(UnidadDeVenta::esPeso('unidad'))->toBeFalse();
+    expect(UnidadDeVenta::esPeso('libra'))->toBeTrue();
 });

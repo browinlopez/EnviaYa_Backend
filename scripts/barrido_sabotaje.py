@@ -16,6 +16,7 @@ esta midiendo.
 Lee la salida asi: FALLA = defendido. PASA = nadie lo vigila.
 """
 import io
+import json
 import os
 import re
 import subprocess
@@ -28,96 +29,70 @@ import time
 # cuanto alguien clona el repositorio en otro sitio.
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# (etiqueta, fichero, texto original, texto saboteado, que error representa)
+# LA LISTA VIVE EN UN FICHERO DE DATOS, `scripts/barrido-mutaciones.json`.
 #
-# LAS DOS PRIMERAS SON EL CONTROL, y van primero a proposito: la respuesta de
-# las dos se conoce de antemano. `ENTREGADO` esta defendido --saboteado el 14 de
-# noviembre tumbo 18 pruebas-- y `COBRADOS` no lo estaba --con `['rejected']`
-# pasaban las 1356--. Si el control sale al reves, el barrido esta ciego y sus
-# demas respuestas no valen nada: un detector que no encuentra lo que SE que
-# esta pasa en verde sin mirar.
-MUTACIONES = [
-    ("CONTROL (debe FALLAR): OrdersSales::ENTREGADO", "app/Models/Order/OrdersSales.php",
-     "public const ENTREGADO = 4;",
-     "public const ENTREGADO = 3;",
-     "entregado y en camino se confunden -- defendido, comprobado el 14 de noviembre"),
+# Estaba escrita dentro de este script, y eso hacia que anadir una constante
+# fuera editar codigo. Son datos: etiqueta, fichero, texto viejo, texto
+# saboteado y que error representa. Con `--lista otra.json` se corre un
+# subconjunto, que es lo que hace util volver a barrer solo una zona.
+#
+# LAS QUE EMPIEZAN POR «CONTROL» SON EL CONTROL, y van primero: su respuesta se
+# conoce de antemano. Si el control no da lo esperado, el barrido esta ciego y
+# sus demas respuestas no valen nada -- un detector que no encuentra lo que SE
+# que esta pasa en verde sin mirar.
+LISTA_POR_DEFECTO = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "barrido-mutaciones.json"
+)
+# El cerrojo vive junto a la lista, no en la raiz: ahi no se cuela en un commit
+# por un `git add .` distraido.
+CERROJO_RUTA = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), ".barrido-en-marcha"
+)
 
-    ("CONTROL (debe FALLAR): Payment::COBRADOS", "app/Models/Payment/Payment.php",
-     "public const COBRADOS = ['approved', 'paid'];",
-     "public const COBRADOS = ['approved', 'rejected'];",
-     "un pago rechazado cuenta como cobrado -- se arreglo hoy, asi que YA debe estar defendido"),
 
-    # ---- DINERO: el efectivo de la operacion ----
-    ("CashDeposit::CONFIRMADA", "app/Models/Operacion/CashDeposit.php",
-     "public const CONFIRMADA = 'confirmada';",
-     "public const CONFIRMADA = 'pendiente';",
-     "una entrega PENDIENTE cuenta como confirmada: plata que nadie entrego, dada por recibida"),
 
-    ("CashDeposit::MOSTRADOR", "app/Models/Operacion/CashDeposit.php",
-     "public const MOSTRADOR = 'mostrador';",
-     "public const MOSTRADOR = 'consignacion';",
-     "el canal se confunde: lo entregado en el mostrador se contabiliza como consignacion al banco"),
+def cargar_mutaciones():
+    ruta = LISTA_POR_DEFECTO
+    if "--lista" in sys.argv:
+        ruta = sys.argv[sys.argv.index("--lista") + 1]
+        if not os.path.isabs(ruta):
+            ruta = os.path.join(RAIZ, ruta)
 
-    ("CashMovement::RECAUDO", "app/Models/Operacion/CashMovement.php",
-     "public const RECAUDO = 'recaudo';",
-     "public const RECAUDO = 'ajuste';",
-     "lo cobrado al cliente entra al libro como un ajuste a mano"),
+    if not os.path.exists(ruta):
+        # Un volcado de pila no es un mensaje: quien se equivoca al teclear la
+        # ruta tiene que leer QUE falta, no donde reventO Python.
+        print("No existe la lista " + ruta)
+        print("La de por defecto es " + os.path.relpath(LISTA_POR_DEFECTO, RAIZ))
+        sys.exit(2)
 
-    ("CashMovement::CONSIGNACION", "app/Models/Operacion/CashMovement.php",
-     "public const CONSIGNACION = 'consignacion';",
-     "public const CONSIGNACION = 'recaudo';",
-     "consignar al banco SUMA al saldo del domiciliario en vez de restarlo"),
+    try:
+        with io.open(ruta, encoding="utf-8") as f:
+            crudo = json.load(f)
+    except json.JSONDecodeError as e:
+        print("La lista " + ruta + " no es JSON valido: " + str(e))
+        sys.exit(2)
 
-    # ---- DINERO: los descuentos ----
-    ("Coupon::TIPO_PORCENTAJE", "app/Models/Marketing/Coupon.php",
-     "public const TIPO_PORCENTAJE = 'percent';",
-     "public const TIPO_PORCENTAJE = 'fixed';",
-     "un cupon del 10% se aplica como 10 pesos fijos, o al reves"),
+    # La lista va bajo `mutaciones`, con la documentacion en `_`, que es como
+    # `scripts/rutas-candidatas.json` documenta la suya: el fichero de datos se
+    # explica a si mismo y no hay un segundo sitio que se quede viejo. Se
+    # admite tambien una lista pelada, por si alguien pasa la suya con `--lista`.
+    datos = crudo["mutaciones"] if isinstance(crudo, dict) else crudo
 
-    ("Coupon::TIPO_ENVIO_GRATIS", "app/Models/Marketing/Coupon.php",
-     "public const TIPO_ENVIO_GRATIS = 'free_shipping';",
-     "public const TIPO_ENVIO_GRATIS = 'fixed';",
-     "el envio gratis deja de reconocerse y se trata como descuento fijo"),
+    faltan = [d for d in datos
+              if not all(k in d for k in ("etiqueta", "fichero", "viejo", "nuevo", "dano"))]
+    if faltan:
+        print("Entradas incompletas en " + ruta + ": " + str(len(faltan)))
+        sys.exit(2)
 
-    # ---- DINERO: el estado del pago del pedido ----
-    ("OrdersSales::A_CREDITO", "app/Models/Order/OrdersSales.php",
-     "public const A_CREDITO = 'store_credit';",
-     "public const A_CREDITO = 'pending_online';",
-     "el pedido a credito de la tienda se confunde con uno esperando pasarela: no entra a liquidacion"),
+    if not datos:
+        print("La lista de " + ruta + " esta vacia: no hay nada que barrer.")
+        sys.exit(2)
 
-    ("OrdersSales::SIN_PAGO", "app/Models/Order/OrdersSales.php",
-     "public const SIN_PAGO = [self::ESPERANDO_PAGO, self::PAGO_RECHAZADO];",
-     "public const SIN_PAGO = [self::ESPERANDO_PAGO, self::PAGO_RECHAZADO, self::A_CREDITO];",
-     "los pedidos a credito dejan de ser pedidos: desaparecen de las cuentas de la tienda"),
+    return ruta, [(d["etiqueta"], d["fichero"], d["viejo"], d["nuevo"], d["dano"])
+                  for d in datos]
 
-    ("OrdersSales::ESPERANDO_PAGO", "app/Models/Order/OrdersSales.php",
-     "public const ESPERANDO_PAGO = 'pending_online';",
-     "public const ESPERANDO_PAGO = 'approved';",
-     "un pago APROBADO se lee como pendiente: el pedido no es un pedido"),
 
-    # ---- PERMISOS: quien puede escribir en el panel ----
-    ("Area::NIVEL_GESTOR", "app/Models/Area.php",
-     "public const NIVEL_GESTOR = 'gestor';",
-     "public const NIVEL_GESTOR = 'consulta';",
-     "gestor y consulta se vuelven indistinguibles: quien solo mira, escribe"),
-
-    # ---- PERMISOS: la porteria del conjunto ----
-    ("ComplexStaff::ROL_CELADOR", "app/Models/Conjunto/ComplexStaff.php",
-     "public const ROL_CELADOR = 6;",
-     "public const ROL_CELADOR = 5;",
-     "el celador pasa por dueno del conjunto"),
-
-    ("ComplexStaff::CELADOR", "app/Models/Conjunto/ComplexStaff.php",
-     "public const CELADOR = 'celador';",
-     "public const CELADOR = 'dueno';",
-     "el cargo del celador se guarda y se lee como dueno"),
-
-    # ---- DINERO: los papeles obligatorios del domiciliario ----
-    ("DomiciliaryDocument::OBLIGATORIOS", "app/Models/Operacion/DomiciliaryDocument.php",
-     "public const OBLIGATORIOS = ['licencia', 'soat', 'tecnomecanica', 'arl', 'eps'];",
-     "public const OBLIGATORIOS = ['licencia'];",
-     "cuatro de los cinco papeles dejan de ser obligatorios: sale a repartir sin SOAT ni ARL"),
-]
+RUTA_LISTA, MUTACIONES = cargar_mutaciones()
 
 RX = re.compile(r"Tests:\s+(.*)")
 
@@ -170,6 +145,18 @@ def suite():
     return "PASA", resumen, []
 
 
+def mio(ruta):
+    """¿El cerrojo que hay puesto lo puso ESTE proceso?
+
+    Se compara el PID que lleva dentro. Es la diferencia entre soltar lo que
+    uno tomo y soltar lo de otro.
+    """
+    try:
+        return io.open(ruta, encoding="utf-8").read().strip() == str(os.getpid())
+    except OSError:
+        return False
+
+
 def arbol_sucio():
     r = subprocess.run(["git", "status", "--porcelain", "app/"],
                        cwd=RAIZ, capture_output=True, text=True, shell=True)
@@ -192,8 +179,59 @@ def restaurar_con_git(rel):
                    cwd=RAIZ, capture_output=True, text=True, shell=True)
 
 def main():
-    print("BARRIDO DE SABOTAJE -", len(MUTACIONES), "mutaciones\n")
+    print("BARRIDO DE SABOTAJE -", len(MUTACIONES), "mutaciones")
+    # Que lista corrio: con dos --la completa y una por zona-- un informe que
+    # no lo diga no se puede volver a reproducir.
+    print("lista:", os.path.relpath(RUTA_LISTA, RAIZ), "\n")
     print("FALLA = defendido.  PASA = nadie lo vigila.\n")
+
+    # `--comprobar`: SOLO VALIDA LA LISTA Y SALE, sin tocar nada.
+    #
+    # Existe porque me pase dos veces lo mismo: para ver si la lista cargaba
+    # bien lance el barrido y lo corte con `head -2`. Eso NO es mirar una
+    # lista, es arrancar un barrido que escribe codigo malo -- y la segunda
+    # vez coincidio con otro corriendo. El arreglo no es tener mas cuidado:
+    # es que exista la forma de comprobar sin ejecutar.
+    #
+    # Y hace la comprobacion que de verdad importa antes de gastar 40 minutos:
+    # que cada texto a sustituir aparezca EXACTAMENTE una vez en su fichero.
+    if "--comprobar" in sys.argv:
+        problemas = 0
+        for etq, rel, viejo, _nuevo, _dano in MUTACIONES:
+            ruta = os.path.join(RAIZ, *rel.split("/"))
+            if not os.path.exists(ruta):
+                print("  FALTA EL FICHERO  " + etq + "  (" + rel + ")")
+                problemas += 1
+                continue
+            n = leer(ruta).count(viejo)
+            if n != 1:
+                print("  CASA " + str(n) + " VECES      " + etq)
+                problemas += 1
+
+        print("")
+        print("  " + str(len(MUTACIONES)) + " mutaciones, "
+              + str(problemas) + " con problema")
+        sys.exit(1 if problemas else 0)
+
+    # UN SOLO BARRIDO A LA VEZ, Y SE COMPRUEBA PRIMERO.
+    #
+    # Dos barridos sobre el mismo arbol se pisan: uno restaura el fichero que
+    # el otro acaba de mutar, y los dos informan de cosas que no pasaron.
+    #
+    # Va ANTES de la guarda de arbol sucio a proposito. Con un barrido en
+    # marcha el arbol casi siempre esta sucio --por su propia mutacion-- asi
+    # que al reves el segundo recibiria «tienes cambios sin guardar», que es el
+    # diagnostico equivocado y manda a buscar un problema que no existe.
+    #
+    # Y hacia falta: la guarda de arbol sucio solo tapa esto por casualidad,
+    # porque ENTRE mutaciones el arbol queda limpio. En esa ventana el segundo
+    # arrancaba, y paso de verdad --dos lanzamientos cortados con `head`
+    # entraron justo ahi--.
+    if os.path.exists(CERROJO_RUTA):
+        print("Ya hay un barrido en marcha (" + os.path.basename(CERROJO_RUTA) + ").")
+        print("Dos a la vez se pisan: uno restaura lo que el otro acaba de mutar.")
+        print("Si no hay ninguno corriendo, borra ese fichero.")
+        return
 
     # NO SE ARRANCA SOBRE UN ARBOL SUCIO. Esto escribe codigo malo a proposito
     # y lo deshace con `git`: con cambios sin guardar, deshacerlos los borraria.
@@ -203,6 +241,8 @@ def main():
         print("deshace con git, asi que arrancar asi BORRARIA esos cambios:")
         print(sucio)
         return
+
+    io.open(CERROJO_RUTA, "w", encoding="utf-8").write(str(os.getpid()) + "\n")
 
     desprotegidas = []
     errores = []
@@ -263,4 +303,17 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    finally:
+        # Se suelta SIEMPRE, incluso si algo revienta. Un `kill` no ejecuta
+        # esto --igual que no ejecuta el `finally` que restaura-- y entonces el
+        # cerrojo queda puesto: el mensaje de arriba dice como quitarlo.
+        #
+        # SOLO SI ES EL NUESTRO, y esto salio de probarlo: el proceso que se
+        # NIEGA a arrancar porque ya hay otro tambien pasaba por aqui y
+        # borraba el cerrojo DEL OTRO. O sea que el segundo no chocaba, pero
+        # dejaba la puerta abierta a un tercero, que si chocaba con el primero.
+        # Un cerrojo que lo suelta quien no lo puso no es un cerrojo.
+        if mio(CERROJO_RUTA):
+            os.remove(CERROJO_RUTA)

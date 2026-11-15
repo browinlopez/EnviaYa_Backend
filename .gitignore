@@ -52,3 +52,6 @@ service-account*.json
 # ejecucion ensuciaba el estado del repositorio con binarios regenerables.
 __pycache__/
 *.pyc
+
+# El cerrojo del barrido de sabotaje: existe solo mientras corre.
+scripts/.barrido-en-marcha

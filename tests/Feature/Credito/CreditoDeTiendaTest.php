@@ -493,3 +493,74 @@ it('un pedido a credito recien hecho SI lo ve la tienda', function () {
 
     expect(OrdersSales::confirmados()->where('orderSales_id', $id)->exists())->toBeFalse();
 });
+
+/**
+ * UN CORTE PAGADO NO ES UN CORTE ANULADO -- Y LA PRUEBA DE ARRIBA NO LO VEIA.
+ *
+ * Del barrido del 14 de noviembre de 2026: poniendo `Settlement::ANULADA = 2`
+ * --el valor de `PAGADA`-- pasaban las 1365 pruebas. Incluida «el rojo se
+ * arrastra UNA vez, y anular el corte que lo absorbio lo libera», que es
+ * justo sobre esto.
+ *
+ * POR QUE NO LO VEIA: esa prueba ESCRIBE `state => Settlement::ANULADA` y la
+ * consulta de `corteEnRojoPendiente()` EXCLUYE `Settlement::ANULADA`. Los dos
+ * lados salen de la misma constante, asi que cambiarle el valor los mueve
+ * juntos y el resultado no se altera. Es el mismo patron que el primer barrido
+ * encontro con `A_CREDITO`.
+ *
+ * Lo que hay que probar es el OTRO lado: que un corte con un estado DISTINTO
+ * de anulado --pagado, que es el caso normal-- siga contando como vivo.
+ *
+ * EL DANO: `corteEnRojoPendiente()` busca el ultimo corte en rojo que ningun
+ * otro haya absorbido, descartando los anulados. Si un corte PAGADO se tomara
+ * por anulado, el rojo que ese corte ya absorbio volveria a aparecer como
+ * pendiente, y **a la tienda se le cobraria dos veces la misma deuda
+ * arrastrada**.
+ */
+it('un corte PAGADO sigue contando como vivo: la deuda no se cobra dos veces', function () {
+    $e = credEscenario();
+    $d1 = now()->subDays(2)->toDateString();
+    $d2 = now()->subDay()->toDateString();
+
+    // Dia 1: solo credito -> el corte queda en rojo.
+    credEntregado($e, CreditoDeTienda::METODO, 10000, 2000, $d1);
+    app(LiquidacionService::class)->generar('business', $e['negocio'], $d1, $d1);
+
+    // Dia 2: efectivo -> este corte absorbe el rojo del dia 1.
+    credEntregado($e, 1, 20000, 2000, $d2);
+    $absorbe = app(LiquidacionService::class)->generar('business', $e['negocio'], $d2, $d2);
+
+    /* CONTROL, antes de tocar nada: absorbido, no queda deuda pendiente. Sin
+       esto, «no hay deuda» tambien seria cierto si el escenario no hubiera
+       armado ningun rojo, y la prueba pasaria estando ciega. */
+    expect(app(CreditoDeTienda::class)->deudaDeLaTienda($e['negocio']))->toBe(0.0);
+
+    /*
+     * Y AHORA SE MARCA COMO PAGADO, que es lo que le pasa a un corte normal
+     * cuando se le transfiere la plata a la tienda. PAGADO no es ANULADO: el
+     * corte sigue vivo y sigue habiendo absorbido ese rojo.
+     */
+    $absorbe->update(['state' => Settlement::PAGADA]);
+
+    expect(app(CreditoDeTienda::class)->deudaDeLaTienda($e['negocio']))->toBe(0.0);
+});
+
+it('los cuatro estados de un corte son contrato y son distintos', function () {
+    /*
+     * CON LITERALES. Viven en la columna `settlements.state` de cortes ya
+     * generados; cambiar un numero reclasifica cortes viejos.
+     */
+    expect(Settlement::BORRADOR)->toBe(0);
+    expect(Settlement::APROBADA)->toBe(1);
+    expect(Settlement::PAGADA)->toBe(2);
+    expect(Settlement::ANULADA)->toBe(3);
+
+    $estados = [Settlement::BORRADOR, Settlement::APROBADA, Settlement::PAGADA, Settlement::ANULADA];
+    expect(count(array_unique($estados)))->toBe(4);
+
+    // La que de verdad importa: anulado no puede ser ninguno de los otros
+    // tres, porque de eso depende que un corte cuente o no.
+    expect(Settlement::ANULADA)->not->toBe(Settlement::PAGADA);
+    expect(Settlement::ANULADA)->not->toBe(Settlement::APROBADA);
+    expect(Settlement::ANULADA)->not->toBe(Settlement::BORRADOR);
+});

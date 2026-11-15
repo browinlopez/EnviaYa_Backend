@@ -841,10 +841,11 @@ pruebas impiden que vuelva a desparejarse.
 
 ---
 
-## 5 · Cuatro cosas que aprendimos convirtiendo
+## 5 · Seis cosas que aprendimos convirtiendo
 
 No están en ningún documento del estándar y son lo que hay que saber para
-seguir:
+seguir. Las cuatro primeras salieron de convertir validaciones; la quinta de
+cargar clases y **la sexta es la que más defectos ha encontrado**.
 
 1. **Un extractor que copia texto copia también sus dependencias.** Las reglas
    nombraban clases cuyo `use` se quedó en el controlador.
@@ -863,3 +864,43 @@ seguir:
 Y una quinta, de esta jornada: **`php -l` no basta.** Un `implements` a una
 interfaz sin importar pasa el lint y hace la clase imposible de cargar. Por
 eso existe `scripts/check_classes_load.php`.
+
+### Y una sexta, la que mas ha encontrado: una prueba verde no dice que algo este probado
+
+El 14 de noviembre de 2026 se saboteo a mano cada constante que decide dinero
+o permisos --una por una, corriendo las 1361 pruebas con cada cambio-- y se
+conto cuales cazaba alguna. Esta en `scripts/barrido_sabotaje.py`, con la
+lista en `scripts/barrido-mutaciones.json`.
+
+**Tres de las quince primeras no las veia nadie**, y las tres podian cobrar
+mal: `CashMovement::RECAUDO`, `OrdersSales::A_CREDITO` y
+`OrdersSales::SIN_PAGO`. Con 1361 pruebas en verde, once cubriendo el efectivo
+y dieciocho el credito.
+
+**Las dos razones por las que una zona bien cubierta puede no estar probada**,
+que es lo que hay que llevarse:
+
+1. **Una prueba que compara la constante contra si misma no prueba su valor.**
+   `expect($pedido->payment_state)->toBe(OrdersSales::A_CREDITO)` pasa igual si
+   alguien cambia el valor, porque cambian los dos lados. Prueba que el
+   servidor escribio lo que la constante dice, que es otra cosa. Y el valor es
+   contrato: vive en columnas ya escritas y sale en respuestas publicadas.
+   Lo mismo con el efectivo: el apunte escribe `RECAUDO`, la guarda de
+   idempotencia busca `RECAUDO` y el saldo suma `RECAUDO`. Si el valor cambia,
+   cambian los tres y las cuentas siguen cuadrando **entre ellas**. Lo que
+   deja de cuadrar es con los ajustes, y eso no lo miraba nadie.
+   **Al menos una asercion por constante de contrato tiene que usar el
+   literal.**
+
+2. **Un ayudante de prueba que inserta un estado que el flujo real no produce
+   deja un camino sin pisar.** `credEntregado()` --del que cuelga toda la
+   liquidacion-- escribia `payment_state => 'paid'` a mano. Asi que la prueba
+   del ejemplo del negocio comprobaba la aritmetica del corte, pero nunca que
+   un pedido a credito de verdad sobreviviera al filtro `confirmados()`.
+
+**Y el barrido mismo necesita su control**, por lo mismo: lleva dos mutaciones
+cuya respuesta se conoce de antemano y se para si no la dan. Ya salvo dos
+corridas --una murio por codificacion y otra la mato el sistema por memoria--
+que habrian reportado «sin vigilancia» en masa sin haber mirado nada. Y una
+corrida sin resumen no cuenta como resultado: `pest` caido no imprime
+«failed», y leer eso como «ninguna fallo» es el falso verde.
