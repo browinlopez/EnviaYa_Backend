@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Models\Area;
 use App\Models\Operacion\DomiciliaryDocument;
+use App\Models\Order\OrdersSales;
 use App\Support\FiltroDeFechas;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -274,7 +275,7 @@ class ResumenDeArea
                 'urgente' => true,
                 'ruta' => '/ordenes',
                 'contar' => fn () => DB::table('orderssales')
-                    ->whereIn('state', [1, 2, 3])
+                    ->whereIn('state', OrdersSales::ACTIVOS)
                     ->where(function ($q) {
                         // El mismo umbral que usa el panel, que ahora se ajusta
                         // desde Ajustes: si el correo y la pantalla contaran

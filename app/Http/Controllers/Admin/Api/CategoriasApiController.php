@@ -9,13 +9,13 @@ use App\Http\Requests\Admin\BorrarCategoriaRequest;
 use App\Http\Requests\Admin\CorregirCategoriaRequest;
 use App\Http\Requests\Admin\CrearCategoriaRequest;
 use App\Services\MediaService;
-use App\Support\Consultas\AyudasDeAdmin;
+use App\Support\ImagenPrincipalEnLaFila;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class CategoriasApiController extends Controller
 {
-    use AyudasDeAdmin;
+    use ImagenPrincipalEnLaFila;
 
     public function categories(Request $request, MediaService $medios)
     {

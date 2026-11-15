@@ -101,7 +101,7 @@ class ConsultaDePedidosController extends Controller
         $orders = OrdersSales::where('busines_id', $business->busines_id)
             ->confirmados()
             ->where(function ($q) {
-                $q->whereIn('state', [1, 2, 3])
+                $q->whereIn('state', OrdersSales::ACTIVOS)
                   /*
                    * Los cerrados, por el día en que SE CERRARON y no por el
                    * día en que se pidieron: uno pedido a las 23:50 y

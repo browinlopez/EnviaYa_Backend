@@ -8,14 +8,14 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\CrearProductoDelCatalogoRequest;
 use App\Queries\ProductosDelPanel;
 use App\Services\MediaService;
-use App\Support\Consultas\AyudasDeAdmin;
+use App\Support\ImagenPrincipalEnLaFila;
 use App\Support\ListadoPaginado;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class ProductosApiController extends Controller
 {
-    use AyudasDeAdmin;
+    use ImagenPrincipalEnLaFila;
 
     /**
      * El listado del catalogo.

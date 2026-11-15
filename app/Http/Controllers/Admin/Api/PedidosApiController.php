@@ -6,8 +6,8 @@ namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order\OrdersSales;
+use App\Queries\PedidosDelPanel;
 use App\Services\Ajustes;
-use App\Support\Consultas\AyudasDeAdmin;
 use App\Support\ListadoPaginado;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -15,8 +15,6 @@ use Illuminate\Support\Facades\DB;
 
 class PedidosApiController extends Controller
 {
-    use AyudasDeAdmin;
-
     /**
      * Horas sin avanzar tras las que un pedido activo "pide atención".
      *
@@ -49,7 +47,7 @@ class PedidosApiController extends Controller
      */
     public function orders(Request $request)
     {
-        $q = $this->ordenesBase();
+        $q = (new PedidosDelPanel)->ordenesBase();
         $this->filtrarPedidos($q, $request);
 
         return response()->json(ListadoPaginado::responder(
@@ -99,10 +97,10 @@ class PedidosApiController extends Controller
         $limite = Carbon::now()->subHours($this->horasEstancado());
 
         match ($request->query('state_group')) {
-            'activos' => $q->whereIn('o.state', self::ACTIVOS),
+            'activos' => $q->whereIn('o.state', OrdersSales::ACTIVOS),
             'entregados' => $q->where('o.state', OrdersSales::ENTREGADO),
-            'sin_pago' => $q->whereNotExists(fn ($sub) => $this->pagoAprobado($sub)),
-            'atencion' => $q->whereIn('o.state', self::ACTIVOS)
+            'sin_pago' => $q->whereNotExists(fn ($sub) => (new PedidosDelPanel)->pagoAprobado($sub)),
+            'atencion' => $q->whereIn('o.state', OrdersSales::ACTIVOS)
                 ->where(fn ($sub) => $sub
                     ->where(fn ($x) => $x->where('o.state', 2)->whereNull('o.domiciliary_id'))
                     ->orWhere('o.sale_date', '<', $limite)),
@@ -114,7 +112,7 @@ class PedidosApiController extends Controller
     private function resumenDePedidos($q): array
     {
         $entregado = OrdersSales::ENTREGADO;
-        $activos = implode(',', self::ACTIVOS);
+        $activos = implode(',', OrdersSales::ACTIVOS);
         $limite = Carbon::now()->subHours($this->horasEstancado())->toDateTimeString();
 
         $r = ListadoPaginado::soloAgregados($q, "
@@ -140,7 +138,7 @@ class PedidosApiController extends Controller
 
     public function showOrder($id)
     {
-        $orden = $this->ordenesBase()->where('o.orderSales_id', $id)->first();
+        $orden = (new PedidosDelPanel)->ordenesBase()->where('o.orderSales_id', $id)->first();
         abort_if(! $orden, 404, 'El pedido no existe.');
 
         $orden->items = DB::table('orderssales_detail as od')

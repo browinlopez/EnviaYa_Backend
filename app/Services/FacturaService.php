@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\Invoice\Invoice;
+use App\Models\Payment\Payment;
 use App\Support\ImporteDeLinea;
 use App\Support\UnidadDeVenta;
 use Dompdf\Dompdf;
@@ -105,7 +106,7 @@ class FacturaService
 
         $pago = DB::table('payments')
             ->where('orderSales_id', $pedidoId)
-            ->whereIn('status', ['approved', 'paid'])
+            ->whereIn('status', Payment::COBRADOS)
             ->orderByDesc('payments_id')
             ->first(['payments_id', 'provider', 'provider_payment_id']);
 

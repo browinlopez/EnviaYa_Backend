@@ -20,6 +20,27 @@ class Payment extends Audit
 
     public $timestamps = true;
 
+    /**
+     * LOS VALORES DE `status` QUE SIGNIFICAN QUE LA PLATA ENTRÓ.
+     *
+     * SON DOS PERO SOLO UNO EXISTE. Medido el 14 de noviembre de 2026 contra
+     * la base: 187 filas cobradas, TODAS con `approved`, tanto las de Bold
+     * como las de efectivo. `paid` es el vocabulario de OTRA columna
+     * --`orderssales.payment_state`, que sí lo escribe en tres servicios--
+     * y se colló aquí al escribir la condición.
+     *
+     * Se queda igualmente: `whereIn` con un valor que nunca aparece da
+     * exactamente el mismo resultado que el `where` de un solo valor, así que
+     * quitarlo no compra nada y sería tocar la condición de la que cuelga el
+     * tablero. Lo que no se queda es la duda: está medido.
+     *
+     * Estaba como `private const PAGO_OK` en el rasgo `AyudasDeAdmin` --y por
+     * tanto repetida en sus diez consumidores-- más un literal suelto en
+     * `FacturaService`. Va en el modelo de pagos porque describe una columna
+     * de `payments`, que es lo que §07 dice que hace un modelo.
+     */
+    public const COBRADOS = ['approved', 'paid'];
+
     protected $fillable = [
         'orderSales_id',
         'methods_id',

@@ -7,7 +7,7 @@ namespace App\Services;
 use App\Models\Area;
 use App\Models\Operacion\DomiciliaryDocument;
 use App\Models\Order\OrdersSales;
-use App\Support\Consultas\AyudasDeAdmin;
+use App\Queries\PedidosDelPanel;
 use App\Support\FiltroDeFechas;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -18,8 +18,6 @@ use Illuminate\Support\Facades\DB;
  */
 class ResumenDelPanel
 {
-    use AyudasDeAdmin;
-
     /**
      * Los conteos que esta pantalla pide DOS VECES, contados una.
      *
@@ -87,8 +85,8 @@ class ResumenDelPanel
     public function pedidosSinPagoAprobado(): int
     {
         return $this->unaVez('sin_pago', fn () => DB::table('orderssales as o')
-            ->whereIn('o.state', self::ACTIVOS)
-            ->whereNotExists(fn ($q) => $this->pagoAprobado($q))
+            ->whereIn('o.state', OrdersSales::ACTIVOS)
+            ->whereNotExists(fn ($q) => (new PedidosDelPanel)->pagoAprobado($q))
             ->count());
     }
 

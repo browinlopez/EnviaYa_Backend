@@ -6,17 +6,15 @@ namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order\OrdersSales;
+use App\Queries\PedidosDelPanel;
 use App\Services\Ajustes;
 use App\Services\ResumenDelPanel;
-use App\Support\Consultas\AyudasDeAdmin;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class AdminApiController extends Controller
 {
-    use AyudasDeAdmin;
-
     public function overview(Request $request, ResumenDelPanel $resumen)
     {
         $dias = $resumen->rango($request);
@@ -59,17 +57,18 @@ class AdminApiController extends Controller
             'users' => DB::table('user')->count(),
             'businesses' => $resumen->negociosEnTotal(),
             'products' => $resumen->productosEnTotal(),
-            'active_orders' => DB::table('orderssales')->whereIn('state', self::ACTIVOS)->count(),
+            'active_orders' => DB::table('orderssales')->whereIn('state', OrdersSales::ACTIVOS)->count(),
             'pending_payment' => $resumen->pedidosSinPagoAprobado(),
             // Pedidos que llevan más de un día sin llegar a entregado: la
             // señal más barata de que algo se atascó.
             'stalled_orders' => DB::table('orderssales')
-                ->whereIn('state', self::ACTIVOS)
+                ->whereIn('state', OrdersSales::ACTIVOS)
                 ->where('sale_date', '<', Carbon::now()->subDay())
                 ->count(),
         ];
 
-        $repartidores = $this->resumenDomiciliarios();
+        $panel = new PedidosDelPanel;
+        $repartidores = $panel->resumenDomiciliarios();
         $totales['couriers_total'] = $repartidores->count();
         $totales['couriers_available'] = $repartidores->where('available', 1)->count();
         $totales['couriers_at_limit'] = $repartidores
@@ -87,7 +86,7 @@ class AdminApiController extends Controller
                 ->get(),
             'top_businesses' => $resumen->topNegocios($desde),
             'couriers' => $repartidores->sortByDesc('deliveries')->values(),
-            'recent_orders' => $this->ordenesBase()->orderByDesc('o.sale_date')->limit(10)->get(),
+            'recent_orders' => $panel->ordenesBase()->orderByDesc('o.sale_date')->limit(10)->get(),
         ] + $resumen->bloquesDelInicio($request));
     }
 }

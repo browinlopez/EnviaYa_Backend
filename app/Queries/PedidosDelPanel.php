@@ -2,105 +2,62 @@
 
 declare(strict_types=1);
 
-namespace App\Support\Consultas;
+namespace App\Queries;
 
 use App\Models\Order\OrdersSales;
-use App\Models\User;
-use App\Services\MediaService;
+use App\Models\Payment\Payment;
+use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use stdClass;
 
 /**
- * Consultas base que comparten los controladores del panel y los servicios.
+ * LAS LECTURAS DE PEDIDOS Y DE LA FLOTA QUE COMPARTE EL PANEL INTERNO.
  *
- * Vivia en el espacio de los controladores, y por eso un servicio no podia
- * usarlo sin depender de ellos. Lo que hay aca no es logica de HTTP: son las
- * consultas que definen que cuenta como pedido y que como pago aprobado, y
- * duplicarlas es como se acaba con dos tableros que dan cifras distintas.
+ * §12 pide las consultas complejas en `Queries/`. Estas vivían en un RASGO,
+ * `App\Support\Consultas\AyudasDeAdmin`, del que tiraban nueve controladores
+ * de administración y un servicio.
  *
- * Estaban sueltos dentro del controlador gordo. Aca no se duplican:
- * quien los necesite usa el trait.
+ * POR QUÉ DEJA DE SER UN RASGO, que es el cambio de verdad:
+ *
+ *  1. `app/Support/Consultas/` era un segundo hogar para los objetos de
+ *     consulta. Con `app/Queries/` ya creado, tener dos sitios donde buscar
+ *     la misma cosa es el defecto que se cierra acá.
+ *  2. Un rasgo mete sus métodos Y SUS CONSTANTES en cada clase que lo usa.
+ *     Eso convertía dos decisiones --qué pedido está activo, qué pago entró--
+ *     en constantes privadas de diez clases distintas. Ya pasó esta misma
+ *     semana con los cinco estados del pedido.
+ *  3. Un rasgo no se puede pedir, ni sustituir en una prueba, ni leer sin
+ *     abrir a sus consumidores para saber quién lo usa.
+ *
+ * LAS DOS CONSTANTES SE FUERON A SUS MODELOS: `OrdersSales::ACTIVOS` y
+ * `Payment::COBRADOS`. Describen columnas, y §07 dice que eso es lo que
+ * describe un modelo. Arrastrarlas hasta acá habría sido mover el problema.
+ *
+ * Y DEVUELVE EL CONSTRUCTOR en `ordenesBase()`, no las filas: la paginación,
+ * la búsqueda y el orden los resuelve `ListadoPaginado`, y los tres
+ * consumidores le añaden filtros distintos antes de ejecutar.
  */
-trait AyudasDeAdmin
+class PedidosDelPanel
 {
-    /*
-     * LOS ESTADOS VIENEN DE `OrdersSales`, no de una copia privada.
-     * Estaban declarados aqui y en otras ocho clases: la misma decision
-     * tomada nueve veces. Ver la cabecera de esas constantes en el modelo.
-     */
-
-    private const ACTIVOS = [1, 2, 3];
-
-    /** Estados de `payments.status` que significan "la plata entró". */
-    private const PAGO_OK = ['approved', 'paid'];
-
     /**
      * Subconsulta: ¿esta orden tiene al menos un pago aprobado?
      *
      * Se correlaciona con el alias `o` de la consulta externa, así que quien
      * la use debe nombrar así la tabla `orderssales`.
+     *
+     * @param  Builder  $q
      */
-    private function pagoAprobado($q)
+    public function pagoAprobado($q): Builder
     {
         return $q->select(DB::raw(1))
             ->from('payments as pg')
             ->whereColumn('pg.orderSales_id', 'o.orderSales_id')
-            ->whereIn('pg.status', self::PAGO_OK);
+            ->whereIn('pg.status', Payment::COBRADOS);
     }
-
-    /* ==================================================================
-       PANEL
-       ================================================================== */
-
-    /**
-     * Resuelve la imagen principal de una colección desde `media_files`.
-     *
-     * El campo `logo`/`image` del registro solo se rellena cuando hay dominio
-     * público configurado, porque una URL firmada caduca y no se puede
-     * persistir. Para que el panel muestre la imagen igualmente, se resuelve
-     * al vuelo desde la tabla de archivos.
-     *
-     * Se hace en UNA consulta para toda la colección: pedir la imagen fila a
-     * fila sería el problema N+1 de manual.
-     */
-    private function conImagenPrincipal($filas, string $entidad, string $campoId, string $campoImagen, MediaService $medios)
-    {
-        $ids = $filas->pluck($campoId)->filter()->all();
-
-        if (! $ids) {
-            return $filas;
-        }
-
-        $principales = DB::table('media_files')
-            ->where('entity_type', $entidad)
-            ->whereIn('entity_id', $ids)
-            ->where('is_primary', true)
-            ->pluck('object_key', 'entity_id');
-
-        return $filas->map(function ($fila) use ($principales, $campoId, $campoImagen, $medios) {
-            $key = $principales[$fila->{$campoId}] ?? null;
-
-            /*
-             * El archivo marcado como principal MANDA sobre la columna.
-             *
-             * La columna suele arrastrar la URL con la que se sembró el
-             * registro (una imagen de Google, por ejemplo). Si alguien sube un
-             * logo desde el panel, ese es el logo actual: dejar ganar a la
-             * columna haría que la subida no se viera y pareciera que falló.
-             */
-            if ($key) {
-                $fila->{$campoImagen} = $medios->url($key);
-            }
-
-            return $fila;
-        });
-    }
-
-    /* ==================================================================
-       MEDIOS DE CUALQUIER ENTIDAD (Cloudflare R2)
-       ================================================================== */
 
     /** Consulta base con los nombres ya resueltos, para lista y detalle. */
-    private function ordenesBase()
+    public function ordenesBase(): Builder
     {
         return DB::table('orderssales as o')
             ->leftJoin('buyer as by', 'by.buyer_id', '=', 'o.buyer_id')
@@ -129,13 +86,20 @@ trait AyudasDeAdmin
                 'EXISTS (SELECT 1 FROM payments pg
                           WHERE pg.orderSales_id = o.orderSales_id
                             AND pg.status IN (?, ?)) as paid',
-                self::PAGO_OK,
+                Payment::COBRADOS,
             );
     }
 
-    private function resumenDomiciliarios(?int $negocioId = null)
+    /**
+     * La flota, con sus agregados: entregas, pedidos en curso y ganancias.
+     *
+     * `stdClass` y no `object`: los genéricos de `Collection` son INVARIANTES.
+     *
+     * @return Collection<int, stdClass>
+     */
+    public function resumenDomiciliarios(?int $negocioId = null): Collection
     {
-        // Mismo criterio que en `businesses()`: agregados por subconsulta.
+        // Mismo criterio que en `NegociosDelPanel`: agregados por subconsulta.
         // Unir a la vez `orderssales` y `business_domiciliary` multiplicaba
         // las ganancias por la cantidad de negocios asignados al repartidor.
         $deOrdenes = fn (callable $extra) => $extra(
@@ -174,7 +138,7 @@ trait AyudasDeAdmin
                 'deliveries',
             )
             ->selectSub(
-                $deOrdenes(fn ($q) => $q->selectRaw('COUNT(*)')->whereIn('state', self::ACTIVOS)),
+                $deOrdenes(fn ($q) => $q->selectRaw('COUNT(*)')->whereIn('state', OrdersSales::ACTIVOS)),
                 'active_deliveries',
             )
             ->selectSub(
