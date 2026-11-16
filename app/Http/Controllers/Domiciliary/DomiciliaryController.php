@@ -132,12 +132,22 @@ class DomiciliaryController extends Controller
                 'domiciliary' => $domiciliary->load('businesses'),
             ]);
         } catch (\Throwable $e) {
-
+            /*
+             * ESTE `catch` SE QUEDA ATRAPANDO TODO, PORQUE ESTA PARA REVERTIR.
+             *
+             * Lo que no se queda es la respuesta que daba: un 500 con
+             * `'error' => 'Error al crear el domiciliario: '.$e->getMessage()`.
+             * Eso ponia el texto crudo de la excepcion --nombres de columna,
+             * trozos de SQL, rutas del servidor-- en la pantalla de quien
+             * estaba dando de alta a un repartidor, y ademas la averia NO
+             * llegaba a Sentry, porque la excepcion moria aqui.
+             *
+             * Se revierte y se vuelve a lanzar: el manejador de Laravel la
+             * reporta y devuelve el 500 sin contar de mas.
+             */
             DB::rollBack();
 
-            return response()->json([
-                'error' => 'Error al crear el domiciliario: '.$e->getMessage(),
-            ], 500);
+            throw $e;
         }
     }
 

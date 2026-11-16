@@ -13,6 +13,7 @@ use App\Services\MediaService;
 use App\Support\ImagenPrincipalEnLaFila;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 class NegociosApiController extends Controller
 {
@@ -118,7 +119,10 @@ class NegociosApiController extends Controller
 
         try {
             $subido = $medios->subir($negocio, $request->file('file'), $tipo);
-        } catch (\Throwable $e) {
+        } catch (RuntimeException $e) {
+            // Solo lo que el servicio lanza a proposito, con mensaje
+            // escrito para quien lo lee. Una averia del almacenamiento
+            // no es un 422: sube, sale 500 y queda en Sentry.
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
@@ -158,7 +162,10 @@ class NegociosApiController extends Controller
 
         try {
             $medios->eliminar($negocio, $datos['key']);
-        } catch (\Throwable $e) {
+        } catch (RuntimeException $e) {
+            // Solo lo que el servicio lanza a proposito, con mensaje
+            // escrito para quien lo lee. Una averia del almacenamiento
+            // no es un 422: sube, sale 500 y queda en Sentry.
             return response()->json(['message' => $e->getMessage()], 422);
         }
 

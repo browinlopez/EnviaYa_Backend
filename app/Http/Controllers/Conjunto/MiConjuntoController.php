@@ -15,6 +15,7 @@ use App\Services\MediaService;
 use App\Support\FiltroDeFechas;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 class MiConjuntoController extends Controller
 {
@@ -154,7 +155,10 @@ class MiConjuntoController extends Controller
                 'logo',
                 $request->user()->user_id,
             );
-        } catch (\Throwable $e) {
+        } catch (RuntimeException $e) {
+            // `MediaService` solo lanza `RuntimeException`, y hasta envuelve el
+            // fallo del almacenamiento con un texto legible (`explicar()`).
+            // Lo que no sea eso no es culpa de quien sube la foto.
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
