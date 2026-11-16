@@ -89,11 +89,16 @@ test('el acuerdo dice que la ubicación se toma SOLO durante el turno', function
 test('firmarlo lo deja guardado y con su fecha', function () {
     $d = domiciliarioQueEntra();
 
-    $this->postJson('/v1/domiciliaries/contrato', [
+    $r = $this->postJson('/v1/domiciliaries/contrato', [
         'signature' => firmaDePrueba(),
         'city' => 'Barranquilla',
         'acepta' => true,
-    ])->assertStatus(201);
+    ]);
+
+    // DIAGNOSTICO TEMPORAL: el controlador envuelve cualquier fallo en un
+    // 422 con el mensaje dentro, y el CI solo ensena el codigo. Esto hace
+    // que el mensaje salga en el informe. Se quita en cuanto se sepa.
+    expect([$r->status(), $r->json()])->toBe([201, $r->json()]);
 
     $fila = DB::table('domiciliary')->where('domiciliary_id', $d['domiciliary_id'])->first();
 
