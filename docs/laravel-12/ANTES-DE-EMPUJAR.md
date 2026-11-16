@@ -41,9 +41,9 @@ servidor todavía no sirve.
 > Esa es la decisión que queda, y los números de abajo se miden contra
 > `origin/Devs`, que es la rama que despliega.
 
-Nada está desplegado. Medido el **15 de noviembre de 2026**: son **182 commits**
+Nada está desplegado. Medido el **15 de noviembre de 2026**: son **183 commits**
 en `validacion/integracion` sobre `Devs`, y `Devs` a su vez va **22 commits por
-delante de `origin/Devs`**: **204** en total. La cuenta **incluye el commit que la escribe**: si no, cada
+delante de `origin/Devs`**: **205** en total. La cuenta **incluye el commit que la escribe**: si no, cada
 marcador la deja corta en uno y el verificador avisa para siempre de un
 desajuste que es de construccion. Hasta que `Devs` suba, las ramas
 de trabajo que cuelgan de ahí no tienen dónde apoyarse.
@@ -596,10 +596,136 @@ nombres de los checks no existen y la regla se escribiría a ciegas.
   15 de noviembre**, no supuesto: `branches/main/protection` y
   `branches/Devs/protection` devuelven las dos *«Branch not protected»*. Y la
   rama por omisión del repositorio es `main`, mientras el trabajo va a `Devs`.
-- **Siete rutas sin llamante**, sin decidir: tres piden criterio —la baja de
-  cuenta, el crédito a medias y la contradicción de `bold/status/{ref}`— y
-  cuatro son duplicados o reemplazos. Están en `scripts/rutas-candidatas.json`,
-  cada una con su motivo.
+- **Siete rutas sin llamante**, sin decidir. Están en
+  `scripts/rutas-candidatas.json` y cada una tiene abajo lo que hace falta
+  para decidirla, medido el **16 de noviembre de 2026**. Lo que cambió
+  respecto a como estaban clasificadas: **dos de las cuatro «duplicadas» no
+  lo son**, y la de negocios no es un duplicado de la de administración sino
+  una puerta más ancha.
+
+### Las siete, con la evidencia
+
+**1 · `POST v1/businesses/store` — `BusinessController@store`**
+
+Reemplazo vivo: `POST v1/admin/businesses` (`NegociosApiController`). La
+diferencia está en la puerta: la vieja lleva `EnsureAdmin` pero **no**
+`EnsureModuleAccess:negocios,gestionar`, que la nueva sí. O sea que una
+cuenta interna sin el módulo de negocios puede crear un negocio por la vieja
+y no por la nueva. El sistema de módulos existe justo para acotar al equipo
+interno; esta ruta lo rodea.
+
+**2 · `PUT v1/businesses/update` — `BusinessController@update`**
+
+**No es un duplicado de la ruta de administración: es la puerta del tendero,
+y es más ancha que la moderna.** Lo moderno es `PUT v1/negocio/me`, donde el
+middleware `negocio` resuelve el local desde la sesión y el cliente no puede
+ni nombrar otro. Comparando los campos que cada una acepta, la vieja permite
+**cuatro que la moderna no**:
+
+| campo | qué cambia |
+|---|---|
+| `logo` | la imagen de la tienda |
+| `type` | la categoría del negocio (`in:1,2`), de la que depende el esquema de productos |
+| `state` | encender o apagar la tienda — y hay un endpoint propio para eso, hecho aparte **para que la auditoría distinga «apagó la tienda» de «corrigió su dirección»** |
+| `owner_ids[]` | **quién es propietario de la tienda.** Se valida solo como `exists:owner,owner_id`, así que admite cualquier propietario existente: un tendero podría atar otra cuenta a su tienda, o quitarse a sí mismo |
+
+**Y no está abierta**, que fue mi primera lectura al ver que le faltan
+`EnsureAdmin` y el permiso de módulo: la guarda está en el controlador,
+`negarNegocioAjeno($request, $request->busines_id)`, que da 403 a quien no
+administra ese negocio y deja pasar al rol 4. El alcance es la tienda propia.
+Lo que queda por decidir es si esas cuatro capacidades deben existir por una
+ruta que ningún cliente usa.
+
+**3 · `DELETE v1/users/delete` — `UserController@desactivate`**
+
+Primero, el nombre engaña: **desactiva, no borra**. Y el camino que se usa de
+verdad **no pasa por aquí**, medido en la landing que está en este mismo
+disco: `src/modulos/cuenta/EliminarCuenta.jsx` llama a
+`enviarSolicitud("eliminacion", ...)`, que hace `POST /v1/solicitudes-free`.
+O sea que darse de baja **radica una solicitud** y alguien la atiende a mano.
+
+Comprobado que esa solicitud no se pierde: `SolicitudDesdeLaWebRequest` acepta
+`'tipo' => 'nullable|string|max:30'` sin lista blanca, `LandingRequest` conoce
+el tipo `eliminacion`, mapea *«eliminar mi cuenta»* a él, tiene
+**`DIAS_ELIMINACION = 15`** y `SolicitudesApiController` trata las vencidas
+como bajas de cuenta. El panel que las muestra es `EnviaYa_Admin`; el de
+aliados no las nombra.
+
+Retirarla no cambia ningún comportamiento, porque nadie la llama. La decisión
+real es otra: **si darse de baja debe seguir siendo manual con 15 días de
+plazo, o pasar a ser automática** —y entonces esta ruta es por donde iría.
+
+**4 · `POST v1/email/resend-verification` — retirada de riesgo cero**
+
+`v1/email/resend-verification` y `v1/resend-verification-email` **apuntan al
+mismo método**, `VerificacionDeCorreoController@resendVerificationEmail`. Son
+dos grafías del mismo endpoint. La app llama la segunda —
+`features/auth/data/authApi.ts:165`, y está en la lista de rutas públicas de
+`httpClient.ts:137`—, así que retirar la primera deja el mismo método
+alcanzable por el otro camino. **Es la única de las siete sin nada que
+decidir.**
+
+**5 · `GET v1/bold/status/{ref}` — `PaymentController@checkStatus`**
+
+La contradicción se resuelve a favor de la app: `routes/api.php` tenía escrito
+«si es un manejador de verdad y se queda», y la app dice en
+`features/payments/data/paymentsApi.ts:7` que `payment/status` reemplaza al
+viejo `GET /bold/status/{ref}`. **Son métodos distintos**: el vivo es
+`PaymentController@checkStatusByReference`. Retirar la ruta deja `checkStatus`
+como código muerto, así que las dos cosas se van juntas o no se van.
+
+Y el comentario de la app dice de más: *«(no existe en el backend
+actual)»*. **Sí existe**, está en el router. O sea que la app ya da por
+retirada una ruta que sigue ahí, lo cual juega a favor de retirarla de
+verdad: nadie la espera.
+
+**6 · `GET v1/creditos` — `MiCreditoController@index`: no es sobra**
+
+Confirmado lo que la lista olía. Devuelve **todos los créditos del comprador
+en todas las tiendas** —en qué tiendas tiene cupo y cuánto— mientras la app
+solo llama a `@enTienda`, que es el cupo de UNA tienda. El backend está
+terminado y lo que falta es la pantalla. **Retirarla sería borrar trabajo
+hecho**, no limpiar.
+
+**7 · `GET v1/ads/featured` — `AdsController@featured`**
+
+Sus hermanas están vivas (`ads/banners`, `ads/coupons/validate`,
+`ads/banners/{id}/track`); solo `featured` no se llama. Su única aparición en
+la app es `core/api/httpClient.test.ts:38`, dentro de la lista de rutas que no
+necesitan sesión. Si se retira **hay que borrar esa línea**, o la próxima
+medición la volverá a dar por viva.
+
+### Dos hallazgos que salieron de paso, y no son de las rutas
+
+**La respuesta de «reenviar verificación» sí permite enumerar correos.** El
+código lleva escrito *«Respuesta genérica (evita enumeración de usuarios)»* y
+la rama siguiente lo deshace:
+
+| caso | respuesta |
+|---|---|
+| el correo no existe | «Si el correo existe, se enviará un enlace de verificación.» |
+| existe y ya está verificado | «El correo ya está verificado.» |
+
+Se distinguen, así que se puede averiguar si una dirección está registrada. La
+ruta no pide sesión —solo `throttle:10,1`— porque es justo la que usa quien no
+puede entrar.
+
+**No lo cambié, y el motivo es que no es un defecto con arreglo obvio.**
+Comprobado que la app no se fija en el texto —lo devuelve tal cual— así que
+unificar los dos mensajes no la rompería. Pero quien ya tiene el correo
+verificado pulsaría «reenviar», leería «se enviará un enlace» y no le
+llegaría nada. Es un cambio de texto de autenticación con un precio en
+claridad: es decisión, no tarea.
+
+**Nueve rutas de verificación de correo, no dos mecanismos.** El apartado de
+Breeze dice «dos mecanismos a la vez» y contadas son nueve:
+`email/verification-notification`, `laravel-verify-email`,
+`laravel-verify-email/{id}/{hash}`, `verify-email`, `verify-email/reenviar`,
+`v1/email/resend-verification`, `v1/resend-verification-email`,
+`v1/admin/users/{id}/verify-email` y `v1/conjunto/porteria/verificar` —esta
+última es de portería y no de correo, pero el nombre la mete en cualquier
+búsqueda—. De las ocho de correo, **dos son la misma** (punto 4) y cuatro son
+el andamiaje de Breeze.
 - **El andamiaje web de Breeze**: 25 rutas vivas —login, perfil, contraseña y
   su propia verificación de correo por URL firmada— en un repositorio que
   `AGENTS.md` describe como API sin Blade ni vistas. Son **dos mecanismos de
