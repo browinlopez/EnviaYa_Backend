@@ -100,7 +100,21 @@ class DomiciliaryController extends Controller
                 'address' => $request->address,
                 'rol' => 3,
                 'qualification' => $request->qualification ?? 0,
-                'state' => $request->state,
+                /*
+                 * EL DEFECTO, QUE FALTABA. `CrearDomiciliarioRequest` declara
+                 * `state` OPCIONAL --`'state' => 'boolean'`--, asi que el
+                 * panel puede no mandarlo; y entonces esto escribia `null`.
+                 *
+                 * En SQLite pasa, porque la migracion original creo la columna
+                 * `nullable()`. En MySQL NO: `estados_sin_null_y_pivotes_unicos`
+                 * hace `MODIFY state TINYINT NOT NULL DEFAULT 1` y lo hace SOLO
+                 * si el motor es mysql. O sea que dar de alta un repartidor sin
+                 * mandar `state` era un 500 en produccion y verde en la suite.
+                 * El `1` es el mismo defecto que declara esa migracion.
+                 *
+                 * La linea de arriba ya ponia su defecto; esta se quedo sin el.
+                 */
+                'state' => $request->state ?? 1,
             ]);
 
             // Crear domiciliario asociado

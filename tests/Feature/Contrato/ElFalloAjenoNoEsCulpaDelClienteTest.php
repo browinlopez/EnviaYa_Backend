@@ -218,6 +218,41 @@ it('un fallo que el servicio NO anuncia ya no sale como 422: sube', function () 
     ], ['Accept' => 'application/json']);
 })->throws(LogicException::class, 'averia de prueba');
 
+it('dar de alta un repartidor sin mandar state no revienta, y queda activo', function () {
+    /*
+     * POR QUE ESTA PRUEBA. `CrearDomiciliarioRequest` declara `state` como
+     * opcional, y el controlador lo escribia tal cual: `null`. La migracion
+     * `estados_sin_null_y_pivotes_unicos` deja `user.state` en
+     * `TINYINT NOT NULL DEFAULT 1` **solo si el motor es mysql**, asi que esto
+     * era un 500 en produccion y verde en la suite. Lo encontro el CI.
+     *
+     * Se afirma el valor guardado y no solo el 201: sobre SQLite la columna
+     * sigue admitiendo null, asi que un `assertCreated()` a secas pasaria sin
+     * comprobar nada. Asi la prueba vale en los dos motores.
+     */
+    Rol::firstOrCreate(['rol_id' => 3], ['name' => 'domiciliario', 'guard_name' => 'web']);
+    Rol::firstOrCreate(['rol_id' => 4], ['name' => 'admin', 'guard_name' => 'web']);
+
+    Sanctum::actingAs(User::factory()->create([
+        'rol' => 4,
+        'area_id' => Area::where('code', 'sistema')->firstOrFail()->id,
+        'access_level' => 'gestor',
+    ]));
+
+    $this->postJson('/v1/domiciliaries/createDomiciliary', [
+        'name' => 'Repartidor Sin Estado',
+        'email' => 'sin.estado@prueba.test',
+        'password' => 'secreta123',
+    ])->assertOk();
+
+    $usuario = DB::table('user')->where('email', 'sin.estado@prueba.test')->first();
+
+    expect($usuario)->not->toBeNull()
+        ->and((int) $usuario->state)->toBe(1)
+        ->and((int) DB::table('domiciliary')->where('user_id', $usuario->user_id)->value('state'))
+        ->toBe(1);
+});
+
 it('el alta de domiciliario sigue revirtiendo cuando algo se rompe por dentro', function () {
     /*
      * ESTE `catch` SE QUEDÓ ATRAPANDO `\Throwable`, porque está para el
