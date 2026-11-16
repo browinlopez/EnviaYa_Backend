@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Models\Invoice\Invoice;
 use App\Models\Payment\Payment;
+use App\Support\DatosDelEmisor;
 use App\Support\ImporteDeLinea;
 use App\Support\UnidadDeVenta;
 use Dompdf\Dompdf;
@@ -13,6 +14,7 @@ use Dompdf\Options;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 /**
@@ -268,6 +270,22 @@ class FacturaService
     /** El PDF del comprobante, armado con la foto guardada. */
     public function pdf(Invoice $factura): string
     {
+        /*
+         * UN COMPROBANTE SIN EL NIT DE QUIEN LO EMITE.
+         *
+         * De los tres datos del emisor, el comprobante solo imprime el NIT
+         * —nombre y plataforma tienen valor por defecto—, así que acá se avisa
+         * solo de ese. Avisar del representante legal en cada comprobante
+         * sería ruido: no sale en el papel.
+         */
+        if (in_array('CONTRATO_NIT', DatosDelEmisor::faltantes(), true)) {
+            Log::warning('Comprobante emitido sin el NIT de la empresa', [
+                'factura' => $factura->getKey(),
+                'faltan' => [DatosDelEmisor::descripcion('CONTRATO_NIT')],
+                'se_arregla_en' => 'variables de entorno del despliegue',
+            ]);
+        }
+
         $html = view('documentos.factura', [
             'f' => $factura,
             'snapshot' => $factura->snapshot ?? [],
