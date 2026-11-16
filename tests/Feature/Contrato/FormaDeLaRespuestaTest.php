@@ -44,12 +44,27 @@ use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 
 /**
- * El camino de cada clave con el tipo de su valor, en plano.
+ * El camino de cada clave con el tipo de su valor, en plano y ORDENADO.
  *
  * `['order' => ['total' => '1.0']]` da `['order.total' => 'string']`. De una
  * lista se mira SOLO EL PRIMER ELEMENTO y se marca con `[]`: los demás tienen
  * la misma forma, y guardar los cien pedidos de una lista haría un fichero
  * que cambia con los datos en vez de con el contrato.
+ *
+ * SE ORDENA POR CLAVE, Y ESO LO ENSEÑÓ EL CI DE MySQL. `toBe()` compara
+ * arreglos incluyendo el orden, y el orden de las claves de una respuesta que
+ * lleva un modelo de Eloquent crudo ES EL ORDEN DE LAS COLUMNAS de su tabla.
+ * Ahí los dos motores no coinciden: MySQL coloca la columna donde dice
+ * `->after('x')` en la migración y **SQLite ignora `after()` y la añade al
+ * final**. `POST /v1/reviews/store` fallaba con los tipos idénticos y solo el
+ * orden distinto; las otras entradas no lo sufrían porque pasan por un
+ * `Resource`, que arma el arreglo en orden explícito.
+ *
+ * Y ordenar no afloja nada: el orden de las claves de un objeto JSON no es
+ * contrato --el cliente las lee por nombre, no por posición--. Lo que sí es
+ * contrato es QUÉ claves hay y de qué tipo, y eso se sigue comparando entero.
+ * El orden de una LISTA sí importa, pero de una lista solo se mira el primer
+ * elemento, así que esto no lo toca.
  */
 function formaDe(mixed $valor, string $camino = ''): array
 {
@@ -62,6 +77,8 @@ function formaDe(mixed $valor, string $camino = ''): array
         foreach ($valor as $clave => $dentro) {
             $fuera += formaDe($dentro, $camino === '' ? (string) $clave : $camino.'.'.$clave);
         }
+
+        ksort($fuera);
 
         return $fuera;
     }
