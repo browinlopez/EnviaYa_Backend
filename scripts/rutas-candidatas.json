@@ -1,161 +1,353 @@
 {
+ "_": [
+  "LAS RUTAS QUE NINGUN CLIENTE PARECE LLAMAR, en un solo sitio.",
+  "",
+  "La lista nacio en Documentacion/SUPERFICIE-DE-API-SIN-USO.md el 27 de",
+  "agosto de 2026, de cruzar las rutas de /v1 contra lo que escriben los",
+  "cuatro clientes. Vive aca porque la leen DOS herramientas y tenerla dos",
+  "veces es tenerla mal una de las dos:",
+  "",
+  "  scripts/rutas_sin_llamante.py  busca cada ruta en el codigo de cada",
+  "                                 cliente, en cada version publicada y en",
+  "                                 toda la historia de git",
+  "  scripts/rutas_sin_uso.php      las cruza contra el registro de",
+  "                                 auditoria del servidor",
+  "",
+  "Las rutas van SIN el prefijo v1/ en la busqueda: los clientes lo llevan",
+  "en la URL base. El verbo esta para poder comprobar que la ruta sigue",
+  "existiendo en el router tal cual."
+ ],
+ "grupos": {
+  "Reseñas": [
+   [
+    "GET",
+    "v1/reviews/business/all"
+   ],
+   [
+    "POST",
+    "v1/reviews/business/create"
+   ],
+   [
+    "PUT",
+    "v1/reviews/business/update"
+   ],
+   [
+    "DELETE",
+    "v1/reviews/business/delete"
+   ],
+   [
+    "GET",
+    "v1/reviews/domiciliaries/all"
+   ],
+   [
+    "POST",
+    "v1/reviews/domiciliary/create"
+   ],
+   [
+    "PUT",
+    "v1/reviews/domiciliary/update"
+   ],
+   [
+    "DELETE",
+    "v1/reviews/domiciliary/delete"
+   ],
+   [
+    "GET",
+    "v1/reviews/users/all"
+   ],
+   [
+    "GET",
+    "v1/reviews/user/by"
+   ],
+   [
+    "POST",
+    "v1/reviews/user/create"
+   ],
+   [
+    "PUT",
+    "v1/reviews/user/update"
+   ],
+   [
+    "DELETE",
+    "v1/reviews/user/delete"
+   ]
+  ],
+  "Categorías de negocio": [
+   [
+    "POST",
+    "v1/categories-business/store"
+   ],
+   [
+    "POST",
+    "v1/categories-business/update"
+   ],
+   [
+    "POST",
+    "v1/categories-business/destroy"
+   ],
+   [
+    "POST",
+    "v1/categories-business/show"
+   ],
+   [
+    "GET",
+    "v1/categories/show"
+   ]
+  ],
+  "Domiciliarios": [
+   [
+    "GET",
+    "v1/domiciliaries/listDomiciliary"
+   ],
+   [
+    "POST",
+    "v1/domiciliaries/listbussiness"
+   ],
+   [
+    "POST",
+    "v1/domiciliaries/assignToBusiness"
+   ],
+   [
+    "POST",
+    "v1/domiciliaries/deleteDomiciliary"
+   ]
+  ],
+  "Productos": [
+   [
+    "POST",
+    "v1/product/show"
+   ],
+   [
+    "POST",
+    "v1/product/top-products"
+   ],
+   [
+    "PUT",
+    "v1/product/update"
+   ]
+  ],
+  "Sueltas": [
+   [
+    "GET",
+    "v1/businesses/affiliations/usersBusinesses"
+   ],
+   [
+    "GET",
+    "v1/orders/pending-review"
+   ],
+   [
+    "GET",
+    "v1/paymentForms"
+   ],
+   [
+    "POST",
+    "v1/chats/create"
+   ],
+   [
+    "POST",
+    "v1/users/buyer"
+   ],
+   [
+    "POST",
+    "v1/users/show"
+   ],
+   [
+    "POST",
+    "v1/email/resend-verification"
+   ]
+  ],
+  "Usuarios": [
+   [
+    "GET",
+    "v1/users"
+   ]
+  ]
+ },
+ "pendientes": {
   "_": [
-    "LAS RUTAS QUE NINGUN CLIENTE PARECE LLAMAR, en un solo sitio.",
-    "",
-    "La lista nacio en Documentacion/SUPERFICIE-DE-API-SIN-USO.md el 27 de",
-    "agosto de 2026, de cruzar las rutas de /v1 contra lo que escriben los",
-    "cuatro clientes. Vive aca porque la leen DOS herramientas y tenerla dos",
-    "veces es tenerla mal una de las dos:",
-    "",
-    "  scripts/rutas_sin_llamante.py  busca cada ruta en el codigo de cada",
-    "                                 cliente, en cada version publicada y en",
-    "                                 toda la historia de git",
-    "  scripts/rutas_sin_uso.php      las cruza contra el registro de",
-    "                                 auditoria del servidor",
-    "",
-    "Las rutas van SIN el prefijo v1/ en la busqueda: los clientes lo llevan",
-    "en la URL base. El verbo esta para poder comprobar que la ruta sigue",
-    "existiendo en el router tal cual."
+   "CANDIDATAS SIN DECIDIR. No se han retirado: siguen en el router.",
+   "",
+   "Esta division no estaba y costo una prueba roja: `grupos` es el",
+   "REGISTRO DE LO QUE SE FUE --`LasRetiradasNoVuelvenTest` comprueba que",
+   "ninguna volvio al router y cuenta las filas para que nadie recorte la",
+   "lista-- y meter ahi una ruta viva dice que se retiro algo que no se",
+   "retiro. Son dos estados de la misma lista, no dos listas: los dos",
+   "buscadores recorren `grupos` y `pendientes`; la prueba, solo `grupos`.",
+   "",
+   "Las siete de aqui salieron el 12 de noviembre de 2026 del buscador de",
+   "caminos, y las confirmo el pickaxe: ningun llamante en ninguna version",
+   "publicada ni en los 202 commits de la historia de la app. Lo que falta",
+   "no es medirlas, es decidir cada una, y tres no son evidentes:",
+   "",
+   "  users/delete            la baja de cuenta. La app no la llama: manda",
+   "                          a la web, `vecipaya.com/eliminar-cuenta`. Las",
+   "                          tiendas de aplicaciones exigen un camino para",
+   "                          darse de baja, asi que antes de retirarla hay",
+   "                          que saber cual de los dos es el bueno.",
+   "  creditos                `Buyer\\MiCreditoController@index`, el credito",
+   "                          propio del comprador. La app solo llama",
+   "                          `/creditos/tienda/{id}`, que es otro metodo:",
+   "                          esto huele a funcion a medio hacer, no a",
+   "                          sobra.",
+   "  bold/status/{ref}       en `routes/api.php:360` hay escrito «si es un",
+   "                          manejador de verdad y se queda», de una",
+   "                          limpieza anterior. La medicion de ahora dice",
+   "                          lo contrario, y la app lo dice con palabras en",
+   "                          `features/payments/data/paymentsApi.ts:7`:",
+   "                          reemplaza al viejo `GET /bold/status/{ref}`.",
+   "                          Lo que usa es `payment/status`. Decidir cual",
+   "                          de las dos frases vale.",
+   "",
+   "Y una nota de `ads/featured`: su unica aparicion en toda la app es una",
+   "lista dentro de `httpClient.test.ts`. Si se retira, hay que borrar esa",
+   "linea tambien, o la prueba del cliente la volvera a dar por viva.",
+   "",
+   "RETIRADA EL 16 DE NOVIEMBRE DE 2026: `POST v1/email/resend-verification`,",
+   "la unica de las siete sin nada que decidir. Apuntaba AL MISMO METODO que",
+   "`v1/resend-verification-email` --mismo controlador, declaradas una debajo",
+   "de la otra en el mismo grupo de throttle-- y la app llama la segunda, asi",
+   "que el metodo sigue alcanzable. Sus tres llamantes eran PRUEBAS y se",
+   "repuntaron al otro camino, para que el manejador siga cubierto.",
+   "",
+   "Quedan SEIS, y para cada una hay evidencia en",
+   "`docs/laravel-12/ANTES-DE-EMPUJAR.md`. Dos de las que estaban",
+   "clasificadas como duplicadas NO lo son: `GET creditos` devuelve los",
+   "creditos del comprador en TODAS las tiendas y solo le falta la pantalla,",
+   "y `PUT businesses/update` no es la ruta de administracion sino la del",
+   "tendero, mas ancha que la moderna en cuatro campos --`logo`, `type`,",
+   "`state` y `owner_ids`--."
   ],
   "grupos": {
-    "Reseñas": [
-      ["GET", "v1/reviews/business/all"],
-      ["POST", "v1/reviews/business/create"],
-      ["PUT", "v1/reviews/business/update"],
-      ["DELETE", "v1/reviews/business/delete"],
-      ["GET", "v1/reviews/domiciliaries/all"],
-      ["POST", "v1/reviews/domiciliary/create"],
-      ["PUT", "v1/reviews/domiciliary/update"],
-      ["DELETE", "v1/reviews/domiciliary/delete"],
-      ["GET", "v1/reviews/users/all"],
-      ["GET", "v1/reviews/user/by"],
-      ["POST", "v1/reviews/user/create"],
-      ["PUT", "v1/reviews/user/update"],
-      ["DELETE", "v1/reviews/user/delete"]
+   "Negocios, altas y cambios": [
+    [
+     "POST",
+     "v1/businesses/store"
     ],
-    "Categorías de negocio": [
-      ["POST", "v1/categories-business/store"],
-      ["POST", "v1/categories-business/update"],
-      ["POST", "v1/categories-business/destroy"],
-      ["POST", "v1/categories-business/show"],
-      ["GET", "v1/categories/show"]
-    ],
-    "Domiciliarios": [
-      ["GET", "v1/domiciliaries/listDomiciliary"],
-      ["POST", "v1/domiciliaries/listbussiness"],
-      ["POST", "v1/domiciliaries/assignToBusiness"],
-      ["POST", "v1/domiciliaries/deleteDomiciliary"]
-    ],
-    "Productos": [
-      ["POST", "v1/product/show"],
-      ["POST", "v1/product/top-products"],
-      ["PUT", "v1/product/update"]
-    ],
-    "Sueltas": [
-      ["GET", "v1/businesses/affiliations/usersBusinesses"],
-      ["GET", "v1/orders/pending-review"],
-      ["GET", "v1/paymentForms"],
-      ["POST", "v1/chats/create"],
-      ["POST", "v1/users/buyer"],
-      ["POST", "v1/users/show"]
-    ],
-    "Usuarios": [
-      ["GET", "v1/users"]
+    [
+     "PUT",
+     "v1/businesses/update"
     ]
-  },
-  "pendientes": {
-    "_": [
-      "CANDIDATAS SIN DECIDIR. No se han retirado: siguen en el router.",
-      "",
-      "Esta division no estaba y costo una prueba roja: `grupos` es el",
-      "REGISTRO DE LO QUE SE FUE --`LasRetiradasNoVuelvenTest` comprueba que",
-      "ninguna volvio al router y cuenta las filas para que nadie recorte la",
-      "lista-- y meter ahi una ruta viva dice que se retiro algo que no se",
-      "retiro. Son dos estados de la misma lista, no dos listas: los dos",
-      "buscadores recorren `grupos` y `pendientes`; la prueba, solo `grupos`.",
-      "",
-      "Las siete de aqui salieron el 12 de noviembre de 2026 del buscador de",
-      "caminos, y las confirmo el pickaxe: ningun llamante en ninguna version",
-      "publicada ni en los 202 commits de la historia de la app. Lo que falta",
-      "no es medirlas, es decidir cada una, y tres no son evidentes:",
-      "",
-      "  users/delete            la baja de cuenta. La app no la llama: manda",
-      "                          a la web, `vecipaya.com/eliminar-cuenta`. Las",
-      "                          tiendas de aplicaciones exigen un camino para",
-      "                          darse de baja, asi que antes de retirarla hay",
-      "                          que saber cual de los dos es el bueno.",
-      "  creditos                `Buyer\\MiCreditoController@index`, el credito",
-      "                          propio del comprador. La app solo llama",
-      "                          `/creditos/tienda/{id}`, que es otro metodo:",
-      "                          esto huele a funcion a medio hacer, no a",
-      "                          sobra.",
-      "  bold/status/{ref}       en `routes/api.php:360` hay escrito «si es un",
-      "                          manejador de verdad y se queda», de una",
-      "                          limpieza anterior. La medicion de ahora dice",
-      "                          lo contrario, y la app lo dice con palabras en",
-      "                          `features/payments/data/paymentsApi.ts:7`:",
-      "                          reemplaza al viejo `GET /bold/status/{ref}`.",
-      "                          Lo que usa es `payment/status`. Decidir cual",
-      "                          de las dos frases vale.",
-      "",
-      "Y una nota de `ads/featured`: su unica aparicion en toda la app es una",
-      "lista dentro de `httpClient.test.ts`. Si se retira, hay que borrar esa",
-      "linea tambien, o la prueba del cliente la volvera a dar por viva."
-    ],
-    "grupos": {
-      "Negocios, altas y cambios": [
-        ["POST", "v1/businesses/store"],
-        ["PUT", "v1/businesses/update"]
-      ],
-      "Usuarios": [
-        ["DELETE", "v1/users/delete"]
-      ],
-      "Duplicadas o reemplazadas": [
-        ["POST", "v1/email/resend-verification"],
-        ["GET", "v1/bold/status/{ref}"],
-        ["GET", "v1/ads/featured"],
-        ["GET", "v1/creditos"]
-      ]
-    }
-  },
-  "control": {
-    "_": [
-      "RUTAS QUE SI SE LLAMAN, para comprobar que el buscador funciona.",
-      "",
-      "Sin esto, un buscador roto devuelve «nadie la llama» 31 veces y parece",
-      "una respuesta. Son del mismo vecindario que las candidatas a proposito:",
-      "si encuentra reviews/business/by y no encuentra reviews/business/all,",
-      "la ausencia significa algo."
-    ],
-    "rutas": [
-      "reviews/store",
-      "reviews/business/by",
-      "reviews/domiciliary/by"
+   ],
+   "Usuarios": [
+    [
+     "DELETE",
+     "v1/users/delete"
     ]
-  },
-  "clientes": [
-    { "rotulo": "app 1.0.0", "repo": "EnviaYa_App/EnviaYa_App", "ref": "bda4c9fb", "dir": "src" },
-    { "rotulo": "app 1.0.4", "repo": "EnviaYa_App/EnviaYa_App", "ref": "02217cdf", "dir": "src" },
-    { "rotulo": "app 1.0.6", "repo": "EnviaYa_App/EnviaYa_App", "ref": "d3d5921d", "dir": "src" },
-    { "rotulo": "app 1.0.7", "repo": "EnviaYa_App/EnviaYa_App", "ref": "0f2addad", "dir": "src" },
-    { "rotulo": "app 1.0.8", "repo": "EnviaYa_App/EnviaYa_App", "ref": "8e2f00b3", "dir": "src" },
-    { "rotulo": "app 1.0.9", "repo": "EnviaYa_App/EnviaYa_App", "ref": "84cc5e84", "dir": "src" },
-    { "rotulo": "app 1.0.11", "repo": "EnviaYa_App/EnviaYa_App", "ref": "def517c9", "dir": "src" },
-    { "rotulo": "app 1.0.12", "repo": "EnviaYa_App/EnviaYa_App", "ref": "97426f5e", "dir": "src" },
-    { "rotulo": "app hoy", "repo": "EnviaYa_App/EnviaYa_App", "ref": "HEAD", "dir": "src" },
-    { "rotulo": "aliados", "repo": "EnviaYa_Aliados/EnviaYa_Aliados", "ref": "HEAD", "dir": "src" },
-    { "rotulo": "admin", "repo": "EnviaYa_Admin/EnviaYa_Admin", "ref": "HEAD", "dir": "src" },
-    { "rotulo": "landing", "repo": "EnviaYa_Landing/EnviaYa_Landing", "ref": "HEAD", "dir": "." }
-  ],
-  "historia": {
-    "_": [
-      "En que repo se recorre TODA la historia de git con el pickaxe, no solo",
-      "los puntos de arriba. Es la pregunta fuerte: «¿existio alguna vez esta",
-      "cadena?». La app es la que importa, porque es la que queda instalada en",
-      "telefonos que no se actualizan; los paneles web sirven siempre la",
-      "ultima."
+   ],
+   "Duplicadas o reemplazadas": [
+    [
+     "GET",
+     "v1/bold/status/{ref}"
     ],
-    "repo": "EnviaYa_App/EnviaYa_App",
-    "dir": "src"
+    [
+     "GET",
+     "v1/ads/featured"
+    ],
+    [
+     "GET",
+     "v1/creditos"
+    ]
+   ]
   }
+ },
+ "control": {
+  "_": [
+   "RUTAS QUE SI SE LLAMAN, para comprobar que el buscador funciona.",
+   "",
+   "Sin esto, un buscador roto devuelve «nadie la llama» 31 veces y parece",
+   "una respuesta. Son del mismo vecindario que las candidatas a proposito:",
+   "si encuentra reviews/business/by y no encuentra reviews/business/all,",
+   "la ausencia significa algo."
+  ],
+  "rutas": [
+   "reviews/store",
+   "reviews/business/by",
+   "reviews/domiciliary/by"
+  ]
+ },
+ "clientes": [
+  {
+   "rotulo": "app 1.0.0",
+   "repo": "EnviaYa_App/EnviaYa_App",
+   "ref": "bda4c9fb",
+   "dir": "src"
+  },
+  {
+   "rotulo": "app 1.0.4",
+   "repo": "EnviaYa_App/EnviaYa_App",
+   "ref": "02217cdf",
+   "dir": "src"
+  },
+  {
+   "rotulo": "app 1.0.6",
+   "repo": "EnviaYa_App/EnviaYa_App",
+   "ref": "d3d5921d",
+   "dir": "src"
+  },
+  {
+   "rotulo": "app 1.0.7",
+   "repo": "EnviaYa_App/EnviaYa_App",
+   "ref": "0f2addad",
+   "dir": "src"
+  },
+  {
+   "rotulo": "app 1.0.8",
+   "repo": "EnviaYa_App/EnviaYa_App",
+   "ref": "8e2f00b3",
+   "dir": "src"
+  },
+  {
+   "rotulo": "app 1.0.9",
+   "repo": "EnviaYa_App/EnviaYa_App",
+   "ref": "84cc5e84",
+   "dir": "src"
+  },
+  {
+   "rotulo": "app 1.0.11",
+   "repo": "EnviaYa_App/EnviaYa_App",
+   "ref": "def517c9",
+   "dir": "src"
+  },
+  {
+   "rotulo": "app 1.0.12",
+   "repo": "EnviaYa_App/EnviaYa_App",
+   "ref": "97426f5e",
+   "dir": "src"
+  },
+  {
+   "rotulo": "app hoy",
+   "repo": "EnviaYa_App/EnviaYa_App",
+   "ref": "HEAD",
+   "dir": "src"
+  },
+  {
+   "rotulo": "aliados",
+   "repo": "EnviaYa_Aliados/EnviaYa_Aliados",
+   "ref": "HEAD",
+   "dir": "src"
+  },
+  {
+   "rotulo": "admin",
+   "repo": "EnviaYa_Admin/EnviaYa_Admin",
+   "ref": "HEAD",
+   "dir": "src"
+  },
+  {
+   "rotulo": "landing",
+   "repo": "EnviaYa_Landing/EnviaYa_Landing",
+   "ref": "HEAD",
+   "dir": "."
+  }
+ ],
+ "historia": {
+  "_": [
+   "En que repo se recorre TODA la historia de git con el pickaxe, no solo",
+   "los puntos de arriba. Es la pregunta fuerte: «¿existio alguna vez esta",
+   "cadena?». La app es la que importa, porque es la que queda instalada en",
+   "telefonos que no se actualizan; los paneles web sirven siempre la",
+   "ultima."
+  ],
+  "repo": "EnviaYa_App/EnviaYa_App",
+  "dir": "src"
+ }
 }

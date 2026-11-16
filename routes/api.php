@@ -133,13 +133,30 @@ Route::middleware('throttle:5,10')->group(function () {
  * usuarios comparten IP por el CGNAT del operador, así que el vecino gasta
  * los intentos de uno.
  *
- * Reenviar no es peligroso: manda SIEMPRE al correo de la cuenta y nunca
- * revela si existe. Lo único que se evita es usarlo para inundar un buzón
- * ajeno, y para eso 10 por minuto sobra.
+ * Reenviar manda SIEMPRE al correo de la cuenta, así que no sirve para
+ * llevarse el enlace de nadie. Lo que el límite evita es usarlo para
+ * inundar un buzón ajeno, y para eso 10 por minuto sobra.
+ *
+ * AQUÍ DECÍA «nunca revela si existe», Y SÍ LO REVELA: un correo que no
+ * existe recibe «Si el correo existe, se enviará un enlace» y uno
+ * registrado y ya verificado recibe «El correo ya está verificado». Se
+ * distinguen. Está dicho en el controlador y queda como decisión en
+ * `docs/laravel-12/ANTES-DE-EMPUJAR.md`, porque unificar los mensajes
+ * tiene un precio: quien ya está verificado leería «se enviará un
+ * enlace» y no recibiría nada.
  */
 Route::middleware('throttle:10,1')->group(function () {
     Route::post('/resend-verification-email', [VerificacionDeCorreoController::class, 'resendVerificationEmail']);
-    Route::post('/email/resend-verification', [VerificacionDeCorreoController::class, 'resendVerificationEmail']);
+    /*
+     * AQUI HABIA UNA SEGUNDA GRAFIA de la misma ruta,
+     * `/email/resend-verification`, al mismo metodo de este mismo
+     * controlador. Retirada el 16 de noviembre de 2026: ningun cliente
+     * la llamaba --solo tres pruebas, repuntadas-- y el metodo sigue
+     * alcanzable por la linea de arriba, que es la que llama la app.
+     *
+     * Esta en `scripts/rutas-candidatas.json` y
+     * `LasRetiradasNoVuelvenTest` comprueba que no vuelva.
+     */
 });
 
 // --- Catálogo público: lo que la app muestra antes de loguearse ---

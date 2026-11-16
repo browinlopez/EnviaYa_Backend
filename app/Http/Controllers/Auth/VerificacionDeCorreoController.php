@@ -82,7 +82,27 @@ class VerificacionDeCorreoController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
-        // 🔒 Respuesta genérica (evita enumeración de usuarios)
+        /*
+         * RESPUESTA GENÉRICA PARA EL QUE NO EXISTE — Y NO ALCANZA.
+         *
+         * Acá decía «evita enumeración de usuarios», y no la evita: la
+         * rama de abajo contesta «El correo ya está verificado» cuando
+         * la dirección SÍ está registrada y verificada. Los dos
+         * mensajes se distinguen, así que con esta ruta —que no pide
+         * sesión, porque la usa quien no puede entrar— se puede
+         * averiguar si un correo tiene cuenta.
+         *
+         * NO SE UNIFICAN LOS MENSAJES AQUÍ Y A ESCONDIDAS. Se comprobó
+         * que la app no se fija en el texto, así que unificarlos no la
+         * rompería; lo que cuesta es que quien ya tiene el correo
+         * verificado pulsaría «reenviar», leería «se enviará un
+         * enlace» y no le llegaría nada. Es texto de autenticación
+         * con un precio en claridad: queda como decisión en
+         * `docs/laravel-12/ANTES-DE-EMPUJAR.md`.
+         *
+         * Lo que no se deja es la frase que prometía la garantía:
+         * quien la leyera daría el problema por resuelto.
+         */
         if (! $user) {
             return response()->json([
                 'message' => 'Si el correo existe, se enviará un enlace de verificación.',

@@ -54,7 +54,7 @@ class SoloParaCambiarPorSesion
          * reutiliza después lo ya resuelto. El reordenamiento se deshizo.
          *
          * LA BÚSQUEDA A MANO SE QUEDA COMO RESPALDO, y es lo que impide ceder
-         * nada: en las 21 rutas de `/v1` que no piden sesión no hay nadie que
+         * nada: en las 20 rutas de `/v1` que no piden sesión no hay nadie que
          * resuelva un token, y sin el respaldo la credencial biométrica
          * dejaría de estar acotada en ellas. No ganaría privilegio —en una
          * ruta pública tener este token es igual que no tener ninguno— pero

@@ -79,7 +79,7 @@ test('una contrasena de menos de seis caracteres no pasa', function () {
 test('reenviar la verificacion exige un correo', function () {
     rolesBasicos();
 
-    $this->postJson('/v1/email/resend-verification', [])
+    $this->postJson('/v1/resend-verification-email', [])
         ->assertStatus(422)
         ->assertJsonValidationErrors(['email']);
 });

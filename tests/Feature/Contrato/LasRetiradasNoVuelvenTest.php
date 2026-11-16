@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Route;
 use Laravel\Sanctum\Sanctum;
 
 /**
- * LAS 32 RUTAS RETIRADAS, Y LO QUE LAS SUSTITUYE.
+ * LAS 33 RUTAS RETIRADAS, Y LO QUE LAS SUSTITUYE.
  *
  * El 11 de noviembre de 2026 se retiraron 31 rutas de `/v1`: la superficie
  * pasó de 325 a 294. No fue una limpieza a ojo —`scripts/rutas_sin_llamante.py`
@@ -34,7 +34,7 @@ use Laravel\Sanctum\Sanctum;
  * el personal con sus correos a cualquiera con sesión. Su motivo propio está
  * en `tests/Feature/Seguridad/ElPersonalNoSeListaConSesionTest.php`.
  */
-test('ninguna de las 32 retiradas volvio al router', function () {
+test('ninguna de las 33 retiradas volvio al router', function () {
     $lista = json_decode(
         (string) file_get_contents(base_path('scripts/rutas-candidatas.json')),
         true,
@@ -57,7 +57,7 @@ test('ninguna de las 32 retiradas volvio al router', function () {
        impedir, así que el estado va en el fichero: `grupos` es lo retirado y
        `pendientes` lo que falta decidir. Los dos buscadores recorren los dos;
        esta prueba, solo el primero. */
-    expect($retiradas)->toHaveCount(32);
+    expect($retiradas)->toHaveCount(33);
 
     $vivas = [];
     foreach (Route::getRoutes() as $ruta) {

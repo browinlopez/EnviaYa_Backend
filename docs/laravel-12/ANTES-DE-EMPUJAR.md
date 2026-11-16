@@ -41,9 +41,9 @@ servidor todavía no sirve.
 > Esa es la decisión que queda, y los números de abajo se miden contra
 > `origin/Devs`, que es la rama que despliega.
 
-Nada está desplegado. Medido el **15 de noviembre de 2026**: son **183 commits**
+Nada está desplegado. Medido el **15 de noviembre de 2026**: son **184 commits**
 en `validacion/integracion` sobre `Devs`, y `Devs` a su vez va **22 commits por
-delante de `origin/Devs`**: **205** en total. La cuenta **incluye el commit que la escribe**: si no, cada
+delante de `origin/Devs`**: **206** en total. La cuenta **incluye el commit que la escribe**: si no, cada
 marcador la deja corta en uno y el verificador avisa para siempre de un
 desajuste que es de construccion. Hasta que `Devs` suba, las ramas
 de trabajo que cuelgan de ahí no tienen dónde apoyarse.
@@ -596,7 +596,8 @@ nombres de los checks no existen y la regla se escribiría a ciegas.
   15 de noviembre**, no supuesto: `branches/main/protection` y
   `branches/Devs/protection` devuelven las dos *«Branch not protected»*. Y la
   rama por omisión del repositorio es `main`, mientras el trabajo va a `Devs`.
-- **Siete rutas sin llamante**, sin decidir. Están en
+- **Seis rutas sin llamante**, sin decidir —eran siete y la séptima ya se
+  retiró, ver el punto 4—. Están en
   `scripts/rutas-candidatas.json` y cada una tiene abajo lo que hace falta
   para decidirla, medido el **16 de noviembre de 2026**. Lo que cambió
   respecto a como estaban clasificadas: **dos de las cuatro «duplicadas» no
@@ -655,15 +656,36 @@ Retirarla no cambia ningún comportamiento, porque nadie la llama. La decisión
 real es otra: **si darse de baja debe seguir siendo manual con 15 días de
 plazo, o pasar a ser automática** —y entonces esta ruta es por donde iría.
 
-**4 · `POST v1/email/resend-verification` — retirada de riesgo cero**
+**4 · ~~`POST v1/email/resend-verification`~~ — RETIRADA el 16 de noviembre de 2026**
 
 `v1/email/resend-verification` y `v1/resend-verification-email` **apuntan al
 mismo método**, `VerificacionDeCorreoController@resendVerificationEmail`. Son
 dos grafías del mismo endpoint. La app llama la segunda —
 `features/auth/data/authApi.ts:165`, y está en la lista de rutas públicas de
-`httpClient.ts:137`—, así que retirar la primera deja el mismo método
-alcanzable por el otro camino. **Es la única de las siete sin nada que
-decidir.**
+`httpClient.ts:137`—, así que retirarla no quitó ninguna capacidad: el mismo
+método sigue alcanzable por el otro camino. Era la única de las siete sin
+nada que decidir, y es la que se hizo.
+
+**Sus tres llamantes eran PRUEBAS**, no clientes —dos en `RegistroResistenteTest`
+y una en `EntradaDeCuentaYResenasTest`—, así que se repuntaron al otro
+camino en vez de borrarse: el manejador tiene que seguir cubierto.
+
+Lo que se movió con ella, cada cosa regenerada y no editada a mano:
+
+| | |
+|---|---|
+| `superficie-api.json` | 293 → **292**, con `CONGELAR_SUPERFICIE=1` |
+| `openapi.json` | 294 → **292** operaciones, con `php scripts/openapi.php` |
+| `rutas-candidatas.json` | de `pendientes` a `grupos`, que es el registro de lo retirado |
+| `LasRetiradasNoVuelvenTest` | cuenta las filas de `grupos`: 32 → **33** |
+
+**Y una cifra contada dos veces a propósito se puso roja sola, que es para lo
+que estaba.** `ContratoOpenApiTest` afirma `expect($publicas)->toBe(21)` —exacto,
+mientras sus otras tres comprobaciones son mínimos— y su comentario dice que es
+«el mismo 21 que cuenta por su cuenta el docblock de
+`SoloParaCambiarPorSesion`». La ruta retirada no pedía sesión, así que al
+irse quedó en 20 y hubo que mover **las dos** cuentas. Medido del contrato
+generado: 292 operaciones, 272 con Bearer, 20 públicas.
 
 **5 · `GET v1/bold/status/{ref}` — `PaymentController@checkStatus`**
 
@@ -710,12 +732,28 @@ Se distinguen, así que se puede averiguar si una dirección está registrada. L
 ruta no pide sesión —solo `throttle:10,1`— porque es justo la que usa quien no
 puede entrar.
 
-**No lo cambié, y el motivo es que no es un defecto con arreglo obvio.**
+**El comportamiento no se cambió, y el motivo es que no es un defecto con
+arreglo obvio.**
 Comprobado que la app no se fija en el texto —lo devuelve tal cual— así que
 unificar los dos mensajes no la rompería. Pero quien ya tiene el correo
 verificado pulsaría «reenviar», leería «se enviará un enlace» y no le
 llegaría nada. Es un cambio de texto de autenticación con un precio en
 claridad: es decisión, no tarea.
+
+**Lo que sí se arregló son los tres sitios que prometían la garantía que el
+código no cumple**, porque un comentario así es peor que ninguno: el
+siguiente que lo lea da el problema por resuelto.
+
+| dónde | decía |
+|---|---|
+| el controlador | «Respuesta genérica (evita enumeración de usuarios)», justo encima de la rama que sí la evita y dos ramas por encima de la que la deshace |
+| `routes/api.php` | «manda SIEMPRE al correo de la cuenta y **nunca revela si existe**» |
+| `RegistroResistenteTest` | «Respuesta idéntica para el que existe y el que no» — y solo comprueba el caso del que **no** existe |
+
+El nombre de esa prueba sí era exacto desde el principio —*«un correo que no
+existe no delata si está registrado»*—; era el comentario el que prometía más
+de lo que hay. Comparar los dos mensajes ahí pondría la prueba en rojo, y por
+eso no se hace antes de decidir el texto.
 
 **Nueve rutas de verificación de correo, no dos mecanismos.** El apartado de
 Breeze dice «dos mecanismos a la vez» y contadas son nueve:

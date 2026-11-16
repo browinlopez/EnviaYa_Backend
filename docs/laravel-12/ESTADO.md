@@ -146,7 +146,7 @@ y sin un solo error. Ahora lo vigila `colas:comprobar --avisar`, a diario.
 | `env()` fuera de `config/` | 2 | **0** | hecho |
 | Clases que no cargan | sin comprobar | **0 de 493** | comprobador nuevo en el CI |
 | Análisis estático | no había | **PHPStan nivel 5** | línea base de **44 entradas / 59 avisos**, desde 503. El CI exige código nuevo limpio. El camino y lo que NO sirvió, en §4 |
-| Superficie de la API | sin congelar | **293 rutas** | prueba que falla si cambia verbo, URI, nombre o middleware. Eran 325: 31 sin llamante se retiraron el 11 de noviembre y `GET /v1/users` el 12, que publicaba el personal con sus correos a cualquiera con sesión |
+| Superficie de la API | sin congelar | **292 rutas** | prueba que falla si cambia verbo, URI, nombre o middleware. Eran 325: 31 sin llamante se retiraron el 11 de noviembre, `GET /v1/users` el 12 —que publicaba el personal con sus correos a cualquiera con sesión— y `POST /v1/email/resend-verification` el 16, que era una segunda grafía de `/v1/resend-verification-email` al mismo método |
 | Duración de la suite | 630 s | **48 s** | las pruebas ya no llaman a un Reverb real |
 | Forma de la respuesta en `JsonResource` | 0 | **55 clases** | quince tandas. `scripts/formas_de_entidad.py` mide **0 formas de entidad por migrar** en `app/Http`: lo que queda son informes de agregados, donde un Resource sería la ceremonia que §05 prohíbe |
 | Relaciones de Eloquent tipadas | 52 | **153 de 153** | con genéricos las 153. Dos pruebas lo fijan: que toda relación declarada se construya, y que ninguna nueva se quede sin tipo ni sin genéricos |
@@ -515,7 +515,7 @@ dos ficheros distintos.
 > Fijadas en `tests/Feature/Contrato/ElProductoSeVeDistintoSegunLaPuertaTest.php`
 > con la lista exacta de campos, para que el arreglo sea deliberado.
 
-| ~~§34 OpenAPI~~ | **Hecho el 11 de noviembre de 2026**: `docs/laravel-12/openapi.json`, 294 operaciones, GENERADO del router por `scripts/openapi.php` y comprobado en el CI con `--revisar`. Un fichero escrito a mano deja de ser verdad con el primer cambio de ruta |
+| ~~§34 OpenAPI~~ | **Hecho el 11 de noviembre de 2026**: `docs/laravel-12/openapi.json`, GENERADO del router por `scripts/openapi.php` y comprobado en el CI con `--revisar`. Eran 294 operaciones aquel día y hoy son **292**, porque el fichero se regenera con cada retirada y no se corrige a mano. Un fichero escrito a mano deja de ser verdad con el primer cambio de ruta |
 | ~~§41 `declare(strict_types=1)`~~ | **Hecho el 11 de noviembre de 2026**: 433 de 433. Se puso de golpe en una rama y se midio con la suite, el arnes, Pint y PHPStan antes de darlo por bueno |
 | §51 límites de archivo | 113 por encima del objetivo. §03 los llama «umbrales orientativos, no bloqueos», y §00 pone el tamaño en el ÚLTIMO lugar de las prioridades |
 

@@ -138,7 +138,7 @@ test('reenviar la verificacion no revienta si el correo falla', function () {
      */
     Mail::shouldReceive('to')->andThrow(new RuntimeException('SMTP caído'));
 
-    $r = $this->postJson('/v1/email/resend-verification', [
+    $r = $this->postJson('/v1/resend-verification-email', [
         'email' => 'sin.verificar@ejemplo.com',
     ]);
 
@@ -151,10 +151,23 @@ test('un correo que no existe no delata si esta registrado', function () {
     Mail::fake();
 
     /*
-     * Respuesta identica para el que existe y el que no: si se distinguieran,
-     * este endpoint seria una forma de averiguar quien tiene cuenta.
+     * LO QUE ESTO FIJA, Y LO QUE NO.
+     *
+     * Fija que un correo que NO existe recibe 200 y el mensaje genérico,
+     * o sea que no se delata por un 404 ni por un error.
+     *
+     * NO FIJA que la respuesta sea idéntica para el que sí existe, que
+     * es lo que este comentario afirmaba. Y no lo es: uno registrado y
+     * ya verificado recibe «El correo ya está verificado», distinto, así
+     * que con esta ruta se puede averiguar si una dirección tiene
+     * cuenta. Comparar los dos mensajes aquí pondría esta prueba en
+     * rojo, que es por lo que no se hace sin decidir primero el texto:
+     * está en `docs/laravel-12/ANTES-DE-EMPUJAR.md`.
+     *
+     * El nombre de la prueba sí era exacto desde el principio; era el
+     * comentario el que prometía más de lo que hay.
      */
-    $r = $this->postJson('/v1/email/resend-verification', [
+    $r = $this->postJson('/v1/resend-verification-email', [
         'email' => 'nadie@ejemplo.com',
     ]);
 

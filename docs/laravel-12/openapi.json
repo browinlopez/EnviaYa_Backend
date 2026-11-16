@@ -9314,48 +9314,6 @@
                 "x-form-request": "App\\Http\\Requests\\Domiciliary\\ActualizarDomiciliarioRequest"
             }
         },
-        "/v1/email/resend-verification": {
-            "post": {
-                "operationId": "post_v1_email_resend_verification",
-                "tags": [
-                    "email"
-                ],
-                "summary": "App\\Http\\Controllers\\Auth\\VerificacionDeCorreoController@resendVerificationEmail",
-                "x-middleware": [
-                    "api",
-                    "throttle:10,1"
-                ],
-                "security": [],
-                "responses": {
-                    "200": {
-                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
-                    },
-                    "422": {
-                        "description": "Validacion fallida."
-                    }
-                },
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "email": {
-                                        "type": "string",
-                                        "format": "email"
-                                    }
-                                },
-                                "required": [
-                                    "email"
-                                ]
-                            }
-                        }
-                    }
-                },
-                "x-form-request": "App\\Http\\Requests\\Auth\\ReenviarVerificacionRequest"
-            }
-        },
         "/v1/favorites/index": {
             "post": {
                 "operationId": "post_v1_favorites_index",

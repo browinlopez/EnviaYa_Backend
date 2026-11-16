@@ -2283,15 +2283,6 @@
     },
     {
         "verbo": "POST",
-        "uri": "v1/email/resend-verification",
-        "nombre": null,
-        "middleware": [
-            "api",
-            "throttle:10,1"
-        ]
-    },
-    {
-        "verbo": "POST",
         "uri": "v1/favorites/index",
         "nombre": null,
         "middleware": [

@@ -20,9 +20,15 @@ use Illuminate\Support\Facades\Route;
  * Así que acá se fijan los mínimos que el generador tiene que seguir
  * sacando, y cada número está medido, no elegido:
  *
- *   294 operaciones   = las rutas de `/v1` que el router tiene hoy
- *   273 con Bearer    y 21 públicas, que es el mismo 21 que cuenta por su
+ *   292 operaciones   = las rutas de `/v1` que el router tiene hoy
+ *   272 con Bearer    y 20 públicas, que es el mismo 20 que cuenta por su
  *                     cuenta `SoloParaCambiarPorSesion` en su docblock
+ *
+ * Eran 294, 273 y 21 hasta el 16 de noviembre de 2026, cuando se retiró
+ * `POST /v1/email/resend-verification` —una segunda grafía de
+ * `/v1/resend-verification-email`, al mismo método— y antes `GET /v1/users`.
+ * La de las públicas puso esta prueba en rojo al retirarla, que es
+ * exactamente para lo que está contada dos veces.
  *   95 con cuerpo     las que declaran un `FormRequest`
  *
  * Los mínimos van por debajo del número de hoy a propósito: una ruta nueva
@@ -138,9 +144,17 @@ it('el generador sigue extrayendo esquemas, y no solo URLs', function () {
      */
     expect($conCuerpo + $cuerpoSinDocumentar)->toBe($escrituras);
 
-    // Las públicas: el mismo 21 que cuenta por su cuenta el docblock de
-    // `SoloParaCambiarPorSesion`. Dos medidas independientes del mismo hecho.
-    expect($publicas)->toBe(21);
+    /*
+     * Las públicas: el mismo 20 que cuenta por su cuenta el docblock de
+     * `SoloParaCambiarPorSesion`. Dos medidas independientes del mismo
+     * hecho, y EXACTA a propósito mientras las otras tres son mínimos:
+     * una ruta pública nueva es justo lo que hay que mirar dos veces.
+     *
+     * Era 21 hasta que el 16 de noviembre de 2026 se retiró
+     * `POST /v1/email/resend-verification`, que no pide sesión. Esta
+     * línea se puso roja sola y hubo que mover las dos cuentas.
+     */
+    expect($publicas)->toBe(20);
 });
 
 it('lo que el contrato promete de una ruta concreta es lo que el router tiene', function () {
