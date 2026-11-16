@@ -1,6 +1,6 @@
 # Estado del backend frente al estándar
 
-**Medido el 15 de noviembre de 2026.** Laravel 12.72 · 1404 pruebas en verde y
+**Medido el 15 de noviembre de 2026.** Laravel 12.72 · 1410 pruebas en verde y
 12 saltadas · PHPStan y Pint limpios (línea base 57 avisos en 44 entradas, desde
 503) · **512** clases cargan · `composer audit` en cero · OpenAPI al día · **la suite corrida también sobre MySQL 8** (72 de 72) ·
 **el arnés recorrido entero tras los cambios de respuesta: 33 de 33

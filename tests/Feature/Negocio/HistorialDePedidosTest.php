@@ -211,7 +211,26 @@ function tiendaConEntregas(array $entregas): array
         DB::table('orderssales')->insert([
             'buyer_id' => $buyerId, 'busines_id' => $t['businessId'],
             'subtotal' => 10000, 'domicilio' => 0, 'total' => 10000,
-            'sale_date' => now()->subHours(4),
+            /*
+             * `now()` Y NO `now()->subHours(4)`, y es un arreglo, no un
+             * detalle. El historial filtra por una ventana que por omision
+             * empieza en `now()->startOfWeek()->startOfDay()`, asi que un
+             * pedido de hace cuatro horas cae FUERA cada lunes entre las
+             * 00:00 y las 04:00 --es domingo-- y estas tres pruebas fallaban
+             * en esa franja. Salio midiendo: el comprador estaba, los cuatro
+             * pedidos estaban y eran del negocio, y el endpoint devolvia
+             * `pedidos: 0`.
+             *
+             * `now()` cae siempre dentro, porque la ventana es
+             * `[startOfWeek()->startOfDay(), now()->endOfDay()]`. Y lo que
+             * estas pruebas miden --cuanto se tardo contra lo prometido--
+             * vive en las tres columnas de abajo, que la ventana no filtra.
+             *
+             * No se congela el reloj con `travelTo`: sin callback no lo
+             * deshace, y el `tearDown` de Laravel tampoco, asi que se
+             * filtraria a las pruebas siguientes.
+             */
+            'sale_date' => now(),
             'state' => 4, 'payment_state' => 'paid', 'methods_id' => 1,
             'dispatched_at' => $prometidos === null ? null : $salida,
             'delivery_date' => $tardo === null ? null : $salida->copy()->addMinutes($tardo),

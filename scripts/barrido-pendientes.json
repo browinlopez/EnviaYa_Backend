@@ -113,301 +113,32 @@
   "                                   unica que de verdad era inmedible;",
   "                                   prueba nueva en CreditoDeTiendaTest",
   "",
-  "Las cuatro pasan a `barrido-mutaciones.json`."
+  "Las cuatro pasan a `barrido-mutaciones.json`.",
+  "",
+  "LA LISTA SE VACIO EL 16 DE NOVIEMBRE DE 2026. Los tres grupos a cero:",
+  "las 4 `muertas` el dia 15, y las 10 `sin_prueba` mas las 8 `con_prueba`",
+  "hoy. Las 18 pasan a `barrido-mutaciones.json` con su veredicto.",
+  "",
+  "16 ESTABAN DEFENDIDAS y 2 no:",
+  "",
+  "  Promotion::BORRADOR  sin defensa, prueba nueva, probada rompiendola",
+  "  Promotion::TIPOS     sin defensa, prueba nueva, probada rompiendola",
+  "",
+  "Y «SIN PRUEBA» NUNCA QUISO DECIR «SIN DEFENSA»: de las 10 asi",
+  "clasificadas, 8 estaban defendidas. Siete por `Pqrs::ESTADOS`,",
+  "`SafetyIncident::ESTADOS` y `PushCampaign::ESTADOS_A_MANO`, que se",
+  "construyen desde ellas y que una prueba afirma CON LITERALES, y la octava",
+  "porque `VisitantesTest` manda `'kind' => 'servicio'` escrito contra la",
+  "lista blanca. Escribirles pruebas habria sido trabajo redundante.",
+  "",
+  "DEFECTO DEL CAMPO `tests` DE ESTA LISTA, dicho para quien la vuelva a",
+  "generar: solo cuenta las pruebas que nombran la constante DIRECTAMENTE,",
+  "asi que para una que se usa a traves de una lista derivada subcuenta. Es",
+  "«grep no es sabotaje» otra vez, ahora dentro de los datos. Se vio con",
+  "`PushCampaign::BORRADOR`: la lista le daba una prueba y la que de verdad",
+  "la caza es otra, la de la lista blanca."
  ],
  "muertas": [],
- "sin_prueba": [
-  {
-   "clase": "Pqrs",
-   "const": "ABIERTO",
-   "fichero": "app/Models/Operacion/Pqrs.php",
-   "valor": "0",
-   "self": 1,
-   "app": [
-    [
-     "app/Http/Controllers/Admin/Api/PqrsApiController.php",
-     2
-    ]
-   ],
-   "tests": []
-  },
-  {
-   "clase": "Pqrs",
-   "const": "CERRADO",
-   "fichero": "app/Models/Operacion/Pqrs.php",
-   "valor": "3",
-   "self": 2,
-   "app": [],
-   "tests": []
-  },
-  {
-   "clase": "Pqrs",
-   "const": "EN_GESTION",
-   "fichero": "app/Models/Operacion/Pqrs.php",
-   "valor": "1",
-   "self": 1,
-   "app": [
-    [
-     "app/Http/Controllers/Admin/Api/PqrsApiController.php",
-     2
-    ]
-   ],
-   "tests": []
-  },
-  {
-   "clase": "Promotion",
-   "const": "BORRADOR",
-   "fichero": "app/Models/Promotion.php",
-   "valor": "0",
-   "self": 0,
-   "app": [
-    [
-     "app/Services/PromocionesDeLaTienda.php",
-     1
-    ]
-   ],
-   "tests": []
-  },
-  {
-   "clase": "Promotion",
-   "const": "TIPOS",
-   "fichero": "app/Models/Promotion.php",
-   "valor": "[self::SIN_DESCUENTO, self::PORCENTAJE, self::NXM]",
-   "self": 0,
-   "app": [
-    [
-     "app/Http/Requests/Negocio/GuardarPromocionRequest.php",
-     1
-    ]
-   ],
-   "tests": []
-  },
-  {
-   "clase": "PushCampaign",
-   "const": "CANCELADA",
-   "fichero": "app/Models/Marketing/PushCampaign.php",
-   "valor": "3",
-   "self": 1,
-   "app": [
-    [
-     "app/Http/Controllers/Admin/Api/MarketingApiController.php",
-     2
-    ]
-   ],
-   "tests": []
-  },
-  {
-   "clase": "PushCampaign",
-   "const": "PROGRAMADA",
-   "fichero": "app/Models/Marketing/PushCampaign.php",
-   "valor": "1",
-   "self": 2,
-   "app": [],
-   "tests": []
-  },
-  {
-   "clase": "SafetyIncident",
-   "const": "ABIERTO",
-   "fichero": "app/Models/Operacion/SafetyIncident.php",
-   "valor": "0",
-   "self": 1,
-   "app": [
-    [
-     "app/Http/Controllers/Admin/Api/IncidentesApiController.php",
-     1
-    ]
-   ],
-   "tests": []
-  },
-  {
-   "clase": "SafetyIncident",
-   "const": "EN_INVESTIGACION",
-   "fichero": "app/Models/Operacion/SafetyIncident.php",
-   "valor": "1",
-   "self": 1,
-   "app": [
-    [
-     "app/Http/Controllers/Admin/Api/IncidentesApiController.php",
-     1
-    ]
-   ],
-   "tests": []
-  },
-  {
-   "clase": "VisitantesController",
-   "const": "CLASES",
-   "fichero": "app/Http/Controllers/Conjunto/VisitantesController.php",
-   "valor": "['visitante', 'servicio', 'domicilio_externo']",
-   "self": 0,
-   "app": [
-    [
-     "app/Http/Requests/Conjunto/RegistrarVisitanteRequest.php",
-     1
-    ]
-   ],
-   "tests": []
-  }
- ],
- "con_prueba": [
-  {
-   "clase": "Promotion",
-   "const": "ENVIADA",
-   "fichero": "app/Models/Promotion.php",
-   "valor": "1",
-   "self": 1,
-   "app": [
-    [
-     "app/Http/Controllers/Business/ConsultaDeNegociosController.php",
-     1
-    ],
-    [
-     "app/Services/DescuentoPorPromocion.php",
-     1
-    ],
-    [
-     "app/Services/PromocionesDeLaTienda.php",
-     1
-    ]
-   ],
-   "tests": [
-    [
-     "tests/Feature/Marketing/PromocionUsosTest.php",
-     1
-    ],
-    [
-     "tests/Feature/Negocio/DescuentoPorPromocionTest.php",
-     1
-    ],
-    [
-     "tests/Feature/Negocios/LaEtiquetaDePromocionNoVaAlPesoTest.php",
-     1
-    ]
-   ]
-  },
-  {
-   "clase": "Promotion",
-   "const": "NXM",
-   "fichero": "app/Models/Promotion.php",
-   "valor": "'nxm'",
-   "self": 2,
-   "app": [
-    [
-     "app/Http/Controllers/Negocio/PromocionesController.php",
-     1
-    ],
-    [
-     "app/Http/Requests/Negocio/GuardarPromocionRequest.php",
-     2
-    ]
-   ],
-   "tests": [
-    [
-     "tests/Feature/Contrato/LaNovenaTandaNoCambiaLaFormaTest.php",
-     1
-    ],
-    [
-     "tests/Feature/Negocio/DescuentoPorPromocionTest.php",
-     3
-    ]
-   ]
-  },
-  {
-   "clase": "PushCampaign",
-   "const": "BORRADOR",
-   "fichero": "app/Models/Marketing/PushCampaign.php",
-   "valor": "0",
-   "self": 2,
-   "app": [],
-   "tests": [
-    [
-     "tests/Feature/Push/NotificacionesTest.php",
-     1
-    ]
-   ]
-  },
-  {
-   "clase": "PushCampaign",
-   "const": "ENVIADA",
-   "fichero": "app/Models/Marketing/PushCampaign.php",
-   "valor": "2",
-   "self": 0,
-   "app": [
-    [
-     "app/Http/Controllers/Admin/Api/MarketingApiController.php",
-     1
-    ]
-   ],
-   "tests": [
-    [
-     "tests/Feature/Panel/ElFiltroDeEstadoTieneListaBlancaTest.php",
-     2
-    ]
-   ]
-  },
-  {
-   "clase": "RedencionDePromociones",
-   "const": "DEVUELTA",
-   "fichero": "app/Services/RedencionDePromociones.php",
-   "valor": "0",
-   "self": 1,
-   "app": [],
-   "tests": [
-    [
-     "tests/Feature/Marketing/PromocionUsosTest.php",
-     3
-    ]
-   ]
-  },
-  {
-   "clase": "UnidadDeVenta",
-   "const": "GRAMO",
-   "fichero": "app/Support/UnidadDeVenta.php",
-   "valor": "'gramo'",
-   "self": 4,
-   "app": [],
-   "tests": [
-    [
-     "tests/Feature/Pedidos/VenderPorPesoTest.php",
-     1
-    ]
-   ]
-  },
-  {
-   "clase": "UnidadDeVenta",
-   "const": "KILO",
-   "fichero": "app/Support/UnidadDeVenta.php",
-   "valor": "'kg'",
-   "self": 3,
-   "app": [],
-   "tests": [
-    [
-     "tests/Feature/Pedidos/VenderPorPesoTest.php",
-     1
-    ]
-   ]
-  },
-  {
-   "clase": "UnidadDeVenta",
-   "const": "TODAS",
-   "fichero": "app/Support/UnidadDeVenta.php",
-   "valor": "[self::UNIDAD, self::KILO, self::LIBRA, self::GRAMO]",
-   "self": 1,
-   "app": [
-    [
-     "app/Http/Requests/Negocio/ActualizarProductoRequest.php",
-     1
-    ],
-    [
-     "app/Http/Requests/Negocio/AgregarProductoRequest.php",
-     1
-    ]
-   ],
-   "tests": [
-    [
-     "tests/Feature/Pedidos/VenderPorPesoTest.php",
-     2
-    ]
-   ]
-  }
- ]
+ "sin_prueba": [],
+ "con_prueba": []
 }

@@ -2,7 +2,7 @@
 
 > Registro del repositorio `EnviaYa_Backend` (§20 del estándar).
 > **Medido el 15 de noviembre de 2026** sobre Laravel 12.72, 113 controladores,
-> 52 servicios, 70 modelos, 10 objetos de consulta y 1404 pruebas.
+> 52 servicios, 70 modelos, 10 objetos de consulta y 1410 pruebas.
 > *(El 9 de noviembre: 12.66, 115 controladores, 54 servicios, 70 modelos y 1022
 > pruebas. Esta cabecera se quedó seis días diciendo las de entonces, que es
 > justo lo que el registro existe para que no pase.)*
@@ -94,7 +94,7 @@ Si aparece una tercera, que aparezca con su motivo escrito acá.
 | **Realidad** | **Medido el 14 de noviembre de 2026: `app/Http/Resources/` tiene 56 clases.** Esta fila decia «no existe», que era verdad cuando se escribio y dejo de serlo sin que nadie la actualizara. `scripts/formas_de_entidad.py` mide **0 formas de entidad por migrar** en `app/Http`: lo que se arma a mano a dia de hoy son informes de agregados, donde un Resource seria la ceremonia que §05 prohibe |
 | **Motivo** | Mismo argumento que arriba, con un agravante: la forma de la respuesta **es el contrato** que consumen la app, tres paneles y las versiones ya publicadas en las tiendas. Reescribirla a ciegas rompe clientes que no se pueden actualizar |
 | **Riesgo aceptado** | No hay un sitio único donde ver qué campos expone un endpoint; esconder un campo nuevo es fácil de olvidar |
-| **Alternativa adoptada** | Mismo trinquete. Y las pruebas del contrato público siguen siendo la red: **1404 pruebas**, varias de ellas **de ausencia** (que un campo NO viaje) |
+| **Alternativa adoptada** | Mismo trinquete. Y las pruebas del contrato público siguen siendo la red: **1410 pruebas**, varias de ellas **de ausencia** (que un campo NO viaje) |
 | **Revisión** | Cada PR |
 
 ### Los archivos son más grandes que los objetivos
@@ -195,7 +195,7 @@ Conviene decirlo, porque el registro no es solo una lista de culpas:
   llave secreta está vacía y lo deja escrito en el registro, en vez de aceptar
   una firma HMAC que cualquiera podría calcular. Es la ruta que marca pedidos
   como pagados.
-- **Pruebas por funcionalidad** (§11): 1404 en Pest, con casos de error,
+- **Pruebas por funcionalidad** (§11): 1410 en Pest, con casos de error,
   permisos y límites — incluidas pruebas de que un campo **no** viaja.
 - **Nada de `catch (\Throwable)` para devolver 200** con `success: false`.
 

@@ -35,7 +35,27 @@
   "",
   "Correr el fichero que la nombra BASTA para decir «defendida»: si ahi la",
   "cazan, la respuesta ya es si. La suite entera solo aporta cuando la",
-  "respuesta es NO, porque entonces falta saber si la caza algo inesperado."
+  "respuesta es NO, porque entonces falta saber si la caza algo inesperado.",
+  "",
+  "LAS 18 ULTIMAS ERAN TODO LO QUE QUEDABA EN `barrido-pendientes.json`, y",
+  "entran el 16 de noviembre de 2026 con veredicto medido. Las 16 primeras",
+  "estaban defendidas; las dos ultimas --`Promotion::BORRADOR` y",
+  "`Promotion::TIPOS`-- NO lo estaban, y tienen prueba nueva en",
+  "`PromocionesDeLaTiendaTest`, probada rompiendola.",
+  "",
+  "COMO SE MIDIERON, para que nadie lo confunda con una pasada del barrido:",
+  "sabotaje DIRIGIDO contra los ficheros de prueba que las vigilan, con",
+  "pasada de control sobre codigo sano antes y exigiendo el resumen de Pest",
+  "en la salida. Las dos de `Promotion` fueron con la SUITE COMPLETA, porque",
+  "el dirigido no basta para decir que algo NO esta defendido.",
+  "",
+  "LA REGLA QUE SALIO DE ESTO, y costo un veredicto equivocado: una prueba",
+  "que cae solo vale como defensa SI ESTA VERDE AISLADA. Al sabotear las dos",
+  "de `Promotion` la suite daba «2 failed» y parecia defensa; las dos que",
+  "caian eran de porcentaje a tiempo, en un fichero que no nombra",
+  "`Promotion`, y fallaban igual sobre codigo sano --las tumbaba la ventana",
+  "de fechas en un lunes de madrugada--. Arreglado eso, las dos mutaciones",
+  "pasan las 1404 enteras."
  ],
  "mutaciones": [
   {
@@ -618,6 +638,132 @@
    "viejo": "public const AJUSTE = 'ajuste';",
    "nuevo": "public const AJUSTE = 'reverso';",
    "dano": "colisiona con REVERSO, que es el tipo por el que `reversar()` decide si el cupo ya se devolvio"
+  },
+  {
+   "etiqueta": "Promotion::ENVIADA",
+   "fichero": "app/Models/Promotion.php",
+   "viejo": "public const ENVIADA = 1;",
+   "nuevo": "public const ENVIADA = 2;",
+   "dano": "colisiona con RETIRADA: una promocion publicada y una retirada dejan de distinguirse, y los dos sitios que filtran la vitrina y el descuento buscan ENVIADA"
+  },
+  {
+   "etiqueta": "Promotion::NXM",
+   "fichero": "app/Models/Promotion.php",
+   "viejo": "public const NXM = 'nxm';",
+   "nuevo": "public const NXM = 'porcentaje';",
+   "dano": "colisiona con PORCENTAJE, y los dos estan en la lista blanca TIPOS"
+  },
+  {
+   "etiqueta": "PushCampaign::BORRADOR",
+   "fichero": "app/Models/Marketing/PushCampaign.php",
+   "viejo": "public const BORRADOR = 0;",
+   "nuevo": "public const BORRADOR = 1;",
+   "dano": "colisiona con PROGRAMADA, y las dos estan en ESTADOS_A_MANO"
+  },
+  {
+   "etiqueta": "PushCampaign::ENVIADA",
+   "fichero": "app/Models/Marketing/PushCampaign.php",
+   "viejo": "public const ENVIADA = 2;",
+   "nuevo": "public const ENVIADA = 3;",
+   "dano": "colisiona con CANCELADA"
+  },
+  {
+   "etiqueta": "RedencionDePromociones::DEVUELTA",
+   "fichero": "app/Services/RedencionDePromociones.php",
+   "viejo": "public const DEVUELTA = 0;",
+   "nuevo": "public const DEVUELTA = 1;",
+   "dano": "colisiona con APLICADA: una redencion devuelta se lee como aplicada"
+  },
+  {
+   "etiqueta": "UnidadDeVenta::GRAMO",
+   "fichero": "app/Support/UnidadDeVenta.php",
+   "viejo": "public const GRAMO = 'gramo';",
+   "nuevo": "public const GRAMO = 'kg';",
+   "dano": "colisiona con KILO: un producto en gramos se trata como kilos"
+  },
+  {
+   "etiqueta": "UnidadDeVenta::KILO",
+   "fichero": "app/Support/UnidadDeVenta.php",
+   "viejo": "public const KILO = 'kg';",
+   "nuevo": "public const KILO = 'libra';",
+   "dano": "colisiona con LIBRA"
+  },
+  {
+   "etiqueta": "UnidadDeVenta::TODAS",
+   "fichero": "app/Support/UnidadDeVenta.php",
+   "viejo": "public const TODAS = [self::UNIDAD, self::KILO, self::LIBRA, self::GRAMO];",
+   "nuevo": "public const TODAS = [self::UNIDAD, self::KILO, self::LIBRA];",
+   "dano": "la lista blanca pierde GRAMO: no se puede crear un producto en gramos"
+  },
+  {
+   "etiqueta": "Pqrs::ABIERTO",
+   "fichero": "app/Models/Operacion/Pqrs.php",
+   "viejo": "public const ABIERTO = 0;",
+   "nuevo": "public const ABIERTO = 1;",
+   "dano": "colisiona con EN_GESTION: un PQRS recien abierto se cuenta como en gestion"
+  },
+  {
+   "etiqueta": "Pqrs::EN_GESTION",
+   "fichero": "app/Models/Operacion/Pqrs.php",
+   "viejo": "public const EN_GESTION = 1;",
+   "nuevo": "public const EN_GESTION = 3;",
+   "dano": "colisiona con CERRADO"
+  },
+  {
+   "etiqueta": "Pqrs::CERRADO",
+   "fichero": "app/Models/Operacion/Pqrs.php",
+   "viejo": "public const CERRADO = 3;",
+   "nuevo": "public const CERRADO = 0;",
+   "dano": "colisiona con ABIERTO: un PQRS cerrado vuelve a aparecer abierto"
+  },
+  {
+   "etiqueta": "SafetyIncident::ABIERTO",
+   "fichero": "app/Models/Operacion/SafetyIncident.php",
+   "viejo": "public const ABIERTO = 0;",
+   "nuevo": "public const ABIERTO = 1;",
+   "dano": "colisiona con EN_INVESTIGACION"
+  },
+  {
+   "etiqueta": "SafetyIncident::EN_INVESTIGACION",
+   "fichero": "app/Models/Operacion/SafetyIncident.php",
+   "viejo": "public const EN_INVESTIGACION = 1;",
+   "nuevo": "public const EN_INVESTIGACION = 0;",
+   "dano": "colisiona con ABIERTO"
+  },
+  {
+   "etiqueta": "PushCampaign::PROGRAMADA",
+   "fichero": "app/Models/Marketing/PushCampaign.php",
+   "viejo": "public const PROGRAMADA = 1;",
+   "nuevo": "public const PROGRAMADA = 3;",
+   "dano": "colisiona con CANCELADA, y las dos estan en ESTADOS_A_MANO"
+  },
+  {
+   "etiqueta": "PushCampaign::CANCELADA",
+   "fichero": "app/Models/Marketing/PushCampaign.php",
+   "viejo": "public const CANCELADA = 3;",
+   "nuevo": "public const CANCELADA = 2;",
+   "dano": "colisiona con ENVIADA: cancelar una campana la deja como enviada"
+  },
+  {
+   "etiqueta": "Promotion::BORRADOR",
+   "fichero": "app/Models/Promotion.php",
+   "viejo": "public const BORRADOR = 0;",
+   "nuevo": "public const BORRADOR = 1;",
+   "dano": "colisiona con ENVIADA: una promocion que se quedo a medio publicar --porque el paso de avisos revento-- se anunciaria y descontaria"
+  },
+  {
+   "etiqueta": "Promotion::TIPOS",
+   "fichero": "app/Models/Promotion.php",
+   "viejo": "public const TIPOS = [self::SIN_DESCUENTO, self::PORCENTAJE, self::NXM];",
+   "nuevo": "public const TIPOS = [self::SIN_DESCUENTO, self::PORCENTAJE];",
+   "dano": "la lista blanca pierde `nxm`: no se puede crear una promocion de N x M"
+  },
+  {
+   "etiqueta": "VisitantesController::CLASES",
+   "fichero": "app/Http/Controllers/Conjunto/VisitantesController.php",
+   "viejo": "['visitante', 'servicio', 'domicilio_externo']",
+   "nuevo": "['visitante', 'domicilio_externo']",
+   "dano": "la lista blanca pierde `servicio`: la porteria no puede registrar a un tecnico"
   }
  ]
 }

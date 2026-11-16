@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Promotion;
 use App\Models\Rol;
 use App\Models\User;
 use App\Services\Ajustes;
@@ -420,4 +421,104 @@ it('una promocion ya retirada no se puede corregir', function () {
     $this->putJson("/v1/negocio/promociones/{$id}", ['texto' => 'Intento resucitarla'])
         ->assertStatus(422)
         ->assertJsonPath('reason', 'ya_retirada');
+});
+
+/* ============== EL VOCABULARIO DE UNA PROMOCION ============== */
+
+/*
+ * LAS DOS DE ACA SALIERON DE QUEDARSE SIN DEFENSA DELANTE DE LAS 1404
+ * PRUEBAS, y el camino hasta saberlo importa porque casi las da por
+ * defendidas.
+ *
+ * Al sabotearlas, la suite contestaba «2 failed». Las dos que caian eran de
+ * porcentaje a tiempo, en `HistorialDePedidosTest`, un fichero que no nombra
+ * `Promotion` ni `nxm`. Aislado, ese fichero fallaba esas mismas dos pruebas
+ * SOBRE CODIGO SANO: las tumbaba la ventana de fechas en un lunes de
+ * madrugada, no la mutacion. Con eso arreglado, las dos mutaciones pasan las
+ * 1404 enteras.
+ *
+ * De ahi la regla que faltaba: una prueba que cae solo vale como defensa si
+ * esta verde aislada. Si no, lo que se midio es otra cosa.
+ */
+
+it('los tres estados de una promocion son distintos, y BORRADOR vale 0', function () {
+    /*
+     * ESTA PRUEBA FIJA EL NUMERO, Y SOLO EL NUMERO. Conviene decirlo porque la
+     * primera version de aca afirmaba otra cosa --que una promocion recien
+     * creada queda en `state = 0`-- y es FALSO: `PromocionesDeLaTienda` la crea
+     * en BORRADOR dentro de la transaccion y al salir la pisa con `ENVIADA`
+     * sin condicion. La prueba fallo, y asi se supo.
+     *
+     * DONDE SI DECIDE ALGO: si escribir los avisos revienta --`Avisos::para`
+     * no esta dentro del `try`, solo el push lo esta-- el `forceFill` de
+     * ENVIADA no llega a correr y la promocion se queda en BORRADOR. Entonces
+     * no aparece en la vitrina ni rebaja nada, porque los dos sitios filtran
+     * `state = ENVIADA`. Si BORRADOR colisionara con ENVIADA, esa promocion a
+     * medio publicar se anunciaria y descontaria dinero.
+     *
+     * ESE CAMINO NO LO RECORRE NINGUNA PRUEBA, y alcanzarlo pide inyectar un
+     * fallo en el paso de avisos. Se dice en vez de escribir una prueba que
+     * aparente cubrirlo.
+     *
+     * CON LITERALES: estos numeros estan en `promotions.state` de filas que ya
+     * existen.
+     */
+    expect(Promotion::BORRADOR)->toBe(0);
+    expect(Promotion::ENVIADA)->toBe(1);
+    expect(Promotion::RETIRADA)->toBe(2);
+
+    $estados = [Promotion::BORRADOR, Promotion::ENVIADA, Promotion::RETIRADA];
+    expect(count(array_unique($estados)))->toBe(3);
+});
+
+it('se puede crear una promocion de cada uno de los tres tipos', function (string $tipo, array $regla) {
+    ['tendero' => $tendero] = tiendaConAfiliados(1);
+
+    Sanctum::actingAs($tendero);
+
+    /*
+     * CON EL TIPO ESCRITO, porque es lo que manda el panel por la red y
+     * `GuardarPromocionRequest` lo valida contra `Promotion::TIPOS`. Si la
+     * lista pierde un miembro, ese tipo deja de poderse crear: 422. Con
+     * `Promotion::NXM` en la mano los dos lados saldrian de la constante y
+     * esto no probaria nada.
+     */
+    $this->postJson('/v1/negocio/promociones', [
+        'texto' => 'Promocion de prueba para el tipo '.$tipo,
+        'tipo' => $tipo,
+        ...$regla,
+    ])->assertStatus(201);
+})->with([
+    'sin descuento' => ['ninguno', []],
+    'porcentaje' => ['porcentaje', ['porcentaje' => 15]],
+    'N x M' => ['nxm', ['lleva' => 3, 'paga' => 2]],
+]);
+
+it('un tipo de promocion inventado se rechaza', function () {
+    ['tendero' => $tendero] = tiendaConAfiliados(1);
+
+    Sanctum::actingAs($tendero);
+
+    /*
+     * CONTROL de la de arriba. Si el endpoint contestara 201 para cualquier
+     * cosa --o 422 por un campo que falta-- los tres «se acepta» no
+     * significarian nada. Aca se comprueba que lo que decide es el tipo.
+     */
+    $this->postJson('/v1/negocio/promociones', [
+        'texto' => 'Promocion con un tipo que no existe',
+        'tipo' => 'dos_por_uno',
+    ])->assertStatus(422)->assertJsonValidationErrors('tipo');
+});
+
+it('los tres tipos de promocion son los que la lista blanca acepta', function () {
+    /*
+     * Los valores viven en `promotions.rule_type` de filas que ya existen, de
+     * ahi los literales.
+     */
+    expect(Promotion::SIN_DESCUENTO)->toBe('ninguno');
+    expect(Promotion::PORCENTAJE)->toBe('porcentaje');
+    expect(Promotion::NXM)->toBe('nxm');
+
+    expect(Promotion::TIPOS)->toBe(['ninguno', 'porcentaje', 'nxm']);
+    expect(count(array_unique(Promotion::TIPOS)))->toBe(3);
 });

@@ -41,9 +41,9 @@ servidor todavía no sirve.
 > Esa es la decisión que queda, y los números de abajo se miden contra
 > `origin/Devs`, que es la rama que despliega.
 
-Nada está desplegado. Medido el **15 de noviembre de 2026**: son **181 commits**
+Nada está desplegado. Medido el **15 de noviembre de 2026**: son **182 commits**
 en `validacion/integracion` sobre `Devs`, y `Devs` a su vez va **22 commits por
-delante de `origin/Devs`**: **203** en total. La cuenta **incluye el commit que la escribe**: si no, cada
+delante de `origin/Devs`**: **204** en total. La cuenta **incluye el commit que la escribe**: si no, cada
 marcador la deja corta en uno y el verificador avisa para siempre de un
 desajuste que es de construccion. Hasta que `Devs` suba, las ramas
 de trabajo que cuelgan de ahí no tienen dónde apoyarse.
@@ -98,7 +98,7 @@ vez encontró tres agujeros con 1361 pruebas en verde; el por qué está en la
 sexta lección de `ESTADO.md`.
 
 **Lo que le falta por barrer está medido, en `scripts/barrido-pendientes.json`.**
-De las **137** constantes públicas de `app/`, **82** están barridas y **18 de las
+De las **137** constantes públicas de `app/`, **100** están barridas y **0 de las
 restantes deciden** --eran 131 y 43 por la mañana: subieron porque las seis
 listas de estados que las validaciones escribían a mano pasaron a ser
 constantes, más dos nuevas, menos una que sobraba-- dinero, un permiso o un estado. Eso corrige algo que este
@@ -113,8 +113,74 @@ parecía barrido no lo es**:
 | grupo | cuántas | qué pide |
 |---|---|---|
 | muertas | **0** | **Vaciado el 15 de noviembre, y no borrando constantes: midiéndolas.** Esta fila afirmaba que sabotearlas «no puede fallar ninguna prueba», y era falso para tres de las cuatro —sus propias filas traían las pruebas que las nombran—. Ver abajo |
-| sin prueba | **10** | Las usa `app/` y ninguna prueba **las nombra**. Eso NO es «nadie las defiende»: ver el aviso de abajo |
-| con prueba | **8** | Las que el barrido no alcanzó a medir antes de que lo mataran |
+| sin prueba | **0** | **A cero el 16 de noviembre.** Las usaba `app/` y ninguna prueba las **nombraba**, que no es «nadie las defiende»: 8 de las 10 estaban defendidas por listas derivadas que una prueba afirma con literales |
+| con prueba | **0** | **A cero el 16 de noviembre.** Eran las que el barrido no alcanzó a medir antes de que lo mataran; las 8 estaban defendidas |
+
+### La lista de pendientes a cero, y la regla que costó un veredicto
+
+**16 de noviembre de 2026.** Los tres grupos a cero: las 4 `muertas` el día
+15, y hoy las 10 `sin_prueba` y las 8 `con_prueba`. **16 estaban defendidas y
+2 no.**
+
+| | |
+|---|---|
+| `Promotion::BORRADOR` | **sin defensa** — prueba nueva en `PromocionesDeLaTiendaTest`, probada rompiéndola |
+| `Promotion::TIPOS` | **sin defensa** — la lista blanca del tipo: sin `nxm` no se puede crear una promoción de N×M |
+
+**Y «sin prueba» nunca quiso decir «sin defensa»:** de las 10 clasificadas
+así, **8 estaban defendidas**. Siete porque `Pqrs::ESTADOS`,
+`SafetyIncident::ESTADOS` y `PushCampaign::ESTADOS_A_MANO` se construyen desde
+ellas y una prueba afirma esos arrays **con literales**; la octava porque
+`VisitantesTest` manda `'kind' => 'servicio'` escrito contra la lista blanca.
+Escribirles pruebas habría sido trabajo redundante.
+
+#### La regla nueva: una prueba que cae solo vale si está verde aislada
+
+Al sabotear las dos de `Promotion`, la suite contestaba **«2 failed»** y
+parecía defensa. Las dos que caían eran de **porcentaje a tiempo**, en
+`HistorialDePedidosTest`, un fichero que no nombra `Promotion` ni `nxm`.
+Aislado, ese fichero fallaba **esas mismas dos pruebas sobre código sano**.
+
+Con eso arreglado, las dos mutaciones **pasan las 1404 enteras**. O sea que el
+«2 failed» no era defensa: era el reloj.
+
+> Una mutación que mueve el estado compartido puede tumbar una prueba que no
+> la vigila. Si se lee eso como «defendida», la constante se da por cubierta
+> y nadie vuelve a mirarla. **FALLA solo cuenta si la prueba que cayó está
+> verde aislada.**
+
+#### El defecto de reloj que salió de paso
+
+Tres pruebas de `HistorialDePedidosTest` **se rompían todos los lunes entre
+las 00:00 y las 04:00**, y una de ellas estaba verde **por el motivo
+equivocado**.
+
+La causa, medida volcando la respuesta y no supuesta: el comprador estaba, los
+cuatro pedidos estaban y eran del negocio, y el endpoint devolvía
+`pedidos: 0`. El `desde` por omisión del historial es
+`now()->startOfWeek()->startOfDay()` y el ayudante insertaba con
+`sale_date = now()->subHours(4)`: un lunes a las 00:10, hace cuatro horas es
+**domingo**, fuera de la semana en curso.
+
+Arreglado con `sale_date = now()`, que cae siempre dentro de la ventana
+`[startOfWeek()->startOfDay(), now()->endOfDay()]` y deja la prueba midiendo
+la ventana de verdad. **No se congeló el reloj**, que era lo primero que
+apetecía: `travelTo($fecha)` sin callback no lo deshace y el `tearDown` de
+Laravel tampoco —comprobado en `vendor/`—, así que se habría filtrado a las
+pruebas siguientes, que es el mismo tipo de defecto que se estaba arreglando.
+
+Y la tercera, *«sin pedidos medibles no se inventa un cero»*, pasaba igual con
+la ventana vacía: cero pedidos dentro da la misma respuesta que cero pedidos
+medibles. Verde y ciega.
+
+#### Un defecto del propio instrumento
+
+El campo `tests` de `barrido-pendientes.json` **solo cuenta las pruebas que
+nombran la constante directamente**, así que para una usada a través de una
+lista derivada subcuenta. Es «grep no es sabotaje» otra vez, ahora dentro de
+los datos: a `PushCampaign::BORRADOR` la lista le daba una prueba, y la que de
+verdad la caza es otra —la de la lista blanca—. Queda dicho en la cabecera del
+fichero para quien lo vuelva a generar.
 
 ### Las cuatro «muertas»: el grupo estaba mal planteado
 
