@@ -315,26 +315,82 @@ tiene que funcionar contra 1.0.9.
 
 ---
 
-## 5 · Landing: la instalación está rota
+## 5 · Landing: la instalación estaba rota **en esta máquina**
 
-`npm run build` y `npm run lint` fallan en `EnviaYa_Landing` por una
-instalación incompleta de `node_modules`: falta el paquete `rolldown`, que
-pide vite 8.2.2. **Fallaba ya antes del cambio de esta tanda** —comprobado
-guardando el cambio y construyendo sobre `main` limpio—, así que no es una
-regresión, pero sí significa que el sitio no se puede construir ahora mismo.
+Arreglado el **15 de noviembre de 2026**, y la redacción anterior de este
+apartado era injusta con el repositorio. Decía «la instalación está rota» y
+«el sitio no se puede construir ahora mismo»: lo segundo era verdad acá, pero
+lo primero daba a entender que el defecto estaba en el código. No estaba.
 
-No lo arreglé porque `pnpm install` quiere purgar `node_modules` entero y eso
-no se hace sin pedirlo. Cuando se quiera:
+**La prueba es la bandera que se usó para arreglarlo.** `CI=true pnpm install
+--frozen-lockfile` pasó sin una sola queja, y esa bandera es justo la que falla
+si el bloqueo no cuadra con `package.json`. Cuadra: 349 paquetes, todos
+reutilizados del almacén, 15 s. Lo que faltaba era desplegarlo.
 
-```bash
-cd EnviaYa_Landing/EnviaYa_Landing
-CI=true pnpm install --frozen-lockfile
-npm run build
-```
+Y una lectura mía que también se cae: conté 19 directorios en `node_modules` y
+lo leí como media instalación. No lo era —pnpm pone ahí solo las dependencias
+directas y lo demás en `.pnpm`, que tiene 352—. **Y qué faltaba exactamente ya
+no se puede comprobar:** la redacción anterior nombraba `rolldown`, e instalar
+reescribió justo la prueba que lo diría. Queda como estaba escrito, sin
+reconfirmar.
 
-El cambio de CSS de esta tanda se verificó sin construir: llaves balanceadas,
-`@starting-style` bien formado, el token `--entrada` existe,
-`npm run check:tokens` en verde y Prettier limpio.
+**Medido después de instalar**, cada puerta con su código de salida de verdad y
+no con el del `tail` que lo estaba leyendo —el primer bucle midió cuatro puertas
+y dio cuatro ceros, `format:check` incluido, porque `$?` detrás de una tubería
+es el del último mandato y no el del `npm`:
+
+| puerta | resultado |
+|---|---|
+| `npm run build` | 18 rutas prerenderizadas, sitemap con 13 urls, 488 ms |
+| `npm run lint` | limpio |
+| `npm run check:tokens` | ningún color literal fuera de `tokens.css` |
+| `npm run check:modulos` | sin cruces entre los 10 módulos |
+| `npm run test:unit` | **91** pruebas en 9 ficheros |
+| `npm run test` | **51** correctas, 0 fallas |
+| `npm run test:a11y` | **175** correctas, 0 fallas |
+| `npm run test:responsive` | **80** páginas medidas, 0 desbordamientos |
+| `npm run format:check` | **falla, y no por el repositorio: ver abajo** |
+
+Esas nueve cifras **están fechadas, no instrumentadas**, y es a propósito:
+viven en otro repositorio y tres de ellas piden un navegador y un servidor
+levantado, así que `scripts/cifras_del_registro.py` no las mide —la misma
+regla que ya aplica al número de pruebas del backend—. Para rehacerlas:
+`npm run preview` en un terminal y las nueve órdenes en otro.
+
+Las tres de navegador pidieron antes `npx playwright install chromium`: el
+`pnpm install` trajo Playwright 1.62.1 y el chromium que había era de otra
+versión. Necesitan `npm run preview` levantado en el 5175.
+
+Con esto, el cambio de CSS de aquella tanda —llaves balanceadas,
+`@starting-style`, el token `--entrada`— ya no está verificado «sin
+construir»: **está construido**.
+
+### `format:check` no puede pasar en un clon de Windows
+
+Falla en 93 ficheros y **la única diferencia es el fin de línea**. Medido, no
+supuesto: el blob que guarda git tiene **0 CRLF**, el fichero en disco los
+tiene en todas sus líneas, y comparar el fichero con lo que Prettier
+produciría da **idéntico en cuanto se normaliza el salto**. `core.autocrlf`
+vale `true` en la configuración del sistema de Git para Windows, la landing no
+tiene `.gitattributes`, y Prettier trae `endOfLine: "lf"` por omisión.
+
+O sea: esa puerta pasaría en Linux y **no puede pasar acá**, así que hoy no
+mide nada en esta máquina. Se arregla con una línea —`"endOfLine": "auto"` en
+`.prettierrc`, o un `.gitattributes` que fije el salto— pero eso es trabajo del
+repositorio de la landing y va en su propia rama, no colado desde acá.
+
+**No lo «arreglé» con `prettier --write`**, que es lo que apetece: reescribir
+93 ficheros para tapar un síntoma local habría ensuciado el árbol de otro
+repositorio sin corregir la causa.
+
+### Y nada de esto corre solo
+
+`EnviaYa_Landing` **no tiene `.github/workflows`**. Las nueve puertas de arriba
+existen y funcionan, pero solo cuando alguien las escribe a mano: nada las
+corre al empujar. Es **el único de los cinco** repositorios así —backend
+`pruebas.yml` y `pruebas-mysql.yml`, aliados `calidad.yml`, app `ci.yml`,
+admin `pruebas.yml`—. Es lo que explica que una instalación a medias pudiera
+pasar desapercibida.
 
 ---
 
