@@ -5,6 +5,7 @@ use App\Models\User;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 
 /**
@@ -18,6 +19,34 @@ use Laravel\Sanctum\Sanctum;
  * sobre lo que tiene que poder sostenerse: que firme lo que leyó, que se sepa
  * de dónde salió la firma y que nadie refirme por encima.
  */
+
+/*
+ * EL DISCO SE FINGE, Y HASTA EL 16 DE NOVIEMBRE DE 2026 NO SE FINGÍA.
+ *
+ * Firmar genera un PDF y `MediaService` lo guarda con
+ * `Storage::disk('r2')->put(...)`. Sin esto, en una máquina con las
+ * credenciales de R2 en su `.env` —la de quien desarrolla— cada corrida
+ * de la suite **subía un PDF de contrato al bucket de verdad**; y en el
+ * CI, que no las tiene, `MediaService` lanzaba y el controlador lo
+ * devolvía como un 422, así que estas cinco pruebas fallaban ahí y
+ * pasaban acá.
+ *
+ * O sea que no pasaban por funcionar: pasaban por tener credenciales.
+ *
+ * `config()` es para que `MediaService::configurado()` dé true —mira
+ * las claves, no el disco— y `Storage::fake` para que nada salga de la
+ * máquina. Es el mismo bloque que `LogoDeLaTiendaTest`, copiado y no
+ * reinventado.
+ */
+beforeEach(function () {
+    config([
+        'filesystems.disks.r2.key' => 'prueba',
+        'filesystems.disks.r2.secret' => 'prueba',
+        'filesystems.disks.r2.endpoint' => 'https://r2.prueba',
+        'filesystems.disks.r2.url' => 'https://archivos.prueba',
+    ]);
+    Storage::fake('r2');
+});
 
 /** Un PNG de un píxel, que es lo que produciría el trazo más corto posible. */
 function firmaDePrueba(): string
@@ -89,16 +118,11 @@ test('el acuerdo dice que la ubicación se toma SOLO durante el turno', function
 test('firmarlo lo deja guardado y con su fecha', function () {
     $d = domiciliarioQueEntra();
 
-    $r = $this->postJson('/v1/domiciliaries/contrato', [
+    $this->postJson('/v1/domiciliaries/contrato', [
         'signature' => firmaDePrueba(),
         'city' => 'Barranquilla',
         'acepta' => true,
-    ]);
-
-    // DIAGNOSTICO TEMPORAL: el controlador envuelve cualquier fallo en un
-    // 422 con el mensaje dentro, y el CI solo ensena el codigo. Esto hace
-    // que el mensaje salga en el informe. Se quita en cuanto se sepa.
-    expect([$r->status(), $r->json()])->toBe([201, $r->json()]);
+    ])->assertStatus(201);
 
     $fila = DB::table('domiciliary')->where('domiciliary_id', $d['domiciliary_id'])->first();
 
