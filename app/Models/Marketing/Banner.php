@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models\Marketing;
 
 use Illuminate\Database\Eloquent\Builder;
@@ -37,24 +39,26 @@ class Banner extends Model
     ];
 
     protected $casts = [
-        'campaign_id'                => 'integer',
-        'priority'                   => 'integer',
-        'starts_at'                  => 'date',
-        'ends_at'                    => 'date',
-        'target_municipalities'      => 'array',
-        'target_complexes'           => 'array',
+        'campaign_id' => 'integer',
+        'priority' => 'integer',
+        'starts_at' => 'date',
+        'ends_at' => 'date',
+        'target_municipalities' => 'array',
+        'target_complexes' => 'array',
         'target_business_categories' => 'array',
-        'target_roles'               => 'array',
-        'impressions_count'          => 'integer',
-        'clicks_count'               => 'integer',
-        'state'                      => 'integer',
+        'target_roles' => 'array',
+        'impressions_count' => 'integer',
+        'clicks_count' => 'integer',
+        'state' => 'integer',
     ];
 
+    /** @return BelongsTo<AdCampaign, $this> */
     public function campaign(): BelongsTo
     {
         return $this->belongsTo(AdCampaign::class, 'campaign_id');
     }
 
+    /** @return HasMany<BannerEvent, $this> */
     public function events(): HasMany
     {
         return $this->hasMany(BannerEvent::class, 'banner_id');

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use App\Models\Business;
@@ -56,16 +58,16 @@ class CreditoDeTienda
     {
         $credito = StoreCredit::where('busines_id', $negocioId)->where('user_id', $userId)->first();
 
-        if (!$credito) {
+        if (! $credito) {
             return ['limite' => 0.0, 'usado' => 0.0, 'disponible' => 0.0];
         }
 
         $limite = (float) $credito->credit_limit;
-        $usado  = $this->usado($credito->id);
+        $usado = $this->usado($credito->id);
 
         return [
-            'limite'     => $limite,
-            'usado'      => $usado,
+            'limite' => $limite,
+            'usado' => $usado,
             // Bajar el cupo por debajo de lo ya usado es válido: queda en cero
             // disponible hasta que abone, no en negativo.
             'disponible' => max(0.0, round($limite - $usado, 2)),
@@ -113,22 +115,22 @@ class CreditoDeTienda
     /** El panorama de la tienda, para su pantalla y para el panel. */
     public function resumenDeLaTienda(int $negocioId): array
     {
-        $tope     = Business::where('busines_id', $negocioId)->value('credit_debt_cap');
+        $tope = Business::where('busines_id', $negocioId)->value('credit_debt_cap');
         $asignado = $this->asignadoPorLaTienda($negocioId);
-        $deuda    = $this->deudaDeLaTienda($negocioId);
-        $usado    = round((float) StoreCreditMovement::whereIn(
+        $deuda = $this->deudaDeLaTienda($negocioId);
+        $usado = round((float) StoreCreditMovement::whereIn(
             'store_credit_id',
             StoreCredit::where('busines_id', $negocioId)->select('id'),
         )->sum('amount'), 2);
 
         return [
-            'habilitado'        => $tope !== null && (float) $tope > 0,
-            'tope'              => $tope === null ? null : (float) $tope,
-            'asignado'          => $asignado,
-            'por_asignar'       => $tope === null ? 0.0 : max(0.0, round((float) $tope - $asignado, 2)),
-            'usado'             => $usado,
-            'deuda_arrastrada'  => $deuda,
-            'puede_vender'      => $tope !== null && (float) $tope > 0 && $deuda < (float) $tope,
+            'habilitado' => $tope !== null && (float) $tope > 0,
+            'tope' => $tope === null ? null : (float) $tope,
+            'asignado' => $asignado,
+            'por_asignar' => $tope === null ? 0.0 : max(0.0, round((float) $tope - $asignado, 2)),
+            'usado' => $usado,
+            'deuda_arrastrada' => $deuda,
+            'puede_vender' => $tope !== null && (float) $tope > 0 && $deuda < (float) $tope,
         ];
     }
 
@@ -147,11 +149,11 @@ class CreditoDeTienda
         return DB::transaction(function () use ($negocioId, $userId, $limite, $porQuien) {
             $negocio = Business::where('busines_id', $negocioId)->lockForUpdate()->first();
 
-            if (!$negocio) {
+            if (! $negocio) {
                 throw new RuntimeException('Negocio no encontrado.');
             }
 
-            if (!$this->estaAfiliado($negocioId, $userId)) {
+            if (! $this->estaAfiliado($negocioId, $userId)) {
                 throw new RuntimeException('Solo puedes dar crédito a clientes afiliados a tu tienda.');
             }
 
@@ -194,9 +196,9 @@ class CreditoDeTienda
     public function consumir(OrdersSales $order, int $userId, ?int $porQuien = null): StoreCreditMovement
     {
         $negocioId = (int) $order->busines_id;
-        $total     = round((float) $order->total, 2);
+        $total = round((float) $order->total, 2);
 
-        if (!$this->estaAfiliado($negocioId, $userId)) {
+        if (! $this->estaAfiliado($negocioId, $userId)) {
             throw new RuntimeException('Para pagar con crédito tienes que estar afiliado a esta tienda.');
         }
 
@@ -205,7 +207,7 @@ class CreditoDeTienda
             ->lockForUpdate()
             ->first();
 
-        if (!$credito || (float) $credito->credit_limit <= 0) {
+        if (! $credito || (float) $credito->credit_limit <= 0) {
             throw new RuntimeException('Esta tienda no te ha dado crédito.');
         }
 
@@ -229,10 +231,10 @@ class CreditoDeTienda
 
         return StoreCreditMovement::create([
             'store_credit_id' => $credito->id,
-            'type'            => StoreCreditMovement::CONSUMO,
-            'amount'          => $total,
-            'order_id'        => $order->orderSales_id,
-            'created_by'      => $porQuien ?? $userId,
+            'type' => StoreCreditMovement::CONSUMO,
+            'amount' => $total,
+            'order_id' => $order->orderSales_id,
+            'created_by' => $porQuien ?? $userId,
         ]);
     }
 
@@ -243,7 +245,7 @@ class CreditoDeTienda
             ->where('type', StoreCreditMovement::CONSUMO)
             ->first();
 
-        if (!$consumo) {
+        if (! $consumo) {
             return null;
         }
 
@@ -257,10 +259,10 @@ class CreditoDeTienda
 
         return StoreCreditMovement::create([
             'store_credit_id' => $consumo->store_credit_id,
-            'type'            => StoreCreditMovement::REVERSO,
-            'amount'          => -1 * (float) $consumo->amount,
-            'order_id'        => $order->orderSales_id,
-            'created_by'      => $porQuien,
+            'type' => StoreCreditMovement::REVERSO,
+            'amount' => -1 * (float) $consumo->amount,
+            'order_id' => $order->orderSales_id,
+            'created_by' => $porQuien,
         ]);
     }
 
@@ -277,7 +279,7 @@ class CreditoDeTienda
                 ->lockForUpdate()
                 ->first();
 
-            if (!$credito) {
+            if (! $credito) {
                 throw new RuntimeException('Este cliente no tiene crédito en tu tienda.');
             }
 
@@ -292,16 +294,16 @@ class CreditoDeTienda
 
             return StoreCreditMovement::create([
                 'store_credit_id' => $credito->id,
-                'type'            => StoreCreditMovement::ABONO,
-                'amount'          => -1 * round($monto, 2),
-                'notes'           => $nota,
-                'created_by'      => $porQuien,
+                'type' => StoreCreditMovement::ABONO,
+                'amount' => -1 * round($monto, 2),
+                'notes' => $nota,
+                'created_by' => $porQuien,
             ]);
         });
     }
 
     private function pesos(float $valor): string
     {
-        return '$' . number_format($valor, 0, ',', '.');
+        return '$'.number_format($valor, 0, ',', '.');
     }
 }

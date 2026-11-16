@@ -1,11 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Operacion;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Operacion\FiltrarDepositosRequest;
+use App\Http\Requests\Operacion\ResolverDepositoRequest;
+use App\Http\Resources\Operacion\DepositoResource;
 use App\Models\Domiciliary;
 use App\Models\Operacion\CashDeposit;
 use App\Models\Operacion\CashMovement;
+use App\Queries\EfectivoDeLaOperacion;
 use App\Services\CustodiaDeEfectivo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -22,9 +28,7 @@ use RuntimeException;
  */
 class EfectivoController extends Controller
 {
-    public function __construct(private CustodiaDeEfectivo $custodia)
-    {
-    }
+    public function __construct(private CustodiaDeEfectivo $custodia) {}
 
     /* ------------------------- LADO DOMICILIARIO ------------------------- */
 
@@ -39,7 +43,7 @@ class EfectivoController extends Controller
     {
         $domiciliario = $this->domiciliarioDe($request);
 
-        if (!$domiciliario) {
+        if (! $domiciliario) {
             return response()->json(['message' => 'Esta cuenta no es de un domiciliario.'], 403);
         }
 
@@ -65,11 +69,11 @@ class EfectivoController extends Controller
         $saldo = $this->custodia->saldo($domiciliario->domiciliary_id);
 
         return response()->json([
-            'balance'     => $saldo,
-            'cash_limit'  => $tope !== null ? (float) $tope : null,
-            'cash_room'   => $tope !== null ? max(0, round((float) $tope - $saldo, 2)) : null,
-            'movements'   => $movimientos,
-            'deposits'    => CashDeposit::where('domiciliary_id', $domiciliario->domiciliary_id)
+            'balance' => $saldo,
+            'cash_limit' => $tope !== null ? (float) $tope : null,
+            'cash_room' => $tope !== null ? max(0, round((float) $tope - $saldo, 2)) : null,
+            'movements' => $movimientos,
+            'deposits' => CashDeposit::where('domiciliary_id', $domiciliario->domiciliary_id)
                 ->latest('created_at')->limit(20)->get(),
         ]);
     }
@@ -85,22 +89,22 @@ class EfectivoController extends Controller
     {
         $domiciliario = $this->domiciliarioDe($request);
 
-        if (!$domiciliario) {
+        if (! $domiciliario) {
             return response()->json(['message' => 'Esta cuenta no es de un domiciliario.'], 403);
         }
 
         $datos = $request->validate([
-            'amount'       => 'required|numeric|min:1',
-            'reference'    => 'nullable|string|max:100',
+            'amount' => 'required|numeric|min:1',
+            'reference' => 'nullable|string|max:100',
             'deposited_at' => 'nullable|date',
-            'notes'        => 'nullable|string|max:500',
+            'notes' => 'nullable|string|max:500',
         ]);
 
         $deposito = $this->custodia->declararDeposito($domiciliario->domiciliary_id, $datos);
 
         return response()->json([
             'message' => 'Consignación registrada. Queda pendiente de confirmación.',
-            'deposit' => $deposito,
+            'deposit' => (new DepositoResource($deposito))->resolve(),
             'balance' => $this->custodia->saldo($domiciliario->domiciliary_id),
         ], 201);
     }
@@ -108,61 +112,36 @@ class EfectivoController extends Controller
     /* ----------------------------- LADO PANEL ---------------------------- */
 
     /** Los depósitos declarados, para revisarlos contra el extracto. */
-    public function index(Request $request)
+    /** Los depositos declarados. La consulta vive en `Queries/EfectivoDeLaOperacion`. */
+    public function index(FiltrarDepositosRequest $request)
     {
-        $q = CashDeposit::query()
-            ->leftJoin('domiciliary as d', 'd.domiciliary_id', '=', 'cash_deposits.domiciliary_id')
-            ->leftJoin('user as u', 'u.user_id', '=', 'd.user_id')
-            ->select([
-                'cash_deposits.*',
-                'u.name as domiciliary_name',
-            ]);
-
-        if ($estado = $request->query('state')) {
-            $q->where('cash_deposits.state', $estado);
-        }
-
-        if ($domi = $request->query('domiciliary_id')) {
-            $q->where('cash_deposits.domiciliary_id', $domi);
-        }
-
         return response()->json([
-            'data' => $q->latest('cash_deposits.created_at')->limit(200)->get(),
+            'data' => (new EfectivoDeLaOperacion)->depositos(
+                estado: $request->query('state'),
+                domiciliario: ((int) $request->query('domiciliary_id')) ?: null,
+            ),
         ]);
     }
 
-    /** Quién debe cuánto, ahora mismo. Es la pregunta que antes no se podía hacer. */
+    /** Quien debe cuanto, ahora mismo. Es la pregunta que antes no se podia hacer. */
     public function saldos()
     {
-        $saldos = CashMovement::query()
-            ->join('domiciliary as d', 'd.domiciliary_id', '=', 'cash_movements.domiciliary_id')
-            ->leftJoin('user as u', 'u.user_id', '=', 'd.user_id')
-            ->groupBy('cash_movements.domiciliary_id', 'u.name')
-            ->havingRaw('SUM(cash_movements.amount) <> 0')
-            ->orderByRaw('SUM(cash_movements.amount) DESC')
-            ->get([
-                'cash_movements.domiciliary_id',
-                'u.name',
-                \Illuminate\Support\Facades\DB::raw('SUM(cash_movements.amount) as balance'),
-            ]);
+        $saldos = (new EfectivoDeLaOperacion)->saldos();
 
         return response()->json([
-            'data'  => $saldos,
+            'data' => $saldos,
             'total' => round((float) $saldos->sum('balance'), 2),
         ]);
     }
 
     /** Confirma o rechaza un depósito. Confirmar es lo que baja el saldo. */
-    public function resolver(Request $request, int $id)
+    public function resolver(ResolverDepositoRequest $request, int $id)
     {
-        $datos = $request->validate([
-            'state' => 'required|in:confirmada,rechazada',
-            'notes' => 'nullable|string|max:500',
-        ]);
+        $datos = $request->validated();
 
         $deposito = CashDeposit::find($id);
 
-        if (!$deposito) {
+        if (! $deposito) {
             return response()->json(['message' => 'Depósito no encontrado.'], 404);
         }
 
@@ -180,7 +159,7 @@ class EfectivoController extends Controller
             'message' => $datos['state'] === CashDeposit::CONFIRMADA
                 ? 'Depósito confirmado. El saldo bajó.'
                 : 'Depósito rechazado. El saldo no cambió.',
-            'deposit' => $deposito,
+            'deposit' => (new DepositoResource($deposito))->resolve(),
             'balance' => $this->custodia->saldo($deposito->domiciliary_id),
         ]);
     }

@@ -1,25 +1,33 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models\Maps;
 
+use App\Models\Audit\Audit;
 use App\Models\User\UserAddress;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use App\Models\Audit\Audit;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Municipality extends Audit
 {
     use HasFactory;
 
     protected $table = 'municipalities';
+
     protected $primaryKey = 'id';
+
     protected $fillable = ['name', 'department_id'];
 
-    public function department()
+    /** @return BelongsTo<Department, $this> */
+    public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class, 'department_id', 'id');
     }
 
-    public function userAddresses()
+    /** @return HasMany<UserAddress, $this> */
+    public function userAddresses(): HasMany
     {
         return $this->hasMany(UserAddress::class, 'municipality_id', 'id');
     }

@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Domiciliary;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Pedido\PedidoDeLaAppResource;
 use App\Models\Domiciliary;
 use App\Models\Order\OrdersSales;
-use App\Services\PedidoParaLaApp;
 use Illuminate\Http\Request;
 
 /**
@@ -24,13 +26,20 @@ use Illuminate\Http\Request;
 class PedidosDelDomiciliarioController extends Controller
 {
     /** `orderssales.state`: 2 listo para recoger · 3 en camino · 4 entregado. */
+    /*
+     * LOS ESTADOS VIENEN DE `OrdersSales`, no de una copia privada.
+     * Estaban declarados aqui y en otras ocho clases: la misma decision
+     * tomada nueve veces. Ver la cabecera de esas constantes en el modelo.
+     */
     private const POR_TOMAR = 2;
-    private const EN_CAMINO = 3;
-    private const ENTREGADO = 4;
 
-    public function __construct(private readonly PedidoParaLaApp $presentador)
-    {
-    }
+    /*
+     * SIN CONSTRUCTOR. Aqui se inyectaba el presentador para llamar a su
+     * `formatear()`; la forma de la respuesta vive ahora en
+     * `PedidoDeLaAppResource`, asi que no queda nada que inyectar. De la
+     * clase vieja se sigue leyendo —estaticamente— la lista de relaciones a
+     * precargar, que es lo unico que le queda y lo unico que le corresponde.
+     */
 
     public function mios(Request $request)
     {
@@ -38,7 +47,7 @@ class PedidosDelDomiciliarioController extends Controller
             ->where('user_id', $request->user()->user_id)
             ->first();
 
-        if (!$domiciliary) {
+        if (! $domiciliary) {
             return response()->json([
                 'message' => 'Esta cuenta no es de un domiciliario.',
             ], 403);
@@ -53,7 +62,7 @@ class PedidosDelDomiciliarioController extends Controller
          * —y llamarlo si no encuentro el timbre—.
          */
         $mios = OrdersSales::where('domiciliary_id', $domiciliary->domiciliary_id)
-            ->whereIn('state', [self::EN_CAMINO, self::ENTREGADO])
+            ->whereIn('state', [OrdersSales::EN_CAMINO, OrdersSales::ENTREGADO])
             ->confirmados()
             ->with($this->relaciones())
             ->get();
@@ -71,7 +80,20 @@ class PedidosDelDomiciliarioController extends Controller
                 ->where('state', self::POR_TOMAR)
                 ->whereNull('domiciliary_id')
                 ->confirmados()
-                ->with($this->relaciones())
+                /*
+                 * SIN LAS DEL COMPRADOR, porque esta mitad no las enseña.
+                 *
+                 * `formatear($o, false, ...)` —el `false` de abajo— devuelve
+                 * `buyer => null` y `delivery_address => null`, que es el
+                 * sentido de esta lista: un pedido que no he tomado no me dice
+                 * de quién es ni a dónde va. Aun así se precargaban: el
+                 * comprador, su usuario, la dirección y sus tres hermanas se
+                 * traían de la base para tirarlas al serializar.
+                 *
+                 * Medido: esta ruta hacía 34 consultas y seis eran estas. La
+                 * respuesta no cambia —esos campos ya salían nulos—.
+                 */
+                ->with(PedidoDeLaAppResource::relacionesSinComprador())
                 ->get()
             : collect();
 
@@ -82,9 +104,11 @@ class PedidosDelDomiciliarioController extends Controller
          * otro lado. El tercer `false` es eso.
          */
         $pedidos = $mios
-            ->map(fn (OrdersSales $o) => $this->presentador->formatear($o, true, false))
+            ->map(fn (OrdersSales $o) => (new PedidoDeLaAppResource($o, true, false))->resolve())
             ->concat(
-                $porTomar->map(fn (OrdersSales $o) => $this->presentador->formatear($o, false, false))
+                $porTomar->map(
+                    fn (OrdersSales $o) => (new PedidoDeLaAppResource($o, false, false))->resolve()
+                )
             )
             ->values();
 
@@ -93,27 +117,25 @@ class PedidosDelDomiciliarioController extends Controller
             // La app arma su pantalla con una sola lista y la reparte por
             // estado, igual que hacía con la de la tienda. Se conserva el
             // nombre `orders` para no tener que tocar el hook.
-            'orders'  => $pedidos,
+            'orders' => $pedidos,
             'resumen' => [
-                'en_camino'  => $mios->where('state', self::EN_CAMINO)->count(),
-                'entregados' => $mios->where('state', self::ENTREGADO)->count(),
-                'por_tomar'  => $porTomar->count(),
+                'en_camino' => $mios->where('state', OrdersSales::EN_CAMINO)->count(),
+                'entregados' => $mios->where('state', OrdersSales::ENTREGADO)->count(),
+                'por_tomar' => $porTomar->count(),
             ],
         ]);
     }
 
     /** Lo que el presentador necesita cargado para no disparar N+1. */
+    /**
+     * Las declara `PedidoDeLaAppResource`, que es quien las lee.
+     *
+     * Esta lista estaba completa y la del otro controlador que usa el mismo
+     * presentador no: le faltaba `domiciliary.user`. Dos copias de la misma
+     * lista es tenerla mal en una de las dos.
+     */
     private function relaciones(): array
     {
-        return [
-            'business',
-            'details.product',
-            'buyer.user',
-            'promotions',
-            'payments',
-            'domiciliary.user',
-            'address.municipality.department.country',
-            'address.alias',
-        ];
+        return PedidoDeLaAppResource::relaciones();
     }
 }

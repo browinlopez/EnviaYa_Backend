@@ -1,8 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Usuario\UsuarioResource;
 use App\Models\User;
 use Illuminate\Http\Request;
 
@@ -53,20 +56,20 @@ class AccesoBiometricoController extends Controller
         $token = $user->createToken(self::NOMBRE_TOKEN, [self::HABILIDAD])->plainTextToken;
 
         $user->tokens()->latest('id')->limit(1)->update([
-            'ip'         => $request->ip(),
+            'ip' => $request->ip(),
             'user_agent' => substr((string) $request->userAgent(), 0, 255),
         ]);
 
         return response()->json([
             'message' => 'Acceso con huella activado.',
-            'token'   => $token,
+            'token' => $token,
             // Lo justo para que la pantalla de inicio pueda decir "Entrar como
             // Browin" sin haber abierto sesión todavía. Ni correo ni teléfono:
             // un nombre en una pantalla bloqueada es bastante menos que eso.
-            'perfil'  => [
+            'perfil' => [
                 'user_id' => $user->user_id,
-                'nombre'  => $user->name,
-                'rol'     => $user->rol,
+                'nombre' => $user->name,
+                'rol' => $user->rol,
             ],
         ]);
     }
@@ -81,10 +84,10 @@ class AccesoBiometricoController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->state) {
+        if (! $user->state) {
             return response()->json([
                 'message' => 'Tu cuenta está deshabilitada. Comunícate con el administrador.',
-                'reason'  => 'account_disabled',
+                'reason' => 'account_disabled',
             ], 403);
         }
 
@@ -95,7 +98,7 @@ class AccesoBiometricoController extends Controller
          * cambio de correo, por ejemplo—. Saltarse esa puerta acá sería dejar
          * una entrada lateral a una comprobación que existe por algo.
          */
-        if (!$user->hasVerifiedEmail()) {
+        if (! $user->hasVerifiedEmail()) {
             return response()->json([
                 'message' => 'Debes verificar tu correo antes de iniciar sesión',
             ], 403);
@@ -104,7 +107,7 @@ class AccesoBiometricoController extends Controller
         $token = $user->createToken('auth_token')->plainTextToken;
 
         $user->tokens()->latest('id')->limit(1)->update([
-            'ip'         => $request->ip(),
+            'ip' => $request->ip(),
             'user_agent' => substr((string) $request->userAgent(), 0, 255),
         ]);
 
@@ -119,7 +122,7 @@ class AccesoBiometricoController extends Controller
         }
 
         return response()->json([
-            'user'  => $user,
+            'user' => new UsuarioResource($user),
             'token' => $token,
         ]);
     }

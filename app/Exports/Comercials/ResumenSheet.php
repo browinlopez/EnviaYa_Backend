@@ -1,23 +1,26 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Exports\Comercials;
 
-use App\Models\Order\OrdersSales;
 use App\Models\Business;
+use App\Models\Order\OrdersSales;
 use Maatwebsite\Excel\Concerns\FromArray;
-use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\WithTitle;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class ResumenSheet implements FromArray, WithTitle, WithStyles
+class ResumenSheet implements FromArray, WithStyles, WithTitle
 {
     protected $start;
+
     protected $end;
 
     public function __construct($start, $end)
     {
         $this->start = $start;
-        $this->end   = $end;
+        $this->end = $end;
     }
 
     public function array(): array
@@ -80,6 +83,7 @@ class ResumenSheet implements FromArray, WithTitle, WithStyles
     public function styles(Worksheet $sheet)
     {
         $sheet->getStyle('A1:B1')->getFont()->setBold(true);
+
         return [];
     }
 }

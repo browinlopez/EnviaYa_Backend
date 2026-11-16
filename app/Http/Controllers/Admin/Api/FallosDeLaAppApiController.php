@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
@@ -53,9 +55,9 @@ class FallosDeLaAppApiController extends Controller
             $q,
             buscables: ['e.mensaje', 'e.pantalla', 'u.name', 'u.email'],
             ordenables: [
-                'id'          => 'e.id',
-                'created_at'  => 'e.created_at',
-                'pantalla'    => 'e.pantalla',
+                'id' => 'e.id',
+                'created_at' => 'e.created_at',
+                'pantalla' => 'e.pantalla',
                 'app_version' => 'e.app_version',
             ],
             ordenPorDefecto: 'created_at',
@@ -89,9 +91,9 @@ class FallosDeLaAppApiController extends Controller
             ->get();
 
         return response()->json([
-            'desde'   => $desde->toIso8601String(),
-            'total'   => DB::table('client_errors')->where('created_at', '>=', $desde)->count(),
-            'grupos'  => $filas,
+            'desde' => $desde->toIso8601String(),
+            'total' => DB::table('client_errors')->where('created_at', '>=', $desde)->count(),
+            'grupos' => $filas,
             /*
              * Por version, para responder «¿esto lo trajo la ultima entrega?».
              * Es la primera pregunta despues de publicar.

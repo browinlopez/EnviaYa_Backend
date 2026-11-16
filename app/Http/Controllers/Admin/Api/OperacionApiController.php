@@ -1,23 +1,21 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Operacion\DomiciliaryDocument;
-use App\Models\Operacion\LandingRequest;
-use App\Models\Operacion\Pqrs;
-use App\Models\Operacion\PqrsNote;
-use App\Models\Operacion\SafetyIncident;
+use App\Http\Requests\Admin\ActualizarLiquidacionRequest;
+use App\Http\Requests\Admin\FiltrarLiquidacionesRequest;
+use App\Http\Requests\Admin\GenerarLiquidacionRequest;
 use App\Models\Operacion\Settlement;
 use App\Services\LiquidacionService;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use App\Support\FiltroDeFechas;
 use RuntimeException;
 
 class OperacionApiController extends Controller
 {
-
-    public function liquidaciones(Request $request)
+    public function liquidaciones(FiltrarLiquidacionesRequest $request)
     {
         $q = Settlement::query()
             ->leftJoin('business as b', 'b.busines_id', '=', 'settlements.business_id')
@@ -48,10 +46,10 @@ class OperacionApiController extends Controller
             'summary' => [
                 'por_pagar' => (float) Settlement::whereIn('state', [Settlement::BORRADOR, Settlement::APROBADA])
                     ->sum('net_payable'),
-                'pagado_mes' => (float) Settlement::where('state', Settlement::PAGADA)
-                    ->whereMonth('paid_at', now()->month)
-                    ->whereYear('paid_at', now()->year)
-                    ->sum('net_payable'),
+                'pagado_mes' => (float) FiltroDeFechas::elMes(
+                    Settlement::where('state', Settlement::PAGADA),
+                    'paid_at', (int) now()->year, (int) now()->month,
+                )->sum('net_payable'),
                 'borradores' => Settlement::where('state', Settlement::BORRADOR)->count(),
             ],
         ]);
@@ -64,14 +62,9 @@ class OperacionApiController extends Controller
         return response()->json($s);
     }
 
-    public function generarLiquidacion(Request $request, LiquidacionService $servicio)
+    public function generarLiquidacion(GenerarLiquidacionRequest $request, LiquidacionService $servicio)
     {
-        $datos = $request->validate([
-            'type'         => 'required|in:business,domiciliary',
-            'target_id'    => 'required|integer',
-            'period_start' => 'required|date',
-            'period_end'   => 'required|date|after_or_equal:period_start',
-        ]);
+        $datos = $request->validated();
 
         try {
             $liq = $servicio->generar(
@@ -89,25 +82,21 @@ class OperacionApiController extends Controller
 
         return response()->json([
             'message' => "Liquidación generada con {$liq->orders_count} pedido(s).",
-            'id'      => $liq->id,
+            'id' => $liq->id,
         ], 201);
     }
 
-    public function updateLiquidacion(Request $request, $id)
+    public function updateLiquidacion(ActualizarLiquidacionRequest $request, $id)
     {
         $s = Settlement::findOr($id, fn () => abort(404, 'La liquidación no existe.'));
 
-        $datos = $request->validate([
-            'state'             => 'sometimes|integer|in:0,1,2,3',
-            'payment_reference' => 'sometimes|nullable|string|max:100',
-            'notes'             => 'sometimes|nullable|string|max:500',
-        ]);
+        $datos = $request->validated();
 
         $nuevo = (int) ($datos['state'] ?? $s->state);
 
         // Una vez aprobada, los montos son constancia. Solo se admite avanzar
         // en el ciclo o anular; volver a borrador reabriría lo ya facturado.
-        if (!$s->editable() && $nuevo < $s->state && $nuevo !== Settlement::ANULADA) {
+        if (! $s->editable() && $nuevo < $s->state && $nuevo !== Settlement::ANULADA) {
             return response()->json([
                 'message' => 'Una liquidación aprobada no vuelve a borrador. Anúlala y genera una nueva.',
             ], 422);
@@ -136,7 +125,7 @@ class OperacionApiController extends Controller
     {
         $s = Settlement::findOr($id, fn () => abort(404, 'La liquidación no existe.'));
 
-        if (!$s->editable()) {
+        if (! $s->editable()) {
             return response()->json([
                 'message' => 'Solo se puede eliminar una liquidación en borrador. Si ya se aprobó, anúlala.',
             ], 422);

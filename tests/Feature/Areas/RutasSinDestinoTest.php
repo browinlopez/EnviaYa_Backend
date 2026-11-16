@@ -20,18 +20,19 @@ test('cada ruta de la API resuelve a un metodo que existe', function () {
         $accion = $ruta->getAction('uses');
 
         // Closures: no hay nada que comprobar.
-        if (!is_string($accion) || !str_contains($accion, '@')) {
+        if (! is_string($accion) || ! str_contains($accion, '@')) {
             continue;
         }
 
         [$clase, $metodo] = explode('@', $accion, 2);
 
-        if (!class_exists($clase)) {
+        if (! class_exists($clase)) {
             $rotas[] = "{$ruta->uri()} → la clase {$clase} no existe";
+
             continue;
         }
 
-        if (!method_exists($clase, $metodo)) {
+        if (! method_exists($clase, $metodo)) {
             $rotas[] = "{$ruta->uri()} → {$clase}::{$metodo}() no existe";
         }
     }
@@ -46,19 +47,19 @@ test('cada ruta de la API resuelve a un metodo que existe', function () {
  * escrito revienta en tiempo de petición, no al arrancar.
  */
 test('cada middleware con nombre existe', function () {
-    $router  = app('router');
-    $alias   = $router->getMiddleware();
-    $faltan  = [];
+    $router = app('router');
+    $alias = $router->getMiddleware();
+    $faltan = [];
 
     foreach ($alias as $nombre => $clase) {
-        if (!class_exists($clase)) {
+        if (! class_exists($clase)) {
             $faltan[] = "{$nombre} → {$clase}";
         }
     }
 
     foreach (Route::getRoutes() as $ruta) {
         foreach ($ruta->gatherMiddleware() as $mw) {
-            if (!is_string($mw)) {
+            if (! is_string($mw)) {
                 continue;
             }
 

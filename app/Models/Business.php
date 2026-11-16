@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use App\Models\Audit\Audit;
@@ -10,12 +12,39 @@ use App\Models\Owner\Owner;
 use App\Models\Product\Product;
 use App\Models\Product\ProductBusiness;
 use App\Models\Reviews\BusinessReview;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
+/**
+ * EL NEGOCIO.
+ *
+ * Las dos columnas de la pausa van anotadas porque Larastan no las ve: sus
+ * moldes estan en el metodo `casts()` --la forma de Laravel 11-- y esta
+ * version de Larastan solo lee la PROPIEDAD `$casts`. Sin la anotacion, cree
+ * que son cadenas y da «Cannot call method toIso8601String() on string» en un
+ * sitio donde en ejecucion hay un Carbon. Comprobado: hay una fila con
+ * `accepting_changed_at` y el modelo devuelve `Illuminate\Support\Carbon`.
+ *
+ * `recibiendo_ahora` es un accessor, no una columna: ver `recibiendoAhora()`.
+ *
+ * PENDIENTE, y no es cosa de este modelo: `scripts/anotar_modelos.php` escribe
+ * el bloque `@property` de los setenta modelos leyendo las migraciones, y
+ * NUNCA SE HA CORRIDO --`ya tenian @property: 0`--. El guion llevaba roto por
+ * el orden de los `use` y nadie lo llamaba. Correrlo quitaria buena parte de
+ * las supresiones que quedan en el baseline, y es su propia tanda.
+ *
+ * @property Carbon|null $accepting_until
+ * @property Carbon|null $accepting_changed_at
+ * @property bool $recibiendo_ahora
+ */
 class Business extends Audit
 {
     protected $table = 'business';
+
     protected $primaryKey = 'busines_id';
+
     /*
      * Ahora sí lleva `created_at` / `updated_at`.
      *
@@ -38,10 +67,9 @@ class Business extends Audit
         'longitude',
         'qualification',
         'razonSocial_DCD',
-        "municipality_id",
+        'municipality_id',
         'NIT',
         'logo',
-        'city',
         'type',
         'state',
         /*
@@ -73,9 +101,9 @@ class Business extends Audit
         return [
             // Sin esto llega como "1"/"0" y el panel pinta un interruptor
             // encendido con la cadena "0", que es verdadera en JavaScript.
-            'accepting_orders'     => 'boolean',
+            'accepting_orders' => 'boolean',
             'accepting_changed_at' => 'datetime',
-            'accepting_until'      => 'datetime',
+            'accepting_until' => 'datetime',
         ];
     }
 
@@ -116,7 +144,8 @@ class Business extends Audit
         });
     }
 
-    public function owners()
+    /** @return BelongsToMany<Owner, $this> */
+    public function owners(): BelongsToMany
     {
         return $this->belongsToMany(
             Owner::class,
@@ -126,28 +155,87 @@ class Business extends Audit
         )->withPivot('state');
     }
 
-    public function municipality()
+    /** @return BelongsTo<Municipality, $this> */
+    public function municipality(): BelongsTo
     {
-        return $this->belongsTo(Municipality::class, 'municipality_id', 'id'); // ajusta según tu pk de municipalities
+        return $this->belongsTo(Municipality::class, 'municipality_id', 'id');
     }
 
-    //relaciones
-    public function products()
+    // relaciones
+    /**
+     * El surtido de la tienda, con las columnas del par tienda-producto.
+     *
+     * LAS TRES ÚLTIMAS SON EL ARREGLO DE LA VENTA AL PESO, y conviene saber
+     * qué pasaba sin ellas.
+     *
+     * `sale_unit`, `min_qty` y `step_qty` están en `products_business` desde
+     * la migración del peso, y dos sitios las leen —la ficha del negocio y el
+     * listado de destacados— con la forma `$product->pivot->sale_unit ??
+     * 'unidad'`. Pero no estaban en este `withPivot`, así que la relación no
+     * las traía: el pivote llegaba sin esas claves, el `??` se disparaba
+     * siempre y la respuesta decía `unidad` aunque la tienda hubiera
+     * configurado kilos.
+     *
+     * NO DABA NINGÚN ERROR. Un pivote al que le falta una columna devuelve
+     * null, no revienta, así que el camino entero —migración, columna,
+     * lectura, serialización— estaba bien escrito y no funcionaba.
+     *
+     * Medido antes de tocarlo, de dos maneras: una prueba que siembra un
+     * producto en `kg` y recibía `unidad`, y a mano contra la base de
+     * desarrollo —se puso una fila a `kg`, se cargó por la relación y salió
+     * `NULL`—.
+     *
+     * LO QUE ARREGLA, EN PANTALLA:
+     *
+     *  · la app recibe la unidad de verdad, que es con lo que decide si
+     *    ofrece el +/- de unidades o los botones de plata y de porción
+     *    —«3.000 de queso», «500 g»—;
+     *  · y la ficha del negocio deja de etiquetar como «en promoción» lo que
+     *    se vende al peso. Ese filtro es
+     *    `in_array($pivot->sale_unit, ['kg','libra','gramo'])` y, viendo
+     *    siempre `unidad`, nunca excluía nada: la etiqueta prometía una
+     *    rebaja que el motor de descuentos no aplica a esas líneas, así que
+     *    el cliente llegaba al total esperando otro número.
+     *
+     * NO CAMBIA NINGUNA RESPUESTA DE HOY, y eso también está medido: las 639
+     * filas de `products_business` están en `unidad`, así que no hay ni un
+     * producto al peso configurado todavía. Comprobado byte a byte en los
+     * cuatro endpoints del catálogo. Esto no enciende un comportamiento
+     * nuevo: hace que el que ya existía deje de estar roto el día que alguien
+     * lo use.
+     *
+     * `stock_weight` NO se añade. Es la existencia en kilos y la escribe y la
+     * lee `ExistenciasDelPedido` por `DB::table`, que no pasa por aquí; traer
+     * una columna que nadie lee desde la relación es peso en cada consulta
+     * del catálogo, que es la lectura de más tráfico de la plataforma.
+     *
+     * @return BelongsToMany<Product, $this>
+     */
+    public function products(): BelongsToMany
     {
         return $this->belongsToMany(
             Product::class,
             'products_business',
             'busines_id',
             'products_id'
-        )->withPivot(['price', 'amount', 'qualification']);
+        )->withPivot([
+            'price',
+            'amount',
+            'qualification',
+            'sale_unit',
+            'min_qty',
+            'step_qty',
+        ]);
     }
 
-    public function orders()
+    /** @return HasMany<OrdersSales, $this> */
+    public function orders(): HasMany
     {
         return $this->hasMany(OrdersSales::class, 'busines_id', 'busines_id');
     }
 
-    public function reviews()
+    /** @return HasMany<BusinessReview, $this> */
+    public function reviews(): HasMany
     {
         return $this->hasMany(
             BusinessReview::class,
@@ -156,24 +244,27 @@ class Business extends Audit
         );
     }
 
-
-    public function productBusinesses()
+    /** @return HasMany<ProductBusiness, $this> */
+    public function productBusinesses(): HasMany
     {
         return $this->hasMany(ProductBusiness::class, 'busines_id', 'busines_id');
     }
 
-    public function domiciliaries()
+    /** @return BelongsToMany<Domiciliary, $this> */
+    public function domiciliaries(): BelongsToMany
     {
         return $this->belongsToMany(Domiciliary::class, 'business_domiciliary', 'busines_id', 'domiciliary_id')
             ->withPivot('state');
     }
 
-    public function usersWhoFavorite()
+    /** @return BelongsToMany<User, $this> */
+    public function usersWhoFavorite(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'business_user_favorites', 'busines_id', 'user_id');
     }
 
-    public function category()
+    /** @return BelongsTo<CategoryBusiness, $this> */
+    public function category(): BelongsTo
     {
         return $this->belongsTo(CategoryBusiness::class, 'type', 'id');
     }

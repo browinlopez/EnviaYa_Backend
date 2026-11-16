@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Imports\ProductBusinessImport;
 use App\Imports\ProductsImport;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -21,6 +20,6 @@ class ProductFromExcelSeeder extends Seeder
         /* Excel::import(new ProductsImport, $productsPath); */
 
         Excel::import(new ProductBusinessImport, $businessPath);
-        
+
     }
 }

@@ -15,14 +15,13 @@ use Laravel\Sanctum\Sanctum;
  * que no se emita dos veces, que no se emita antes de tiempo, que el número no
  * tenga huecos y que lo anulado deje de contar sin desaparecer.
  */
-
 function comoAreaFactura(string $codigo, string $nivel = Area::NIVEL_GESTOR): User
 {
     Rol::firstOrCreate(['rol_id' => 4], ['name' => 'admin', 'guard_name' => 'web']);
 
     $user = User::factory()->create([
-        'rol'          => 4,
-        'area_id'      => Area::where('code', $codigo)->firstOrFail()->id,
+        'rol' => 4,
+        'area_id' => Area::where('code', $codigo)->firstOrFail()->id,
         'access_level' => $nivel,
     ]);
 
@@ -39,17 +38,17 @@ function pedidoConEntrega(int $total = 50000, int $estado = 4): int
     ], 'busines_id');
 
     $pedido = (int) DB::table('orderssales')->insertGetId([
-        'busines_id'      => $negocio,
-        'subtotal'        => $total - 5000,
-        'domicilio'       => 5000,
-        'discount'        => 0,
+        'busines_id' => $negocio,
+        'subtotal' => $total - 5000,
+        'domicilio' => 5000,
+        'discount' => 0,
         'domiciliary_fee' => 1250,
-        'total'           => $total,
-        'currency'        => 'COP',
-        'sale_date'       => now()->subDay(),
-        'delivery_date'   => $estado === 4 ? now() : null,
-        'state'           => $estado,
-        'payment_state'   => 'approved',
+        'total' => $total,
+        'currency' => 'COP',
+        'sale_date' => now()->subDay(),
+        'delivery_date' => $estado === 4 ? now() : null,
+        'state' => $estado,
+        'payment_state' => 'approved',
     ], 'orderSales_id');
 
     $producto = DB::table('products')->insertGetId([
@@ -58,9 +57,9 @@ function pedidoConEntrega(int $total = 50000, int $estado = 4): int
 
     DB::table('orderssales_detail')->insert([
         'orderSales_id' => $pedido,
-        'product_id'    => $producto,
-        'amount'        => 2,
-        'unit_price'    => ($total - 5000) / 2,
+        'product_id' => $producto,
+        'amount' => 2,
+        'unit_price' => ($total - 5000) / 2,
     ]);
 
     return $pedido;
@@ -334,7 +333,7 @@ it('anula VARIOS con el mismo motivo y salta los ya anulados', function () {
     $facturas->anular($tres, 'Anulado antes.', null);
 
     $r = $this->putJson('/v1/admin/invoices/anular-lote', [
-        'ids'    => [$uno->invoice_id, $dos->invoice_id, $tres->invoice_id],
+        'ids' => [$uno->invoice_id, $dos->invoice_id, $tres->invoice_id],
         'motivo' => 'Se facturó dos veces el corte del 12.',
     ])->assertOk();
 
@@ -358,7 +357,7 @@ it('el lote también exige un motivo y tiene techo', function () {
 
     // Sin techo, un identificador de más por descuido anula sin límite.
     $this->putJson('/v1/admin/invoices/anular-lote', [
-        'ids'    => range(1, 51),
+        'ids' => range(1, 51),
         'motivo' => 'Un motivo suficientemente largo.',
     ])->assertStatus(422);
 
@@ -387,12 +386,12 @@ test('el comprobante no lleva la marca ni el NIT de la plataforma', function () 
     $factura = app(FacturaService::class)->emitirPara(pedidoConEntrega());
 
     $html = view('documentos.factura', [
-        'f'         => $factura,
-        'negocio'   => $factura->snapshot['negocio'] ?? [],
+        'f' => $factura,
+        'negocio' => $factura->snapshot['negocio'] ?? [],
         'comprador' => $factura->snapshot['comprador'] ?? [],
-        'entrega'   => $factura->snapshot['entrega'] ?? [],
+        'entrega' => $factura->snapshot['entrega'] ?? [],
         'renglones' => $factura->snapshot['renglones'] ?? [],
-        'empresa'   => config('services.contrato'),
+        'empresa' => config('services.contrato'),
     ])->render();
 
     expect($html)->not->toContain("VeciPa'Ya")
@@ -403,12 +402,12 @@ test('dice vendido y no entregado', function () {
     $factura = app(FacturaService::class)->emitirPara(pedidoConEntrega());
 
     $html = view('documentos.factura', [
-        'f'         => $factura,
-        'negocio'   => $factura->snapshot['negocio'] ?? [],
+        'f' => $factura,
+        'negocio' => $factura->snapshot['negocio'] ?? [],
         'comprador' => $factura->snapshot['comprador'] ?? [],
-        'entrega'   => $factura->snapshot['entrega'] ?? [],
+        'entrega' => $factura->snapshot['entrega'] ?? [],
         'renglones' => $factura->snapshot['renglones'] ?? [],
-        'empresa'   => config('services.contrato'),
+        'empresa' => config('services.contrato'),
     ])->render();
 
     expect($html)->toContain('Comprobante de venta')

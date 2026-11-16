@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use App\Events\OrderCreated;
@@ -48,12 +50,12 @@ class AvisoDePedidoNuevo
             // Perder el aviso es molesto; perder el pedido, no.
             Log::warning('No se pudo anunciar el pedido nuevo', [
                 'order_id' => $order->orderSales_id,
-                'error'    => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
         }
 
-        $mensaje = 'Pedido nuevo #' . $order->orderSales_id
-            . ' por $' . number_format((float) $order->total, 0, ',', '.') . '.';
+        $mensaje = 'Pedido nuevo #'.$order->orderSales_id
+            .' por $'.number_format((float) $order->total, 0, ',', '.').'.';
 
         /*
          * A CADA DUEÑO, y no solo al primero: un negocio puede tener varios, y
@@ -63,7 +65,7 @@ class AvisoDePedidoNuevo
          * cómo llega, solo a quién.
          */
         foreach ($order->business?->owners ?? [] as $duenio) {
-            if (!$duenio->user_id) {
+            if (! $duenio->user_id) {
                 continue;
             }
 

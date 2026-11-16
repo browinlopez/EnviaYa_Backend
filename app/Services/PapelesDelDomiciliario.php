@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use App\Models\Domiciliary;
@@ -21,10 +23,10 @@ class PapelesDelDomiciliario
     public const REQUERIDOS = ['cedula', 'licencia', 'soat'];
 
     private const ROTULOS = [
-        'acuerdo'  => 'el acuerdo firmado',
-        'cedula'   => 'la cédula',
+        'acuerdo' => 'el acuerdo firmado',
+        'cedula' => 'la cédula',
         'licencia' => 'la licencia',
-        'soat'     => 'el SOAT',
+        'soat' => 'el SOAT',
     ];
 
     /** Si la regla le aplica: lo creó una tienda. */
@@ -36,7 +38,7 @@ class PapelesDelDomiciliario
     /** Las claves de lo que falta: 'acuerdo', 'cedula', 'licencia', 'soat'. */
     public function faltantes(Domiciliary $d): array
     {
-        if (!$this->leAplica($d)) {
+        if (! $this->leAplica($d)) {
             return [];
         }
 
@@ -51,7 +53,7 @@ class PapelesDelDomiciliario
             ->all();
 
         foreach (self::REQUERIDOS as $tipo) {
-            if (!in_array($tipo, $vigentes, true)) {
+            if (! in_array($tipo, $vigentes, true)) {
                 $faltan[] = $tipo;
             }
         }
@@ -68,6 +70,6 @@ class PapelesDelDomiciliario
             return $t[0] ?? '';
         }
 
-        return implode(', ', array_slice($t, 0, -1)) . ' y ' . end($t);
+        return implode(', ', array_slice($t, 0, -1)).' y '.end($t);
     }
 }

@@ -1,103 +1,33 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
-use App\Models\Buyer\Buyer;
+use App\Http\Requests\User\ActualizarPerfilRequest;
+use App\Http\Requests\User\CambiarContrasenaRequest;
+use App\Http\Requests\User\DesactivarCuentaRequest;
+use App\Http\Resources\Usuario\UsuarioResource;
 use App\Models\User;
-use App\Models\User\UserAddress;
-use App\Models\Notification;
-use App\Services\MunicipioPorNombre;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
 {
     use ComprobarPertenencia;
 
-    // Listar todos los usuarios con relaciones
-    public function index()
-    {
-        $users = User::with([
-            'buyer.complexes.residentialComplex',
-            'addresses'
-        ])
-            ->where('rol', 4)
-            ->get();
-
-        $formatted = $users->map(function ($user) {
-            return [
-                'user_id'       => $user->user_id,
-                'name'          => $user->name,
-                'email'         => $user->email,
-                'phone'         => $user->phone,
-                'address'       => $user->address,
-                'rol'           => $user->rol,
-                'qualification' => $user->buyer ? $user->buyer->qualification : null,
-                'state'         => $user->state,
-
-                // Buyer directo (sin arreglo)
-                'buyer_id' => $user->buyer ? $user->buyer->buyer_id : null,
-
-                // Complexes simplificado (id y nombre del residencial)
-                'complexes' => $user->buyer && $user->buyer->complexes ? $user->buyer->complexes->map(function ($complex) {
-                    return [
-                        'id'   => $complex->id,
-                        'name' => $complex->residentialComplex ? $complex->residentialComplex->name : null,
-                    ];
-                }) : [],
-
-                // Addresses completo
-                'addresses' => $user->addresses,
-            ];
-        });
-
-        return response()->json($formatted);
-    }
-
-    // Detalle de un usuario
-    public function show(Request $request)
-    {
-        $request->validate([
-            'user_id' => 'required|integer|exists:user,user_id',
-        ]);
-
-        $user = User::with([
-            'buyer.complexes.residentialComplex',
-            'addresses'
-        ])
-            ->where('rol', 4)
-            ->findOrFail($request->user_id);
-
-        $formatted = [
-            'user_id'       => $user->user_id,
-            'name'          => $user->name,
-            'email'         => $user->email,
-            'phone'         => $user->phone,
-            'address'       => $user->address,
-            'rol'           => $user->rol,
-            'qualification' => $user->buyer ? $user->buyer->qualification : null,
-            'state'         => $user->state,
-
-            // Buyer directo (sin arreglo)
-            'buyer_id' => $user->buyer ? $user->buyer->buyer_id : null,
-
-            // Complexes simplificado (id y nombre del residencial)
-            'complexes' => $user->buyer && $user->buyer->complexes ? $user->buyer->complexes->map(function ($complex) {
-                return [
-                    'id'   => $complex->id,
-                    'name' => $complex->residentialComplex ? $complex->residentialComplex->name : null,
-                ];
-            }) : [],
-
-            // Addresses completo
-            'addresses' => $user->addresses,
-        ];
-
-        return response()->json($formatted);
-    }
+    /*
+     * AQUI ESTABA `index()`, que servia `GET /v1/users`: todos los usuarios
+     * con `rol = 4` --el personal-- con su correo, telefono y direccion, y la
+     * ruta solo pedia sesion. Se retiro con la ruta: no la llamaba ningun
+     * cliente en ninguna version publicada ni en los 202 commits de la
+     * historia de la app. El detalle de la medicion esta en `routes/api.php`,
+     * donde estaba la ruta.
+     *
+     * Lo que los paneles usan para esto es
+     * `Admin\\Api\\UsuariosApiController@users`, detras de `modulo:usuarios`.
+     */
 
     // Actualizar usuario
     /**
@@ -109,19 +39,9 @@ class UserController extends Controller
      * Ahora solo se edita el propio perfil y solo los campos de contacto; el
      * rol, la calificación y el estado se gestionan por sus propios flujos.
      */
-    public function update(Request $request)
+    public function update(ActualizarPerfilRequest $request)
     {
         $user = $request->user();
-
-        $request->validate([
-            'name'    => 'nullable|string|max:255',
-            'email'   => 'nullable|email|unique:user,email,' . $user->user_id . ',user_id',
-            'phone'   => 'nullable|string|max:20',
-            'address' => 'nullable|string|max:225',
-            'current_password' => 'nullable|string',
-        ], [
-            'email.unique' => 'Ese correo ya lo usa otra cuenta.',
-        ]);
 
         /*
          * CAMBIAR EL CORREO PIDE LA CONTRASEÑA.
@@ -139,14 +59,14 @@ class UserController extends Controller
         if ($correoNuevo) {
             $clave = (string) $request->input('current_password', '');
 
-            if ($clave === '' || !Hash::check($clave, $user->password)) {
+            if ($clave === '' || ! Hash::check($clave, $user->password)) {
                 $texto = $clave === ''
                     ? 'Para cambiar el correo escribe tu contraseña.'
                     : 'La contraseña no es correcta.';
 
                 return response()->json([
                     'message' => $texto,
-                    'errors'  => ['current_password' => [$texto]],
+                    'errors' => ['current_password' => [$texto]],
                 ], 422);
             }
         }
@@ -162,7 +82,7 @@ class UserController extends Controller
         }
         $user->update($cambios);
 
-        return response()->json($user);
+        return response()->json(new UsuarioResource($user));
     }
 
     /**
@@ -171,19 +91,15 @@ class UserController extends Controller
      * Se exige la contraseña actual: sin eso, quien tuviera el teléfono
      * desbloqueado un momento podría dejar al dueño fuera de su cuenta.
      */
-    public function updatePassword(Request $request)
+    public function updatePassword(CambiarContrasenaRequest $request)
     {
-        $request->validate([
-            'current_password' => 'required|string',
-            'password'         => ['required', 'confirmed', Password::min(8)],
-        ]);
 
         $user = $request->user();
 
-        if (!Hash::check($request->current_password, $user->password)) {
+        if (! Hash::check($request->current_password, $user->password)) {
             return response()->json([
                 'message' => 'La contraseña actual no es correcta',
-                'errors'  => [
+                'errors' => [
                     'current_password' => ['La contraseña actual no es correcta'],
                 ],
             ], 422);
@@ -192,7 +108,7 @@ class UserController extends Controller
         if (Hash::check($request->password, $user->password)) {
             return response()->json([
                 'message' => 'La nueva contraseña debe ser distinta a la actual',
-                'errors'  => [
+                'errors' => [
                     'password' => ['La nueva contraseña debe ser distinta a la actual'],
                 ],
             ], 422);
@@ -212,11 +128,8 @@ class UserController extends Controller
     }
 
     // Eliminar usuario
-    public function desactivate(Request $request)
+    public function desactivate(DesactivarCuentaRequest $request)
     {
-        $request->validate([
-            'email' => 'required|email|exists:user,email',
-        ]);
 
         $user = User::where('email', $request->email)->firstOrFail();
 
@@ -240,42 +153,6 @@ class UserController extends Controller
 
         return response()->json(['message' => 'El usuario ya está desactivado'], 200);
     }
-
-    // Obtener perfil buyer del usuario
-    public function getBuyerProfile(Request $request)
-    {
-        $request->validate([
-            'user_id' => 'required|integer|exists:user,user_id',
-        ]);
-
-        $buyer = Buyer::with([
-            'user:user_id,name,email,phone,address,rol,qualification,state'
-        ])->where('user_id', $request->user_id)->first();
-
-        if (!$buyer) {
-            return response()->json(['message' => 'El usuario no tiene perfil comprador'], 404);
-        }
-
-        $response = [
-            'buyer_id' => $buyer->buyer_id,
-            'user_id' => $buyer->user_id,
-            'qualification' => $buyer->qualification,
-            'state' => $buyer->state,
-            'user' => [
-                'user_id' => $buyer->user->user_id,
-                'name' => $buyer->user->name,
-                'email' => $buyer->user->email,
-                'phone' => $buyer->user->phone,
-                'address' => $buyer->user->address,
-                'rol' => $buyer->user->rol,
-                'qualification' => $buyer->user->qualification,
-                'state' => $buyer->user->state
-            ]
-        ];
-
-        return response()->json($response);
-    }
-
 
     // ----------------------------
     // Notificaciones del usuario

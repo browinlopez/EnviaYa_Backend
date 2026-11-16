@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services\Push;
 
 /**
@@ -18,8 +20,7 @@ class ResultadoPush
         public readonly bool $ok,
         public readonly bool $permanente,
         public readonly ?string $motivo,
-    ) {
-    }
+    ) {}
 
     public static function entregado(): self
     {

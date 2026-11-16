@@ -1,18 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Review;
 
-use App\Http\Controllers\Concerns\ComprobarPertenencia;
-use App\Http\Controllers\Controller;
-use App\Models\Buyer\Buyer;
-use App\Models\Domiciliary;
-use App\Models\Order\OrdersSales;
-use App\Models\Reviews\BusinessReview;
-use App\Models\Reviews\DomiciliaryReview;
-use App\Models\Reviews\UserReview;
-use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Auxiliares que usan varios controladores del panel.
@@ -36,7 +28,7 @@ trait AyudasDeResenas
     {
         $user = $request->user();
 
-        if (!$user) {
+        if (! $user) {
             return false;
         }
 

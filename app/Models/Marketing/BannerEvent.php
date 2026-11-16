@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models\Marketing;
 
 use Illuminate\Database\Eloquent\Model;
@@ -29,10 +31,11 @@ class BannerEvent extends Model
 
     protected $casts = [
         'banner_id' => 'integer',
-        'user_id'   => 'integer',
-        'day'       => 'date',
+        'user_id' => 'integer',
+        'day' => 'date',
     ];
 
+    /** @return BelongsTo<Banner, $this> */
     public function banner(): BelongsTo
     {
         return $this->belongsTo(Banner::class, 'banner_id');

@@ -1,30 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Admin\Api;
 
-use App\Services\Ajustes;
 use App\Http\Controllers\Controller;
-use App\Models\Area;
-use App\Models\Conjunto\ComplexStaff;
-use App\Models\Operacion\DomiciliaryDocument;
-use App\Models\Reviews\BusinessReview;
-use App\Models\Reviews\DomiciliaryReview;
-use App\Models\User;
-use App\Services\BusinessMediaService;
-use App\Services\ContratoService;
-use App\Services\MediaService;
-use App\Services\VinculosDelRol;
 use App\Support\ListadoPaginado;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 
 class AuditoriaApiController extends Controller
 {
-
     public function audits(Request $request)
     {
         $q = DB::table('audits as a')
@@ -48,10 +35,10 @@ class AuditoriaApiController extends Controller
             $q,
             buscables: ['u.name', 'u.email', 'a.auditable_type', 'a.url'],
             ordenables: [
-                'id'         => 'a.id',
-                'event'      => 'a.event',
+                'id' => 'a.id',
+                'event' => 'a.event',
                 'created_at' => 'a.created_at',
-                'user_name'  => 'u.name',
+                'user_name' => 'u.name',
             ],
             ordenPorDefecto: 'id',
             resumen: fn ($f) => $this->resumenDeAuditoria($f),
@@ -69,11 +56,11 @@ class AuditoriaApiController extends Controller
         ");
 
         return [
-            'total'        => (int) ($r->total ?? 0),
-            'creados'      => (int) ($r->creados ?? 0),
+            'total' => (int) ($r->total ?? 0),
+            'creados' => (int) ($r->creados ?? 0),
             'actualizados' => (int) ($r->actualizados ?? 0),
-            'borrados'     => (int) ($r->borrados ?? 0),
-            'personas'     => (int) ($r->personas ?? 0),
+            'borrados' => (int) ($r->borrados ?? 0),
+            'personas' => (int) ($r->personas ?? 0),
         ];
     }
 

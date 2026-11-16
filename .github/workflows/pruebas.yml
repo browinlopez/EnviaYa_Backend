@@ -30,17 +30,17 @@ jobs:
         php: ["8.2", "8.3"]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Preparar PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
         with:
           php-version: ${{ matrix.php }}
           extensions: mbstring, pdo_sqlite, sqlite3, bcmath, gd, zip
           coverage: none
 
       - name: Caché de dependencias
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: vendor
           key: composer-${{ matrix.php }}-${{ hashFiles('composer.lock') }}
@@ -57,5 +57,53 @@ jobs:
       - name: Comprobar la sintaxis de todo el código
         run: find app config database routes tests -name "*.php" -print0 | xargs -0 -n1 php -l > /dev/null
 
+      # `php -l` solo mira la sintaxis: un `implements` a una interfaz sin
+      # importar pasa el lint y revienta al cargar la clase. Pasó con los
+      # siete eventos que difunden.
+      - name: Comprobar que todas las clases cargan
+        run: php scripts/check_classes_load.php
+
+      # Pint estaba instalado y nadie lo corría: 506 archivos se habían ido
+      # separando del preset sin que se viera. Con esto no vuelve a pasar.
+      - name: Formato (Pint)
+        run: ./vendor/bin/pint --test
+
+      # PHPStan con linea base: los 493 hallazgos de hoy estan congelados y lo
+      # que se exige es que el codigo NUEVO salga limpio. El numero solo baja.
+      - name: Analisis estatico (PHPStan + Larastan)
+        run: ./vendor/bin/phpstan analyse --no-progress --memory-limit=1G
+
+      # EL TRINQUETE DE LAS VALIDACIONES.
+      #
+      # El acuerdo escrito era «todo endpoint nuevo o tocado estrena su
+      # FormRequest; el contador solo baja; si sube, el PR no entra», y nada
+      # lo impedia: era una promesa. Esto la cumple.
+      #
+      # Falla si aparece una validacion en linea SIN NINGUN MOTIVO para
+      # estarlo —o sea, con nada ejecutandose antes—, que es la regla literal,
+      # y si el total pasa del tope escrito en el script. Y falla tambien si
+      # el propio detector no pudo medir: sin `route:list` o sin la lista de
+      # rutas sin llamante, el informe sale con buena cara y no ha comprobado
+      # nada, que es peor que no tener compuerta.
+      - name: Validaciones en linea (trinquete)
+        run: python3 scripts/validaciones_en_linea.py --trinquete
+
+      # EL CONTRATO OpenAPI, AL DIA. §34 pide mantenerlo, y un fichero
+      # OpenAPI escrito a mano empieza siendo verdad y deja de serlo con el
+      # primer cambio de ruta que nadie refleja: a partir de ahi es peor que
+      # no tenerlo, porque alguien lo lee y le cree. Se genera del router y
+      # esto comprueba que el fichero del repositorio es el que saldria hoy.
+      # Probado anadiendo una ruta y sin regenerar: sale con 1.
+      - name: Contrato OpenAPI al dia
+        run: php scripts/openapi.php --revisar
+
       - name: Pruebas
         run: php artisan test
+
+      # `composer audit` avisa de dependencias con vulnerabilidad conocida.
+      # NO tumba la compilación todavía: hoy hay 20 avisos en 10 paquetes y un
+      # CI en rojo desde el primer día deja de mirarse. Queda a la vista en el
+      # registro para poder subirlo a bloqueante cuando el número sea cero.
+      - name: Dependencias con vulnerabilidades conocidas
+        continue-on-error: true
+        run: composer audit

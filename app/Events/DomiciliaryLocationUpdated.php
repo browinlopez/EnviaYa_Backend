@@ -1,12 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Events;
 
 use App\Models\Order\OrderGeolocation;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
-use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
 
@@ -112,13 +113,13 @@ class DomiciliaryLocationUpdated implements ShouldBroadcastNow
     public function broadcastWith(): array
     {
         return [
-            'order_id'  => (int) $this->geolocation->orderSales_id,
+            'order_id' => (int) $this->geolocation->orderSales_id,
             // Para la torre, que pinta una moto por domiciliario y no por
             // pedido: sin esto no sabría cuál de los pines mover.
             'domiciliary_id' => (int) $this->geolocation->domiciliary_id,
-            'latitude'  => (float) $this->geolocation->latitude,
+            'latitude' => (float) $this->geolocation->latitude,
             'longitude' => (float) $this->geolocation->longitude,
-            'at'        => optional($this->geolocation->created_at)->toIso8601String(),
+            'at' => optional($this->geolocation->created_at)->toIso8601String(),
         ];
     }
 }

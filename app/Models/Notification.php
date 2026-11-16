@@ -1,8 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Un aviso dirigido a una persona.
@@ -13,7 +16,9 @@ use Illuminate\Database\Eloquent\Model;
 class Notification extends Model
 {
     protected $table = 'notifications';
+
     protected $primaryKey = 'notification_id';
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -28,12 +33,13 @@ class Notification extends Model
 
     protected $casts = [
         'datos' => 'array',
-        'read'  => 'boolean',
+        'read' => 'boolean',
         'state' => 'boolean',
-        'date'  => 'datetime',
+        'date' => 'datetime',
     ];
 
-    public function user()
+    /** @return BelongsTo<User, $this> */
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id', 'user_id');
     }

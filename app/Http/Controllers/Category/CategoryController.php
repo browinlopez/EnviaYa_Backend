@@ -1,21 +1,24 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Category;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Category\ActualizarCategoriaDeProductoRequest;
+use App\Http\Requests\Category\BorrarCategoriaDeProductoRequest;
+use App\Http\Requests\Category\CategoriasDeUnTipoRequest;
+use App\Http\Requests\Category\CrearCategoriaDeProductoRequest;
+use App\Http\Resources\Producto\CategoriaDeProductoResource;
 use App\Models\Product\Category;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class CategoryController extends Controller
 {
     // Listar todas las categorías
-    public function index(Request $request)
+    public function index(CategoriasDeUnTipoRequest $request)
     {
         // Validar que venga el parámetro type
-        $request->validate([
-            'type' => 'required|integer|exists:category_business,id'
-        ]);
 
         $businessType = $request->type;
 
@@ -32,64 +35,41 @@ class CategoryController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'Categorías filtradas correctamente',
-            'data' => $categories
+            'data' => $categories,
         ]);
     }
 
     // Crear nueva categoría
-    public function store(Request $request)
+    public function store(CrearCategoriaDeProductoRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'state' => 'nullable|boolean'
-        ]);
+        $validated = $request->validated();
 
         $category = Category::create($validated);
 
         return response()->json([
             'message' => 'Categoría creada correctamente',
-            'category' => $category
+            'category' => (new CategoriaDeProductoResource($category))->resolve(),
         ], 201);
     }
 
-    // Mostrar categoría específica
-    public function show(Request $request)
-    {
-        $validated = $request->validate([
-            'category_id' => 'required|integer|exists:category,category_id',
-        ]);
-
-        $category = Category::findOrFail($validated['category_id']);
-
-        return response()->json($category);
-    }
-
     // Actualizar categoría
-    public function update(Request $request)
+    public function update(ActualizarCategoriaDeProductoRequest $request)
     {
-        $validated = $request->validate([
-            'category_id' => 'required|integer|exists:category,category_id',
-            'name' => 'nullable|string|max:255',
-            'description' => 'nullable|string',
-            'state' => 'nullable|boolean'
-        ]);
+        $validated = $request->validated();
 
         $category = Category::findOrFail($validated['category_id']);
         $category->update($request->only(['name', 'description', 'state']));
 
         return response()->json([
             'message' => 'Categoría actualizada correctamente',
-            'category' => $category
+            'category' => (new CategoriaDeProductoResource($category))->resolve(),
         ]);
     }
 
     // Eliminar categoría
-    public function destroy(Request $request)
+    public function destroy(BorrarCategoriaDeProductoRequest $request)
     {
-        $validated = $request->validate([
-            'category_id' => 'required|integer|exists:category,category_id',
-        ]);
+        $validated = $request->validated();
 
         $category = Category::findOrFail($validated['category_id']);
         $category->delete();

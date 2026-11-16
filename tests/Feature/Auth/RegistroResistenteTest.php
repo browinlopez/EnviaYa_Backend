@@ -13,7 +13,6 @@ use Illuminate\Support\Facades\Mail;
  * PRODUCCIÓN y se encontraron intentando crear una cuenta de verdad contra
  * `api.vecipaya.com`, que respondió «Server Error».
  */
-
 beforeEach(function () {
     Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
 });
@@ -30,8 +29,8 @@ test('registrarse sin decir si vive en un conjunto no revienta', function () {
      * estaba latente esperando a cualquier otro cliente.
      */
     $r = $this->postJson('/v1/register', [
-        'name'     => 'Sin Bandera',
-        'email'    => 'sin.bandera@ejemplo.com',
+        'name' => 'Sin Bandera',
+        'email' => 'sin.bandera@ejemplo.com',
         'password' => '12345678',
         // El registro exige la autorizacion de datos (Ley 1581).
         'consentimiento' => true,
@@ -58,11 +57,11 @@ test('si el correo de verificacion falla, la cuenta igual queda creada', functio
      * crearla, y al reintentar con el mismo correo recibía «ya está
      * registrado» sobre una cuenta que no existía.
      */
-    Mail::shouldReceive('to')->andThrow(new \RuntimeException('SMTP caído'));
+    Mail::shouldReceive('to')->andThrow(new RuntimeException('SMTP caído'));
 
     $r = $this->postJson('/v1/register', [
-        'name'     => 'Correo Caido',
-        'email'    => 'correo.caido@ejemplo.com',
+        'name' => 'Correo Caido',
+        'email' => 'correo.caido@ejemplo.com',
         'password' => '12345678',
         'belongs_to_complex' => false,
         // El registro exige la autorizacion de datos (Ley 1581).
@@ -80,8 +79,8 @@ test('el registro normal manda el correo y lo dice', function () {
     Mail::fake();
 
     $r = $this->postJson('/v1/register', [
-        'name'     => 'Con Correo',
-        'email'    => 'con.correo@ejemplo.com',
+        'name' => 'Con Correo',
+        'email' => 'con.correo@ejemplo.com',
         'password' => '12345678',
         'belongs_to_complex' => false,
         // El registro exige la autorizacion de datos (Ley 1581).
@@ -137,9 +136,9 @@ test('reenviar la verificacion no revienta si el correo falla', function () {
      * contra produccion— con lo que recibia otro error sin saber si el
      * problema era suyo o del servidor.
      */
-    Mail::shouldReceive('to')->andThrow(new \RuntimeException('SMTP caído'));
+    Mail::shouldReceive('to')->andThrow(new RuntimeException('SMTP caído'));
 
-    $r = $this->postJson('/v1/email/resend-verification', [
+    $r = $this->postJson('/v1/resend-verification-email', [
         'email' => 'sin.verificar@ejemplo.com',
     ]);
 
@@ -152,10 +151,23 @@ test('un correo que no existe no delata si esta registrado', function () {
     Mail::fake();
 
     /*
-     * Respuesta identica para el que existe y el que no: si se distinguieran,
-     * este endpoint seria una forma de averiguar quien tiene cuenta.
+     * LO QUE ESTO FIJA, Y LO QUE NO.
+     *
+     * Fija que un correo que NO existe recibe 200 y el mensaje genérico,
+     * o sea que no se delata por un 404 ni por un error.
+     *
+     * NO FIJA que la respuesta sea idéntica para el que sí existe, que
+     * es lo que este comentario afirmaba. Y no lo es: uno registrado y
+     * ya verificado recibe «El correo ya está verificado», distinto, así
+     * que con esta ruta se puede averiguar si una dirección tiene
+     * cuenta. Comparar los dos mensajes aquí pondría esta prueba en
+     * rojo, que es por lo que no se hace sin decidir primero el texto:
+     * está en `docs/laravel-12/ANTES-DE-EMPUJAR.md`.
+     *
+     * El nombre de la prueba sí era exacto desde el principio; era el
+     * comentario el que prometía más de lo que hay.
      */
-    $r = $this->postJson('/v1/email/resend-verification', [
+    $r = $this->postJson('/v1/resend-verification-email', [
         'email' => 'nadie@ejemplo.com',
     ]);
 
@@ -195,7 +207,7 @@ test('pulsar el enlace dos veces no dice que sea invalido', function () {
 test('un enlace de un correo anterior lo dice sin asustar', function () {
     Mail::fake();
 
-    $r = $this->get('/verify-email?token=' . str_repeat('x', 60));
+    $r = $this->get('/verify-email?token='.str_repeat('x', 60));
 
     $r->assertOk();
 

@@ -1,5 +1,16 @@
 <?php
 
+use Spatie\Backup\Notifications\Notifiable;
+use Spatie\Backup\Notifications\Notifications\BackupHasFailedNotification;
+use Spatie\Backup\Notifications\Notifications\BackupWasSuccessfulNotification;
+use Spatie\Backup\Notifications\Notifications\CleanupHasFailedNotification;
+use Spatie\Backup\Notifications\Notifications\CleanupWasSuccessfulNotification;
+use Spatie\Backup\Notifications\Notifications\HealthyBackupWasFoundNotification;
+use Spatie\Backup\Notifications\Notifications\UnhealthyBackupWasFoundNotification;
+use Spatie\Backup\Tasks\Cleanup\Strategies\DefaultStrategy;
+use Spatie\Backup\Tasks\Monitor\HealthChecks\MaximumAgeInDays;
+use Spatie\Backup\Tasks\Monitor\HealthChecks\MaximumStorageInMegabytes;
+
 /*
 |--------------------------------------------------------------------------
 | COPIAS DE SEGURIDAD
@@ -15,7 +26,6 @@
 | es perder el servidor.
 |
 */
-
 
 return [
 
@@ -218,27 +228,86 @@ return [
      * the `Spatie\Backup\Notifications\Notifications` classes.
      */
     'notifications' => [
+        /*
+         * CUIDADO AL DESACTIVAR UNO DE ESTOS: la clave se queda, la lista de
+         * canales se vacía.
+         *
+         * `Notifications\EventHandler::subscribe()` se suscribe a los SEIS
+         * eventos pase lo que pase, y `determineNotification()` lanza
+         * `NotificationCouldNotBeSent` cuando el evento no encuentra su clase
+         * aquí. O sea que BORRAR una línea no silencia el aviso: tumba el
+         * comando que lo emite. `backup:monitor` con una copia sana se caería.
+         * Con `=> []`, `BaseNotification::via()` devuelve un array vacío y
+         * Laravel no manda nada, que es lo que se quería.
+         */
         'notifications' => [
-            \Spatie\Backup\Notifications\Notifications\BackupHasFailedNotification::class => ['mail'],
-            \Spatie\Backup\Notifications\Notifications\UnhealthyBackupWasFoundNotification::class => ['mail'],
-            \Spatie\Backup\Notifications\Notifications\CleanupHasFailedNotification::class => ['mail'],
-            \Spatie\Backup\Notifications\Notifications\BackupWasSuccessfulNotification::class => ['mail'],
-            \Spatie\Backup\Notifications\Notifications\HealthyBackupWasFoundNotification::class => ['mail'],
-            \Spatie\Backup\Notifications\Notifications\CleanupWasSuccessfulNotification::class => ['mail'],
+            // Los cuatro que importan: algo salió mal, o lleva más de un día
+            // sin copia.
+            BackupHasFailedNotification::class => ['mail'],
+            UnhealthyBackupWasFoundNotification::class => ['mail'],
+            CleanupHasFailedNotification::class => ['mail'],
+
+            /*
+             * Este se queda a propósito, y es el único «todo bien» que se
+             * manda: es el latido. Si el cron entero muere, ningún aviso
+             * puede salir de dentro de la aplicación —no hay nada que lo
+             * dispare— y la única señal posible es que alguien eche en falta
+             * el correo de cada mañana.
+             */
+            BackupWasSuccessfulNotification::class => ['mail'],
+
+            // Redundantes con el latido de arriba: dos correos diarios más
+            // que dicen que no pasa nada. Tres «todo bien» al día es la
+            // forma más rápida de que nadie lea el cuarto, que es el que
+            // avisa del fallo.
+            HealthyBackupWasFoundNotification::class => [],
+            CleanupWasSuccessfulNotification::class => [],
         ],
 
         /*
          * Here you can specify the notifiable to which the notifications should be sent. The default
          * notifiable will use the variables specified in this config file.
          */
-        'notifiable' => \Spatie\Backup\Notifications\Notifiable::class,
+        'notifiable' => Notifiable::class,
 
         'mail' => [
-            'to' => 'your@example.com',
+            /*
+             * ESTO ERA `your@example.com`, el valor que trae el paquete.
+             *
+             * No es que no llegara el aviso: es que el aviso de que la copia
+             * de seguridad FALLÓ se mandaba a una dirección que no existe,
+             * desde `gerencia@vecipaya.com`. Dos consecuencias, y la segunda
+             * es peor que la primera: nadie se entera de que no hay copia, y
+             * cada fallo genera un rebote contra el propio dominio, que es de
+             * donde salen los correos de los pedidos.
+             *
+             * Comprobado con la aplicación en marcha, no leyendo este archivo:
+             * `app(Notifiable::class)->routeNotificationForMail()` devolvía
+             * `your@example.com`.
+             */
+            /*
+             * `?:` Y NO EL SEGUNDO ARGUMENTO DE `env()`, y es la
+             * diferencia entre arrancar y no arrancar. El defecto de
+             * `env()` solo entra cuando la clave NO ESTA; con
+             * `BACKUP_MAIL_TO=` vacia —como viene en `.env.example`—
+             * llega una cadena vacía, Spatie la valida como correo y
+             * lanza `InvalidConfig` antes de que arranque nada. Tumbó
+             * el CI entero el 16 de noviembre de 2026.
+             */
+            'to' => env('BACKUP_MAIL_TO') ?: 'gerencia@vecipaya.com',
 
+            /*
+             * El REMITENTE tambien venia del esqueleto, y lo encontro la
+             * prueba, no yo: `config/mail.php` ya estaba arreglado y este
+             * bloque es OTRO, propio del paquete. Con el `.env` sin
+             * `MAIL_FROM_ADDRESS`, el aviso de que no hay copia saldria de
+             * `hello@example.com` hacia una direccion de verdad, y un SMTP
+             * serio lo rechaza por remitente ajeno al dominio autenticado:
+             * el aviso seguiria sin llegar, con el destinatario ya corregido.
+             */
             'from' => [
-                'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
-                'name' => env('MAIL_FROM_NAME', 'Example'),
+                'address' => env('MAIL_FROM_ADDRESS', 'gerencia@vecipaya.com'),
+                'name' => env('MAIL_FROM_NAME', "VeciPa'Ya"),
             ],
         ],
 
@@ -283,8 +352,8 @@ return [
             // sobre un disco vacío.
             'disks' => [env('BACKUP_DISK', 'local')],
             'health_checks' => [
-                \Spatie\Backup\Tasks\Monitor\HealthChecks\MaximumAgeInDays::class => 1,
-                \Spatie\Backup\Tasks\Monitor\HealthChecks\MaximumStorageInMegabytes::class => 5000,
+                MaximumAgeInDays::class => 1,
+                MaximumStorageInMegabytes::class => 5000,
             ],
         ],
 
@@ -310,7 +379,7 @@ return [
          * No matter how you configure it the default strategy will never
          * delete the newest backup.
          */
-        'strategy' => \Spatie\Backup\Tasks\Cleanup\Strategies\DefaultStrategy::class,
+        'strategy' => DefaultStrategy::class,
 
         'default_strategy' => [
             /*

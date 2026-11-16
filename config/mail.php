@@ -110,9 +110,22 @@ return [
     |
     */
 
+    /*
+     * EL POR DEFECTO NO ES DECORACION.
+     *
+     * Venia `hello@example.com`, que es el valor del esqueleto de Laravel. El
+     * `.env` de produccion si tiene `MAIL_FROM_ADDRESS`, asi que hoy no se
+     * nota; el dia que falte, TODO el correo de la plataforma —la confirmacion
+     * del pedido, el restablecimiento de contrasena— saldria con un remitente
+     * de un dominio que no es nuestro, y un servidor SMTP serio rechaza o
+     * marca como basura un remitente que no coincide con el dominio
+     * autenticado. El fallo no seria «no llega un correo»: seria todos.
+     *
+     * El dominio es .com, no .com.co: el .com.co no existe y rebota.
+     */
     'from' => [
-        'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
-        'name' => env('MAIL_FROM_NAME', 'Example'),
+        'address' => env('MAIL_FROM_ADDRESS', 'gerencia@vecipaya.com'),
+        'name' => env('MAIL_FROM_NAME', "VeciPa'Ya"),
     ],
 
 ];

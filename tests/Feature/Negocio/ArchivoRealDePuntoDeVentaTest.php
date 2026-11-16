@@ -32,18 +32,18 @@ function archivoBiff2EnDisco(array $encabezados, array $filas): string
     $texto = function (int $fila, int $col, string $v): string {
         // CP1252: BIFF2 es anterior a Unicode.
         $v = mb_convert_encoding($v, 'CP1252', 'UTF-8');
-        $cuerpo = pack('vv', $fila, $col) . "\x00\x00\x00" . chr(strlen($v)) . $v;
+        $cuerpo = pack('vv', $fila, $col)."\x00\x00\x00".chr(strlen($v)).$v;
 
-        return pack('vv', 0x04, strlen($cuerpo)) . $cuerpo;
+        return pack('vv', 0x04, strlen($cuerpo)).$cuerpo;
     };
 
     $numero = function (int $fila, int $col, float $v): string {
-        $cuerpo = pack('vv', $fila, $col) . "\x00\x00\x00" . pack('d', $v);
+        $cuerpo = pack('vv', $fila, $col)."\x00\x00\x00".pack('d', $v);
 
-        return pack('vv', 0x03, strlen($cuerpo)) . $cuerpo;
+        return pack('vv', 0x03, strlen($cuerpo)).$cuerpo;
     };
 
-    $bytes = "\x09\x00\x04\x00" . pack('vv', 0, 0x10);
+    $bytes = "\x09\x00\x04\x00".pack('vv', 0, 0x10);
 
     foreach ($encabezados as $c => $h) {
         $bytes .= $texto(0, $c, $h);
@@ -59,7 +59,7 @@ function archivoBiff2EnDisco(array $encabezados, array $filas): string
 
     $bytes .= pack('vv', 0x0A, 0);
 
-    $ruta = sys_get_temp_dir() . '/ARTICULOS-' . uniqid() . '.XLS';
+    $ruta = sys_get_temp_dir().'/ARTICULOS-'.uniqid().'.XLS';
     file_put_contents($ruta, $bytes);
 
     return $ruta;
@@ -101,7 +101,7 @@ test('el lector entiende el xls de punto de venta y respeta las tildes', functio
         ],
     );
 
-    $filas = (new LectorDeArchivoDeCatalogo())->leer($ruta);
+    $filas = (new LectorDeArchivoDeCatalogo)->leer($ruta);
 
     expect($filas)->toHaveCount(2);
 
@@ -117,10 +117,10 @@ test('el lector entiende el xls de punto de venta y respeta las tildes', functio
 });
 
 test('el lector reconoce que un csv NO es biff2 y lo deja a la libreria', function () {
-    $ruta = sys_get_temp_dir() . '/catalogo-' . uniqid() . '.csv';
+    $ruta = sys_get_temp_dir().'/catalogo-'.uniqid().'.csv';
     file_put_contents($ruta, "codigo_barras,nombre,precio\n7702011000011,ARROZ,4800\n");
 
-    $lector = new LectorDeArchivoDeCatalogo();
+    $lector = new LectorDeArchivoDeCatalogo;
 
     expect($lector->esBiff2($ruta))->toBeFalse();
 

@@ -58,15 +58,15 @@ return new class extends Migration
 
         if (DB::table('business')->where('busines_id', 1)->exists()) {
             DB::table('media_files')->insert([
-                'entity_type'   => 'negocios',
-                'entity_id'     => 1,
-                'tipo'          => 'logo',
-                'object_key'    => $huerfano,
+                'entity_type' => 'negocios',
+                'entity_id' => 1,
+                'tipo' => 'logo',
+                'object_key' => $huerfano,
                 'original_name' => 'logo.jpeg',
-                'mime_type'     => 'image/jpeg',
-                'is_primary'    => true,
-                'created_at'    => now(),
-                'updated_at'    => now(),
+                'mime_type' => 'image/jpeg',
+                'is_primary' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
         }
     }

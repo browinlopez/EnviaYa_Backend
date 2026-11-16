@@ -1,206 +1,62 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Order;
 
-use App\Services\PedidoParaLaApp;
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
-use App\Services\Ajustes;
-use App\Services\PoliticaDeDomicilio;
-use App\Services\CustodiaDeEfectivo;
-use App\Services\CreditoDeTienda;
-use App\Services\ConfirmacionDePago;
-use App\Services\Avisos;
-use App\Events\DomiciliaryLocationUpdated;
-use App\Events\OrderCreated;
-use App\Events\OrderStatusUpdated;
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\Payment\PaymentController;
+use App\Http\Requests\Order\IngresosDelNegocioRequest;
+use App\Http\Requests\Order\PedidosDelNegocioRequest;
+use App\Http\Requests\Order\PedidosDelUsuarioRequest;
+use App\Http\Requests\Order\UltimosPedidosRequest;
+use App\Http\Resources\Negocio\NegocioDelPedidoResource;
+use App\Http\Resources\Pedido\PedidoDeLaAppResource;
+use App\Http\Resources\Pedido\PedidoDelCompradorResource;
+use App\Http\Resources\Pedido\PosicionDelDomiciliarioResource;
 use App\Models\Business;
 use App\Models\Buyer\Buyer;
-use App\Models\Domiciliary;
 use App\Models\Order\OrderGeolocation;
 use App\Models\Order\OrdersSales;
-use App\Models\Order\OrdersSalesDetail;
-use App\Models\Payment\Payment;
-use App\Services\FacturaService;
-use Illuminate\Support\Facades\Log;
-use App\Models\Payment\PaymentForms;
-use App\Models\Payment\PaymentIntent;
-use App\Models\Payment\PaymentMethods;
-use App\Models\Product\ProductBusiness;
 use App\Models\User;
-use App\Models\User\UserAddress;
-use App\Services\BoldService;
-use App\Services\CouponService;
-use Carbon\Carbon;
-use Illuminate\Http\Request;
+use App\Services\CreditoDeTienda;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Gate;
 
 class ConsultaDePedidosController extends Controller
 {
-    public function __construct(private readonly PedidoParaLaApp $presentador)
-    {
-    }
-
     use ComprobarPertenencia;
 
     // Función para obtener todas las órdenes de un usuario
-    public function ordersUser(Request $request)
+    public function ordersUser(PedidosDelUsuarioRequest $request)
     {
-        $request->validate([
-            'user_id' => 'required|integer'
-        ]);
 
         $buyer = Buyer::where('user_id', $request->user_id)->first();
 
-        if (!$buyer) {
+        if (! $buyer) {
             return response()->json([
-                'message' => 'Usuario comprador no encontrado'
+                'message' => 'Usuario comprador no encontrado',
             ], 404);
         }
 
         $orders = OrdersSales::where('buyer_id', $buyer->buyer_id)
             ->confirmados()
-            ->with('details.product.category', 'business', 'promotions', 'payments', 'address.municipality.department.country', 'address.alias', 'domiciliary.user')
+            ->with('details.product.category', 'business.municipality', 'promotions', 'payments', 'address.municipality.department.country', 'address.alias', 'domiciliary.user')
             ->get();
 
-        $formattedOrders = $orders->map(function ($order) {
-            return [
-                'order_id' => $order->orderSales_id,
-                'buyer_id' => $order->buyer_id,
-                'busines_id' => $order->busines_id,
-                'total' => $order->total,
-                // Desglose, para que cada rol sepa qué parte le corresponde:
-                // el negocio cobra el subtotal y el domiciliario el domicilio.
-                'subtotal' => $order->subtotal,
-                'domicilio' => $order->domicilio,
-                'domiciliary_fee' => $order->domiciliary_fee,
-                /*
-                 * Con cuánto dijo el cliente que va a pagar, y cuánto cambio
-                 * hay que mandarle. La tienda es quien prepara el sencillo
-                 * ANTES de que el domiciliario salga: si el dato no llega
-                 * acá, el cambio no sale de la tienda y da igual que el
-                 * domiciliario lo vea después.
-                 */
-                'cash_tendered' => $order->cash_tendered,
-                'change_due' => $order->change_due,
-                // Si falta pesar: el tablero lo marca y el despacho se bloquea.
-                'weighing_state' => (int) $order->weighing_state,
-                // El domiciliario necesita saber si cobra en la puerta o
-                // si el pedido ya viene pagado en línea.
-                'methods_id' => $order->methods_id,
-                'payment_state' => $order->payment_state,
-                'sale_date' => $order->sale_date,
-                'is_scheduled' => $order->is_scheduled,
-                'delivery_date' => $order->delivery_date,
-                'delivery_type' => $order->pickup ? 'pickup' : 'delivery',
-                'pickup' => (bool) $order->pickup,
-                'pickup_time' => $order->pickup_time,
-                'has_review' => $order->has_review,
-                'dispatched_at' => $order->dispatched_at,
-                // Compromiso y cumplimiento del plazo. Se mandan resueltos
-                // desde acá para que la app no tenga que reimplementar la
-                // regla y contarla distinto que el informe del panel.
-                'promised_minutes' => $order->promised_minutes,
-                'delivery_minutes' => $order->delivery_minutes,
-                'on_time' => $order->on_time,
-                'delay_minutes' => $order->delay_minutes,
-                'state' => $order->state,
-                'business' => [
-                    'business_id' => $order->business->busines_id,
-                    'name' => $order->business->name,
-                    'address' => $order->business->address,
-                    'address' => $order->business->address,
-                    'latitude' => $order->business->latitude !== null ? (float)$order->business->latitude : null,
-                    'longitude' => $order->business->longitude !== null ? (float)$order->business->longitude : null,
-                    'phone' => $order->business->phone,
-                    'city' => $order->business->city,
-                    'state' => $order->business->state,
-                    'logo' => $order->business->logo,
-                ],
-                'delivery_address' => !$order->pickup && $order->address ? [
-                    'address_id' => $order->address->address_id,
-                    /*
-                     * La calle va JUNTO a la dirección del mapa, no en vez de
-                     * ella.
-                     *
-                     * La del mapa sitúa la cuadra; la que escribió la persona
-                     * lleva el número de casa o apartamento. El domiciliario
-                     * necesita las dos para llegar a la puerta, y hasta ahora
-                     * solo le llegaba la primera.
-                     */
-                    'address' => trim(implode(', ', array_filter([
-                        $order->address->street,
-                        $order->address->address,
-                    ]))),
-                    'street' => $order->address->street,
-                    'alias' => $order->address->alias?->name,
-                    'municipality' => $order->address->municipality?->name,
-                    'department' => $order->address->department?->name,
-                    'country' => $order->address->country?->name,
-                    'latitude' => $order->address->latitude !== null ? (float)$order->address->latitude : null,
-                    'longitude' => $order->address->longitude !== null ? (float)$order->address->longitude : null,
-                ] : null,
-                'domiciliary' => $order->domiciliary ? [
-                    'name' => $order->domiciliary->user->name,
-                    'email' => $order->domiciliary->user->email,
-                    'phone' => $order->domiciliary->user->phone,
-                    'domiciliary_id' => $order->domiciliary->domiciliary_id,
-                    'available' => $order->domiciliary->available,
-                    'qualification' => $order->domiciliary->qualification,
-                    'state' => $order->domiciliary->state,
-                    'user_id' => $order->domiciliary->user->user_id,
-                ] : null,
-                'details' => $order->details->map(function ($detail) {
-                    return [
-                        /*
-                         * EL ID DE LA LINEA, que es por donde se pesa.
-                         *
-                         * Y no por `product_id`: un pedido puede traer la
-                         * misma referencia en dos lineas --media libra de
-                         * queso para hoy y un kilo para la semana-- y con el
-                         * producto no se sabe a cual va cada peso.
-                         */
-                        'orderDet_id' => $detail->orderDet_id,
-                        'product_id' => $detail->product->products_id,
-                        'name' => $detail->product->name,
-                        'description' => $detail->product->description,
-                        'category' => $detail->product->category?->name,
-                        'image' => $detail->product->image,
-                        'amount' => $detail->amount,
-                        'unit_price' => $detail->unit_price,
-                        /*
-                         * Lo que se vende al peso. Esta pantalla es la que
-                         * usa el tendero para armar la bolsa y para pesar,
-                         * asi que necesita la cantidad de verdad: en esas
-                         * lineas `amount` vale 1.
-                         */
-                        'sale_unit' => $detail->sale_unit,
-                        'pedido_por' => $detail->pedido_por,
-                        'qty_requested' => $detail->qty_requested,
-                        'qty_final' => $detail->qty_final,
-                        'line_total' => $detail->line_total,
-                    ];
-                }),
-                'promotions' => $order->promotions,
-                'payments' => $order->payments,
-            ];
-        });
+        $formattedOrders = $orders->map(
+            fn ($order) => (new PedidoDelCompradorResource($order))->resolve(),
+        );
 
         return response()->json([
             'message' => 'Órdenes encontradas',
-            'orders' => $formattedOrders
+            'orders' => $formattedOrders,
         ]);
     }
 
     // Función para obtener todas las órdenes de un negocio (tendero)
-    public function ordersBusiness(Request $request)
+    public function ordersBusiness(PedidosDelNegocioRequest $request)
     {
-        $request->validate([
-            'business_id' => 'required|integer'
-        ]);
 
         /*
          * Un identificador en el cuerpo es una sugerencia, no una
@@ -213,9 +69,9 @@ class ConsultaDePedidosController extends Controller
 
         $business = Business::find($request->business_id);
 
-        if (!$business) {
+        if (! $business) {
             return response()->json([
-                'message' => 'Negocio no encontrado'
+                'message' => 'Negocio no encontrado',
             ], 404);
         }
 
@@ -245,7 +101,7 @@ class ConsultaDePedidosController extends Controller
         $orders = OrdersSales::where('busines_id', $business->busines_id)
             ->confirmados()
             ->where(function ($q) {
-                $q->whereIn('state', [1, 2, 3])
+                $q->whereIn('state', OrdersSales::ACTIVOS)
                   /*
                    * Los cerrados, por el día en que SE CERRARON y no por el
                    * día en que se pidieron: uno pedido a las 23:50 y
@@ -253,45 +109,33 @@ class ConsultaDePedidosController extends Controller
                    * entregado tiene su fecha; el cancelado, la de su último
                    * cambio.
                    */
-                  ->orWhere(function ($q2) {
-                      $q2->where('state', 4)
-                         ->whereDate(DB::raw('COALESCE(delivery_date, sale_date)'), now()->toDateString());
-                  })
-                  ->orWhere(function ($q2) {
-                      $q2->where('state', 5)
-                         ->whereDate(DB::raw('COALESCE(updated_at, sale_date)'), now()->toDateString());
-                  });
+                    ->orWhere(fn ($q2) => $q2->where('state', OrdersSales::ENTREGADO)
+                        ->where($this->cerradoHoy('delivery_date')))
+                    ->orWhere(fn ($q2) => $q2->where('state', OrdersSales::CANCELADO)
+                        ->where($this->cerradoHoy('updated_at')));
             })
-            ->with([
-                'business',
-                'details.product',
-                'buyer.user', // Buyer + User
-                'promotions',
-                'payments',
-                'address.municipality.department.country',
-                'address.alias'
-            ])
+            // La lista la declara el presentador, que es quien las lee: esta
+            // copia se habia quedado sin `domiciliary.user` y cargaba el
+            // repartidor de uno en uno.
+            ->with(PedidoDeLaAppResource::relaciones())
             ->get();
 
         // Datos del business, solo una vez
-        $businessData = $this->presentador->negocio($business);
+        $businessData = (new NegocioDelPedidoResource($business))->resolve();
 
         $formattedOrders = $orders->map(
-            fn ($order) => $this->presentador->formatear($order)
+            fn ($order) => (new PedidoDeLaAppResource($order))->resolve()
         );
 
         return response()->json([
             'message' => 'Órdenes del negocio encontradas',
             'business' => $businessData,  // incluimos business una sola vez
-            'orders' => $formattedOrders
+            'orders' => $formattedOrders,
         ]);
     }
 
-    public function incomeBusiness(Request $request)
+    public function incomeBusiness(IngresosDelNegocioRequest $request)
     {
-        $request->validate([
-            'business_id' => 'required|integer|exists:business,busines_id',
-        ]);
 
         /*
          * Un identificador en el cuerpo es una sugerencia, no una
@@ -310,7 +154,7 @@ class ConsultaDePedidosController extends Controller
          * (efectivo, state 4). Antes se sumaba desde `payments`, que solo
          * existe para pagos online: las ventas en efectivo no contaban.
          */
-        $incomeOrders = fn() => OrdersSales::where('busines_id', $business_id)
+        $incomeOrders = fn () => OrdersSales::where('busines_id', $business_id)
             ->where(function ($q) {
                 $q->where('payment_state', 'paid')->orWhere('state', 4);
             });
@@ -358,14 +202,14 @@ class ConsultaDePedidosController extends Controller
         };
 
         $currentWeekStart = now()->startOfWeek();
-        $currentWeekEnd   = (clone $currentWeekStart)->endOfWeek();
+        $currentWeekEnd = (clone $currentWeekStart)->endOfWeek();
         $previousWeekStart = (clone $currentWeekStart)->subWeek();
-        $previousWeekEnd   = (clone $previousWeekStart)->endOfWeek();
+        $previousWeekEnd = (clone $previousWeekStart)->endOfWeek();
 
         $weeklyIncome = $incomeByDay($currentWeekStart, $currentWeekEnd);
         $previousWeeklyIncome = $incomeByDay($previousWeekStart, $previousWeekEnd);
 
-        $currentWeekTotal  = array_sum($weeklyIncome);
+        $currentWeekTotal = array_sum($weeklyIncome);
         $previousWeekTotal = array_sum($previousWeeklyIncome);
 
         $difference = $currentWeekTotal - $previousWeekTotal;
@@ -407,7 +251,7 @@ class ConsultaDePedidosController extends Controller
             ->all();
 
         $month_start = now()->startOfMonth();
-        $month_end   = (clone $month_start)->endOfMonth();
+        $month_end = (clone $month_start)->endOfMonth();
 
         $monthlyIncome = $incomeOrders()
             ->whereBetween('sale_date', [$month_start, $month_end])
@@ -427,7 +271,7 @@ class ConsultaDePedidosController extends Controller
 
             return [
                 'inicio' => $inicio->toDateString(),
-                'total'  => (float) $incomeOrders()->whereBetween('sale_date', [$inicio, $fin])->sum('total'),
+                'total' => (float) $incomeOrders()->whereBetween('sale_date', [$inicio, $fin])->sum('total'),
             ];
         })->values()->all();
 
@@ -435,11 +279,11 @@ class ConsultaDePedidosController extends Controller
             'business_id' => $business_id,
 
             'week_start' => $currentWeekStart->toDateString(),
-            'week_end'   => $currentWeekEnd->toDateString(),
+            'week_end' => $currentWeekEnd->toDateString(),
             // Las de la semana pasada: el panel enseñaba las de ESTA bajo el
             // rótulo «Semana pasada» porque no tenía otras.
             'previous_week_start' => $previousWeekStart->toDateString(),
-            'previous_week_end'   => $previousWeekEnd->toDateString(),
+            'previous_week_end' => $previousWeekEnd->toDateString(),
 
             /* LA SEMANA PASADA A ESTA MISMA ALTURA: de su lunes hasta el mismo
                día y hora de hoy. Comparar el miércoles contra una semana
@@ -449,10 +293,10 @@ class ConsultaDePedidosController extends Controller
                 ->whereBetween('sale_date', [$previousWeekStart, now()->subWeek()])
                 ->sum('total'),
 
-            'ventas_semana'   => $cuantasSemana,
+            'ventas_semana' => $cuantasSemana,
             'ticket_promedio' => $cuantasSemana ? round((float) $currentWeekTotal / $cuantasSemana, 2) : 0.0,
-            'hoy'             => (float) (clone $hoy)->sum('total'),
-            'ventas_hoy'      => (clone $hoy)->count(),
+            'hoy' => (float) (clone $hoy)->sum('total'),
+            'ventas_hoy' => (clone $hoy)->count(),
             'ultimas_semanas' => $ultimasSemanas,
 
             'weekly_income' => $weeklyIncome,
@@ -460,16 +304,16 @@ class ConsultaDePedidosController extends Controller
             // y la línea comparativa del chart no tenía datos)
             'previous_weekly_income' => $previousWeeklyIncome,
 
-            'current_week_income'  => (float)$currentWeekTotal,
-            'previous_week_income' => (float)$previousWeekTotal,
-            'difference'            => (float)$difference,
-            'percentage_change'     => round($percentageChange, 2),
+            'current_week_income' => (float) $currentWeekTotal,
+            'previous_week_income' => (float) $previousWeekTotal,
+            'difference' => (float) $difference,
+            'percentage_change' => round($percentageChange, 2),
 
-            'month_start'    => $month_start->toDateString(),
-            'month_end'      => $month_end->toDateString(),
-            'monthly_income' => (float)$monthlyIncome,
+            'month_start' => $month_start->toDateString(),
+            'month_end' => $month_end->toDateString(),
+            'monthly_income' => (float) $monthlyIncome,
 
-            'total_income' => (float)$totalIncome,
+            'total_income' => (float) $totalIncome,
 
             // Cómo le pagaron esta semana, de mayor a menor.
             'por_medio' => $porMedio,
@@ -494,14 +338,15 @@ class ConsultaDePedidosController extends Controller
      * posicion» a quien no deberia estar preguntando es confirmarle que el
      * numero existe.
      */
-    public function latest(Request $request)
+    public function latest(UltimosPedidosRequest $request)
     {
-        $data = $request->validate([
-            'domiciliary_id' => 'required|exists:domiciliary,domiciliary_id'
-        ]);
+        $data = $request->validated();
 
+        /* La regla vive en `DomiciliaryPolicy::verUbicacion`, por la puerta
+           con nombre que la registra: §08 pide Policy o Gate por recurso, y
+           esto era un metodo privado de este controlador. */
         abort_unless(
-            $this->puedeVerAlDomiciliario($request, (int) $data['domiciliary_id']),
+            Gate::allows('ver-ubicacion-del-domiciliario', [(int) $data['domiciliary_id']]),
             403,
             'Esa posicion no es tuya.',
         );
@@ -511,105 +356,55 @@ class ConsultaDePedidosController extends Controller
             ->first();
 
         if ($last) {
-            return response()->json([
-                'latitude' => $last->latitude,
-                'longitude' => $last->longitude,
-                'orderSales_id' => $last->orderSales_id,
-                'state' => $last->state,
-                'created_at' => $last->created_at,
-            ]);
+            return response()->json(
+                (new PosicionDelDomiciliarioResource($last))->resolve()
+            );
         }
 
         return response()->json([]); // sin ubicación
     }
 
-    /** Las tres relaciones que dan derecho a ver por donde va un domiciliario. */
-    private function puedeVerAlDomiciliario(Request $request, int $domiciliaryId): bool
+    /**
+     * «Se cerró hoy», mirando esa columna y cayendo a `sale_date` si está vacía.
+     *
+     * SUSTITUYE A `whereDate(DB::raw('COALESCE($columna, sale_date)'), hoy)`,
+     * que es lo que había, y la reescritura importa tanto como los índices que
+     * la acompañan. Esta es la secuencia de medidas sobre la base de
+     * desarrollo, y las dos primeras conclusiones fueron equivocadas:
+     *
+     *   1. como estaba                       type=ref    504 filas
+     *   2. sargable, SIN los índices nuevos  type=ref    504 filas  <-- nada
+     *   3. con los índices, SIN reescribir   type=ref    504 filas  <-- nada
+     *   4. las dos cosas juntas              type=range   69 filas
+     *
+     * O sea que el tablero del tendero —la pantalla que se queda puesta y se
+     * refresca sola— abría las 504 filas del histórico del negocio en CADA
+     * refresco, y seguiría haciéndolo con cualquiera de los dos arreglos por
+     * separado. Con los dos, abre las de hoy.
+     *
+     * LA EQUIVALENCIA NO SE DEDUJO, SE COMPROBÓ: 280 combinaciones de negocio
+     * y día contra la base de desarrollo, las dos formas dan el mismo número
+     * en las 280.
+     *
+     * Medio abierto —`>=` la medianoche y `<` la siguiente— y no `between`
+     * hasta `endOfDay()`: el final del día son las 23:59:59.999999 y perder el
+     * borde por microsegundos es la clase de fallo que aparece una vez al año.
+     *
+     * La rama del `IS NULL` conserva el `COALESCE`: un pedido entregado sin
+     * `delivery_date` cuenta por su `sale_date`, igual que antes. Va dentro de
+     * su propio grupo para que el `OR` no se escape del `AND state = 4`.
+     */
+    private function cerradoHoy(string $columna): callable
     {
-        $user = $request->user();
+        $desde = now()->startOfDay();
+        $hasta = now()->addDay()->startOfDay();
 
-        if (!$user) {
-            return false;
-        }
-
-        // El equipo, por su propia puerta (rol 4), igual que en el resto.
-        if ((int) $user->rol === 4) {
-            return true;
-        }
-
-        // El propio domiciliario.
-        $esElMismo = DB::table('domiciliary')
-            ->where('domiciliary_id', $domiciliaryId)
-            ->where('user_id', $user->user_id)
-            ->exists();
-
-        if ($esElMismo) {
-            return true;
-        }
-
-        // El negocio al que reparte: su tendero necesita ver su flota.
-        $esDeSuNegocio = DB::table('business_domiciliary as bd')
-            ->join('owner_busines as ob', 'ob.busines_id', '=', 'bd.busines_id')
-            ->join('owner as o', 'o.owner_id', '=', 'ob.owner_id')
-            ->where('bd.domiciliary_id', $domiciliaryId)
-            ->where('o.user_id', $user->user_id)
-            ->exists();
-
-        if ($esDeSuNegocio) {
-            return true;
-        }
-
-        /*
-         * Y el comprador que lo tiene encima: solo mientras el pedido esta
-         * vivo. Cuando se entrega, deja de poder mirar donde anda.
-         */
-        return DB::table('orderssales as o')
-            ->join('buyer as b', 'b.buyer_id', '=', 'o.buyer_id')
-            ->where('o.domiciliary_id', $domiciliaryId)
-            ->whereIn('o.state', [2, 3])
-            ->where('b.user_id', $user->user_id)
-            ->exists();
-    }
-
-    public function ordersPendingReview(Request $request)
-    {
-        /*
-         * Solo los pedidos de quien pregunta. La consulta no filtraba por
-         * comprador, así que devolvía TODOS los pedidos entregados del
-         * sistema: a cualquiera se le pedía calificar compras ajenas (y de
-         * paso se le exponía la dirección de entrega de otras personas).
-         */
-        $buyer = Buyer::where('user_id', $request->user()->user_id)->first();
-
-        if (!$buyer) {
-            return response()->json([
-                'message' => 'Órdenes pendientes de review',
-                'orders' => [],
-            ]);
-        }
-
-        $orders = OrdersSales::where('buyer_id', $buyer->buyer_id)
-            ->where('state', 4)
-            ->where('has_review', false) // o 0
-            ->where('pickup', false)     // o 0
-            ->with([
-                'details.product.category',
-                'business',
-                'promotions',
-                'payments',
-                'address.municipality.department.country',
-                'address.alias',
-                'domiciliary.user'
-            ])
-            ->get();
-
-        $formattedOrders = $orders->map(function ($order) {
-            return $order->toApi(); // usando tu método toApi para mantener consistencia
-        });
-
-        return response()->json([
-            'message' => 'Órdenes pendientes de review',
-            'orders' => $formattedOrders,
-        ]);
+        return function ($q) use ($columna, $desde, $hasta) {
+            $q->where(fn ($r) => $r->where($columna, '>=', $desde)
+                ->where($columna, '<', $hasta))
+                ->orWhere(fn ($r) => $r->whereNull($columna)
+                    ->where('sale_date', '>=', $desde)
+                    ->where('sale_date', '<', $hasta));
+        };
     }
 }

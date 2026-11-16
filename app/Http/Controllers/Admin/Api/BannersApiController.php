@@ -1,30 +1,24 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Admin\Api;
 
-use App\Services\Push\Notificador;
 use App\Http\Controllers\Controller;
-use App\Models\DeviceToken;
-use App\Models\Marketing\AdCampaign;
-use App\Models\Marketing\Advertiser;
+use App\Http\Requests\Admin\BannerRequest;
+use App\Http\Resources\Marketing\BannerResource;
 use App\Models\Marketing\Banner;
-use App\Models\Marketing\Coupon;
-use App\Models\Marketing\FeaturedBusiness;
-use App\Models\Marketing\PushCampaign;
 use App\Services\MediaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class BannersApiController extends Controller
 {
-    public function __construct(private readonly MediaService $medios)
-    {
-    }
+    public function __construct(private readonly MediaService $medios) {}
 
     /* ==================================================================
        RESUMEN
        ================================================================== */
-
 
     public function banners(Request $request)
     {
@@ -44,7 +38,7 @@ class BannersApiController extends Controller
         $imagenes = $this->imagenesDe($banners->pluck('id')->all());
 
         return response()->json(
-            $banners->map(fn (Banner $b) => $this->presentarBanner($b, $imagenes))
+            $banners->map(fn (Banner $b) => (new BannerResource($b, $imagenes))->resolve())
         );
     }
 
@@ -53,12 +47,12 @@ class BannersApiController extends Controller
         $b = Banner::with('campaign.advertiser')
             ->findOr($id, fn () => abort(404, 'El banner no existe.'));
 
-        return response()->json($this->presentarBanner($b, $this->imagenesDe([$b->id])));
+        return response()->json(new BannerResource($b, $this->imagenesDe([$b->id])));
     }
 
-    public function storeBanner(Request $request)
+    public function storeBanner(BannerRequest $request)
     {
-        $b = Banner::create($this->validarBanner($request));
+        $b = Banner::create($request->validated());
 
         return response()->json(['message' => 'Banner creado.', 'id' => $b->id], 201);
     }
@@ -67,7 +61,13 @@ class BannersApiController extends Controller
     {
         $b = Banner::findOr($id, fn () => abort(404, 'El banner no existe.'));
 
-        $b->update($this->validarBanner($request, true));
+        /*
+         * EN LINEA Y NO EN UN FormRequest, a proposito: la busqueda de arriba
+         * contesta 404 cuando el registro no existe, y eso tiene que ir ANTES
+         * que un error de validacion. Las reglas no se repiten: se piden a
+         * `BannerRequest` en modo parcial.
+         */
+        $b->update($request->validate(BannerRequest::reglas(parcial: true)));
 
         return response()->json(['message' => 'Banner actualizado.']);
     }
@@ -107,7 +107,7 @@ class BannersApiController extends Controller
     {
         $b = Banner::findOr($id, fn () => abort(404, 'El banner no existe.'));
 
-        $dias  = max(1, min(365, (int) $request->query('range', 30)));
+        $dias = max(1, min(365, (int) $request->query('range', 30)));
         $hasta = now()->startOfDay();
         $desde = $hasta->copy()->subDays($dias - 1);
 
@@ -126,26 +126,26 @@ class BannersApiController extends Controller
 
         for ($d = $desde->copy(); $d->lte($hasta); $d->addDay()) {
             $clave = $d->toDateString();
-            $fila  = $porDia[$clave] ?? null;
+            $fila = $porDia[$clave] ?? null;
 
             $i = (int) ($fila->impressions ?? 0);
             $c = (int) ($fila->clicks ?? 0);
 
             $impresiones += $i;
-            $clics       += $c;
+            $clics += $c;
 
             $serie[] = [
-                'day'         => $clave,
-                'label'       => $d->format('d M'),
+                'day' => $clave,
+                'label' => $d->format('d M'),
                 'impressions' => $i,
-                'clicks'      => $c,
-                'ctr'         => $i > 0 ? round($c / $i * 100, 2) : 0,
+                'clicks' => $c,
+                'ctr' => $i > 0 ? round($c / $i * 100, 2) : 0,
             ];
         }
 
         $antes = $this->eventosPorDia($b->id, $desdeAntes, $hastaAntes);
         $impresionesAntes = array_sum(array_map(fn ($f) => (int) $f->impressions, $antes));
-        $clicsAntes       = array_sum(array_map(fn ($f) => (int) $f->clicks, $antes));
+        $clicsAntes = array_sum(array_map(fn ($f) => (int) $f->clicks, $antes));
 
         // El mejor día por CLICS y no por impresiones: lo que interesa de una
         // pieza es cuándo funcionó, no cuándo se mostró mucho sin resultado.
@@ -153,20 +153,20 @@ class BannersApiController extends Controller
 
         return response()->json([
             'banner_id' => $b->id,
-            'title'     => $b->title,
-            'period'    => [
+            'title' => $b->title,
+            'period' => [
                 'days' => $dias,
                 'from' => $desde->toDateString(),
-                'to'   => $hasta->toDateString(),
+                'to' => $hasta->toDateString(),
             ],
-            'totals'   => $this->cifras($impresiones, $clics),
+            'totals' => $this->cifras($impresiones, $clics),
             'previous' => $this->cifras($impresionesAntes, $clicsAntes),
             'lifetime' => $this->cifras(
                 (int) $b->impressions_count,
                 (int) $b->clicks_count,
             ),
             'best_day' => ($mejor && $mejor['clicks'] > 0) ? $mejor : null,
-            'series'   => $serie,
+            'series' => $serie,
         ]);
     }
 
@@ -191,7 +191,7 @@ class BannersApiController extends Controller
     {
         return [
             'impressions' => $impresiones,
-            'clicks'      => $clics,
+            'clicks' => $clics,
             // Sin impresiones el CTR no es cero, es indefinido: dividir por
             // cero y devolver 0,0 % afirma que la pieza no funcionó cuando lo
             // que pasa es que no se mostró.
@@ -207,7 +207,7 @@ class BannersApiController extends Controller
      */
     private function imagenesDe(array $ids): array
     {
-        if (!$ids) {
+        if (! $ids) {
             return [];
         }
 
@@ -220,48 +220,6 @@ class BannersApiController extends Controller
             ->groupBy('entity_id')
             ->map(fn ($grupo) => $this->medios->url($grupo->first()->object_key))
             ->all();
-    }
-
-    private function presentarBanner(Banner $b, array $imagenes): array
-    {
-        return array_merge($b->toArray(), [
-            'image_url'       => $imagenes[$b->id] ?? null,
-            'campaign_name'   => $b->campaign?->name,
-            'advertiser_name' => $b->campaign?->advertiser?->name,
-            'ctr'             => $b->impressions_count > 0
-                ? round($b->clicks_count / $b->impressions_count * 100, 2)
-                : 0,
-        ]);
-    }
-
-    private function validarBanner(Request $request, bool $parcial = false): array
-    {
-        $regla = $parcial ? 'sometimes' : 'required';
-
-        return $request->validate([
-            'campaign_id' => "{$regla}|integer|exists:ad_campaigns,id",
-            'title'       => "{$regla}|string|max:150",
-            'subtitle'    => 'sometimes|nullable|string|max:255',
-            'placement'   => 'sometimes|in:home_hero,home_strip,listing_inline,splash,web_home',
-            'platform'    => 'sometimes|in:app,web,both',
-            'link_type'   => 'sometimes|in:none,url,business,product,category',
-            'link_value'  => 'sometimes|nullable|string|max:500',
-            'priority'    => 'sometimes|integer|min:0|max:999',
-            'starts_at'   => 'sometimes|nullable|date',
-            'ends_at'     => 'sometimes|nullable|date|after_or_equal:starts_at',
-
-            // Segmentación. Se admiten arreglos de enteros; vacío = sin filtro.
-            'target_municipalities'        => 'sometimes|nullable|array',
-            'target_municipalities.*'      => 'integer',
-            'target_complexes'             => 'sometimes|nullable|array',
-            'target_complexes.*'           => 'integer',
-            'target_business_categories'   => 'sometimes|nullable|array',
-            'target_business_categories.*' => 'integer',
-            'target_roles'                 => 'sometimes|nullable|array',
-            'target_roles.*'               => 'integer',
-
-            'state' => 'sometimes|boolean',
-        ]);
     }
 
     /* ==================================================================

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use Illuminate\Support\Facades\Cache;
@@ -67,16 +69,17 @@ class FuenteExternaDeProductos
     private function consultar(string $barcode): ?array
     {
         try {
-            $r = Http::timeout(4)
+            $r = Http::connectTimeout(2)
+                ->timeout(4)
                 ->withHeaders([
                     // La fuente pide identificarse; sin esto limitan por abuso.
                     'User-Agent' => 'VeciPaYa/1.0 (gerencia@vecipaya.com)',
                 ])
-                ->get(self::URL . $barcode . '.json', [
+                ->get(self::URL.$barcode.'.json', [
                     'fields' => 'product_name,product_name_es,brands,image_front_url,quantity',
                 ]);
 
-            if (!$r->successful()) {
+            if (! $r->successful()) {
                 return null;
             }
 
@@ -104,9 +107,9 @@ class FuenteExternaDeProductos
             }
 
             return [
-                'name'   => mb_substr($nombre, 0, 255),
-                'brand'  => mb_substr(trim(explode(',', $p['brands'] ?? '')[0]), 0, 120) ?: null,
-                'image'  => $p['image_front_url'] ?? null,
+                'name' => mb_substr($nombre, 0, 255),
+                'brand' => mb_substr(trim(explode(',', $p['brands'] ?? '')[0]), 0, 120) ?: null,
+                'image' => $p['image_front_url'] ?? null,
                 'fuente' => 'openfoodfacts',
             ];
         } catch (\Throwable $e) {
@@ -116,7 +119,7 @@ class FuenteExternaDeProductos
              */
             Log::info('Fuente externa de productos no disponible', [
                 'barcode' => $barcode,
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
 
             return null;

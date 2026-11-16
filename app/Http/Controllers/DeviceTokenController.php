@@ -1,9 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Dispositivos\GuardarTokenDelDispositivoRequest;
+use App\Http\Requests\Dispositivos\OlvidarTokenDelDispositivoRequest;
 use App\Models\DeviceToken;
-use Illuminate\Http\Request;
 
 /**
  * REGISTRO DEL TELÉFONO PARA RECIBIR NOTIFICACIONES
@@ -20,30 +23,25 @@ use Illuminate\Http\Request;
  */
 class DeviceTokenController extends Controller
 {
-    public function store(Request $request)
+    public function store(GuardarTokenDelDispositivoRequest $request)
     {
-        $datos = $request->validate([
-            'token'       => 'required|string|max:255',
-            'platform'    => 'required|in:android,ios,web',
-            'app_version' => 'nullable|string|max:20',
-            'device_name' => 'nullable|string|max:80',
-        ]);
+        $datos = $request->validated();
 
         DeviceToken::updateOrCreate(
             ['token' => $datos['token']],
             [
-                'user_id'      => $request->user()->user_id,
-                'platform'     => $datos['platform'],
-                'app_version'  => $datos['app_version'] ?? null,
-                'device_name'  => $datos['device_name'] ?? null,
+                'user_id' => $request->user()->user_id,
+                'platform' => $datos['platform'],
+                'app_version' => $datos['app_version'] ?? null,
+                'device_name' => $datos['device_name'] ?? null,
                 'last_seen_at' => now(),
                 /*
                  * Se revive un token que se había marcado como muerto. Pasa
                  * cuando alguien reinstala la app: el proveedor puede devolver el
                  * mismo token y sin esto quedaría descartado para siempre.
                  */
-                'failed_at'    => null,
-                'fail_reason'  => null,
+                'failed_at' => null,
+                'fail_reason' => null,
             ],
         );
 
@@ -57,10 +55,9 @@ class DeviceTokenController extends Controller
      * persona, no un fallo del token. Dejarla marcada como fallida ensuciaría el
      * registro de tokens muertos, que existe para detectar desinstalaciones.
      */
-    public function destroy(Request $request)
+    public function destroy(OlvidarTokenDelDispositivoRequest $request)
     {
-        $datos = $request->validate(['token' => 'required|string|max:255']);
-
+        $datos = $request->validated();
         DeviceToken::where('token', $datos['token'])
             ->where('user_id', $request->user()->user_id)
             ->delete();

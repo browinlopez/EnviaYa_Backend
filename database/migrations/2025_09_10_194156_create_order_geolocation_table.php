@@ -23,8 +23,8 @@ return new class extends Migration
 
             // Foreign Key
             $table->foreign('domiciliary_id', 'fk_order_geolocation_domiciliary')
-                  ->references('domiciliary_id')->on('domiciliary')
-                  ->onDelete('cascade');
+                ->references('domiciliary_id')->on('domiciliary')
+                ->onDelete('cascade');
         });
     }
 

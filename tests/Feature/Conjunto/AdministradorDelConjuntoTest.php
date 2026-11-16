@@ -36,8 +36,8 @@ function comoAdministrador(string $nivel = Area::NIVEL_GESTOR): User
     Rol::firstOrCreate(['rol_id' => 4], ['name' => 'admin', 'guard_name' => 'web']);
 
     $u = User::factory()->create([
-        'rol'          => 4,
-        'area_id'      => Area::where('code', 'sistema')->firstOrFail()->id,
+        'rol' => 4,
+        'area_id' => Area::where('code', 'sistema')->firstOrFail()->id,
         'access_level' => $nivel,
     ]);
 
@@ -49,17 +49,17 @@ function comoAdministrador(string $nivel = Area::NIVEL_GESTOR): User
 function unConjunto(string $nombre = 'Los Almendros'): ResidentialComplex
 {
     return ResidentialComplex::create([
-        'name'                 => $nombre,
-        'address'              => 'Carrera 51B #87-50',
-        'people_count'         => 200,
-        'towers_count'         => 4,
+        'name' => $nombre,
+        'address' => 'Carrera 51B #87-50',
+        'people_count' => 200,
+        'towers_count' => 4,
         'apartments_per_tower' => 50,
-        'state'                => 1,
+        'state' => 1,
     ]);
 }
 
 /* ===================================================================== */
-/*  EL ESTADO EN EL QUE NACE                                             */
+/*  EL ESTADO EN EL QUE NACE */
 /* ===================================================================== */
 
 test('un conjunto recien creado sale marcado como sin administrador', function () {
@@ -80,7 +80,7 @@ test('un conjunto recien creado sale marcado como sin administrador', function (
 });
 
 /* ===================================================================== */
-/*  ASIGNARLO                                                            */
+/*  ASIGNARLO */
 /* ===================================================================== */
 
 test('asignar administrador crea la cuenta y la ficha del conjunto', function () {
@@ -88,7 +88,7 @@ test('asignar administrador crea la cuenta y la ficha del conjunto', function ()
     $conjunto = unConjunto();
 
     $r = $this->postJson("/v1/admin/complexes/{$conjunto->complex_id}/owner", [
-        'name'  => 'Administración Los Almendros',
+        'name' => 'Administración Los Almendros',
         'email' => 'almendros@ejemplo.com',
         'phone' => '3001234567',
     ])->assertCreated();
@@ -118,8 +118,8 @@ test('la clave escrita a mano no se devuelve en la respuesta', function () {
     $conjunto = unConjunto();
 
     $r = $this->postJson("/v1/admin/complexes/{$conjunto->complex_id}/owner", [
-        'name'     => 'Administración',
-        'email'    => 'mano@ejemplo.com',
+        'name' => 'Administración',
+        'email' => 'mano@ejemplo.com',
         'password' => 'unaClaveLarga123',
     ])->assertCreated();
 
@@ -134,12 +134,12 @@ test('la clave escrita a mano no se devuelve en la respuesta', function () {
 
 test('el administrador asignado entra al panel de aliados y ve SU conjunto', function () {
     comoAdministrador();
-    $suyo  = unConjunto('Los Almendros');
+    $suyo = unConjunto('Los Almendros');
     $ajeno = unConjunto('Villa Carolina');
 
     $this->postJson("/v1/admin/complexes/{$suyo->complex_id}/owner", [
-        'name'     => 'Administración Los Almendros',
-        'email'    => 'almendros@ejemplo.com',
+        'name' => 'Administración Los Almendros',
+        'email' => 'almendros@ejemplo.com',
         'password' => 'unaClaveLarga123',
     ])->assertCreated();
 
@@ -205,7 +205,7 @@ test('reponer el acceso del mismo administrador no lo duplica', function () {
 });
 
 /* ===================================================================== */
-/*  LO QUE NO SE PUEDE HACER                                             */
+/*  LO QUE NO SE PUEDE HACER */
 /* ===================================================================== */
 
 test('no convierte en administrador el correo de un comprador', function () {
@@ -252,7 +252,7 @@ test('un conjunto que no existe responde 404 y no crea nada', function () {
 });
 
 /* ===================================================================== */
-/*  LA PANTALLA DE USUARIOS TAMPOCO PUEDE CREAR CUENTAS MUDAS            */
+/*  LA PANTALLA DE USUARIOS TAMPOCO PUEDE CREAR CUENTAS MUDAS */
 /* ===================================================================== */
 
 test('crear un usuario de conjunto sin decir cual conjunto se rechaza', function () {
@@ -264,10 +264,10 @@ test('crear un usuario de conjunto sin decir cual conjunto se rechaza', function
      * Ahora el conjunto es obligatorio para los dos roles de conjunto.
      */
     $this->postJson('/v1/admin/users', [
-        'name'     => 'Administración',
-        'email'    => 'muda@ejemplo.com',
+        'name' => 'Administración',
+        'email' => 'muda@ejemplo.com',
         'password' => 'unaClaveLarga123',
-        'rol'      => ComplexStaff::ROL_DUENO,
+        'rol' => ComplexStaff::ROL_DUENO,
     ])->assertStatus(422)->assertJsonValidationErrors('complex_id');
 
     expect(User::where('email', 'muda@ejemplo.com')->exists())->toBeFalse();
@@ -278,10 +278,10 @@ test('crear un celador desde usuarios lo ata a su conjunto', function () {
     $conjunto = unConjunto();
 
     $this->postJson('/v1/admin/users', [
-        'name'       => 'Celador de turno',
-        'email'      => 'celador@ejemplo.com',
-        'password'   => 'unaClaveLarga123',
-        'rol'        => ComplexStaff::ROL_CELADOR,
+        'name' => 'Celador de turno',
+        'email' => 'celador@ejemplo.com',
+        'password' => 'unaClaveLarga123',
+        'rol' => ComplexStaff::ROL_CELADOR,
         'complex_id' => $conjunto->complex_id,
     ])->assertCreated();
 
@@ -300,10 +300,10 @@ test('los roles de siempre no piden conjunto', function () {
     Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
 
     $this->postJson('/v1/admin/users', [
-        'name'     => 'Vecina',
-        'email'    => 'vecina2@ejemplo.com',
+        'name' => 'Vecina',
+        'email' => 'vecina2@ejemplo.com',
         'password' => 'unaClaveLarga123',
-        'rol'      => 1,
+        'rol' => 1,
     ])->assertCreated();
 
     expect(DB::table('buyer')->where('user_id', User::where('email', 'vecina2@ejemplo.com')->value('user_id'))->exists())
@@ -311,7 +311,7 @@ test('los roles de siempre no piden conjunto', function () {
 });
 
 /* ===================================================================== */
-/*  LEER EL PERSONAL                                                     */
+/*  LEER EL PERSONAL */
 /* ===================================================================== */
 
 test('el personal del conjunto separa al administrador de los celadores', function () {
@@ -344,14 +344,14 @@ test('el personal del conjunto separa al administrador de los celadores', functi
 });
 
 /* ===================================================================== */
-/*  NO SE LE QUITA EL ADMINISTRADOR A OTRO CONJUNTO                      */
+/*  NO SE LE QUITA EL ADMINISTRADOR A OTRO CONJUNTO */
 /* ===================================================================== */
 
 test('nombrar aca a quien ya administra otro conjunto se rechaza', function () {
     comoAdministrador();
 
-    $suyo  = unConjunto('Villa Carolina');
-    $otro  = unConjunto('Los Mangos');
+    $suyo = unConjunto('Villa Carolina');
+    $otro = unConjunto('Los Mangos');
 
     $this->postJson("/v1/admin/complexes/{$suyo->complex_id}/owner", [
         'name' => 'Administración', 'email' => 'admin@ejemplo.com',

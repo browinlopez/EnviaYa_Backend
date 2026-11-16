@@ -1,8 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models\Operacion;
 
 use App\Models\Domiciliary;
+use App\Support\FiltroDeFechas;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -33,10 +36,10 @@ class DomiciliaryDocument extends Model
 
     protected $casts = [
         'domiciliary_id' => 'integer',
-        'issued_at'      => 'date',
-        'expires_at'     => 'date',
-        'media_id'       => 'integer',
-        'state'          => 'integer',
+        'issued_at' => 'date',
+        'expires_at' => 'date',
+        'media_id' => 'integer',
+        'state' => 'integer',
     ];
 
     /**
@@ -50,6 +53,7 @@ class DomiciliaryDocument extends Model
         'state' => 1,
     ];
 
+    /** @return BelongsTo<Domiciliary, $this> */
     public function domiciliary(): BelongsTo
     {
         return $this->belongsTo(Domiciliary::class, 'domiciliary_id', 'domiciliary_id');
@@ -68,7 +72,7 @@ class DomiciliaryDocument extends Model
             return 'archivado';
         }
 
-        if (!$this->expires_at) {
+        if (! $this->expires_at) {
             return 'sin_vencimiento';
         }
 
@@ -84,7 +88,7 @@ class DomiciliaryDocument extends Model
     /** Días que faltan (negativo si ya venció). */
     public function diasRestantes(): ?int
     {
-        if (!$this->expires_at) {
+        if (! $this->expires_at) {
             return null;
         }
 
@@ -94,8 +98,13 @@ class DomiciliaryDocument extends Model
     /** Vencidos o a punto de vencer: lo que el tablero de SST pone primero. */
     public function scopeRequiereAtencion(Builder $q): Builder
     {
-        return $q->where($q->qualifyColumn('state'), 1)
-            ->whereNotNull($q->qualifyColumn('expires_at'))
-            ->whereDate($q->qualifyColumn('expires_at'), '<=', now()->addDays(self::AVISO_DIAS)->toDateString());
+        $q = $q->where($q->qualifyColumn('state'), 1)
+            ->whereNotNull($q->qualifyColumn('expires_at'));
+
+        // Como rango: ver `FiltroDeFechas`. `hasta` incluye el dia entero, que
+        // es lo que decia `whereDate(..., '<=', ...)`.
+        return FiltroDeFechas::hasta(
+            $q, $q->qualifyColumn('expires_at'), now()->addDays(self::AVISO_DIAS)
+        );
     }
 }

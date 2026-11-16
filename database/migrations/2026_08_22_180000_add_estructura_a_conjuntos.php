@@ -29,11 +29,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('residential_complexes', function (Blueprint $table) {
-            if (!Schema::hasColumn('residential_complexes', 'towers_count')) {
+            if (! Schema::hasColumn('residential_complexes', 'towers_count')) {
                 $table->unsignedSmallInteger('towers_count')->nullable()->after('people_count');
             }
 
-            if (!Schema::hasColumn('residential_complexes', 'apartments_per_tower')) {
+            if (! Schema::hasColumn('residential_complexes', 'apartments_per_tower')) {
                 $table->unsignedSmallInteger('apartments_per_tower')->nullable()->after('towers_count');
             }
         });

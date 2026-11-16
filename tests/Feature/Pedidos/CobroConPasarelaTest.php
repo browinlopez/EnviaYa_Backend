@@ -1,12 +1,18 @@
 <?php
 
+use App\Events\OrderCreated;
+use App\Http\Controllers\Payment\PaymentController;
 use App\Models\Order\OrdersSales;
+use App\Models\Payment\Payment;
+use App\Models\Payment\PaymentIntent;
 use App\Models\Rol;
 use App\Models\User;
 use App\Services\BoldService;
 use App\Services\PagoEnLinea;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
+use Laravel\Sanctum\Sanctum;
 
 /**
  * EL COBRO CON PASARELA, QUE NO COBRÓ NUNCA.
@@ -182,7 +188,7 @@ function tiendaParaCobro(): array
         ['methods_id' => 2, 'name' => 'Tarjeta', 'state' => 1],
     ]);
 
-    Laravel\Sanctum\Sanctum::actingAs($comprador);
+    Sanctum::actingAs($comprador);
 
     return compact('comprador', 'negocio', 'producto', 'direccion');
 }
@@ -296,7 +302,7 @@ test('consultar el estado NO borra el QR que el cliente tiene delante', function
         ['methods_id' => 5, 'name' => 'Pago por QR', 'state' => 1],
     ]);
 
-    $pago = App\Models\Payment\Payment::create([
+    $pago = Payment::create([
         'orderSales_id' => $order->orderSales_id,
         'methods_id' => 5,
         'provider' => 'bold',
@@ -307,7 +313,7 @@ test('consultar el estado NO borra el QR que el cliente tiene delante', function
         'qr_payload' => 'iVBORw0KGgoQR_BUENO',
     ]);
 
-    App\Models\Payment\PaymentIntent::create([
+    PaymentIntent::create([
         'orderSales_id' => $order->orderSales_id,
         'provider' => 'bold',
         'bold_reference_id' => 'ORD-QR-1',
@@ -323,7 +329,7 @@ test('consultar el estado NO borra el QR que el cliente tiene delante', function
         'transaction_id' => 'TX-QR-1',
     ]);
 
-    app(App\Http\Controllers\Payment\PaymentController::class)
+    app(PaymentController::class)
         ->checkStatus('ORD-QR-1', $bold);
 
     // El QR sigue ahí: sin noticia, se conserva lo que ya se sabía.
@@ -349,17 +355,17 @@ function cobroEnCursoDeBold(string $referencia, int $metodo = 5): array
         'payment_state' => OrdersSales::ESPERANDO_PAGO,
     ]);
 
-    $pago = App\Models\Payment\Payment::create([
+    $pago = Payment::create([
         'orderSales_id' => $order->orderSales_id,
         'methods_id' => $metodo,
         'provider' => 'bold',
-        'provider_payment_id' => 'TX-' . $referencia,
+        'provider_payment_id' => 'TX-'.$referencia,
         'amount' => 18500, 'subtotal' => 12500, 'total' => 18500, 'domicilio' => 6000,
         'payment_status' => 0,
         'status' => 'running',
     ]);
 
-    App\Models\Payment\PaymentIntent::create([
+    PaymentIntent::create([
         'orderSales_id' => $order->orderSales_id,
         'provider' => 'bold',
         'bold_reference_id' => $referencia,
@@ -391,7 +397,7 @@ test('un cobro rechazado CIERRA el pedido: no se queda esperando para siempre', 
         'transaction_id' => 'TX-ORD-RECHAZO-1',
     ]);
 
-    app(App\Http\Controllers\Payment\PaymentController::class)
+    app(PaymentController::class)
         ->checkStatus('ORD-RECHAZO-1', $bold);
 
     expect($e['order']->fresh()->payment_state)->toBe(OrdersSales::PAGO_RECHAZADO)
@@ -408,7 +414,7 @@ test('lo que sigue en curso NO se cierra: PSE puede tardar', function () {
         'transaction_id' => 'TX-ORD-PENDIENTE-1',
     ]);
 
-    app(App\Http\Controllers\Payment\PaymentController::class)
+    app(PaymentController::class)
         ->checkStatus('ORD-PENDIENTE-1', $bold);
 
     expect($e['order']->fresh()->payment_state)->toBe(OrdersSales::ESPERANDO_PAGO);
@@ -425,7 +431,7 @@ test('al aprobar por sondeo se ANUNCIA el pedido, no solo se marca pagado', func
      * Y es justo el caso que más lo necesita: quien paga por QR o PSE suele
      * tener la app cerrada cuando el banco confirma.
      */
-    Illuminate\Support\Facades\Event::fake([App\Events\OrderCreated::class]);
+    Event::fake([OrderCreated::class]);
 
     $e = cobroEnCursoDeBold('ORD-APROBADO-1');
 
@@ -435,13 +441,13 @@ test('al aprobar por sondeo se ANUNCIA el pedido, no solo se marca pagado', func
         'transaction_id' => 'TX-ORD-APROBADO-1',
     ]);
 
-    app(App\Http\Controllers\Payment\PaymentController::class)
+    app(PaymentController::class)
         ->checkStatus('ORD-APROBADO-1', $bold);
 
     expect($e['order']->fresh()->payment_state)->toBe('paid')
         ->and((int) $e['pago']->fresh()->payment_status)->toBe(1);
 
-    Illuminate\Support\Facades\Event::assertDispatched(App\Events\OrderCreated::class);
+    Event::assertDispatched(OrderCreated::class);
 });
 
 test('la caducidad del QR se LEE, no se inventan 10 minutos', function () {
@@ -467,7 +473,7 @@ test('la caducidad del QR se LEE, no se inventan 10 minutos', function () {
         ],
     ]);
 
-    app(App\Http\Controllers\Payment\PaymentController::class)
+    app(PaymentController::class)
         ->checkStatus('ORD-QR-CADUCA', $bold);
 
     expect($e['pago']->fresh()->qr_expires_at->timestamp)->toBe($caducidad->timestamp);

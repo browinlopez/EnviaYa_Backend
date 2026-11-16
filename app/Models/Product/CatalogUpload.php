@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models\Product;
 
 use Illuminate\Database\Eloquent\Model;
@@ -14,6 +16,7 @@ use Illuminate\Database\Eloquent\Model;
 class CatalogUpload extends Model
 {
     protected $table = 'catalog_uploads';
+
     protected $primaryKey = 'catalog_upload_id';
 
     protected $fillable = [

@@ -1,6 +1,9 @@
 <?php
 
 use App\Models\Business\BusinessUserAffiliation;
+use App\Models\Operacion\StoreCredit;
+use App\Models\Operacion\StoreCreditMovement;
+use App\Models\Rol;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
@@ -20,7 +23,7 @@ use Laravel\Sanctum\Sanctum;
 /** Un comprador de verdad, con su ficha. */
 function compradorConTelefono(string $telefono): User
 {
-    \App\Models\Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
+    Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
 
     $u = User::factory()->create(['rol' => 1, 'phone' => $telefono, 'address' => 'Cra 43 #76-120']);
 
@@ -149,14 +152,14 @@ test('desafiliar NO borra la deuda: la dice', function () {
 
     // Se le anota una compra fiada en su libro: es lo que hace `consumir()`
     // cuando el pedido se paga con crédito de tienda.
-    $credito = \App\Models\Operacion\StoreCredit::where('busines_id', $t['mio'])
+    $credito = StoreCredit::where('busines_id', $t['mio'])
         ->where('user_id', $cliente->user_id)
         ->firstOrFail();
 
-    \App\Models\Operacion\StoreCreditMovement::create([
+    StoreCreditMovement::create([
         'store_credit_id' => $credito->id,
-        'type'            => \App\Models\Operacion\StoreCreditMovement::CONSUMO,
-        'amount'          => 40000,
+        'type' => StoreCreditMovement::CONSUMO,
+        'amount' => 40000,
     ]);
 
     $r = $this->deleteJson("/v1/negocio/clientes/{$cliente->user_id}")->assertSuccessful();
@@ -171,7 +174,7 @@ test('desafiliar NO borra la deuda: la dice', function () {
 });
 
 test('un tendero no toca los clientes de otra tienda', function () {
-    $mio   = tenderoConCatalogo();
+    $mio = tenderoConCatalogo();
     $ajeno = tenderoConCatalogo();
     $cliente = compradorConTelefono('3001112233');
 

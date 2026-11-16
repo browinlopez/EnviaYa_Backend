@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models\Operacion;
 
 use Illuminate\Database\Eloquent\Model;
@@ -30,13 +32,14 @@ class SettlementItem extends Model
 
     protected $casts = [
         'settlement_id' => 'integer',
-        'order_id'      => 'integer',
-        'gross'         => 'decimal:2',
-        'delivery_fee'  => 'decimal:2',
-        'discount'      => 'decimal:2',
-        'net'           => 'decimal:2',
+        'order_id' => 'integer',
+        'gross' => 'decimal:2',
+        'delivery_fee' => 'decimal:2',
+        'discount' => 'decimal:2',
+        'net' => 'decimal:2',
     ];
 
+    /** @return BelongsTo<Settlement, $this> */
     public function settlement(): BelongsTo
     {
         return $this->belongsTo(Settlement::class, 'settlement_id');

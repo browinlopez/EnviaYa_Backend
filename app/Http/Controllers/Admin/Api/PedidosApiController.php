@@ -1,32 +1,20 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Admin\Api;
 
-use App\Support\Consultas\AyudasDeAdmin;
-use App\Services\Ajustes;
 use App\Http\Controllers\Controller;
-use App\Models\Area;
-use App\Models\Conjunto\ComplexStaff;
-use App\Models\Operacion\DomiciliaryDocument;
-use App\Models\Reviews\BusinessReview;
-use App\Models\Reviews\DomiciliaryReview;
-use App\Models\User;
-use App\Services\BusinessMediaService;
-use App\Services\ContratoService;
-use App\Services\MediaService;
-use App\Services\VinculosDelRol;
+use App\Models\Order\OrdersSales;
+use App\Queries\PedidosDelPanel;
+use App\Services\Ajustes;
 use App\Support\ListadoPaginado;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 
 class PedidosApiController extends Controller
 {
-    use AyudasDeAdmin;
-
     /**
      * Horas sin avanzar tras las que un pedido activo "pide atención".
      *
@@ -59,7 +47,7 @@ class PedidosApiController extends Controller
      */
     public function orders(Request $request)
     {
-        $q = $this->ordenesBase();
+        $q = (new PedidosDelPanel)->ordenesBase();
         $this->filtrarPedidos($q, $request);
 
         return response()->json(ListadoPaginado::responder(
@@ -68,11 +56,11 @@ class PedidosApiController extends Controller
             buscables: ['bu.name', 'b.name', 'du.name', 'o.orderSales_id'],
             ordenables: [
                 'orderSales_id' => 'o.orderSales_id',
-                'sale_date'     => 'o.sale_date',
-                'total'         => 'o.total',
-                'state'         => 'o.state',
+                'sale_date' => 'o.sale_date',
+                'total' => 'o.total',
+                'state' => 'o.state',
                 'business_name' => 'b.name',
-                'buyer_name'    => 'bu.name',
+                'buyer_name' => 'bu.name',
             ],
             ordenPorDefecto: 'sale_date',
             resumen: fn ($filtrada) => $this->resumenDePedidos($filtrada),
@@ -109,10 +97,10 @@ class PedidosApiController extends Controller
         $limite = Carbon::now()->subHours($this->horasEstancado());
 
         match ($request->query('state_group')) {
-            'activos'    => $q->whereIn('o.state', self::ACTIVOS),
-            'entregados' => $q->where('o.state', self::ENTREGADO),
-            'sin_pago'   => $q->whereNotExists(fn ($sub) => $this->pagoAprobado($sub)),
-            'atencion'   => $q->whereIn('o.state', self::ACTIVOS)
+            'activos' => $q->whereIn('o.state', OrdersSales::ACTIVOS),
+            'entregados' => $q->where('o.state', OrdersSales::ENTREGADO),
+            'sin_pago' => $q->whereNotExists(fn ($sub) => (new PedidosDelPanel)->pagoAprobado($sub)),
+            'atencion' => $q->whereIn('o.state', OrdersSales::ACTIVOS)
                 ->where(fn ($sub) => $sub
                     ->where(fn ($x) => $x->where('o.state', 2)->whereNull('o.domiciliary_id'))
                     ->orWhere('o.sale_date', '<', $limite)),
@@ -123,9 +111,9 @@ class PedidosApiController extends Controller
     /** Indicadores de la pantalla, sobre TODO lo filtrado. */
     private function resumenDePedidos($q): array
     {
-        $entregado = self::ENTREGADO;
-        $activos   = implode(',', self::ACTIVOS);
-        $limite    = Carbon::now()->subHours($this->horasEstancado())->toDateTimeString();
+        $entregado = OrdersSales::ENTREGADO;
+        $activos = implode(',', OrdersSales::ACTIVOS);
+        $limite = Carbon::now()->subHours($this->horasEstancado())->toDateTimeString();
 
         $r = ListadoPaginado::soloAgregados($q, "
             COUNT(*) as total,
@@ -139,10 +127,10 @@ class PedidosApiController extends Controller
         ", [$limite]);
 
         return [
-            'total'      => (int) ($r->total ?? 0),
-            'activas'    => (int) ($r->activas ?? 0),
-            'atencion'   => (int) ($r->atencion ?? 0),
-            'ingresos'   => round((float) ($r->ingresos ?? 0), 2),
+            'total' => (int) ($r->total ?? 0),
+            'activas' => (int) ($r->activas ?? 0),
+            'atencion' => (int) ($r->atencion ?? 0),
+            'ingresos' => round((float) ($r->ingresos ?? 0), 2),
             'domicilios' => round((float) ($r->domicilios ?? 0), 2),
             'comisiones' => round((float) ($r->comisiones ?? 0), 2),
         ];
@@ -150,8 +138,8 @@ class PedidosApiController extends Controller
 
     public function showOrder($id)
     {
-        $orden = $this->ordenesBase()->where('o.orderSales_id', $id)->first();
-        abort_if(!$orden, 404, 'El pedido no existe.');
+        $orden = (new PedidosDelPanel)->ordenesBase()->where('o.orderSales_id', $id)->first();
+        abort_if(! $orden, 404, 'El pedido no existe.');
 
         $orden->items = DB::table('orderssales_detail as od')
             ->leftJoin('products as p', 'p.products_id', '=', 'od.product_id')

@@ -1,17 +1,15 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
-use App\Models\Buyer\Buyer;
-use App\Models\User;
-use App\Models\User\UserAddress;
+use App\Http\Requests\User\MarcarAvisoLeidoRequest;
+use App\Http\Resources\Usuario\AvisoResource;
 use App\Models\Notification;
-use App\Services\MunicipioPorNombre;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules\Password;
 
 class NotificacionesController extends Controller
 {
@@ -38,17 +36,15 @@ class NotificacionesController extends Controller
             ->get();
 
         return response()->json([
-            'notifications' => $avisos,
+            'notifications' => AvisoResource::collection($avisos)->resolve(),
             // El número que va en la burbuja de la campana.
             'unread' => $avisos->where('read', false)->count(),
         ]);
     }
 
-    public function markNotificationAsRead(Request $request)
+    public function markNotificationAsRead(MarcarAvisoLeidoRequest $request)
     {
-        $datos = $request->validate([
-            'notification_id' => 'required|integer',
-        ]);
+        $datos = $request->validated();
 
         $aviso = Notification::where('notification_id', $datos['notification_id'])
             ->where('user_id', $request->user()->user_id)
@@ -56,7 +52,7 @@ class NotificacionesController extends Controller
 
         // Un aviso ajeno se responde igual que uno inexistente: no hay por qué
         // confirmarle a nadie que el número acertó.
-        if (!$aviso) {
+        if (! $aviso) {
             return response()->json(['message' => 'Aviso no encontrado'], 404);
         }
 

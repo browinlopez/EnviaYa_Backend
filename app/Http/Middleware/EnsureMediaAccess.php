@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Middleware;
 
 use App\Models\Area;
@@ -29,7 +31,7 @@ class EnsureMediaAccess
     public function handle(Request $request, Closure $next): Response
     {
         $entidad = (string) $request->route('entidad');
-        $modulo  = app(MediaService::class)->moduloDe($entidad);
+        $modulo = app(MediaService::class)->moduloDe($entidad);
 
         if ($modulo === null) {
             return response()->json([
@@ -38,9 +40,10 @@ class EnsureMediaAccess
         }
 
         $user = $request->user();
-        $area = $user?->area_id ? Area::find($user->area_id) : null;
+        // La relacion, no `Area::find`: ver `User::area()`.
+        $area = $user?->area;
 
-        if (!$area || (int) $area->state !== 1) {
+        if (! $area || (int) $area->state !== 1) {
             return response()->json([
                 'message' => 'Tu cuenta no tiene un área asignada. Pídele a Tecnología que te asigne una.',
             ], 403);
@@ -55,7 +58,7 @@ class EnsureMediaAccess
             ? $area->puedeGestionar($modulo, $nivel)
             : $area->puedeVer($modulo, $nivel);
 
-        if (!$permitido) {
+        if (! $permitido) {
             return response()->json([
                 'message' => $escribe
                     ? ($area->puedeVer($modulo, $nivel)

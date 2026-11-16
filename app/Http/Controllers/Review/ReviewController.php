@@ -1,18 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Review;
 
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
 use App\Models\Buyer\Buyer;
-use App\Models\Domiciliary;
 use App\Models\Order\OrdersSales;
 use App\Models\Reviews\BusinessReview;
 use App\Models\Reviews\DomiciliaryReview;
 use App\Models\Reviews\UserReview;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class ReviewController extends Controller
 {
@@ -40,7 +40,7 @@ class ReviewController extends Controller
                     'comment' => 'nullable|string',
                 ]);
 
-                if (!$user->buyer) {
+                if (! $user->buyer) {
                     return response()->json([
                         'message' => 'El usuario no tiene perfil de comprador',
                     ], 422);
@@ -110,11 +110,11 @@ class ReviewController extends Controller
 
         // 🔹 Cargar solo las relaciones existentes según tipo de review
         $relations = [];
-        if ($review instanceof \App\Models\Reviews\BusinessReview) {
+        if ($review instanceof BusinessReview) {
             $relations = ['business', 'buyer.user'];
-        } elseif ($review instanceof \App\Models\Reviews\DomiciliaryReview) {
+        } elseif ($review instanceof DomiciliaryReview) {
             $relations = ['domiciliary', 'buyer.user'];
-        } elseif ($review instanceof \App\Models\Reviews\UserReview) {
+        } elseif ($review instanceof UserReview) {
             $relations = ['user', 'domiciliary'];
         }
 
@@ -124,7 +124,6 @@ class ReviewController extends Controller
             'review' => $review->loadMissing($relations),
         ], 201);
     }
-
 
     // ----------------- BUSINESS REVIEWS -----------------
 }

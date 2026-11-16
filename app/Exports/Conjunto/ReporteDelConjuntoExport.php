@@ -1,10 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Exports\Conjunto;
 
 use Maatwebsite\Excel\Concerns\FromArray;
-use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
+use Maatwebsite\Excel\Concerns\WithTitle;
 
 /**
  * El reporte del conjunto, en Excel.
@@ -23,8 +25,7 @@ class ReporteDelConjuntoExport implements WithMultipleSheets
     public function __construct(
         private array $datos,
         private string $conjunto,
-    ) {
-    }
+    ) {}
 
     public function sheets(): array
     {
@@ -39,9 +40,7 @@ class ReporteDelConjuntoExport implements WithMultipleSheets
 
 class HojaResumen implements FromArray, WithTitle
 {
-    public function __construct(private array $d, private string $conjunto)
-    {
-    }
+    public function __construct(private array $d, private string $conjunto) {}
 
     public function array(): array
     {
@@ -79,9 +78,7 @@ class HojaResumen implements FromArray, WithTitle
 
 class HojaPorTorre implements FromArray, WithTitle
 {
-    public function __construct(private array $d)
-    {
-    }
+    public function __construct(private array $d) {}
 
     public function array(): array
     {
@@ -102,9 +99,7 @@ class HojaPorTorre implements FromArray, WithTitle
 
 class HojaPorDia implements FromArray, WithTitle
 {
-    public function __construct(private array $d)
-    {
-    }
+    public function __construct(private array $d) {}
 
     public function array(): array
     {
@@ -125,9 +120,7 @@ class HojaPorDia implements FromArray, WithTitle
 
 class HojaDomiciliarios implements FromArray, WithTitle
 {
-    public function __construct(private array $d)
-    {
-    }
+    public function __construct(private array $d) {}
 
     public function array(): array
     {

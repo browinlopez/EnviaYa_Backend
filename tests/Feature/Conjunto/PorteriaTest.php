@@ -1,7 +1,6 @@
 <?php
 
 use App\Models\Conjunto\ComplexStaff;
-use App\Models\Domiciliary;
 use App\Models\Rol;
 use App\Models\User;
 use App\Services\AccesoAlConjunto;
@@ -16,7 +15,6 @@ use Laravel\Sanctum\Sanctum;
  * por fila. La prueba que más importa es la última — un celador pidiendo la
  * portería de otro conjunto no recibe datos, recibe los suyos.
  */
-
 
 /* ---------------------------------------------------------------------- */
 
@@ -58,7 +56,7 @@ test('sin pedidos en el conjunto, el mensaje es exacto', function () {
 });
 
 test('un pedido a OTRO conjunto no da derecho a entrar', function () {
-    $mio  = conjuntoConPersonal();
+    $mio = conjuntoConPersonal();
     $otro = conjuntoConPersonal();
 
     // Lleva pedido, pero al conjunto de al lado.
@@ -123,14 +121,14 @@ test('el celador solo ve las entradas de SU conjunto', function () {
      * los permisos eran por módulo: quien tenía la sección la tenía entera,
      * para todos los conjuntos del país.
      */
-    $mio  = conjuntoConPersonal();
+    $mio = conjuntoConPersonal();
     $otro = conjuntoConPersonal();
 
     DB::table('complex_entries')->insert([
         ['complex_id' => $mio['complexId'], 'domiciliary_id' => repartidorConPedidoEn(null)->domiciliary_id,
-         'method' => 'codigo', 'orders_count' => 1, 'created_at' => now(), 'updated_at' => now()],
+            'method' => 'codigo', 'orders_count' => 1, 'created_at' => now(), 'updated_at' => now()],
         ['complex_id' => $otro['complexId'], 'domiciliary_id' => repartidorConPedidoEn(null)->domiciliary_id,
-         'method' => 'codigo', 'orders_count' => 1, 'created_at' => now(), 'updated_at' => now()],
+            'method' => 'codigo', 'orders_count' => 1, 'created_at' => now(), 'updated_at' => now()],
     ]);
 
     Sanctum::actingAs($mio['user']);
@@ -226,7 +224,7 @@ test('un dueno no puede tocar celadores de otro conjunto', function () {
      * Responde 404 y no 403 a propósito: confirmar que existe pero es de otro
      * ya sería decirle algo del edificio del vecino.
      */
-    $mio  = conjuntoConPersonal(ComplexStaff::DUENO);
+    $mio = conjuntoConPersonal(ComplexStaff::DUENO);
     $otro = conjuntoConPersonal(ComplexStaff::CELADOR);
 
     $ajeno = ComplexStaff::where('complex_id', $otro['complexId'])->first();
@@ -384,7 +382,7 @@ test('unas fechas al reves se corrigen en vez de devolver cero filas', function 
 });
 
 test('el reporte de otro conjunto no existe: cada quien ve el suyo', function () {
-    $mio  = conjuntoConPersonal(ComplexStaff::DUENO);
+    $mio = conjuntoConPersonal(ComplexStaff::DUENO);
     $otro = conjuntoConPersonal(ComplexStaff::DUENO);
 
     // Pedido en el conjunto del vecino.

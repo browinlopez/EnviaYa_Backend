@@ -126,7 +126,6 @@ test('un correo que ya tiene cuenta o una cédula repetida no crean otro', funct
         ->assertUnprocessable()->assertJsonValidationErrors('document');
 });
 
-
 test('no se vincula a un domiciliario por su id a secas ni con un dato de otro', function () {
     $t = tiendaParaAltas();
     $u = User::factory()->create(['rol' => 3, 'phone' => '3005550001']);

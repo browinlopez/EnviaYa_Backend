@@ -19,9 +19,9 @@ use Illuminate\Support\Facades\DB;
  * salían seis veces, cada uno junto a su gemelo, y la tarjeta decía 6.
  */
 it('borra a las personas de cualquier dominio de demostracion, no solo el de hoy', function () {
-    $actual = User::factory()->create(['email' => 'yeimy.polo@' . DemoSeeder::DOMINIO]);
-    $viejo  = User::factory()->create(['email' => 'yeimy.polo@demo.enviaya.test']);
-    $real   = User::factory()->create(['email' => 'persona.de.verdad@gmail.com']);
+    $actual = User::factory()->create(['email' => 'yeimy.polo@'.DemoSeeder::DOMINIO]);
+    $viejo = User::factory()->create(['email' => 'yeimy.polo@demo.enviaya.test']);
+    $real = User::factory()->create(['email' => 'persona.de.verdad@gmail.com']);
 
     (new DemoPurgeSeeder)->run();
 

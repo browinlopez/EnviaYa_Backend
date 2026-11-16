@@ -38,7 +38,7 @@ function escenarioDeEfectivo(): array
 function entregaEnEfectivo(int $negocio, int $domi, float $subtotal): int
 {
     // El medio de pago «Efectivo»: la base de pruebas arranca vacía.
-    if (!DB::table('payment_methods')->where('methods_id', 1)->exists()) {
+    if (! DB::table('payment_methods')->where('methods_id', 1)->exists()) {
         DB::table('payment_methods')->insert(['methods_id' => 1, 'name' => 'Efectivo', 'state' => 1]);
     }
 

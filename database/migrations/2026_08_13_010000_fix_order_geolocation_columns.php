@@ -20,13 +20,13 @@ return new class extends Migration
     {
         Schema::table('order_geolocation', function (Blueprint $table) {
             if (Schema::hasColumn('order_geolocation', 'length')
-                && !Schema::hasColumn('order_geolocation', 'longitude')) {
+                && ! Schema::hasColumn('order_geolocation', 'longitude')) {
                 $table->renameColumn('length', 'longitude');
             }
         });
 
         Schema::table('order_geolocation', function (Blueprint $table) {
-            if (!Schema::hasColumn('order_geolocation', 'orderSales_id')) {
+            if (! Schema::hasColumn('order_geolocation', 'orderSales_id')) {
                 $table->unsignedInteger('orderSales_id')
                     ->nullable()
                     ->after('domiciliary_id');

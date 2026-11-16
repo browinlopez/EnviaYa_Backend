@@ -21,7 +21,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('orderssales', function (Blueprint $table) {
-            if (!Schema::hasColumn('orderssales', 'promised_minutes')) {
+            if (! Schema::hasColumn('orderssales', 'promised_minutes')) {
                 $table->unsignedSmallInteger('promised_minutes')
                     ->nullable()
                     ->after('dispatched_at');

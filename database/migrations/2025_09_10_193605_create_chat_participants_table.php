@@ -25,16 +25,16 @@ return new class extends Migration
 
             // Foreign Keys
             $table->foreign('chat_id', 'fk_chat_participant_chat')
-                  ->references('chat_id')->on('chats')
-                  ->onDelete('cascade');
+                ->references('chat_id')->on('chats')
+                ->onDelete('cascade');
 
             $table->foreign('user_id', 'fk_chat_participant_user')
-                  ->references('user_id')->on('user')
-                  ->onDelete('cascade');
+                ->references('user_id')->on('user')
+                ->onDelete('cascade');
 
             $table->foreign('role_id', 'fk_chat_participant_role')
-                  ->references('rol_id')->on('rol')
-                  ->onDelete('cascade');
+                ->references('rol_id')->on('rol')
+                ->onDelete('cascade');
         });
     }
 

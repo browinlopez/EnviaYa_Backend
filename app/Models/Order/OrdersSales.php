@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models\Order;
 
 use App\Models\Audit\Audit;
@@ -11,17 +13,21 @@ use App\Models\Payment\PaymentForms;
 use App\Models\Payment\PaymentIntent;
 use App\Models\Payment\PaymentMethods;
 use App\Models\Payment\PaymentTransaction;
-use App\Models\User;
 use App\Models\User\UserAddress;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class OrdersSales extends Audit
 {
     use HasFactory;
 
     protected $table = 'orderssales';
+
     protected $primaryKey = 'orderSales_id';
+
     public $timestamps = true;
 
     protected $fillable = [
@@ -118,8 +124,90 @@ class OrdersSales extends Audit
      * aceptar y preparar es de la tienda y se mide aparte.
      */
 
-    /** Estado 4: entregado. */
-    private const ENTREGADO = 4;
+    /* =====================================================================
+       LOS CINCO ESTADOS DE UN PEDIDO, EN UN SOLO SITIO.
+
+       ESTO ESTABA REPARTIDO EN NUEVE DECLARACIONES, y el 14 de noviembre de
+       2026 se juntó. `ENTREGADO = 4` vivía como constante PRIVADA en seis
+       clases distintas --este modelo, `PedidosDelDomiciliarioController`,
+       `HistorialDePedidosController`, `MasVendidosController`,
+       `GeneradorDeReportes` y el rasgo `AyudasDeAdmin`--, `CANCELADO = 5` en
+       tres y `EN_CAMINO = 3` en dos. Y además había `4` escrito a pelo en
+       cinco ficheros más.
+
+       Privada en seis sitios no es encapsulación: es la misma decisión tomada
+       seis veces, y el día que un estado cambie de número habrá que acordarse
+       de las seis. Lo mismo que pasaba con la ciudad del negocio y con las
+       tres listas de `MediaService`.
+
+       VAN EN EL MODELO y no en un catálogo aparte porque son datos DEL
+       PEDIDO, que es lo que §07 dice que describe un modelo. Y son públicas
+       porque el problema era justamente que no lo fueran.
+
+       LOS NOMBRES NO SE INVENTARON: salen de `ESTADOS_DE_PEDIDO` en
+       `EnviaYa_Aliados/src/lib/constants.js`, que es el vocabulario con el
+       que el panel los pinta. Dos nombres para lo mismo habría sido cambiar
+       una duplicación por otra.
+       ===================================================================== */
+
+    /** Recién creado: el cliente espera que la tienda lo acepte. */
+    public const NUEVO = 1;
+
+    /** Aceptado por la tienda, en preparación. */
+    public const PREPARANDO = 2;
+
+    /** Despachado: lo lleva un domiciliario. */
+    public const EN_CAMINO = 3;
+
+    /** Entregado. Es la transición que mueve dinero. */
+    public const ENTREGADO = 4;
+
+    /** Cancelado. La fila NO se borra: ver `CancelacionDelPedido`. */
+    public const CANCELADO = 5;
+
+    /** Los cinco, para recorrerlos o validarlos. */
+    public const ESTADOS = [
+        self::NUEVO,
+        self::PREPARANDO,
+        self::EN_CAMINO,
+        self::ENTREGADO,
+        self::CANCELADO,
+    ];
+
+    /**
+     * A DONDE SE PUEDE MOVER UN PEDIDO desde el panel o la app.
+     *
+     * No son todos los estados, y las dos ausencias son deliberadas:
+     *
+     *   NUEVO      es el estado inicial. Un pedido no "vuelve" a nuevo: eso
+     *              seria deshacer que la tienda lo acepto.
+     *   CANCELADO  tiene su propio camino --`OrderController::cancel`--, que
+     *              devuelve inventario, el uso de la promocion y el cupo de
+     *              credito. Llegar ahi por "mover de estado" se saltaria las
+     *              tres devoluciones.
+     *
+     * Existe porque `MoverPedidoRequest` escribia `in:2,3,4`: tres numeros a
+     * mano al lado de tres constantes que dicen lo mismo. Que una transicion
+     * concreta sea legal AHORA lo sigue decidiendo `ReglasDeDespacho`; esto
+     * solo es el vocabulario que la validacion acepta.
+     */
+    public const DESTINOS_AL_MOVER = [self::PREPARANDO, self::EN_CAMINO, self::ENTREGADO];
+
+    /**
+     * LOS PEDIDOS QUE TODAVÍA ESTÁN PASANDO: ni entregados ni cancelados.
+     *
+     * Era la DÉCIMA declaración de estados, encontrada al mover
+     * `AyudasDeAdmin`: vivía como `private const ACTIVOS = [1, 2, 3]` en el
+     * rasgo --y por tanto en sus diez consumidores-- más dos literales
+     * sueltos, en `ConsultaDePedidosController` y en `ResumenDeArea`.
+     *
+     * Va con las constantes y no con los tres números: `[1, 2, 3]` escrito a
+     * mano no dice QUÉ tienen en común esos tres, y era justo lo que hacía
+     * que las copias pasaran desapercibidas. Una lista de constantes es lo
+     * más cerca que deja llegar PHP: una expresión constante no puede llamar
+     * a `array_diff`, así que los tres hay que nombrarlos.
+     */
+    public const ACTIVOS = [self::NUEVO, self::PREPARANDO, self::EN_CAMINO];
 
     /**
      * Un pago en línea que todavía no se ha confirmado.
@@ -206,7 +294,7 @@ class OrdersSales extends Audit
             return null;
         }
 
-        if (!$this->dispatched_at || !$this->delivery_date) {
+        if (! $this->dispatched_at || ! $this->delivery_date) {
             return null;
         }
 
@@ -227,7 +315,7 @@ class OrdersSales extends Audit
     {
         $minutos = $this->delivery_minutes;
 
-        if ($minutos === null || !$this->promised_minutes) {
+        if ($minutos === null || ! $this->promised_minutes) {
             return null;
         }
 
@@ -239,7 +327,7 @@ class OrdersSales extends Audit
     {
         $minutos = $this->delivery_minutes;
 
-        if ($minutos === null || !$this->promised_minutes) {
+        if ($minutos === null || ! $this->promised_minutes) {
             return null;
         }
 
@@ -276,12 +364,22 @@ class OrdersSales extends Audit
         return $cambio > 0 ? $cambio : null;
     }
 
-    public function paymentIntents()
+    /** @return HasMany<PaymentIntent, $this> */
+    public function paymentIntents(): HasMany
     {
-        return $this->hasMany(\App\Models\Payment\PaymentIntent::class, 'orderSales_id');
+        return $this->hasMany(PaymentIntent::class, 'orderSales_id');
     }
 
-    public function paymentTransactions()
+    /**
+     * Los movimientos de la pasarela de ESTE pedido, pasando por el intento.
+     *
+     * Los genericos de `hasManyThrough` llevan TRES parametros y no dos: lo
+     * que se alcanza, por donde se pasa, y desde donde. Es la unica relacion
+     * del repositorio con esta forma, y por eso se escribio a mano.
+     *
+     * @return HasManyThrough<PaymentTransaction, PaymentIntent, $this>
+     */
+    public function paymentTransactions(): HasManyThrough
     {
         return $this->hasManyThrough(
             PaymentTransaction::class,
@@ -291,130 +389,63 @@ class OrdersSales extends Audit
         );
     }
 
-
-    public function buyer()
+    /** @return BelongsTo<Buyer, $this> */
+    public function buyer(): BelongsTo
     {
         // el buyer_id de orderssales apunta al buyer_id de la tabla buyer
         return $this->belongsTo(Buyer::class, 'buyer_id', 'buyer_id');
     }
 
-    public function business()
+    /** @return BelongsTo<Business, $this> */
+    public function business(): BelongsTo
     {
         return $this->belongsTo(Business::class, 'busines_id', 'busines_id');
     }
 
-    public function domiciliary()
+    /** @return BelongsTo<Domiciliary, $this> */
+    public function domiciliary(): BelongsTo
     {
         return $this->belongsTo(Domiciliary::class, 'domiciliary_id', 'domiciliary_id');
     }
 
-    public function details()
+    /** @return HasMany<OrdersSalesDetail, $this> */
+    public function details(): HasMany
     {
         return $this->hasMany(OrdersSalesDetail::class, 'orderSales_id', 'orderSales_id');
     }
 
-    public function promotions()
+    /** @return HasMany<OrderPromotion, $this> */
+    public function promotions(): HasMany
     {
         return $this->hasMany(OrderPromotion::class, 'orderSales_id', 'orderSales_id');
     }
 
-    public function payments()
+    /*
+     * `hasOne` y la clave se llama `payments`, en plural. Se queda: es el
+     * nombre que leen las apps publicadas en `'payments' => ...`, y
+     * renombrarlo cambia la respuesta.
+     */
+    /** @return HasOne<Payment, $this> */
+    public function payments(): HasOne
     {
         return $this->hasOne(Payment::class, 'orderSales_id', 'orderSales_id');
     }
 
-    public function paymentMethod()
+    /** @return BelongsTo<PaymentMethods, $this> */
+    public function paymentMethod(): BelongsTo
     {
         return $this->belongsTo(PaymentMethods::class, 'methods_id');
     }
 
-    public function paymentForm()
+    /** @return BelongsTo<PaymentForms, $this> */
+    public function paymentForm(): BelongsTo
     {
         return $this->belongsTo(PaymentForms::class, 'forms_id');
     }
 
-    public function address()
+    /** @return BelongsTo<UserAddress, $this> */
+    public function address(): BelongsTo
     {
         return $this->belongsTo(UserAddress::class, 'address_id', 'address_id');
-    }
-
-    /**
-     * Transformar la orden para API frontend
-     */
-    public function toApi(): array
-    {
-        return [
-            'order_id' => $this->orderSales_id,
-            'buyer_id' => $this->buyer_id,
-            'busines_id' => $this->busines_id,
-            'total' => $this->total,
-            // Con cuánto paga y cuánto cambio llevarle. Solo en efectivo.
-            'cash_tendered' => $this->cash_tendered,
-            'change_due' => $this->change_due,
-            // 0 no aplica · 1 por pesar · 2 pesado. Es una dimension aparte
-            // del estado del pedido, no un estado nuevo.
-            'weighing_state' => (int) $this->weighing_state,
-            'sale_date' => $this->sale_date,
-            'delivery_date' => $this->delivery_date,
-            'state' => $this->state,
-            'is_scheduled' => $this->is_scheduled,
-            'has_review' => $this->has_review,
-            'dispatched_at' => $this->dispatched_at,
-            // Compromiso y cumplimiento. `promised_minutes` es lo que el reloj
-            // del seguimiento tiene que contar: antes la app usaba un 20 fijo
-            // porque leía un campo que el servidor nunca mandó.
-            'promised_minutes' => $this->promised_minutes,
-            'delivery_minutes' => $this->delivery_minutes,
-            'on_time' => $this->on_time,
-            'delay_minutes' => $this->delay_minutes,
-            'domiciliary' => $this->domiciliary ? [
-                'domiciliary_id' => $this->domiciliary->domiciliary_id,
-                'user_id' => $this->domiciliary->user->user_id ?? null,
-                'name' => $this->domiciliary->user->name ?? null,
-                'phone' => $this->domiciliary->user->phone ?? null,
-                'qualification' => $this->domiciliary->qualification,
-            ] : null,
-            'business' => [
-                'business_id' => $this->business->busines_id ?? null,
-                'name' => $this->business->name ?? null,
-                'address' => $this->business->address ?? null,
-                'latitude' => $this->business->latitude ? (float) $this->business->latitude : null,
-                'longitude' => $this->business->longitude ? (float) $this->business->longitude : null,
-                'phone' => $this->business->phone ?? null,
-                'city' => $this->business->city ?? null,
-                'state' => $this->business->state ?? null,
-                'logo' => $this->business->logo ?? null,
-            ],
-            'delivery_address' => $this->address ? [
-                'address_id' => $this->address->address_id,
-                'address' => $this->address->address ?? null,
-                'alias' => $this->address->alias?->name,
-                'municipality' => $this->address->municipality?->name,
-                'department' => $this->address->department?->name,
-                'country' => $this->address->country?->name,
-                'latitude' => $this->address->latitude ? (float) $this->address->latitude : null,
-                'longitude' => $this->address->longitude ? (float) $this->address->longitude : null,
-            ] : null,
-            'details' => $this->details->map(fn($d) => [
-                // Por donde se pesa una linea; ver `PesajeDelPedidoController`.
-                'orderDet_id' => $d->orderDet_id,
-                'product_id' => $d->product->products_id ?? null,
-                'name' => $d->product->name ?? null,
-                'description' => $d->product->description ?? null,
-                'category' => $d->product->category?->name ?? null,
-                'image' => $d->product->image ?? null,
-                'amount' => $d->amount,
-                'unit_price' => $d->unit_price,
-                // Lo que se vende al peso: `amount` vale 1 en esas lineas y la
-                // cantidad de verdad va aca. Ver la migracion del peso.
-                'sale_unit' => $d->sale_unit,
-                'pedido_por' => $d->pedido_por,
-                'qty_requested' => $d->qty_requested,
-                'qty_final' => $d->qty_final,
-                'line_total' => $d->line_total,
-            ])->toArray(),
-            'promotions' => $this->promotions ?? [],
-            'payments' => $this->payments ?? null,
-        ];
     }
 }

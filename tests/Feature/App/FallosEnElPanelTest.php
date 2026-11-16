@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Rol;
 use App\Models\User;
 use App\Support\PanelModules;
 use Illuminate\Support\Facades\DB;
@@ -20,7 +21,7 @@ use Laravel\Sanctum\Sanctum;
 /** Un administrador con el módulo concedido. */
 function adminConFallos(): User
 {
-    \App\Models\Rol::firstOrCreate(['rol_id' => 4], ['name' => 'admin', 'guard_name' => 'web']);
+    Rol::firstOrCreate(['rol_id' => 4], ['name' => 'admin', 'guard_name' => 'web']);
 
     $user = User::factory()->create(['rol' => 4]);
 
@@ -31,16 +32,16 @@ function adminConFallos(): User
      */
     $area = DB::table('areas')->insertGetId([
         // `code` es obligatorio: es como el panel identifica el area.
-        'code'      => 'tec-' . uniqid(),
-        'name'      => 'Tecnología ' . uniqid(),
-        'state'     => 1,
+        'code' => 'tec-'.uniqid(),
+        'name' => 'Tecnología '.uniqid(),
+        'state' => 1,
         'is_system' => 0,
     ]);
 
     DB::table('area_module')->insert([
-        'area_id'    => $area,
-        'module'     => 'fallos',
-        'can_view'   => 1,
+        'area_id' => $area,
+        'module' => 'fallos',
+        'can_view' => 1,
         'can_manage' => 0,
     ]);
 
@@ -52,12 +53,12 @@ function adminConFallos(): User
 function fallo(array $extra = []): void
 {
     DB::table('client_errors')->insert(array_merge([
-        'platform'    => 'android',
+        'platform' => 'android',
         'app_version' => '1.0.8',
-        'pantalla'    => 'CartScreen',
-        'mensaje'     => 'Cannot read property x of undefined',
-        'traza'       => 'en <CartScreen>',
-        'created_at'  => now(),
+        'pantalla' => 'CartScreen',
+        'mensaje' => 'Cannot read property x of undefined',
+        'traza' => 'en <CartScreen>',
+        'created_at' => now(),
     ], $extra));
 }
 
@@ -125,7 +126,7 @@ it('el listado uno por uno tambien responde', function () {
 });
 
 it('sin el modulo concedido no se ven', function () {
-    \App\Models\Rol::firstOrCreate(['rol_id' => 4], ['name' => 'admin', 'guard_name' => 'web']);
+    Rol::firstOrCreate(['rol_id' => 4], ['name' => 'admin', 'guard_name' => 'web']);
 
     // Un administrador SIN el módulo: el panel se acota por área, no por rol.
     Sanctum::actingAs(User::factory()->create(['rol' => 4]));

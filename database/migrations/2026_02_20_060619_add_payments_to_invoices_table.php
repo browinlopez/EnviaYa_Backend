@@ -14,8 +14,8 @@ return new class extends Migration
             $table->string('payment_reference')->nullable()->after('payment_provider');
 
             $table->foreign('payments_id')
-                  ->references('payments_id')->on('payments')
-                  ->nullOnDelete();
+                ->references('payments_id')->on('payments')
+                ->nullOnDelete();
         });
     }
 
@@ -26,7 +26,7 @@ return new class extends Migration
             $table->dropColumn([
                 'payments_id',
                 'payment_provider',
-                'payment_reference'
+                'payment_reference',
             ]);
         });
     }

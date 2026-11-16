@@ -1,24 +1,20 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Operacion\DomiciliaryDocument;
+use App\Http\Requests\Admin\ActualizarSolicitudRequest;
+use App\Http\Requests\Admin\FiltrarSolicitudesRequest;
 use App\Models\Operacion\LandingRequest;
 use App\Models\Operacion\Pqrs;
-use App\Models\Operacion\PqrsNote;
-use App\Models\Operacion\SafetyIncident;
-use App\Models\Operacion\Settlement;
-use App\Services\LiquidacionService;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use App\Support\FiltroDeFechas;
 use Illuminate\Support\Facades\Storage;
-use RuntimeException;
 
 class SolicitudesApiController extends Controller
 {
-
-    public function solicitudes(Request $request)
+    public function solicitudes(FiltrarSolicitudesRequest $request)
     {
         $q = LandingRequest::query()
             ->leftJoin('user as a', 'a.user_id', '=', 'landing_requests.assigned_to')
@@ -43,7 +39,7 @@ class SolicitudesApiController extends Controller
             // devuelve objetos planos.
             'data' => $filas->each(fn ($s) => $s->overdue = $s->vencida()),
             'summary' => [
-                'nuevas'     => LandingRequest::where('state', LandingRequest::NUEVA)->count(),
+                'nuevas' => LandingRequest::where('state', LandingRequest::NUEVA)->count(),
                 'en_gestion' => LandingRequest::where('state', LandingRequest::EN_GESTION)->count(),
                 /*
                  * Vencidas son, hoy por hoy, solo eliminaciones de cuenta: son
@@ -52,15 +48,16 @@ class SolicitudesApiController extends Controller
                  * /eliminar-cuenta es un incumplimiento público, no un retraso
                  * interno.
                  */
-                'vencidas'   => LandingRequest::whereIn('state', [LandingRequest::NUEVA, LandingRequest::EN_GESTION])
+                'vencidas' => LandingRequest::whereIn('state', [LandingRequest::NUEVA, LandingRequest::EN_GESTION])
                     ->whereNotNull('due_at')
                     ->where('due_at', '<', now())
                     ->count(),
-                'mes'        => LandingRequest::whereMonth('created_at', now()->month)
-                    ->whereYear('created_at', now()->year)
-                    ->count(),
+                'mes' => FiltroDeFechas::elMes(
+                    LandingRequest::query(),
+                    'created_at', (int) now()->year, (int) now()->month,
+                )->count(),
                 // Cuántas hay de cada tipo, para el tablero del panel.
-                'por_tipo'   => LandingRequest::selectRaw('type, count(*) as total')
+                'por_tipo' => LandingRequest::selectRaw('type, count(*) as total')
                     ->groupBy('type')
                     ->pluck('total', 'type'),
             ],
@@ -87,7 +84,7 @@ class SolicitudesApiController extends Controller
 
         $disco = Storage::disk(LandingRequest::ADJUNTO_DISCO);
 
-        if (!$s->attachment_path || !$disco->exists($s->attachment_path)) {
+        if (! $s->attachment_path || ! $disco->exists($s->attachment_path)) {
             abort(404, 'Esta solicitud no trae adjunto.');
         }
 
@@ -97,18 +94,14 @@ class SolicitudesApiController extends Controller
         );
     }
 
-    public function updateSolicitud(Request $request, $id)
+    public function updateSolicitud(ActualizarSolicitudRequest $request, $id)
     {
         $s = LandingRequest::findOr($id, fn () => abort(404, 'La solicitud no existe.'));
 
-        $datos = $request->validate([
-            'state'       => 'sometimes|integer|in:0,1,2,3',
-            'assigned_to' => 'sometimes|nullable|integer|exists:user,user_id',
-            'resolution'  => 'sometimes|nullable|string',
-        ]);
+        $datos = $request->validated();
 
         $nuevoEstado = (int) ($datos['state'] ?? $s->state);
-        $resolucion  = $datos['resolution'] ?? $s->resolution;
+        $resolucion = $datos['resolution'] ?? $s->resolution;
 
         /*
          * Descartar sin decir por qué deja a la siguiente persona sin saber si

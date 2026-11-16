@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 /**
@@ -186,12 +188,12 @@ class AgrupadorDeVariantes
             }
 
             $grupos[] = [
-                'nucleo'      => $nucleo,
-                'name'        => $this->nombreDelGrupo($miembros),
-                'brand'       => $this->marcaComun($miembros),
+                'nucleo' => $nucleo,
+                'name' => $this->nombreDelGrupo($miembros),
+                'brand' => $this->marcaComun($miembros),
                 'category_id' => reset($categorias),
-                'image'       => $this->primeraImagen($miembros),
-                'miembros'    => $miembros,
+                'image' => $this->primeraImagen($miembros),
+                'miembros' => $miembros,
             ];
         }
 
@@ -237,13 +239,13 @@ class AgrupadorDeVariantes
 
         $palabras = array_values(array_filter(
             preg_split('/\s+/', trim($sinMedidas)),
-            fn ($w) => $w !== '' && !in_array($w, self::VACIAS, true) && !ctype_digit($w)
+            fn ($w) => $w !== '' && ! in_array($w, self::VACIAS, true) && ! ctype_digit($w)
         ));
 
         // Las genéricas desaparecen: ni núcleo ni etiqueta.
         $palabras = array_values(array_filter(
             $palabras,
-            fn ($w) => !in_array($w, self::GENERICAS, true)
+            fn ($w) => ! in_array($w, self::GENERICAS, true)
         ));
 
         $distinguen = array_merge(self::SABORES, self::VARIANTES, self::ENVASES);
@@ -255,7 +257,7 @@ class AgrupadorDeVariantes
 
         $nucleo = array_values(array_filter(
             $palabras,
-            fn ($w) => !in_array($w, $distinguen, true)
+            fn ($w) => ! in_array($w, $distinguen, true)
         ));
 
         $nucleo = array_unique($nucleo);
@@ -280,14 +282,14 @@ class AgrupadorDeVariantes
             $texto = implode(' ', array_map(function ($d) use ($conPuntuacion) {
                 $palabra = mb_convert_case(mb_strtolower($d), MB_CASE_TITLE, 'UTF-8');
 
-                if (preg_match('/' . preg_quote($d, '/') . '\s+(\d+)(?![.,\d])/', $conPuntuacion, $n)) {
-                    return $palabra . ' ' . $n[1];
+                if (preg_match('/'.preg_quote($d, '/').'\s+(\d+)(?![.,\d])/', $conPuntuacion, $n)) {
+                    return $palabra.' '.$n[1];
                 }
 
                 return $palabra;
             }, array_unique($distintivas)));
 
-            $etiqueta = $etiqueta === null ? $texto : $texto . ' ' . $etiqueta;
+            $etiqueta = $etiqueta === null ? $texto : $texto.' '.$etiqueta;
         }
 
         return [implode(' ', $nucleo), $etiqueta];
@@ -301,11 +303,11 @@ class AgrupadorDeVariantes
         if (preg_match($this->patronMedida(), $t, $m)) {
             $numero = str_replace('.', ',', $m[1]);
 
-            return $numero . ' ' . self::UNIDADES[$m[2]];
+            return $numero.' '.self::UNIDADES[$m[2]];
         }
 
         if (preg_match('/#\s*(\d+)/', $t, $m)) {
-            return '# ' . $m[1];
+            return '# '.$m[1];
         }
 
         /*
@@ -315,11 +317,11 @@ class AgrupadorDeVariantes
          * litros.
          */
         if (preg_match('/(?<![\d.,])(\d[.,]\d{1,2})\s*$/', trim($t), $m)) {
-            return str_replace('.', ',', $m[1]) . ' L';
+            return str_replace('.', ',', $m[1]).' L';
         }
 
         if (preg_match('/(?:X|\*)\s*(\d+)(?!\d)/', $t, $m)) {
-            return 'x' . $m[1];
+            return 'x'.$m[1];
         }
 
         return null;
@@ -332,7 +334,7 @@ class AgrupadorDeVariantes
             array_keys(self::UNIDADES)
         ));
 
-        return '/(?<![A-Z0-9])(\d+(?:[.,]\d+)?)\s*(' . $unidades . ')(?![A-Z])/';
+        return '/(?<![A-Z0-9])(\d+(?:[.,]\d+)?)\s*('.$unidades.')(?![A-Z])/';
     }
 
     private function limpiar(string $t): string
@@ -408,10 +410,10 @@ class AgrupadorDeVariantes
                 return false;
             }
 
-            return !in_array($plano, $fuera, true);
+            return ! in_array($plano, $fuera, true);
         });
 
-        $base = trim(preg_replace('/\s+/', ' ', implode(' ', $palabras)), " .,-*");
+        $base = trim(preg_replace('/\s+/', ' ', implode(' ', $palabras)), ' .,-*');
 
         /*
          * Si al quitarlo todo no queda nada —un producto que se llama sólo por
@@ -433,7 +435,7 @@ class AgrupadorDeVariantes
     {
         $marcas = array_filter(array_map(fn ($m) => $m['brand'] ?? null, $miembros));
 
-        if (!$marcas) {
+        if (! $marcas) {
             return null;
         }
 
@@ -447,7 +449,7 @@ class AgrupadorDeVariantes
     private function primeraImagen(array $miembros): ?string
     {
         foreach ($miembros as $m) {
-            if (!empty($m['image'])) {
+            if (! empty($m['image'])) {
                 return $m['image'];
             }
         }

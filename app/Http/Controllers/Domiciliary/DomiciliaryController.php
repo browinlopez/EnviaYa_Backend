@@ -1,40 +1,43 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Domiciliary;
 
-use App\Services\Ajustes;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Domiciliary\ActualizarDomiciliarioRequest;
+use App\Http\Requests\Domiciliary\CrearDomiciliarioRequest;
+use App\Http\Requests\Domiciliary\DomiciliariosDeUnNegocioRequest;
+use App\Http\Requests\Domiciliary\VerDomiciliarioRequest;
+use App\Http\Resources\Domiciliario\DomiciliarioDeLaFlotaResource;
+use App\Http\Resources\Domiciliario\MiFichaDeDomiciliarioResource;
+use App\Http\Resources\Usuario\DomiciliarioDelAltaResource;
+use App\Http\Resources\Usuario\UsuarioResource;
+use App\Models\Business;
 use App\Models\Domiciliary;
-use App\Models\Payment\Payment;
+use App\Models\Order\OrdersSales;
 use App\Models\User;
-use Carbon\Carbon;
+use App\Services\Ajustes;
+use App\Services\CustodiaDeEfectivo;
+use App\Services\PapelesDelDomiciliario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 
 class DomiciliaryController extends Controller
 {
-    // Listar todos los domiciliarios
-    public function listDomiciliary(Request $request)
-    {
-        $domiciliaries = Domiciliary::with('user', 'reviews')->get();
-        return response()->json($domiciliaries);
-    }
-
     // Listar todos los domiciliarios de un negocio
-    public function listDomiciliariesByBusiness(Request $request)
+    public function listDomiciliariesByBusiness(DomiciliariosDeUnNegocioRequest $request)
     {
-        $request->validate([
-            'busines_id' => 'required|integer|exists:business,busines_id',
-        ]);
 
-        $business = \App\Models\Business::with(['domiciliaries.user'])
+        $business = Business::with(['domiciliaries.user'])
             ->findOrFail($request->busines_id);
 
         // Pedidos que cada domiciliario lleva encima ahora mismo, para que el
         // tendero vea a quién puede despacharle antes de intentarlo.
         $business->domiciliaries->loadCount([
-            'orders as active_orders' => fn($q) => $q->where('state', 3),
+            'orders as active_orders' => fn ($q) => $q->where('state', OrdersSales::EN_CAMINO),
         ]);
 
         $maxSimultaneos = (int) Ajustes::valor('operacion.entregas_simultaneas');
@@ -47,12 +50,12 @@ class DomiciliaryController extends Controller
          * Sin este dato, el tendero lo intenta, recibe un error y no entiende
          * por qué — la lista le decía que esa persona estaba disponible.
          */
-        $custodia = app(\App\Services\CustodiaDeEfectivo::class);
+        $custodia = app(CustodiaDeEfectivo::class);
         $tope = $business->max_courier_cash !== null
             ? (float) $business->max_courier_cash
             : null;
 
-        $papeles = app(\App\Services\PapelesDelDomiciliario::class);
+        $papeles = app(PapelesDelDomiciliario::class);
 
         $domiciliaries = $business->domiciliaries->map(function ($domiciliary) use ($maxSimultaneos, $custodia, $tope, $papeles) {
             $enCurso = (int) ($domiciliary->active_orders ?? 0);
@@ -61,54 +64,28 @@ class DomiciliaryController extends Controller
             $faltan = $papeles->faltantes($domiciliary);
             $efectivo = round($custodia->saldo($domiciliary->domiciliary_id), 2);
 
-            return [
-                'domiciliary_id' => $domiciliary->domiciliary_id,
-                // user_id del domiciliario: requerido para despachar una
-                // orden (transición 2 → 3 en orders/update)
-                'user_id'        => $domiciliary->user_id,
-                'name'           => $domiciliary->user ? $domiciliary->user->name : null,
-                'email'          => $domiciliary->user ? $domiciliary->user->email : null,
-                'phone'          => $domiciliary->user ? $domiciliary->user->phone : null,
-                'available'      => $domiciliary->available,
-                'qualification'  => $domiciliary->qualification,
-                'state'          => $domiciliary->state,
-                'active_orders'     => $enCurso,
-                'max_active_orders' => $maxSimultaneos,
+            return (new DomiciliarioDeLaFlotaResource(
+                $domiciliary,
+                enCurso: $enCurso,
+                maxSimultaneos: $maxSimultaneos,
                 // Mismas condiciones que valida orders/update al despachar.
-                'can_take'          => $disponible && $enCurso < $maxSimultaneos && !$faltan,
-                'papeles_faltantes' => $faltan,
-                'cash_on_hand'      => $efectivo,
-                'cash_limit'        => $tope,
-                /*
-                 * Cuánto le cabe todavía en efectivo. Se manda calculado y no
-                 * se deja al cliente: la app y el panel harían la misma resta
-                 * cada uno por su lado, y el día que el tope cambie de forma
-                 * habría que acordarse de los dos.
-                 */
-                'cash_room'         => $tope === null ? null : max(0, round($tope - $efectivo, 2)),
-            ];
+                puedeTomar: $disponible && $enCurso < $maxSimultaneos && ! $faltan,
+                papelesFaltantes: $faltan,
+                efectivo: $efectivo,
+                tope: $tope,
+            ))->resolve();
         });
 
         return response()->json([
-            'busines_id'    => $business->busines_id,
+            'busines_id' => $business->busines_id,
             'business_name' => $business->name,
-            'domiciliaries' => $domiciliaries
+            'domiciliaries' => $domiciliaries,
         ]);
     }
 
     // Crear un domiciliario
-    public function createDomiciliary(Request $request)
+    public function createDomiciliary(CrearDomiciliarioRequest $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|unique:user,email',
-            'password' => 'required|string|min:6',
-            'phone' => 'nullable|string|max:20',
-            'address' => 'nullable|string|max:225',
-            'available' => 'boolean',
-            'qualification' => 'numeric|min:0|max:5',
-            'state' => 'boolean'
-        ]);
 
         try {
 
@@ -123,7 +100,7 @@ class DomiciliaryController extends Controller
                 'address' => $request->address,
                 'rol' => 3,
                 'qualification' => $request->qualification ?? 0,
-                'state' => $request->state
+                'state' => $request->state,
             ]);
 
             // Crear domiciliario asociado
@@ -132,7 +109,7 @@ class DomiciliaryController extends Controller
                 'available' => $request->available ?? false,
                 'qualification' => $user->qualification,
                 'state' => $user->state,
-                'document' => $request->document ?? null   // si tienes este campo
+                'document' => $request->document ?? null,   // si tienes este campo
             ]);
 
             // Vincularlo al negocio de quien lo está creando. Sin esto el
@@ -151,7 +128,7 @@ class DomiciliaryController extends Controller
 
             return response()->json([
                 'message' => 'Usuario y domiciliario creados correctamente',
-                'user' => $user,
+                'user' => new UsuarioResource($user),
                 'domiciliary' => $domiciliary->load('businesses'),
             ]);
         } catch (\Throwable $e) {
@@ -159,26 +136,14 @@ class DomiciliaryController extends Controller
             DB::rollBack();
 
             return response()->json([
-                'error' => 'Error al crear el domiciliario: ' . $e->getMessage()
+                'error' => 'Error al crear el domiciliario: '.$e->getMessage(),
             ], 500);
         }
     }
 
     // Actualizar un domiciliario
-    public function updateDomiciliary(Request $request)
+    public function updateDomiciliary(ActualizarDomiciliarioRequest $request)
     {
-        $request->validate([
-            'user_id' => 'required|integer|exists:user,user_id',
-            // Campos del domiciliario
-            'available' => 'boolean',
-            'state' => 'boolean',
-            // Campos del usuario
-            'name' => 'string|max:255',
-            // El correo es la credencial de acceso: no puede chocar con otro.
-            'email' => 'email|max:255|unique:user,email,' . $request->user_id . ',user_id',
-            'phone' => 'string|max:20',
-            'address' => 'string|max:255',
-        ]);
 
         // Buscar usuario
         $user = User::findOrFail($request->user_id);
@@ -186,7 +151,10 @@ class DomiciliaryController extends Controller
         // Solo puede editar el propio domiciliario o el dueño de un negocio al
         // que esté asignado. Antes cualquier sesión válida podía modificar a
         // cualquier usuario mandando su user_id.
-        if (!$this->puedeEditarDomiciliario($request->user(), $user)) {
+        /* La regla vive en `DomiciliaryPolicy::verYEditar`, por la puerta con
+           nombre: el objetivo puede no tener fila de domiciliario y la regla
+           dice que uno siempre puede verse a si mismo, incluso entonces. */
+        if (Gate::denies('ver-y-editar-domiciliario', [$user])) {
             return response()->json([
                 'message' => 'No tienes permiso para editar este domiciliario',
             ], 403);
@@ -207,14 +175,14 @@ class DomiciliaryController extends Controller
         if ($domiciliary) {
             $domiciliary->update($request->only([
                 'available',
-                'state'
+                'state',
             ]));
         }
 
         return response()->json([
             'message' => 'Información actualizada correctamente',
-            'user' => $user,
-            'domiciliary' => $domiciliary
+            'user' => new UsuarioResource($user),
+            'domiciliary' => (new DomiciliarioDelAltaResource($domiciliary))->resolve(),
         ]);
     }
 
@@ -226,7 +194,7 @@ class DomiciliaryController extends Controller
     {
         $owner = $request->user()?->owner;
 
-        if (!$owner) {
+        if (! $owner) {
             return null;
         }
 
@@ -241,55 +209,83 @@ class DomiciliaryController extends Controller
         return $propios->first();
     }
 
-    /**
-     * Un domiciliario puede editarse a sí mismo; un dueño de negocio puede
-     * editar a los domiciliarios asignados a alguno de sus negocios.
+    /*
+     * `puedeVerYEditarDomiciliario()` SE MUDO a
+     * `App\Policies\DomiciliaryPolicy::verYEditar` el 14 de noviembre de
+     * 2026, sin cambiar una coma. §08 pide Policy por recurso; aqui era un
+     * metodo privado, o sea una regla de autorizacion que solo podia usar
+     * quien la escribio --y por eso `showDomiciliary` se quedo sin acotar
+     * mientras `updateDomiciliary` si lo estaba--.
      */
-    private function puedeEditarDomiciliario($autenticado, User $objetivo): bool
+
+    /**
+     * La ficha de un domiciliario: la suya, o la de uno de su tienda.
+     *
+     * LO QUE ESTO ARREGLA. El `domiciliary_id` llegaba EN EL CUERPO de la
+     * petición y nada lo comparaba con quien preguntaba; encima del grupo
+     * `domiciliaries` solo hay `auth:sanctum`. Medido contra la pila HTTP: un
+     * COMPRADOR con sesión recibía 200, la cédula del domiciliario, su correo,
+     * su teléfono y —lo que menos se veía— el `email_verification_token` de su
+     * usuario, que es con lo que se verifica un correo.
+     *
+     * No era una fuga de diseño, era un olvido con fecha: `updateDomiciliary`
+     * se acotó por este mismo motivo y esta, cuarenta líneas más arriba en el
+     * archivo, no. Las dos usan ahora el mismo predicado.
+     *
+     * EL IDENTIFICADOR PASA A SER OPCIONAL, y eso es lo que hace que esto sea
+     * seguro de verdad y no solo comprobado: si no viene, el domiciliario se
+     * resuelve de LA SESIÓN, así que el cliente no tiene que mandar un número
+     * que el servidor ya sabe. La app dejó de mandarlo.
+     *
+     * SIGUE ACEPTÁNDOLO para no romper lo que ya está instalado: las versiones
+     * publicadas mandan el suyo, que es el mismo que resolvería la sesión, así
+     * que para ellas no cambia nada. Cuando llega uno ajeno es cuando responde
+     * 403, y antes respondía la ficha.
+     */
+    public function showDomiciliary(VerDomiciliarioRequest $request)
     {
-        if (!$autenticado) {
-            return false;
+        $autenticado = $request->user();
+
+        /*
+         * Sin identificador, el de la sesión. `?->` y no `->`: quien pregunta
+         * puede no ser domiciliario, y entonces no hay ficha propia que dar.
+         */
+        $id = $request->filled('domiciliary_id')
+            ? (int) $request->domiciliary_id
+            : $autenticado?->domiciliary?->domiciliary_id;
+
+        if ($id === null) {
+            return response()->json([
+                'message' => 'Indica de qué domiciliario quieres la ficha.',
+            ], 422);
         }
 
-        if ((int) $autenticado->user_id === (int) $objetivo->user_id) {
-            return true;
+        $domiciliary = Domiciliary::with('user', 'reviews')->find($id);
+
+        /*
+         * 404 y no `null` con 200, que es lo que hacía: `find()` sobre un id
+         * que no está devuelve `null` y `response()->json(null)` es un 200 con
+         * cuerpo `null`. La validación lo tapaba con un 422 mientras el campo
+         * era obligatorio; ahora que puede faltar, el camino existe.
+         */
+        if (! $domiciliary) {
+            return response()->json(['message' => 'El domiciliario no existe.'], 404);
         }
 
-        $domiciliary = $objetivo->domiciliary;
-
-        if (!$domiciliary || !$autenticado->owner) {
-            return false;
+        /*
+         * `user_id` es nulable en `domiciliary`, así que una fila huérfana no
+         * tiene con quién compararse. Nadie la ve: sin usuario detrás no hay
+         * «es el propio» ni «es de mi tienda» que comprobar, y adivinar sería
+         * justo lo que esto viene a cerrar.
+         */
+        if ($domiciliary->user === null || Gate::denies('ver', $domiciliary)) {
+            return response()->json([
+                'message' => 'No tienes permiso para ver este domiciliario',
+            ], 403);
         }
 
-        $negociosPropios = $autenticado->owner->businesses->pluck('busines_id');
-
-        return $domiciliary->businesses()
-            ->whereIn('business.busines_id', $negociosPropios)
-            ->exists();
-    }
-
-    // Eliminar un domiciliario
-    public function deleteDomiciliary(Request $request)
-    {
-        $request->validate([
-            'domiciliary_id' => 'required|integer|exists:domiciliary,domiciliary_id',
-        ]);
-
-        $domiciliary = Domiciliary::find($request->domiciliary_id);
-        $domiciliary->delete();
-
-        return response()->json(['message' => 'Domiciliario eliminado']);
-    }
-
-    // Obtener un domiciliario específico
-    public function showDomiciliary(Request $request)
-    {
-        $request->validate([
-            'domiciliary_id' => 'required|integer|exists:domiciliary,domiciliary_id',
-        ]);
-
-        $domiciliary = Domiciliary::with('user', 'reviews')->find($request->domiciliary_id);
-
-        return response()->json($domiciliary);
+        return response()->json(
+            (new MiFichaDeDomiciliarioResource($domiciliary))->resolve()
+        );
     }
 }

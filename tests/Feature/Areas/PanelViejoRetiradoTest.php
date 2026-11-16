@@ -20,7 +20,6 @@ use App\Models\User;
  * para que nadie reponga esas rutas sin darse cuenta de lo que abren, porque
  * volver a colgarlas de `auth` no daría ningún error visible.
  */
-
 function comoComprador(): User
 {
     Rol::firstOrCreate(['rol_id' => 1], ['name' => 'buyer', 'guard_name' => 'web']);

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services\Push;
 
 use Illuminate\Support\Facades\Cache;
@@ -84,7 +86,7 @@ class PushFirebase implements TransportePush
 
         $ruta = (string) config('services.fcm.credentials');
 
-        if ($ruta === '' || !is_readable($ruta)) {
+        if ($ruta === '' || ! is_readable($ruta)) {
             return null;
         }
 
@@ -101,7 +103,7 @@ class PushFirebase implements TransportePush
 
     public function enviar(array $tokens, string $titulo, string $cuerpo, array $datos = []): array
     {
-        if (!$this->configurado()) {
+        if (! $this->configurado()) {
             return array_fill_keys(
                 $tokens,
                 ResultadoPush::falloTemporal('Firebase no está configurado en el servidor.'),
@@ -110,7 +112,7 @@ class PushFirebase implements TransportePush
 
         $acceso = $this->accessToken();
 
-        if (!$acceso) {
+        if (! $acceso) {
             return array_fill_keys(
                 $tokens,
                 ResultadoPush::falloTemporal('No se pudo autenticar contra Firebase.'),
@@ -139,10 +141,11 @@ class PushFirebase implements TransportePush
     ): ResultadoPush {
         try {
             $r = Http::withToken($acceso)
+                ->connectTimeout(5)
                 ->timeout(15)
                 ->post($url, [
                     'message' => [
-                        'token'        => $token,
+                        'token' => $token,
                         'notification' => ['title' => $titulo, 'body' => $cuerpo],
                         /*
                          * Todo a texto: FCM rechaza el mensaje entero si un valor
@@ -201,27 +204,27 @@ class PushFirebase implements TransportePush
         return Cache::remember("fcm.access_token.{$huella}", self::VIDA_TOKEN, function () {
             $cuenta = $this->cuenta();
 
-            if (!$cuenta) {
+            if (! $cuenta) {
                 return null;
             }
 
             $ahora = time();
 
             $jwt = $this->firmar([
-                'iss'   => $cuenta['client_email'],
+                'iss' => $cuenta['client_email'],
                 'scope' => 'https://www.googleapis.com/auth/firebase.messaging',
-                'aud'   => 'https://oauth2.googleapis.com/token',
-                'iat'   => $ahora,
-                'exp'   => $ahora + 3600,
+                'aud' => 'https://oauth2.googleapis.com/token',
+                'iat' => $ahora,
+                'exp' => $ahora + 3600,
             ], $cuenta['private_key']);
 
-            if (!$jwt) {
+            if (! $jwt) {
                 return null;
             }
 
-            $r = Http::asForm()->timeout(15)->post('https://oauth2.googleapis.com/token', [
+            $r = Http::asForm()->connectTimeout(5)->timeout(15)->post('https://oauth2.googleapis.com/token', [
                 'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-                'assertion'  => $jwt,
+                'assertion' => $jwt,
             ]);
 
             return $r->successful() ? $r->json('access_token') : null;
@@ -234,16 +237,16 @@ class PushFirebase implements TransportePush
         $base64 = fn (string $s) => rtrim(strtr(base64_encode($s), '+/', '-_'), '=');
 
         $cabecera = $base64(json_encode(['alg' => 'RS256', 'typ' => 'JWT']));
-        $cuerpo   = $base64(json_encode($carga));
+        $cuerpo = $base64(json_encode($carga));
 
         $firma = '';
 
-        if (!openssl_sign("{$cabecera}.{$cuerpo}", $firma, $clavePrivada, 'sha256')) {
+        if (! openssl_sign("{$cabecera}.{$cuerpo}", $firma, $clavePrivada, 'sha256')) {
             Log::error('No se pudo firmar el token de Firebase con la clave privada.');
 
             return null;
         }
 
-        return "{$cabecera}.{$cuerpo}." . $base64($firma);
+        return "{$cabecera}.{$cuerpo}.".$base64($firma);
     }
 }

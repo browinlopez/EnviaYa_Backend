@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use App\Imports\LectorDeArchivoDeCatalogo;
@@ -49,8 +51,7 @@ class ImportadorDeCatalogo
     public function __construct(
         private CatalogoDeProductos $catalogo,
         private LectorDeArchivoDeCatalogo $lector,
-    ) {
-    }
+    ) {}
 
     public function procesar(CatalogUpload $carga): void
     {
@@ -62,8 +63,8 @@ class ImportadorDeCatalogo
             $this->recorrer($carga, $this->lector->leer($ruta));
         } catch (\Throwable $e) {
             $carga->update([
-                'estado'  => 'fallida',
-                'resumen' => ['error' => 'No se pudo leer el archivo: ' . $e->getMessage()],
+                'estado' => 'fallida',
+                'resumen' => ['error' => 'No se pudo leer el archivo: '.$e->getMessage()],
             ]);
         }
     }
@@ -97,6 +98,7 @@ class ImportadorDeCatalogo
 
             if ($f['precio'] === null) {
                 $errores[] = ['fila' => $numero, 'motivo' => 'Falta el precio.'];
+
                 continue;
             }
 
@@ -104,10 +106,11 @@ class ImportadorDeCatalogo
                 $producto = $this->resolverProducto($f, $categorias, $numero, $errores, $porDefecto, (int) $carga->busines_id);
             } catch (\Throwable $e) {
                 $errores[] = ['fila' => $numero, 'motivo' => $e->getMessage()];
+
                 continue;
             }
 
-            if (!$producto) {
+            if (! $producto) {
                 continue; // el motivo ya quedó en $errores
             }
 
@@ -127,13 +130,13 @@ class ImportadorDeCatalogo
         }
 
         $carga->update([
-            'estado'       => 'terminada',
-            'filas'        => count($filas),
-            'creados'      => $creados,
+            'estado' => 'terminada',
+            'filas' => count($filas),
+            'creados' => $creados,
             'actualizados' => $actualizados,
-            'rechazados'   => count($errores),
-            'resumen'      => [
-                'errores'  => array_slice($errores, 0, self::MAX_ERRORES),
+            'rechazados' => count($errores),
+            'resumen' => [
+                'errores' => array_slice($errores, 0, self::MAX_ERRORES),
                 'truncado' => count($errores) > self::MAX_ERRORES,
             ],
         ]);
@@ -152,8 +155,7 @@ class ImportadorDeCatalogo
         array &$errores,
         ?int $porDefecto = null,
         ?int $businessId = null
-    ): ?Product
-    {
+    ): ?Product {
         if ($f['barcode'] !== null) {
             $existente = Product::where('barcode', $f['barcode'])->first();
 
@@ -180,7 +182,7 @@ class ImportadorDeCatalogo
                 $existente = Product::find($porAlias);
 
                 if ($existente) {
-                    if ($f['barcode'] !== null && !$existente->barcode) {
+                    if ($f['barcode'] !== null && ! $existente->barcode) {
                         $existente->fill(['barcode' => $f['barcode']])->save();
                     }
 
@@ -210,7 +212,7 @@ class ImportadorDeCatalogo
                  * Así el catálogo se va sanando solo con cada carga en vez de
                  * quedarse a medias para siempre.
                  */
-                if ($f['barcode'] !== null && !$p->barcode) {
+                if ($f['barcode'] !== null && ! $p->barcode) {
                     $p->fill(['barcode' => $f['barcode']])->save();
                 }
 
@@ -219,7 +221,7 @@ class ImportadorDeCatalogo
 
             if ($porNombre->count() > 1) {
                 $errores[] = [
-                    'fila'   => $numero,
+                    'fila' => $numero,
                     'motivo' => "Hay {$porNombre->count()} productos que se llaman «{$f['nombre']}». Pon el código de barras para saber cuál es.",
                 ];
 
@@ -230,7 +232,7 @@ class ImportadorDeCatalogo
         // No está: solo se crea si la fila trae nombre y categoría.
         if ($f['nombre'] === null) {
             $errores[] = [
-                'fila'   => $numero,
+                'fila' => $numero,
                 'motivo' => 'El código no está en el catálogo y la fila no trae nombre para darlo de alta.',
             ];
 
@@ -253,7 +255,7 @@ class ImportadorDeCatalogo
 
         if ($categoriaId === null) {
             $errores[] = [
-                'fila'   => $numero,
+                'fila' => $numero,
                 'motivo' => $f['categoria'] === null
                     ? "«{$f['nombre']}» es nuevo y el archivo no trae categoría. Elige una al subir."
                     : "La categoría «{$f['categoria']}» no existe.",
@@ -263,9 +265,9 @@ class ImportadorDeCatalogo
         }
 
         return $this->catalogo->proponer([
-            'name'        => $f['nombre'],
-            'barcode'     => $f['barcode'],
-            'brand'       => $f['marca'],
+            'name' => $f['nombre'],
+            'barcode' => $f['barcode'],
+            'brand' => $f['marca'],
             'category_id' => $categoriaId,
         ], 'excel');
     }
@@ -287,11 +289,11 @@ class ImportadorDeCatalogo
          * va a renombrar veintisiete columnas a mano.
          */
         $barcode = $v(['codigo_barras', 'codigo_de_barras', 'barras', 'ean', 'barcode']);
-        $nombre  = $v(['nombre', 'nombre_producto', 'producto', 'descripcion_producto']);
-        $precio  = $v(['precio', 'precio_venta', 'valor', 'venta1', 'venta', 'venta_1']);
+        $nombre = $v(['nombre', 'nombre_producto', 'producto', 'descripcion_producto']);
+        $precio = $v(['precio', 'precio_venta', 'valor', 'venta1', 'venta', 'venta_1']);
         $cantidad = $v(['cantidad', 'existencias', 'existencia', 'stock', 'amount']);
         $categoria = $v(['categoria', 'category']);
-        $marca   = $v(['marca', 'brand']);
+        $marca = $v(['marca', 'brand']);
 
         /*
          * `codigo` SOLO si de verdad parece un código de barras.
@@ -342,12 +344,12 @@ class ImportadorDeCatalogo
         $cantidadLeida = $this->aNumero($cantidad);
 
         return [
-            'barcode'   => ($barcode === null || $barcode === '') ? null : $barcode,
-            'nombre'    => $nombre !== null ? trim((string) $nombre) : null,
-            'marca'     => $marca !== null ? trim((string) $marca) : null,
+            'barcode' => ($barcode === null || $barcode === '') ? null : $barcode,
+            'nombre' => $nombre !== null ? trim((string) $nombre) : null,
+            'marca' => $marca !== null ? trim((string) $marca) : null,
             'categoria' => $categoria !== null ? trim((string) $categoria) : null,
-            'precio'    => $this->aNumero($precio),
-            'cantidad'  => ($cantidadLeida === null || $cantidadLeida < 0) ? null : (int) $cantidadLeida,
+            'precio' => $this->aNumero($precio),
+            'cantidad' => ($cantidadLeida === null || $cantidadLeida < 0) ? null : (int) $cantidadLeida,
         ];
     }
 

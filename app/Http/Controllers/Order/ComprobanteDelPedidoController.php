@@ -1,8 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Order;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Comprobante\ComprobanteResource;
 use App\Models\Buyer\Buyer;
 use App\Models\Invoice\Invoice;
 use App\Models\Order\OrdersSales;
@@ -44,7 +47,7 @@ class ComprobanteDelPedidoController extends Controller
     {
         $comprador = Buyer::where('user_id', $request->user()->user_id)->first();
 
-        abort_if(!$comprador, 404, 'Esta cuenta no tiene compras.');
+        abort_if(! $comprador, 404, 'Esta cuenta no tiene compras.');
 
         $pedido = OrdersSales::find($id);
 
@@ -53,7 +56,7 @@ class ComprobanteDelPedidoController extends Controller
          * número de pedido existe, y con eso se puede recorrer la numeración
          * para saber cuánto vende la plataforma.
          */
-        abort_if(!$pedido || (int) $pedido->buyer_id !== (int) $comprador->buyer_id, 404, 'Ese pedido no es tuyo.');
+        abort_if(! $pedido || (int) $pedido->buyer_id !== (int) $comprador->buyer_id, 404, 'Ese pedido no es tuyo.');
 
         return $this->responder($pedido, $facturas);
     }
@@ -64,7 +67,7 @@ class ComprobanteDelPedidoController extends Controller
         $negocio = (int) $request->attributes->get('busines_id');
         $pedido = OrdersSales::find($id);
 
-        abort_if(!$pedido || (int) $pedido->busines_id !== $negocio, 404, 'Ese pedido no es de tu tienda.');
+        abort_if(! $pedido || (int) $pedido->busines_id !== $negocio, 404, 'Ese pedido no es de tu tienda.');
 
         return $this->responder($pedido, $facturas);
     }
@@ -80,13 +83,13 @@ class ComprobanteDelPedidoController extends Controller
     {
         $comprobante = Invoice::find($id);
 
-        abort_if(!$comprobante, 404, 'El comprobante no existe.');
+        abort_if(! $comprobante, 404, 'El comprobante no existe.');
 
         return response($facturas->pdf($comprobante), 200, [
             'Content-Type' => 'application/pdf',
             // `inline`: que se vea en el visor del teléfono en vez de caer en
             // la carpeta de descargas sin que nadie sepa qué bajó.
-            'Content-Disposition' => 'inline; filename="' . $facturas->nombreArchivo($comprobante) . '"',
+            'Content-Disposition' => 'inline; filename="'.$facturas->nombreArchivo($comprobante).'"',
         ]);
     }
 
@@ -108,25 +111,11 @@ class ComprobanteDelPedidoController extends Controller
          * Se dice con esas palabras, porque «no encontrado» en una pantalla que
          * muestra el pedido delante parece un error de la aplicación.
          */
-        abort_if(!$comprobante, 404, 'El comprobante se emite cuando el pedido se entrega.');
+        abort_if(! $comprobante, 404, 'El comprobante se emite cuando el pedido se entrega.');
 
-        return response()->json([
-            'invoice_id'     => $comprobante->invoice_id,
-            'invoice_number' => $comprobante->invoice_number,
-            'invoice_date'   => $comprobante->invoice_date,
-            'order_id'       => $comprobante->orderSales_id,
-            'subtotal'       => $comprobante->subtotal,
-            'descuento'      => $comprobante->descuento,
-            'domicilio'      => $comprobante->domicilio,
-            'iva'            => $comprobante->iva,
-            'total'          => $comprobante->total,
-            'currency'       => $comprobante->currency,
-            'anulado'        => $comprobante->estaAnulada(),
-            // La foto guardada: negocio, comprador, entrega y renglones. Nada
-            // de esto se consulta vivo, que es el punto de haberla guardado.
-            'snapshot'       => $comprobante->snapshot ?? [],
-            'pdf_url'        => $this->enlaceDelPdf($comprobante),
-        ]);
+        return response()->json(
+            new ComprobanteResource($comprobante, $this->enlaceDelPdf($comprobante))
+        );
     }
 
     /**
@@ -148,6 +137,6 @@ class ComprobanteDelPedidoController extends Controller
             absolute: false,
         );
 
-        return rtrim(config('app.url'), '/') . $ruta;
+        return rtrim(config('app.url'), '/').$ruta;
     }
 }

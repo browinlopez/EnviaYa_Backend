@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Exports\Comercials\ReportGeneralComercial;
@@ -32,14 +34,14 @@ class ReportesExcelController extends Controller
 {
     /** Rótulo del archivo por tipo de reporte. */
     private const ARCHIVOS = [
-        'financial'   => 'reporte-financiero',
-        'commercial'  => 'reporte-comercial',
+        'financial' => 'reporte-financiero',
+        'commercial' => 'reporte-comercial',
         'operational' => 'reporte-operacional',
     ];
 
     public function __invoke(Request $request, string $kind)
     {
-        if (!isset(self::ARCHIVOS[$kind])) {
+        if (! isset(self::ARCHIVOS[$kind])) {
             /*
              * `businesses` existe como reporte de pantalla pero no tiene libro:
              * su tabla ya se exporta a CSV y armar un Excel de una sola hoja
@@ -52,7 +54,7 @@ class ReportesExcelController extends Controller
 
         [$desde, $hasta] = $this->ventana($request);
 
-        $negocio      = $this->entero($request->query('business_id'));
+        $negocio = $this->entero($request->query('business_id'));
         $domiciliario = $this->entero($request->query('domiciliary_id'));
 
         $libro = match ($kind) {
@@ -60,14 +62,14 @@ class ReportesExcelController extends Controller
             // Los otros dos generadores no admiten filtro de negocio: resumen
             // de toda la operación. Pasarlo y que lo ignoraran en silencio sería
             // peor que no ofrecerlo.
-            'commercial'  => new ReportGeneralComercial($desde, $hasta),
+            'commercial' => new ReportGeneralComercial($desde, $hasta),
             'operational' => new ReportesOperativosExport($desde, $hasta),
         };
 
         $nombre = self::ARCHIVOS[$kind]
-            . '-' . $desde->toDateString()
-            . '-a-' . $hasta->toDateString()
-            . '.xlsx';
+            .'-'.$desde->toDateString()
+            .'-a-'.$hasta->toDateString()
+            .'.xlsx';
 
         return Excel::download($libro, $nombre);
     }
@@ -85,8 +87,8 @@ class ReportesExcelController extends Controller
         $desde = $this->fecha($request->query('from'));
         $hasta = $this->fecha($request->query('to'));
 
-        if (!$desde || !$hasta) {
-            $dias  = max(1, min((int) $request->query('range', 30), 365));
+        if (! $desde || ! $hasta) {
+            $dias = max(1, min((int) $request->query('range', 30), 365));
             $hasta = Carbon::today();
             $desde = $hasta->copy()->subDays($dias - 1);
         } elseif ($desde->gt($hasta)) {
@@ -104,7 +106,7 @@ class ReportesExcelController extends Controller
 
     private function fecha(?string $valor): ?Carbon
     {
-        if (!$valor) {
+        if (! $valor) {
             return null;
         }
 

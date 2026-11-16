@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use App\Models\Product\ProductBusiness;
@@ -42,9 +44,13 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 class PlantillaDeCatalogo
 {
     private const MORADO = '1B1464';
+
     private const LILA = 'EEE9FF';
+
     private const GRIS = 'F5F3FA';
+
     private const AMBAR = 'FFF3D6';
+
     private const ROJO_SUAVE = 'FFE5E0';
 
     /** Filas con listas y formato: alcanza para una carga grande. */
@@ -68,7 +74,7 @@ class PlantillaDeCatalogo
 
     public function generar(int $negocioId, bool $conProductos = false): Spreadsheet
     {
-        $libro = new Spreadsheet();
+        $libro = new Spreadsheet;
         $libro->getProperties()
             ->setCreator("VeciPa'Ya")
             ->setTitle('Plantilla del catálogo');
@@ -109,14 +115,14 @@ class PlantillaDeCatalogo
             // La explicación también como comentario del encabezado: se ve al
             // pasar el mouse aunque no se esté editando.
             $nota = $h->getComment("{$col}1");
-            $nota->getText()->createText(($obligatoria ? 'OBLIGATORIA. ' : 'OPCIONAL. ') . $ayuda);
+            $nota->getText()->createText(($obligatoria ? 'OBLIGATORIA. ' : 'OPCIONAL. ').$ayuda);
             $nota->setWidth('260pt')->setHeight('90pt');
         }
 
         $h->getRowDimension(1)->setRowHeight(30);
         $h->freezePane('A2');
-        $h->setAutoFilter("A1:F1");
-        $h->getStyle("A1:F1")->getBorders()->getBottom()
+        $h->setAutoFilter('A1:F1');
+        $h->getStyle('A1:F1')->getBorders()->getBottom()
             ->setBorderStyle(Border::BORDER_MEDIUM)->getColor()->setRGB(self::MORADO);
 
         // Formatos: el código como TEXTO, precio con miles, cantidad entera.
@@ -129,9 +135,9 @@ class PlantillaDeCatalogo
         // Validaciones: un mensaje al pararse en la celda y un aviso si lo
         // escrito no sirve. Avisan sin bloquear, salvo la categoría.
         foreach (self::COLUMNAS as $col => [$titulo, , $obligatoria, $ayuda]) {
-            $v = new DataValidation();
+            $v = new DataValidation;
             $v->setShowInputMessage(true)
-                ->setPromptTitle($titulo . ($obligatoria ? ' (obligatoria)' : ''))
+                ->setPromptTitle($titulo.($obligatoria ? ' (obligatoria)' : ''))
                 ->setPrompt(mb_substr($ayuda, 0, 250))
                 ->setAllowBlank(true);
 
@@ -159,7 +165,7 @@ class PlantillaDeCatalogo
 
         // Un precio vacío en una fila con código se marca en rojo suave: es la
         // fila que el importador va a rechazar por «falta el precio».
-        $sinPrecio = new Conditional();
+        $sinPrecio = new Conditional;
         $sinPrecio->setConditionType(Conditional::CONDITION_EXPRESSION)
             ->addCondition('AND($A2<>"",$B2="")');
         $sinPrecio->getStyle()->getFill()->setFillType(Fill::FILL_SOLID)
@@ -189,7 +195,7 @@ class PlantillaDeCatalogo
         $h->getColumnDimension('C')->setWidth(62);
         $h->getColumnDimension('D')->setWidth(24);
 
-        $h->setCellValue('A1', 'Cómo llenar tu catálogo' . ($tienda ? " · {$tienda}" : ''));
+        $h->setCellValue('A1', 'Cómo llenar tu catálogo'.($tienda ? " · {$tienda}" : ''));
         $h->getStyle('A1')->getFont()->setBold(true)->setSize(16)->getColor()->setRGB(self::MORADO);
 
         $pasos = [
@@ -200,8 +206,8 @@ class PlantillaDeCatalogo
             '5. ¿Lo subes otra vez? Se actualiza lo que cambió: no se duplica nada.',
         ];
         foreach ($pasos as $i => $paso) {
-            $h->setCellValue('A' . (3 + $i), $paso);
-            $h->mergeCells('A' . (3 + $i) . ':D' . (3 + $i));
+            $h->setCellValue('A'.(3 + $i), $paso);
+            $h->mergeCells('A'.(3 + $i).':D'.(3 + $i));
         }
 
         $inicio = 10;
@@ -247,7 +253,7 @@ class PlantillaDeCatalogo
         $h->setTitle('Listas');
         $h->setCellValue('A1', 'Categorías');
         foreach ($categorias as $i => $nombre) {
-            $h->setCellValue('A' . ($i + 2), $nombre);
+            $h->setCellValue('A'.($i + 2), $nombre);
         }
         $h->setSheetState(Worksheet::SHEETSTATE_HIDDEN);
     }
@@ -294,11 +300,11 @@ class PlantillaDeCatalogo
             ->get()
             ->filter(fn ($pb) => $pb->product !== null)
             ->map(fn ($pb) => [
-                'barcode'  => $pb->product->barcode,
-                'price'    => (float) $pb->price ?: null,
-                'amount'   => (int) $pb->amount,
-                'name'     => $pb->product->name,
-                'brand'    => $pb->product->brand,
+                'barcode' => $pb->product->barcode,
+                'price' => (float) $pb->price ?: null,
+                'amount' => (int) $pb->amount,
+                'name' => $pb->product->name,
+                'brand' => $pb->product->brand,
                 'category' => $pb->product->category?->name,
             ])
             ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)

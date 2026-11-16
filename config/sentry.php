@@ -8,7 +8,13 @@
 return [
 
     // @see https://docs.sentry.io/concepts/key-terms/dsn-explainer/
-    'dsn' => env('SENTRY_LARAVEL_DSN', env('SENTRY_DSN')),
+    /*
+     * `?:` y no el segundo argumento de `env()`: con
+     * `SENTRY_LARAVEL_DSN=` vacía —así viene en `.env.example`— Sentry
+     * se quedaría apagado en vez de caer a `SENTRY_DSN`, y apagado no
+     * se nota hasta que hace falta un informe de error que no existe.
+     */
+    'dsn' => env('SENTRY_LARAVEL_DSN') ?: env('SENTRY_DSN'),
 
     // @see https://spotlightjs.com/
     // 'spotlight' => env('SENTRY_SPOTLIGHT', false),

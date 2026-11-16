@@ -1,8 +1,11 @@
 <?php
 
+use App\Http\Resources\Pedido\PedidoDeLaAppResource;
+use App\Models\Order\OrdersSales;
 use App\Models\Rol;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
 
 /**
@@ -19,7 +22,6 @@ use Laravel\Sanctum\Sanctum;
  * suyos, que vea los que puede tomar, y que de esos últimos NO reciba los
  * datos de una persona con la que todavía no tiene nada que ver.
  */
-
 function escenarioDomiciliario(): array
 {
     foreach ([1 => 'comprador', 3 => 'domiciliario'] as $id => $nombre) {
@@ -60,13 +62,13 @@ function escenarioDomiciliario(): array
 
     return [
         'repartidor' => $repartidor,
-        'mio'        => $pedido(3, $domiId),   // en camino, asignado a mí
-        'porTomar'   => $pedido(2, null),      // listo y sin dueño
-        'deOtro'     => $pedido(3, null),      // en camino sin asignar: ni mío ni tomable
+        'mio' => $pedido(3, $domiId),   // en camino, asignado a mí
+        'porTomar' => $pedido(2, null),      // listo y sin dueño
+        'deOtro' => $pedido(3, null),      // en camino sin asignar: ni mío ni tomable
     ];
 }
 
-function misPedidos(User $quien): \Illuminate\Testing\TestResponse
+function misPedidos(User $quien): TestResponse
 {
     Sanctum::actingAs($quien);
 
@@ -195,14 +197,14 @@ test('la comision tampoco se cuela dentro de los pagos', function () {
     $e = escenarioDomiciliario();
 
     DB::table('payments')->insert([
-        'orderSales_id'   => $e['mio'],
-        'amount'          => 7000,
-        'total'           => 7000,
+        'orderSales_id' => $e['mio'],
+        'amount' => 7000,
+        'total' => 7000,
         'domiciliary_fee' => 500,
-        'payment_status'  => 'approved',
-        'status'          => 'approved',
-        'provider'        => 'cash',
-        'state'           => 1,
+        'payment_status' => 'approved',
+        'status' => 'approved',
+        'provider' => 'cash',
+        'state' => 1,
     ]);
 
     $r = misPedidos($e['repartidor'])->assertOk();
@@ -237,8 +239,8 @@ test('la tienda si ve lo que le paga a su domiciliario', function () {
      */
     $e = escenarioDomiciliario();
 
-    $pedido = \App\Models\Order\OrdersSales::find($e['mio']);
-    $ficha = app(\App\Services\PedidoParaLaApp::class)->formatear($pedido);
+    $pedido = OrdersSales::find($e['mio']);
+    $ficha = (new PedidoDeLaAppResource($pedido))->resolve();
 
     expect((float) $ficha['domiciliary_fee'])->toBe(500.0);
 });

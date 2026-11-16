@@ -19,7 +19,7 @@ use Laravel\Sanctum\Sanctum;
 function asignarCategoriaANegocio(int $categoryId, int $businessCategoryId): void
 {
     DB::table('category_category_business')->insertOrIgnore([
-        'category_id'          => $categoryId,
+        'category_id' => $categoryId,
         'business_category_id' => $businessCategoryId,
     ]);
 }

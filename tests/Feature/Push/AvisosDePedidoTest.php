@@ -2,6 +2,7 @@
 
 use App\Jobs\EnviarAvisoPush;
 use App\Models\Order\OrdersSales;
+use App\Services\AvisoDePedidoNuevo;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Sanctum\Sanctum;
@@ -31,7 +32,7 @@ function pedidoConGente(): array
 
     return $e + [
         'comprador' => $pedido->buyer->user,
-        'pedido'    => $pedido,
+        'pedido' => $pedido,
     ];
 }
 
@@ -50,7 +51,7 @@ it('cuando la tienda acepta, al comprador le suena el telefono', function () {
 
     $this->putJson('/v1/orders/update', [
         'order_id' => $e['orderId'],
-        'state'    => 2,
+        'state' => 2,
     ])->assertOk();
 
     Queue::assertPushed(
@@ -67,8 +68,8 @@ it('cuando sale el domiciliario se avisa a los DOS, y a cada uno lo suyo', funct
 
     $this->putJson('/v1/orders/update', [
         'order_id' => $e['orderId'],
-        'state'    => 3,
-        'user_id'  => $e['repartidor']->user_id,
+        'state' => 3,
+        'user_id' => $e['repartidor']->user_id,
     ])->assertOk();
 
     // El repartidor: le acaban de asignar un trabajo.
@@ -94,7 +95,7 @@ it('al entregar se avisa al comprador', function () {
     $e = pedidoConGente();
 
     DB::table('orderssales')->where('orderSales_id', $e['orderId'])->update([
-        'state'          => 3,
+        'state' => 3,
         'domiciliary_id' => $e['domiId'],
     ]);
 
@@ -102,7 +103,7 @@ it('al entregar se avisa al comprador', function () {
 
     $this->putJson('/v1/orders/update', [
         'order_id' => $e['orderId'],
-        'state'    => 4,
+        'state' => 4,
     ])->assertOk();
 
     Queue::assertPushed(
@@ -163,7 +164,7 @@ it('una promocion no se envia dos veces', function () {
      */
     $codigo = file_get_contents(app_path('Services/PromocionesDeLaTienda.php'));
 
-    expect($codigo)->toContain("push: false");
+    expect($codigo)->toContain('push: false');
 });
 
 /* =========================================================================
@@ -178,9 +179,9 @@ it('una promocion no se envia dos veces', function () {
 it('un pedido nuevo le suena al dueño de la tienda', function () {
     $e = pedidoConGente();
 
-    \App\Services\AvisoDePedidoNuevo::anunciar($e['pedido']);
+    AvisoDePedidoNuevo::anunciar($e['pedido']);
 
-    $duenio = \Illuminate\Support\Facades\DB::table('owner')
+    $duenio = DB::table('owner')
         ->join('owner_busines', 'owner.owner_id', '=', 'owner_busines.owner_id')
         ->where('owner_busines.busines_id', $e['businessId'])
         ->value('owner.user_id');
@@ -195,7 +196,7 @@ it('un pedido nuevo le suena al dueño de la tienda', function () {
 it('el aviso del pedido nuevo dice cuanto es, sin abrir nada', function () {
     $e = pedidoConGente();
 
-    \App\Services\AvisoDePedidoNuevo::anunciar($e['pedido']);
+    AvisoDePedidoNuevo::anunciar($e['pedido']);
 
     /*
      * El importe va en el propio aviso a proposito: es lo que deja decidir si
@@ -203,7 +204,7 @@ it('el aviso del pedido nuevo dice cuanto es, sin abrir nada', function () {
      */
     Queue::assertPushed(
         EnviarAvisoPush::class,
-        fn ($job) => str_contains($job->cuerpo, '#' . $e['orderId'])
+        fn ($job) => str_contains($job->cuerpo, '#'.$e['orderId'])
             && str_contains($job->cuerpo, '$'),
     );
 });

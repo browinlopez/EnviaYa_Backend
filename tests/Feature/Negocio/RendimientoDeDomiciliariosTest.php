@@ -1,6 +1,9 @@
 <?php
 
+use App\Models\Rol;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
 
 /**
@@ -19,9 +22,9 @@ use Laravel\Sanctum\Sanctum;
 /** Un domiciliario de esta tienda. */
 function domiciliarioDe(int $businessId, string $nombre): int
 {
-    \App\Models\Rol::firstOrCreate(['rol_id' => 3], ['name' => 'domiciliario', 'guard_name' => 'web']);
+    Rol::firstOrCreate(['rol_id' => 3], ['name' => 'domiciliario', 'guard_name' => 'web']);
 
-    $user = \App\Models\User::factory()->create(['rol' => 3, 'name' => $nombre]);
+    $user = User::factory()->create(['rol' => 3, 'name' => $nombre]);
 
     $domiId = DB::table('domiciliary')->insertGetId([
         'user_id' => $user->user_id, 'available' => 1,
@@ -51,40 +54,40 @@ function entregaHecha(int $businessId, int $domiId, int $minutosReales, ?int $pl
      */
     $buyerId = DB::table('buyer')->value('buyer_id');
 
-    if (!$buyerId) {
-        \App\Models\Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
+    if (! $buyerId) {
+        Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
 
         $buyerId = DB::table('buyer')->insertGetId([
-            'user_id'            => \App\Models\User::factory()->create(['rol' => 1])->user_id,
-            'qualification'      => 0,
+            'user_id' => User::factory()->create(['rol' => 1])->user_id,
+            'qualification' => 0,
             'belongs_to_complex' => 0,
-            'state'              => 1,
+            'state' => 1,
         ]);
     }
 
     DB::table('orderssales')->insert([
-        'buyer_id'         => $buyerId,
-        'busines_id'       => $businessId,
-        'domiciliary_id'   => $domiId,
-        'methods_id'       => 1,
-        'subtotal'         => 10000,
-        'domicilio'        => 2000,
-        'total'            => 12000,
-        'domiciliary_fee'  => 500,
-        'sale_date'        => $despacho->copy()->subMinutes(10),
-        'dispatched_at'    => $despacho,
-        'delivery_date'    => $despacho->copy()->addMinutes($minutosReales),
+        'buyer_id' => $buyerId,
+        'busines_id' => $businessId,
+        'domiciliary_id' => $domiId,
+        'methods_id' => 1,
+        'subtotal' => 10000,
+        'domicilio' => 2000,
+        'total' => 12000,
+        'domiciliary_fee' => 500,
+        'sale_date' => $despacho->copy()->subMinutes(10),
+        'dispatched_at' => $despacho,
+        'delivery_date' => $despacho->copy()->addMinutes($minutosReales),
         'promised_minutes' => $plazo,
-        'state'            => 4,
-        'payment_state'    => 'paid',
+        'state' => 4,
+        'payment_state' => 'paid',
     ]);
 }
 
-function rendimiento(array $t, array $query = []): \Illuminate\Testing\TestResponse
+function rendimiento(array $t, array $query = []): TestResponse
 {
     Sanctum::actingAs($t['user']);
 
-    return test()->getJson('/v1/negocio/domiciliarios/rendimiento?' . http_build_query($query));
+    return test()->getJson('/v1/negocio/domiciliarios/rendimiento?'.http_build_query($query));
 }
 
 /* ---------------------------------------------------------------------- */
@@ -164,9 +167,9 @@ test('sin nada que medir dice que no se puede medir, y no cero por ciento', func
 });
 
 test('un comprador no puede mirar el rendimiento de los domiciliarios', function () {
-    \App\Models\Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
+    Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
 
-    Sanctum::actingAs(\App\Models\User::factory()->create(['rol' => 1]));
+    Sanctum::actingAs(User::factory()->create(['rol' => 1]));
 
     test()->getJson('/v1/negocio/domiciliarios/rendimiento')->assertForbidden();
 });

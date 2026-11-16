@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models\Marketing;
 
 use App\Models\User;
@@ -23,17 +25,19 @@ class CouponRedemption extends Model
 
     protected $casts = [
         'coupon_id' => 'integer',
-        'user_id'   => 'integer',
-        'order_id'  => 'integer',
-        'discount'  => 'decimal:2',
-        'state'     => 'integer',
+        'user_id' => 'integer',
+        'order_id' => 'integer',
+        'discount' => 'decimal:2',
+        'state' => 'integer',
     ];
 
+    /** @return BelongsTo<Coupon, $this> */
     public function coupon(): BelongsTo
     {
         return $this->belongsTo(Coupon::class, 'coupon_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id', 'user_id');

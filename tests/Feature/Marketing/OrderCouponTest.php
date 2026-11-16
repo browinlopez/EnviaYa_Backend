@@ -41,11 +41,11 @@ test('un cupón porcentual descuenta y el total cuadra', function () {
     $e = escenarioPedido();
 
     Coupon::create([
-        'code'      => 'MITAD',
-        'type'      => 'percent',
-        'value'     => 50,
+        'code' => 'MITAD',
+        'type' => 'percent',
+        'value' => 50,
         'starts_at' => now()->subDay()->toDateString(),
-        'ends_at'   => now()->addDay()->toDateString(),
+        'ends_at' => now()->addDay()->toDateString(),
     ]);
 
     $this->postJson('/v1/orders/orders', cuerpoPedido($e, ['coupon_code' => 'mitad']))
@@ -71,18 +71,18 @@ test('el descuento no se toma del cliente aunque lo mande', function () {
     $e = escenarioPedido();
 
     Coupon::create([
-        'code'      => 'DIEZ',
-        'type'      => 'percent',
-        'value'     => 10,
+        'code' => 'DIEZ',
+        'type' => 'percent',
+        'value' => 10,
         'starts_at' => now()->subDay()->toDateString(),
-        'ends_at'   => now()->addDay()->toDateString(),
+        'ends_at' => now()->addDay()->toDateString(),
     ]);
 
     // Un cliente manipulado manda un descuento enorme: debe ignorarse.
     $this->postJson('/v1/orders/orders', cuerpoPedido($e, [
         'coupon_code' => 'DIEZ',
-        'discount'    => 29999,
-        'total'       => 1,
+        'discount' => 29999,
+        'total' => 1,
     ]))->assertSuccessful();
 
     $orden = DB::table('orderssales')->latest('orderSales_id')->first();
@@ -95,11 +95,11 @@ test('rechaza el pedido con un cupón vencido y explica por qué', function () {
     $e = escenarioPedido();
 
     Coupon::create([
-        'code'      => 'CADUCADO',
-        'type'      => 'percent',
-        'value'     => 30,
+        'code' => 'CADUCADO',
+        'type' => 'percent',
+        'value' => 30,
         'starts_at' => now()->subDays(10)->toDateString(),
-        'ends_at'   => now()->subDays(2)->toDateString(),
+        'ends_at' => now()->subDays(2)->toDateString(),
     ]);
 
     $r = $this->postJson('/v1/orders/orders', cuerpoPedido($e, ['coupon_code' => 'CADUCADO']));
@@ -117,12 +117,12 @@ test('respeta el tope de usos por persona', function () {
     $e = escenarioPedido();
 
     Coupon::create([
-        'code'              => 'UNAVEZ',
-        'type'              => 'fixed',
-        'value'             => 2000,
+        'code' => 'UNAVEZ',
+        'type' => 'fixed',
+        'value' => 2000,
         'max_uses_per_user' => 1,
-        'starts_at'         => now()->subDay()->toDateString(),
-        'ends_at'           => now()->addDay()->toDateString(),
+        'starts_at' => now()->subDay()->toDateString(),
+        'ends_at' => now()->addDay()->toDateString(),
     ]);
 
     $this->postJson('/v1/orders/orders', cuerpoPedido($e, ['coupon_code' => 'UNAVEZ']))
@@ -142,12 +142,12 @@ test('respeta el pedido mínimo del cupón', function () {
     $e = escenarioPedido();
 
     Coupon::create([
-        'code'      => 'GRANDE',
-        'type'      => 'fixed',
-        'value'     => 5000,
+        'code' => 'GRANDE',
+        'type' => 'fixed',
+        'value' => 5000,
         'min_order' => 50000, // el pedido de prueba es de 30.000
         'starts_at' => now()->subDay()->toDateString(),
-        'ends_at'   => now()->addDay()->toDateString(),
+        'ends_at' => now()->addDay()->toDateString(),
     ]);
 
     $r = $this->postJson('/v1/orders/orders', cuerpoPedido($e, ['coupon_code' => 'GRANDE']));
@@ -161,18 +161,18 @@ test('un cupón atado a otro negocio no aplica', function () {
     $e = escenarioPedido();
 
     $otro = DB::table('business')->insertGetId([
-        'name'          => 'Otro negocio',
+        'name' => 'Otro negocio',
         'qualification' => 0,
-        'state'         => 1,
+        'state' => 1,
     ]);
 
     Coupon::create([
-        'code'        => 'AJENO',
-        'type'        => 'percent',
-        'value'       => 20,
+        'code' => 'AJENO',
+        'type' => 'percent',
+        'value' => 20,
         'business_id' => $otro,
-        'starts_at'   => now()->subDay()->toDateString(),
-        'ends_at'     => now()->addDay()->toDateString(),
+        'starts_at' => now()->subDay()->toDateString(),
+        'ends_at' => now()->addDay()->toDateString(),
     ]);
 
     $r = $this->postJson('/v1/orders/orders', cuerpoPedido($e, ['coupon_code' => 'AJENO']));

@@ -1,55 +1,25 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Order;
 
-use App\Http\Controllers\Concerns\ComprobarPertenencia;
-use App\Services\Ajustes;
-use App\Services\PoliticaDeDomicilio;
-use App\Services\CustodiaDeEfectivo;
-use App\Services\ConfirmacionDePago;
-use App\Services\Avisos;
 use App\Events\DomiciliaryLocationUpdated;
-use App\Events\OrderCreated;
-use App\Events\OrderStatusUpdated;
+use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\Payment\PaymentController;
-use App\Models\Business;
-use App\Models\Buyer\Buyer;
-use App\Models\Domiciliary;
+use App\Http\Requests\Order\GuardarPosicionRequest;
 use App\Models\Order\OrderGeolocation;
-use App\Models\Order\OrdersSales;
-use App\Models\Order\OrdersSalesDetail;
-use App\Models\Payment\Payment;
-use App\Services\FacturaService;
-use Illuminate\Support\Facades\Log;
-use App\Models\Payment\PaymentForms;
-use App\Models\Payment\PaymentIntent;
-use App\Models\Payment\PaymentMethods;
-use App\Models\Product\ProductBusiness;
-use App\Models\User;
-use App\Models\User\UserAddress;
-use App\Services\BoldService;
-use App\Services\CouponService;
-use Carbon\Carbon;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 class GeolocalizacionDePedidoController extends Controller
 {
     use ComprobarPertenencia;
 
-    public function storeGeolocation(Request $request)
+    public function storeGeolocation(GuardarPosicionRequest $request)
     {
         // Validar los datos recibidos
-        $data = $request->validate([
-            'domiciliary_id' => 'required|exists:domiciliary,domiciliary_id',
-            'orderSales_id'  => 'required|exists:orderssales,orderSales_id',
-            'latitude'       => 'required|numeric',
-            'longitude'      => 'required|numeric',
-            'state'          => 'nullable|integer',
-        ]);
+        $data = $request->validated();
 
         // Crear registro en la base de datos
         $geo = OrderGeolocation::create($data);
@@ -71,7 +41,7 @@ class GeolocalizacionDePedidoController extends Controller
         } catch (\Throwable $e) {
             Log::warning('No se pudo anunciar la ubicación del domiciliario', [
                 'order_id' => $geo->orderSales_id,
-                'error'    => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
         }
 
@@ -79,7 +49,7 @@ class GeolocalizacionDePedidoController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Geolocalización guardada correctamente',
-            'data' => $geo
+            'data' => $geo,
         ], 201);
     }
 }

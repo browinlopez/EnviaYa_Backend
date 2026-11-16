@@ -1,17 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Conjunto;
 
 use App\Http\Controllers\Controller;
-use App\Models\Buyer\ResidentialComplex;
+use App\Http\Requests\Conjunto\CambiarCeladorRequest;
+use App\Http\Requests\Conjunto\CrearCeladorRequest;
 use App\Models\Conjunto\ComplexStaff;
 use App\Models\Rol;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use App\Services\MediaService;
-use Illuminate\Validation\Rules\Password;
 
 class CeladoresController extends Controller
 {
@@ -59,18 +60,13 @@ class CeladoresController extends Controller
      * El conjunto sale de la sesión, nunca del cuerpo: si viniera en la
      * petición, un dueño podría crearle personal al edificio del vecino.
      */
-    public function crearCelador(Request $request)
+    public function crearCelador(CrearCeladorRequest $request)
     {
-        $datos = $request->validate([
-            'name'     => 'required|string|max:255',
-            'email'    => 'required|email|max:255|unique:user,email',
-            'password' => ['required', Password::min(8)],
-            'phone'    => 'nullable|string|max:20',
-        ]);
+        $datos = $request->validated();
 
         $complexId = (int) $request->attributes->get('complex_id');
 
-        if (!Rol::find(ComplexStaff::ROL_CELADOR)) {
+        if (! Rol::find(ComplexStaff::ROL_CELADOR)) {
             return response()->json([
                 'message' => 'Falta el rol de celador en la base. Avísale al equipo.',
             ], 422);
@@ -78,12 +74,12 @@ class CeladoresController extends Controller
 
         $celador = DB::transaction(function () use ($datos, $complexId, $request) {
             $user = User::create([
-                'name'     => $datos['name'],
-                'email'    => $datos['email'],
+                'name' => $datos['name'],
+                'email' => $datos['email'],
                 'password' => Hash::make($datos['password']),
-                'phone'    => $datos['phone'] ?? null,
-                'rol'      => ComplexStaff::ROL_CELADOR,
-                'state'    => true,
+                'phone' => $datos['phone'] ?? null,
+                'rol' => ComplexStaff::ROL_CELADOR,
+                'state' => true,
                 // Sin verificación por correo: la cuenta la crea alguien que
                 // ya respondió por esa persona, y la portería no puede esperar
                 // a que alguien abra un enlace.
@@ -91,10 +87,10 @@ class CeladoresController extends Controller
             ]);
 
             ComplexStaff::create([
-                'user_id'    => $user->user_id,
+                'user_id' => $user->user_id,
                 'complex_id' => $complexId,
-                'role'       => ComplexStaff::CELADOR,
-                'state'      => true,
+                'role' => ComplexStaff::CELADOR,
+                'state' => true,
                 'created_by' => $request->user()->user_id,
             ]);
 
@@ -108,18 +104,14 @@ class CeladoresController extends Controller
     }
 
     /** Activa o desactiva a un celador. Solo los del propio conjunto. */
-    public function cambiarCelador(Request $request, int $id)
+    public function cambiarCelador(CambiarCeladorRequest $request, int $id)
     {
         /*
          * Activar, desactivar, o corregir nombre y teléfono. El correo no:
          * es con lo que entra, y cambiarlo desde acá lo dejaría afuera sin
          * que él lo sepa.
          */
-        $datos = $request->validate([
-            'state' => 'sometimes|boolean',
-            'name'  => 'sometimes|string|max:255',
-            'phone' => 'sometimes|nullable|string|max:20',
-        ]);
+        $datos = $request->validated();
 
         $complexId = (int) $request->attributes->get('complex_id');
 
@@ -130,7 +122,7 @@ class CeladoresController extends Controller
 
         // 404 y no 403: confirmar que existe pero es de otro conjunto ya sería
         // decirle algo del edificio del vecino.
-        if (!$ficha) {
+        if (! $ficha) {
             return response()->json(['message' => 'Ese celador no es de tu conjunto.'], 404);
         }
 
@@ -138,7 +130,7 @@ class CeladoresController extends Controller
             User::where('user_id', $ficha->user_id)->update(array_intersect_key($datos, ['name' => 1, 'phone' => 1]));
         }
 
-        if (!array_key_exists('state', $datos)) {
+        if (! array_key_exists('state', $datos)) {
             return response()->json(['message' => 'Datos del celador guardados.']);
         }
 

@@ -1,38 +1,28 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Auth;
 
-use App\Services\Totp;
 use App\Http\Controllers\Controller;
-use App\Models\Buyer\Buyer;
-use App\Models\Buyer\BuyerComplex;
-use App\Models\Buyer\ResidentialComplex;
-use App\Models\User\UserAddress;
+use App\Http\Requests\Auth\ReenviarVerificacionDesdeLaWebRequest;
+use App\Http\Requests\Auth\ReenviarVerificacionRequest;
+use App\Http\Requests\Auth\VerificarCorreoRequest;
 use App\Models\User;
 use Carbon\Carbon;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Password;
-use Illuminate\Auth\Events\Registered;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use App\Mail\VerifyEmailCustomMail;
 
 class VerificacionDeCorreoController extends Controller
 {
     use AyudasDeAcceso;
 
-    public function verify(Request $request)
+    public function verify(VerificarCorreoRequest $request)
     {
-        $request->validate([
-            'token' => 'required|string'
-        ]);
 
         $user = User::where('email_verification_token', $request->token)->first();
 
-        if (!$user) {
+        if (! $user) {
             /*
              * Se llega aca sobre todo por enlaces VIEJOS: quien pidio el
              * reenvio dos veces tiene dos correos, y el primero ya no sirve.
@@ -40,7 +30,7 @@ class VerificacionDeCorreoController extends Controller
              */
             return view('auth.verify-error', [
                 'message' => 'Este enlace no es válido. Puede que sea de un correo anterior: '
-                    . 'busca el más reciente en tu bandeja.',
+                    .'busca el más reciente en tu bandeja.',
             ]);
         }
 
@@ -49,7 +39,7 @@ class VerificacionDeCorreoController extends Controller
         }
 
         if (
-            !$user->email_verification_expires_at ||
+            ! $user->email_verification_expires_at ||
             $user->email_verification_expires_at->isPast()
         ) {
             /*
@@ -60,7 +50,7 @@ class VerificacionDeCorreoController extends Controller
              */
             return view('auth.verify-error', [
                 'message' => 'Este enlace ya caducó. Los enlaces duran una hora.',
-                'email'   => $user->email,
+                'email' => $user->email,
                 'caducado' => true,
             ]);
         }
@@ -87,25 +77,42 @@ class VerificacionDeCorreoController extends Controller
         return view('auth.verify-success');
     }
 
-    public function resendVerificationEmail(Request $request)
+    public function resendVerificationEmail(ReenviarVerificacionRequest $request)
     {
-        $request->validate([
-            'email' => 'required|email',
-        ]);
 
         $user = User::where('email', $request->email)->first();
 
-        // 🔒 Respuesta genérica (evita enumeración de usuarios)
-        if (!$user) {
+        /*
+         * RESPUESTA GENÉRICA PARA EL QUE NO EXISTE — Y NO ALCANZA.
+         *
+         * Acá decía «evita enumeración de usuarios», y no la evita: la
+         * rama de abajo contesta «El correo ya está verificado» cuando
+         * la dirección SÍ está registrada y verificada. Los dos
+         * mensajes se distinguen, así que con esta ruta —que no pide
+         * sesión, porque la usa quien no puede entrar— se puede
+         * averiguar si un correo tiene cuenta.
+         *
+         * NO SE UNIFICAN LOS MENSAJES AQUÍ Y A ESCONDIDAS. Se comprobó
+         * que la app no se fija en el texto, así que unificarlos no la
+         * rompería; lo que cuesta es que quien ya tiene el correo
+         * verificado pulsaría «reenviar», leería «se enviará un
+         * enlace» y no le llegaría nada. Es texto de autenticación
+         * con un precio en claridad: queda como decisión en
+         * `docs/laravel-12/ANTES-DE-EMPUJAR.md`.
+         *
+         * Lo que no se deja es la frase que prometía la garantía:
+         * quien la leyera daría el problema por resuelto.
+         */
+        if (! $user) {
             return response()->json([
-                'message' => 'Si el correo existe, se enviará un enlace de verificación.'
+                'message' => 'Si el correo existe, se enviará un enlace de verificación.',
             ], 200);
         }
 
         // ✅ Ya verificado
         if ($user->email_verified_at) {
             return response()->json([
-                'message' => 'El correo ya está verificado.'
+                'message' => 'El correo ya está verificado.',
             ], 200);
         }
 
@@ -124,7 +131,7 @@ class VerificacionDeCorreoController extends Controller
         try {
             $this->sendVerificationEmail($user);
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('No se pudo reenviar la verificacion', [
+            Log::error('No se pudo reenviar la verificacion', [
                 'email' => $user->email,
                 'error' => $e->getMessage(),
             ]);
@@ -159,26 +166,25 @@ class VerificacionDeCorreoController extends Controller
      * una página que dijera «ese correo no está registrado» serviría para
      * averiguar quién tiene cuenta probando direcciones.
      */
-    public function reenviarDesdeLaWeb(Request $request)
+    public function reenviarDesdeLaWeb(ReenviarVerificacionDesdeLaWebRequest $request)
     {
-        $datos = $request->validate(['email' => 'required|email|max:255']);
-
+        $datos = $request->validated();
         $user = User::where('email', mb_strtolower(trim($datos['email'])))->first();
 
-        if ($user && !$user->email_verified_at) {
+        if ($user && ! $user->email_verified_at) {
             $this->renovarEnlaceSiHaceFalta($user);
 
             try {
                 $this->sendVerificationEmail($user);
             } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::error('No se pudo reenviar la verificacion desde la web', [
+                Log::error('No se pudo reenviar la verificacion desde la web', [
                     'email' => $user->email,
                     'error' => $e->getMessage(),
                 ]);
 
                 return view('auth.verify-error', [
                     'message' => 'No pudimos enviar el correo en este momento. Inténtalo en unos minutos.',
-                    'email'   => $user->email,
+                    'email' => $user->email,
                 ]);
             }
         }
@@ -196,8 +202,8 @@ class VerificacionDeCorreoController extends Controller
     private function renovarEnlaceSiHaceFalta(User $user): void
     {
         if (
-            !$user->email_verification_token ||
-            !$user->email_verification_expires_at ||
+            ! $user->email_verification_token ||
+            ! $user->email_verification_expires_at ||
             $user->email_verification_expires_at->isPast()
         ) {
             $user->update([

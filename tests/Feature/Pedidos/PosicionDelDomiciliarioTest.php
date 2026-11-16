@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Rol;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 
@@ -19,13 +21,13 @@ use Laravel\Sanctum\Sanctum;
 function flotaConPosicion(): array
 {
     foreach ([1 => 'comprador', 2 => 'tendero', 3 => 'domiciliario', 4 => 'admin'] as $id => $nombre) {
-        \App\Models\Rol::firstOrCreate(['rol_id' => $id], ['name' => $nombre, 'guard_name' => 'web']);
+        Rol::firstOrCreate(['rol_id' => $id], ['name' => $nombre, 'guard_name' => 'web']);
     }
 
-    $domiUser = \App\Models\User::factory()->create(['rol' => 3]);
-    $tendero  = \App\Models\User::factory()->create(['rol' => 2]);
-    $ajeno    = \App\Models\User::factory()->create(['rol' => 1]);
-    $cliente  = \App\Models\User::factory()->create(['rol' => 1]);
+    $domiUser = User::factory()->create(['rol' => 3]);
+    $tendero = User::factory()->create(['rol' => 2]);
+    $ajeno = User::factory()->create(['rol' => 1]);
+    $cliente = User::factory()->create(['rol' => 1]);
 
     $negocio = DB::table('business')->insertGetId([
         'name' => 'Tienda de la flota', 'qualification' => 0, 'state' => 1,

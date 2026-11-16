@@ -1,9 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
-use App\Models\Payment\Payment;
 use App\Models\Order\OrdersSales;
+use App\Models\Payment\Payment;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -21,9 +23,7 @@ class CobroContraEntrega
     /** Valor de `orderssales.methods_id` para el pago contra entrega. */
     private const EFECTIVO = 1;
 
-    public function __construct(private readonly CustodiaDeEfectivo $custodia)
-    {
-    }
+    public function __construct(private readonly CustodiaDeEfectivo $custodia) {}
 
     /**
      * Registra el pago y el recaudo si el pedido era en efectivo.
@@ -55,18 +55,18 @@ class CobroContraEntrega
             return;
         }
 
-            $valorPromocion = 0; // pendiente: descuentos y promociones
+        $valorPromocion = 0; // pendiente: descuentos y promociones
 
-            /*
-             * El pago, el apunte del efectivo y el estado del pedido, o
-             * ninguno de los tres.
-             *
-             * Sin la transacción, un fallo al apuntar el recaudo dejaría un
-             * pago registrado y aprobado sin nadie responsable del dinero
-             * —que es exactamente el agujero que este cambio viene a
-             * cerrar—.
-             */
-            DB::transaction(function () use ($order, $porQuien, $valorPromocion) {
+        /*
+         * El pago, el apunte del efectivo y el estado del pedido, o
+         * ninguno de los tres.
+         *
+         * Sin la transacción, un fallo al apuntar el recaudo dejaría un
+         * pago registrado y aprobado sin nadie responsable del dinero
+         * —que es exactamente el agujero que este cambio viene a
+         * cerrar—.
+         */
+        DB::transaction(function () use ($order, $porQuien, $valorPromocion) {
             Payment::create([
                 'orderSales_id' => $order->orderSales_id,
                 'methods_id' => $order->methods_id,
@@ -84,7 +84,7 @@ class CobroContraEntrega
                 'status' => 'approved',
                 'payment_status' => 1, // pagado
                 'payment_date' => now(),
-                'state' => 1 // activo
+                'state' => 1, // activo
             ]);
 
             // El pago quedaba registrado y aprobado, pero la orden seguía
@@ -109,7 +109,7 @@ class CobroContraEntrega
              */
             $this->custodia->registrarRecaudo($order, $porQuien);
 
-                $order->save();
-            });
+            $order->save();
+        });
     }
 }

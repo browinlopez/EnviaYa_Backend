@@ -1,6 +1,11 @@
 <?php
 
+use App\Models\Rol;
+use App\Models\User;
+use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 
 /**
@@ -15,19 +20,47 @@ use Laravel\Sanctum\Sanctum;
  * de dónde salió la firma y que nadie refirme por encima.
  */
 
+/*
+ * EL DISCO SE FINGE, Y HASTA EL 16 DE NOVIEMBRE DE 2026 NO SE FINGÍA.
+ *
+ * Firmar genera un PDF y `MediaService` lo guarda con
+ * `Storage::disk('r2')->put(...)`. Sin esto, en una máquina con las
+ * credenciales de R2 en su `.env` —la de quien desarrolla— cada corrida
+ * de la suite **subía un PDF de contrato al bucket de verdad**; y en el
+ * CI, que no las tiene, `MediaService` lanzaba y el controlador lo
+ * devolvía como un 422, así que estas cinco pruebas fallaban ahí y
+ * pasaban acá.
+ *
+ * O sea que no pasaban por funcionar: pasaban por tener credenciales.
+ *
+ * `config()` es para que `MediaService::configurado()` dé true —mira
+ * las claves, no el disco— y `Storage::fake` para que nada salga de la
+ * máquina. Es el mismo bloque que `LogoDeLaTiendaTest`, copiado y no
+ * reinventado.
+ */
+beforeEach(function () {
+    config([
+        'filesystems.disks.r2.key' => 'prueba',
+        'filesystems.disks.r2.secret' => 'prueba',
+        'filesystems.disks.r2.endpoint' => 'https://r2.prueba',
+        'filesystems.disks.r2.url' => 'https://archivos.prueba',
+    ]);
+    Storage::fake('r2');
+});
+
 /** Un PNG de un píxel, que es lo que produciría el trazo más corto posible. */
 function firmaDePrueba(): string
 {
     return 'data:image/png;base64,'
-        . 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+        .'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 }
 
 /** Un domiciliario con su cuenta, dentro. */
 function domiciliarioQueEntra(?string $documento = '1143112233'): array
 {
-    \App\Models\Rol::firstOrCreate(['rol_id' => 3], ['name' => 'domiciliario', 'guard_name' => 'web']);
+    Rol::firstOrCreate(['rol_id' => 3], ['name' => 'domiciliario', 'guard_name' => 'web']);
 
-    $user = \App\Models\User::factory()->create(['rol' => 3]);
+    $user = User::factory()->create(['rol' => 3]);
 
     $id = DB::table('domiciliary')->insertGetId([
         'user_id' => $user->user_id, 'available' => 1,
@@ -87,8 +120,8 @@ test('firmarlo lo deja guardado y con su fecha', function () {
 
     $this->postJson('/v1/domiciliaries/contrato', [
         'signature' => firmaDePrueba(),
-        'city'      => 'Barranquilla',
-        'acepta'    => true,
+        'city' => 'Barranquilla',
+        'acepta' => true,
     ])->assertStatus(201);
 
     $fila = DB::table('domiciliary')->where('domiciliary_id', $d['domiciliary_id'])->first();
@@ -104,8 +137,8 @@ test('sin aceptar, no se firma: trazar no es aceptar', function () {
 
     $this->postJson('/v1/domiciliaries/contrato', [
         'signature' => firmaDePrueba(),
-        'city'      => 'Barranquilla',
-        'acepta'    => false,
+        'city' => 'Barranquilla',
+        'acepta' => false,
     ])->assertStatus(422);
 });
 
@@ -114,8 +147,8 @@ test('sin documento no se firma, porque el acuerdo lo lleva impreso', function (
 
     $this->postJson('/v1/domiciliaries/contrato', [
         'signature' => firmaDePrueba(),
-        'city'      => 'Barranquilla',
-        'acepta'    => true,
+        'city' => 'Barranquilla',
+        'acepta' => true,
     ])->assertStatus(422)->assertJsonPath('reason', 'falta_documento');
 });
 
@@ -124,9 +157,9 @@ test('el documento se puede escribir en el mismo paso', function () {
 
     $this->postJson('/v1/domiciliaries/contrato', [
         'signature' => firmaDePrueba(),
-        'city'      => 'Barranquilla',
-        'document'  => '1143998877',
-        'acepta'    => true,
+        'city' => 'Barranquilla',
+        'document' => '1143998877',
+        'acepta' => true,
     ])->assertStatus(201);
 
     expect(DB::table('domiciliary')->where('domiciliary_id', $d['domiciliary_id'])->value('document'))
@@ -153,14 +186,14 @@ test('una firma que no es una imagen se rechaza', function () {
 
     $this->postJson('/v1/domiciliaries/contrato', [
         'signature' => 'esto no es un PNG',
-        'city'      => 'Barranquilla',
-        'acepta'    => true,
+        'city' => 'Barranquilla',
+        'acepta' => true,
     ])->assertStatus(422);
 });
 
 test('quien no es domiciliario no tiene acuerdo que firmar', function () {
-    \App\Models\Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
-    Sanctum::actingAs(\App\Models\User::factory()->create(['rol' => 1]));
+    Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
+    Sanctum::actingAs(User::factory()->create(['rol' => 1]));
 
     $this->getJson('/v1/domiciliaries/contrato')->assertStatus(403);
     $this->postJson('/v1/domiciliaries/contrato', [
@@ -172,7 +205,7 @@ test('nadie firma el acuerdo de otro: no hay identificador en la ruta', function
     $mio = domiciliarioQueEntra();
 
     // Otro domiciliario, sin firmar.
-    $otroUser = \App\Models\User::factory()->create(['rol' => 3]);
+    $otroUser = User::factory()->create(['rol' => 3]);
     $otroId = DB::table('domiciliary')->insertGetId([
         'user_id' => $otroUser->user_id, 'available' => 1,
         'qualification' => 0, 'state' => 1, 'document' => '1140001111',
@@ -199,8 +232,8 @@ test('una vez firmado, el domiciliario puede descargarlo', function () {
 
     $this->postJson('/v1/domiciliaries/contrato', [
         'signature' => firmaDePrueba(),
-        'city'      => 'Barranquilla',
-        'acepta'    => true,
+        'city' => 'Barranquilla',
+        'acepta' => true,
     ])->assertStatus(201);
 
     $r = $this->getJson('/v1/domiciliaries/contrato')->assertSuccessful();
@@ -231,10 +264,10 @@ test('el acuerdo declara cuanto se guarda la ubicacion, y hay quien la borre', f
     expect($texto)->toContain('noventa (90) días calendario');
 
     // Y el comando que lo cumple existe y esta programado.
-    expect(array_key_exists('ubicaciones:podar', \Illuminate\Support\Facades\Artisan::all()))
+    expect(array_key_exists('ubicaciones:podar', Artisan::all()))
         ->toBeTrue();
 
-    $programadas = collect(app(\Illuminate\Console\Scheduling\Schedule::class)->events())
+    $programadas = collect(app(Schedule::class)->events())
         ->map(fn ($e) => $e->command ?? '')
         ->filter(fn ($c) => str_contains($c, 'ubicaciones:podar'));
 

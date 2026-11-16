@@ -1,14 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Events;
 
 use App\Models\Chat\ChatParticipant;
 use App\Models\Chat\Message;
-use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
@@ -60,10 +59,10 @@ class MessageSent implements ShouldBroadcastNow
      */
     public function broadcastOn(): array
     {
-        $canales = [new PrivateChannel('chat.' . $this->message->chat_id)];
+        $canales = [new PrivateChannel('chat.'.$this->message->chat_id)];
 
         foreach ($this->destinatarios as $userId) {
-            $canales[] = new PrivateChannel('App.Models.User.' . $userId);
+            $canales[] = new PrivateChannel('App.Models.User.'.$userId);
         }
 
         return $canales;
@@ -89,11 +88,11 @@ class MessageSent implements ShouldBroadcastNow
             // El chat y la fecha los necesita la app para colocar el mensaje:
             // sin `created_at` no puede agrupar por día ni poner la hora, y
             // acababa mostrando "Invalid Date".
-            'chat_id'    => $this->message->chat_id,
-            'user_id'    => $this->message->user_id,
-            'role_id'    => $this->message->role_id,
-            'name'       => $this->message->user->name ?? null,
-            'content'    => $this->message->content,
+            'chat_id' => $this->message->chat_id,
+            'user_id' => $this->message->user_id,
+            'role_id' => $this->message->role_id,
+            'name' => $this->message->user->name ?? null,
+            'content' => $this->message->content,
             /*
              * Sin `toDateTimeString()`: el modelo tiene `$timestamps = false` y
              * no castea `created_at`, así que al releerlo de la base llega como

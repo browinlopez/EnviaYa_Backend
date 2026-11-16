@@ -15,19 +15,18 @@ use App\Models\Operacion\LandingRequest;
  * guarde sin autorización de tratamiento de datos, y que la eliminación de
  * cuenta nazca con el plazo que la web promete por escrito.
  */
-
 test('una solicitud de la web queda guardada con su radicado', function () {
     $respuesta = $this->postJson('/v1/solicitudes-free', [
-        'nombre'           => 'Marcela Ruiz',
-        'contacto'         => 'marcela@tiendalasflores.co',
-        'barrio'           => 'Villa Carolina, Barranquilla',
-        'tipo'             => 'comercio',
-        'motivo'           => 'Tengo un comercio',
-        'origen'           => 'landing:contacto',
-        'pagina'           => '/comerciantes',
-        'negocio'          => 'Tienda Las Flores',
-        'tipo_negocio'     => 'Tienda de barrio',
-        'consentimiento'   => true,
+        'nombre' => 'Marcela Ruiz',
+        'contacto' => 'marcela@tiendalasflores.co',
+        'barrio' => 'Villa Carolina, Barranquilla',
+        'tipo' => 'comercio',
+        'motivo' => 'Tengo un comercio',
+        'origen' => 'landing:contacto',
+        'pagina' => '/comerciantes',
+        'negocio' => 'Tienda Las Flores',
+        'tipo_negocio' => 'Tienda de barrio',
+        'consentimiento' => true,
         'politica_version' => '2026-02',
     ]);
 
@@ -51,8 +50,8 @@ test('una solicitud de la web queda guardada con su radicado', function () {
 
 test('un número de WhatsApp no se guarda como si fuera un correo', function () {
     $this->postJson('/v1/solicitudes-free', [
-        'contacto'       => '300 246 4966',
-        'tipo'           => 'vecino',
+        'contacto' => '300 246 4966',
+        'tipo' => 'vecino',
         'consentimiento' => true,
     ])->assertCreated();
 
@@ -68,8 +67,8 @@ test('sin autorización de tratamiento de datos no se guarda nada', function () 
      * formulario mal llenado.
      */
     $this->postJson('/v1/solicitudes-free', [
-        'nombre'         => 'Quien sea',
-        'contacto'       => 'quien@sea.co',
+        'nombre' => 'Quien sea',
+        'contacto' => 'quien@sea.co',
         'consentimiento' => false,
     ])->assertStatus(422)->assertJsonValidationErrors('consentimiento');
 
@@ -82,9 +81,9 @@ test('lo que cae en la trampa responde que sí y no se guarda', function () {
      * esquivar la trampa la próxima vez; uno que recibe éxito, no.
      */
     $this->postJson('/v1/solicitudes-free', [
-        'contacto'       => 'bot@ejemplo.co',
+        'contacto' => 'bot@ejemplo.co',
         'consentimiento' => true,
-        'empresa'        => 'Relleno automático',
+        'empresa' => 'Relleno automático',
     ])->assertCreated();
 
     expect(LandingRequest::count())->toBe(0);
@@ -97,9 +96,9 @@ test('la eliminación de cuenta nace con el plazo que promete la web', function 
      * si se calculara al mirarla, nadie podría saber si se incumplió.
      */
     $this->postJson('/v1/solicitudes-free', [
-        'nombre'         => 'Kevin Salas',
-        'contacto'       => 'kevin@ejemplo.co',
-        'motivo'         => 'Eliminar mi cuenta',
+        'nombre' => 'Kevin Salas',
+        'contacto' => 'kevin@ejemplo.co',
+        'motivo' => 'Eliminar mi cuenta',
         'consentimiento' => true,
     ])->assertCreated();
 
@@ -114,8 +113,8 @@ test('el resto de solicitudes no lleva plazo inventado', function () {
     // Solo la eliminación tiene plazo comprometido. Ponerle uno a las demás
     // convertiría el indicador de vencidas en ruido.
     $this->postJson('/v1/solicitudes-free', [
-        'contacto'       => 'vecino@ejemplo.co',
-        'motivo'         => 'Soy vecino',
+        'contacto' => 'vecino@ejemplo.co',
+        'motivo' => 'Soy vecino',
         'consentimiento' => true,
     ])->assertCreated();
 
@@ -126,8 +125,8 @@ test('sin tipo, el motivo del formulario alcanza para clasificarla', function ()
     // Si alguien añade un formulario en la web y olvida mandar el tipo, la
     // solicitud entra clasificada en vez de caer toda en "otro".
     $this->postJson('/v1/solicitudes-free', [
-        'contacto'       => 'repartidor@ejemplo.co',
-        'motivo'         => 'Quiero repartir',
+        'contacto' => 'repartidor@ejemplo.co',
+        'motivo' => 'Quiero repartir',
         'consentimiento' => true,
     ])->assertCreated();
 
@@ -143,8 +142,8 @@ test('la hora de la autorización queda en hora colombiana', function () {
      * autorizó, que es lo que se mira si alguien reclama.
      */
     $this->postJson('/v1/solicitudes-free', [
-        'contacto'    => 'vecino@ejemplo.co',
-        'tipo'        => 'vecino',
+        'contacto' => 'vecino@ejemplo.co',
+        'tipo' => 'vecino',
         'consentimiento' => true,
         'aceptado_en' => '2026-08-22T02:37:00.000Z',
     ])->assertCreated();
@@ -156,8 +155,8 @@ test('la hora de la autorización queda en hora colombiana', function () {
 test('el radicado no se repite', function () {
     foreach (['uno@ejemplo.co', 'dos@ejemplo.co', 'tres@ejemplo.co'] as $correo) {
         $this->postJson('/v1/solicitudes-free', [
-            'contacto'       => $correo,
-            'tipo'           => 'vecino',
+            'contacto' => $correo,
+            'tipo' => 'vecino',
             'consentimiento' => true,
         ])->assertCreated();
     }
@@ -197,11 +196,11 @@ function comoAreaSol(string $codigo): User
 function solicitudDePrueba(array $extra = []): LandingRequest
 {
     return LandingRequest::create(array_merge([
-        'code'     => LandingRequest::siguienteRadicado(),
-        'type'     => 'comercio',
-        'name'     => 'Marcela Ruiz',
-        'contact'  => 'marcela@ejemplo.co',
-        'state'    => LandingRequest::NUEVA,
+        'code' => LandingRequest::siguienteRadicado(),
+        'type' => 'comercio',
+        'name' => 'Marcela Ruiz',
+        'contact' => 'marcela@ejemplo.co',
+        'state' => LandingRequest::NUEVA,
     ], $extra));
 }
 
@@ -246,7 +245,7 @@ test('descartar sin decir por qué no se puede', function () {
         ->assertStatus(422);
 
     $this->putJson("/v1/admin/solicitudes/{$s->id}", [
-        'state'      => 3,
+        'state' => 3,
         'resolution' => 'Es el mismo negocio que ya está afiliado.',
     ])->assertOk();
 
@@ -258,7 +257,7 @@ test('atender deja constancia de cuándo se atendió', function () {
     comoAreaSol('comercial');
 
     $this->putJson("/v1/admin/solicitudes/{$s->id}", [
-        'state'      => 2,
+        'state' => 2,
         'resolution' => 'Se llamó y quedó agendado para el jueves.',
     ])->assertOk();
 
@@ -269,7 +268,7 @@ test('una eliminación pasada de plazo se ve como vencida', function () {
     // Es lo que convierte el incumplimiento de una promesa pública en algo que
     // alguien puede ver antes de que reclamen.
     solicitudDePrueba([
-        'type'   => 'eliminacion',
+        'type' => 'eliminacion',
         'due_at' => now()->subDay(),
     ]);
     comoAreaSol('calidad');
@@ -295,13 +294,13 @@ use Illuminate\Support\Facades\Storage;
 function pqrsDeLaWeb(array $extra = []): array
 {
     return array_merge([
-        'nombre'         => 'Luz Ortega',
-        'contacto'       => 'luz@ejemplo.co',
-        'clase'          => 'Reclamo',
-        'motivo'         => 'PQRS: Reclamo',
-        'tipo'           => 'pqrs',
-        'pedido'         => '4621',
-        'mensaje'        => 'Llegó el arroz roto.',
+        'nombre' => 'Luz Ortega',
+        'contacto' => 'luz@ejemplo.co',
+        'clase' => 'Reclamo',
+        'motivo' => 'PQRS: Reclamo',
+        'tipo' => 'pqrs',
+        'pedido' => '4621',
+        'mensaje' => 'Llegó el arroz roto.',
         'consentimiento' => '1',
     ], $extra);
 }
@@ -336,7 +335,7 @@ test('la foto de la PQRS se guarda en el disco privado, con nombre al azar', fun
 
     $s = LandingRequest::first();
 
-    expect($s->attachment_path)->toStartWith('solicitudes/' . $s->code . '/')
+    expect($s->attachment_path)->toStartWith('solicitudes/'.$s->code.'/')
         // El nombre original puede traer el de la persona: no va en la ruta.
         ->and($s->attachment_path)->not->toContain('Ortega')
         ->and($s->attachment_name)->toBe('Luz Ortega recibo.jpg')
@@ -367,10 +366,10 @@ test('un archivo mandado en otro formulario no se guarda', function () {
     Storage::fake(LandingRequest::ADJUNTO_DISCO);
 
     $this->post('/v1/solicitudes-free', [
-        'contacto'       => 'vecino@ejemplo.co',
-        'tipo'           => 'vecino',
+        'contacto' => 'vecino@ejemplo.co',
+        'tipo' => 'vecino',
         'consentimiento' => '1',
-        'adjunto'        => UploadedFile::fake()->image('foto.jpg'),
+        'adjunto' => UploadedFile::fake()->image('foto.jpg'),
     ], ['Accept' => 'application/json'])->assertCreated();
 
     expect(LandingRequest::first()->attachment_path)->toBeNull()
@@ -382,7 +381,7 @@ test('el panel descarga el adjunto con permiso, y SST no', function () {
     Storage::disk(LandingRequest::ADJUNTO_DISCO)->put('solicitudes/SOL-X/a.jpg', 'foto');
 
     $s = solicitudDePrueba([
-        'type'            => 'pqrs',
+        'type' => 'pqrs',
         'attachment_path' => 'solicitudes/SOL-X/a.jpg',
         'attachment_name' => 'recibo.jpg',
     ]);

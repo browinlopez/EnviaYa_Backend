@@ -13,14 +13,13 @@ use Laravel\Sanctum\Sanctum;
  * cuenta podía descargar el reporte financiero. Acá se comprueba lo que cambió
  * al traerlos al API: que sigan produciendo un libro y que ahora pidan permiso.
  */
-
 function comoAreaLibro(string $codigo, string $nivel = Area::NIVEL_GESTOR): User
 {
     Rol::firstOrCreate(['rol_id' => 4], ['name' => 'admin', 'guard_name' => 'web']);
 
     $user = User::factory()->create([
-        'rol'          => 4,
-        'area_id'      => Area::where('code', $codigo)->firstOrFail()->id,
+        'rol' => 4,
+        'area_id' => Area::where('code', $codigo)->firstOrFail()->id,
         'access_level' => $nivel,
     ]);
 

@@ -19,7 +19,6 @@ use Illuminate\Support\Facades\Config;
  * Estas pruebas miran el HTML ya compuesto. Un correo puede armarse sin
  * errores y aun así llevar la marca de otro.
  */
-
 function correoDeVerificacion(): string
 {
     return (new VerifyEmailCustomMail('https://ejemplo.test/verify?token=abc'))

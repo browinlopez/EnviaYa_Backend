@@ -1,8 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Negocio;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Negocio\SubirCatalogoRequest;
 use App\Jobs\ProcesarCargaDeCatalogo;
 use App\Models\Product\CatalogUpload;
 use App\Services\PlantillaDeCatalogo;
@@ -18,58 +21,27 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class CargaDeCatalogoController extends Controller
 {
-    public function subir(Request $request)
+    public function subir(SubirCatalogoRequest $request)
     {
-        $request->validate([
-            /*
-             * `extensions` Y NO `mimes`, Y NO ES UN DESCUIDO.
-             *
-             * `mimes` no mira la extensión: adivina el tipo por el contenido y
-             * comprueba que ESE tipo corresponda a la extensión. El .xls que
-             * exportan los puntos de venta de las tiendas es BIFF2, de 1987, y
-             * nadie lo tiene en su tabla de tipos: se adivina como
-             * `application/octet-stream`, que no corresponde a `xls`, y la
-             * regla lo rechazaba con «debe ser un archivo de tipo xlsx, xls,
-             * csv, txt» sobre un archivo .xls que Excel abre sin protestar.
-             *
-             * Imposible de entender desde el otro lado, e imposible de ver en
-             * una prueba con `UploadedFile::fake()`, porque el archivo falso
-             * declara el tipo que uno le dice.
-             *
-             * `extensions` comprueba la extensión, que es lo que aquí se
-             * quiere. Lo que el archivo sea por dentro lo decide el lector, y
-             * si no sabe leerlo lo dice con un motivo que se entiende.
-             *
-             * 10 MB da para varios miles de filas y corta el archivo que
-             * alguien sube por error.
-             */
-            'archivo' => 'required|file|extensions:xlsx,xls,csv,txt|max:10240',
-            /*
-             * Para lo que el archivo no clasifique. Los que exporta un punto
-             * de venta no traen columna de categoría, y sin esto la carga
-             * entera se rechazaba fila por fila.
-             */
-            'categoria_id' => 'nullable|integer|exists:category,category_id',
-        ]);
 
         $businessId = (int) $request->attributes->get('busines_id');
 
         $ruta = $request->file('archivo')->store('cargas-de-catalogo');
 
         $carga = CatalogUpload::create([
-            'busines_id'      => $businessId,
-            'user_id'         => $request->user()?->user_id,
-            'archivo'         => $ruta,
+            'busines_id' => $businessId,
+            'user_id' => $request->user()?->user_id,
+            'archivo' => $ruta,
             'nombre_original' => $request->file('archivo')->getClientOriginalName(),
-            'category_id'     => $request->input('categoria_id'),
-            'estado'          => 'pendiente',
+            'category_id' => $request->input('categoria_id'),
+            'estado' => 'pendiente',
         ]);
 
         ProcesarCargaDeCatalogo::dispatch((int) $carga->catalog_upload_id);
 
         return response()->json([
             'message' => 'Recibimos tu archivo. Te avisamos cuando termine.',
-            'data'    => $this->comoFicha($carga),
+            'data' => $this->comoFicha($carga),
         ], 202);
     }
 
@@ -82,7 +54,7 @@ class CargaDeCatalogoController extends Controller
             ->where('busines_id', $businessId)
             ->first();
 
-        if (!$carga) {
+        if (! $carga) {
             return response()->json(['message' => 'Esa carga no es de tu negocio.'], 404);
         }
 
@@ -144,13 +116,13 @@ class CargaDeCatalogoController extends Controller
     {
         $ficha = [
             'catalog_upload_id' => (int) $c->catalog_upload_id,
-            'nombre_original'   => $c->nombre_original,
-            'estado'            => $c->estado,
-            'filas'             => (int) $c->filas,
-            'creados'           => (int) $c->creados,
-            'actualizados'      => (int) $c->actualizados,
-            'rechazados'        => (int) $c->rechazados,
-            'created_at'        => $c->created_at,
+            'nombre_original' => $c->nombre_original,
+            'estado' => $c->estado,
+            'filas' => (int) $c->filas,
+            'creados' => (int) $c->creados,
+            'actualizados' => (int) $c->actualizados,
+            'rechazados' => (int) $c->rechazados,
+            'created_at' => $c->created_at,
         ];
 
         if ($conErrores) {

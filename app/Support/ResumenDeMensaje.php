@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Support;
 
 use Illuminate\Support\Str;
@@ -44,7 +46,7 @@ class ResumenDeMensaje
         }
 
         return match ($datos['type']) {
-            'preorder'        => self::pedidoArmado($datos),
+            'preorder' => self::pedidoArmado($datos),
             'preorder_status' => self::estadoDelPedido($datos),
             /*
              * Una tarjeta que todavía no conocemos. Se dice algo verdadero y
@@ -52,14 +54,14 @@ class ResumenDeMensaje
              * tipo nuevo y olvide pasar por acá, el peor caso es un aviso
              * poco específico, no un volcado de datos.
              */
-            default           => 'Te envió un mensaje.',
+            default => 'Te envió un mensaje.',
         };
     }
 
     /** El JSON de una tarjeta, o null si es texto corriente. */
     private static function comoTarjeta(string $texto): ?array
     {
-        if (!str_starts_with($texto, '{')) {
+        if (! str_starts_with($texto, '{')) {
             return null;
         }
 
@@ -95,17 +97,17 @@ class ResumenDeMensaje
         return match ((string) ($datos['status'] ?? '')) {
             'confirmed' => 'Confirmó el pedido.',
             'cancelled' => 'Canceló el pedido.',
-            default     => 'Actualizó el pedido.',
+            default => 'Actualizó el pedido.',
         };
     }
 
     /** «$12.400», igual que en la app: punto para los miles. */
     private static function plata($valor): ?string
     {
-        if (!is_numeric($valor)) {
+        if (! is_numeric($valor)) {
             return null;
         }
 
-        return '$' . number_format((float) $valor, 0, ',', '.');
+        return '$'.number_format((float) $valor, 0, ',', '.');
     }
 }

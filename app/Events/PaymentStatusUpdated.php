@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Events;
 
 use App\Models\Payment\Payment;
@@ -13,13 +15,11 @@ class PaymentStatusUpdated implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public function __construct(public Payment $payment)
-    {
-    }
+    public function __construct(public Payment $payment) {}
 
     public function broadcastOn(): PrivateChannel
     {
-        return new PrivateChannel('order.' . $this->payment->orderSales_id);
+        return new PrivateChannel('order.'.$this->payment->orderSales_id);
     }
 
     public function broadcastAs(): string

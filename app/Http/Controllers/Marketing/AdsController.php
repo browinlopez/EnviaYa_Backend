@@ -1,14 +1,19 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Marketing;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Marketing\AnotarVistaDeBannerRequest;
+use App\Http\Requests\Marketing\BannersParaLaAppRequest;
+use App\Http\Requests\Marketing\DestacadosRequest;
+use App\Http\Requests\Marketing\ValidarCuponRequest;
 use App\Models\Marketing\Banner;
 use App\Models\Marketing\BannerEvent;
 use App\Models\Marketing\Coupon;
 use App\Models\Marketing\FeaturedBusiness;
 use App\Services\MediaService;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -24,9 +29,7 @@ use Illuminate\Support\Facades\DB;
  */
 class AdsController extends Controller
 {
-    public function __construct(private readonly MediaService $medios)
-    {
-    }
+    public function __construct(private readonly MediaService $medios) {}
 
     /**
      * Banners vigentes para un sitio y un contexto.
@@ -34,19 +37,12 @@ class AdsController extends Controller
      * Parámetros: placement, platform (app|web), municipality_id, complex_id,
      * business_category_id, limit.
      */
-    public function banners(Request $request)
+    public function banners(BannersParaLaAppRequest $request)
     {
-        $datos = $request->validate([
-            'placement'            => 'required|in:home_hero,home_strip,listing_inline,splash,web_home',
-            'platform'             => 'sometimes|in:app,web',
-            'municipality_id'      => 'sometimes|nullable|integer',
-            'complex_id'           => 'sometimes|nullable|integer',
-            'business_category_id' => 'sometimes|nullable|integer',
-            'limit'                => 'sometimes|integer|min:1|max:20',
-        ]);
+        $datos = $request->validated();
 
         $plataforma = $datos['platform'] ?? 'app';
-        $limite     = (int) ($datos['limit'] ?? 10);
+        $limite = (int) ($datos['limit'] ?? 10);
 
         $candidatos = Banner::entregable()
             ->where('placement', $datos['placement'])
@@ -64,10 +60,10 @@ class AdsController extends Controller
          * que en una API siempre devuelve null.
          */
         $contexto = [
-            'municipality_id'      => $datos['municipality_id'] ?? null,
-            'complex_id'           => $datos['complex_id'] ?? null,
+            'municipality_id' => $datos['municipality_id'] ?? null,
+            'complex_id' => $datos['complex_id'] ?? null,
             'business_category_id' => $datos['business_category_id'] ?? null,
-            'rol'                  => $request->user('sanctum')?->rol,
+            'rol' => $request->user('sanctum')?->rol,
         ];
 
         $elegidos = $candidatos
@@ -79,13 +75,13 @@ class AdsController extends Controller
 
         return response()->json(
             $elegidos->map(fn (Banner $b) => [
-                'id'         => $b->id,
-                'title'      => $b->title,
-                'subtitle'   => $b->subtitle,
-                'image_url'  => $imagenes[$b->id] ?? null,
-                'link_type'  => $b->link_type,
+                'id' => $b->id,
+                'title' => $b->title,
+                'subtitle' => $b->subtitle,
+                'image_url' => $imagenes[$b->id] ?? null,
+                'link_type' => $b->link_type,
                 'link_value' => $b->link_value,
-                'placement'  => $b->placement,
+                'placement' => $b->placement,
             ])->all()
         );
     }
@@ -97,28 +93,25 @@ class AdsController extends Controller
      * sumando y guardando: dos impresiones simultáneas —lo normal en cuanto la
      * app tiene tráfico— se perderían una a la otra con el segundo método.
      */
-    public function track(Request $request, $id)
+    public function track(AnotarVistaDeBannerRequest $request, $id)
     {
-        $datos = $request->validate([
-            'type'     => 'required|in:impression,click',
-            'platform' => 'sometimes|in:app,web',
-        ]);
+        $datos = $request->validated();
 
         $banner = Banner::find($id);
 
         // Un banner borrado o apagado mientras el cliente lo tenía en pantalla
         // no es un error del cliente: se responde 204 y no se cuenta nada.
-        if (!$banner) {
+        if (! $banner) {
             return response()->noContent();
         }
 
         BannerEvent::create([
             'banner_id' => $banner->id,
-            'type'      => $datos['type'],
-            'user_id'   => $request->user('sanctum')?->user_id,
-            'platform'  => $datos['platform'] ?? null,
-            'ip'        => $request->ip(),
-            'day'       => now()->toDateString(),
+            'type' => $datos['type'],
+            'user_id' => $request->user('sanctum')?->user_id,
+            'platform' => $datos['platform'] ?? null,
+            'ip' => $request->ip(),
+            'day' => now()->toDateString(),
         ]);
 
         $columna = $datos['type'] === 'click' ? 'clicks_count' : 'impressions_count';
@@ -130,12 +123,9 @@ class AdsController extends Controller
     /**
      * Negocios destacados vigentes para una posición.
      */
-    public function featured(Request $request)
+    public function featured(DestacadosRequest $request)
     {
-        $datos = $request->validate([
-            'placement' => 'sometimes|in:home_top,category_top,search_top',
-            'limit'     => 'sometimes|integer|min:1|max:50',
-        ]);
+        $datos = $request->validated();
 
         $filas = FeaturedBusiness::vigente()
             ->where('placement', $datos['placement'] ?? 'home_top')
@@ -160,28 +150,24 @@ class AdsController extends Controller
      * NO lo canjea: solo dice cuánto valdría. El canje ocurre al confirmar el
      * pedido, y separarlo evita que mirar el carrito consuma usos del cupón.
      */
-    public function validateCoupon(Request $request)
+    public function validateCoupon(ValidarCuponRequest $request)
     {
-        $datos = $request->validate([
-            'code'        => 'required|string|max:40',
-            'subtotal'    => 'required|numeric|min:0',
-            'business_id' => 'sometimes|nullable|integer',
-        ]);
+        $datos = $request->validated();
 
         $cupon = Coupon::vigente()
             ->where('code', strtoupper(trim($datos['code'])))
             ->first();
 
-        if (!$cupon) {
+        if (! $cupon) {
             return response()->json([
-                'valid'   => false,
+                'valid' => false,
                 'message' => 'El cupón no existe o ya no está vigente.',
             ], 200);
         }
 
         if ($cupon->agotado()) {
             return response()->json([
-                'valid'   => false,
+                'valid' => false,
                 'message' => 'Este cupón ya alcanzó su número máximo de usos.',
             ], 200);
         }
@@ -190,14 +176,14 @@ class AdsController extends Controller
 
         if ($subtotal < (float) $cupon->min_order) {
             return response()->json([
-                'valid'   => false,
-                'message' => 'Este cupón aplica desde $' . number_format((float) $cupon->min_order, 0, ',', '.') . '.',
+                'valid' => false,
+                'message' => 'Este cupón aplica desde $'.number_format((float) $cupon->min_order, 0, ',', '.').'.',
             ], 200);
         }
 
         if ($cupon->business_id && (int) ($datos['business_id'] ?? 0) !== (int) $cupon->business_id) {
             return response()->json([
-                'valid'   => false,
+                'valid' => false,
                 'message' => 'Este cupón solo aplica en un negocio específico.',
             ], 200);
         }
@@ -214,7 +200,7 @@ class AdsController extends Controller
 
             if ($usados >= $cupon->max_uses_per_user) {
                 return response()->json([
-                    'valid'   => false,
+                    'valid' => false,
                     'message' => 'Ya usaste este cupón el número máximo de veces.',
                 ], 200);
             }
@@ -223,18 +209,18 @@ class AdsController extends Controller
         $descuento = $cupon->descuentoPara($subtotal);
 
         return response()->json([
-            'valid'       => true,
-            'coupon_id'   => $cupon->id,
-            'code'        => $cupon->code,
+            'valid' => true,
+            'coupon_id' => $cupon->id,
+            'code' => $cupon->code,
             'description' => $cupon->description,
-            'discount'    => $descuento,
-            'total'       => round($subtotal - $descuento, 2),
+            'discount' => $descuento,
+            'total' => round($subtotal - $descuento, 2),
         ]);
     }
 
     private function imagenesDe(array $ids): array
     {
-        if (!$ids) {
+        if (! $ids) {
             return [];
         }
 

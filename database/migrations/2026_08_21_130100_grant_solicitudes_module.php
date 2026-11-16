@@ -37,10 +37,10 @@ use Illuminate\Support\Facades\DB;
 return new class extends Migration
 {
     private const REPARTO = [
-        'sistema'    => true,
-        'comercial'  => true,
-        'calidad'    => true,
-        'gerencia'   => false,
+        'sistema' => true,
+        'comercial' => true,
+        'calidad' => true,
+        'gerencia' => false,
     ];
 
     public function up(): void
@@ -51,14 +51,14 @@ return new class extends Migration
             // Un área que no existe no es un error: alguien pudo borrarla o
             // renombrarla desde el panel, y no le corresponde a esta migración
             // resucitarla.
-            if (!$areaId) {
+            if (! $areaId) {
                 continue;
             }
 
             DB::table('area_module')->updateOrInsert(
                 ['area_id' => $areaId, 'module' => 'solicitudes'],
                 [
-                    'can_view'   => true,
+                    'can_view' => true,
                     'can_manage' => $gestiona,
                     'updated_at' => now(),
                     'created_at' => now(),

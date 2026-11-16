@@ -18,17 +18,16 @@ use Laravel\Sanctum\Sanctum;
  * `PorteriaTest.php`; Pest carga todos los archivos del directorio, así que
  * están disponibles aquí sin volver a escribirlos.
  */
-
 test('un visitante se registra sin ser usuario de la plataforma', function () {
     $c = conjuntoConPersonal();
 
     Sanctum::actingAs($c['user']);
 
     $this->postJson('/v1/conjunto/porteria/visitantes', [
-        'kind'         => 'visitante',
+        'kind' => 'visitante',
         'visitor_name' => 'Marta Robles',
-        'tower'        => '4',
-        'apartment'    => '1203',
+        'tower' => '4',
+        'apartment' => '1203',
     ])->assertCreated();
 
     $fila = DB::table('complex_entries')->latest('id')->first();
@@ -69,13 +68,13 @@ test('si el conjunto lo exige, hace falta quien autorice', function () {
     // La regla es del edificio y se comprueba en el SERVIDOR: tiene que valer
     // aunque la petición venga de otro sitio que no sea el panel.
     $this->postJson('/v1/conjunto/porteria/visitantes', [
-        'kind'         => 'visitante',
+        'kind' => 'visitante',
         'visitor_name' => 'Marta Robles',
     ])->assertStatus(422);
 
     $this->postJson('/v1/conjunto/porteria/visitantes', [
-        'kind'          => 'visitante',
-        'visitor_name'  => 'Marta Robles',
+        'kind' => 'visitante',
+        'visitor_name' => 'Marta Robles',
         'authorized_by' => 'Sra. Vecina',
     ])->assertCreated();
 });
@@ -133,7 +132,7 @@ test('quien esta adentro son los de hoy sin salida', function () {
 });
 
 test('una entrada de otro conjunto no se puede cerrar', function () {
-    $mio  = conjuntoConPersonal();
+    $mio = conjuntoConPersonal();
     $otro = conjuntoConPersonal();
 
     Sanctum::actingAs($otro['user']);
@@ -200,14 +199,14 @@ test('el dueno corrige la ficha pero no las torres ni la ubicacion', function ()
     Sanctum::actingAs($c['user']);
 
     $this->putJson('/v1/conjunto/perfil', [
-        'name'       => 'Los Almendros Etapa II',
-        'phone'      => '3001234567',
+        'name' => 'Los Almendros Etapa II',
+        'phone' => '3001234567',
         'gate_notes' => 'Despues de las 10 de la noche no se reciben domicilios.',
         // Los dos que no se aceptan: de las torres sale la medida del tamaño
         // del conjunto, y de la ubicación heredan sus coordenadas las
         // direcciones de quienes ya viven ahí.
         'towers_count' => 999,
-        'latitude'     => 1.23,
+        'latitude' => 1.23,
     ])->assertOk();
 
     $fila = DB::table('residential_complexes')
@@ -257,7 +256,7 @@ test('el detalle de residentes no lleva correo ni telefono', function () {
 });
 
 test('el detalle de residentes es de otro conjunto para nadie', function () {
-    $mio  = conjuntoConPersonal(ComplexStaff::DUENO);
+    $mio = conjuntoConPersonal(ComplexStaff::DUENO);
     $otro = conjuntoConPersonal(ComplexStaff::DUENO);
 
     // El residente vive en el conjunto del vecino.

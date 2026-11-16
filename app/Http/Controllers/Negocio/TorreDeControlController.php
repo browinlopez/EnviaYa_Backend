@@ -1,8 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Negocio;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Domiciliario\DomiciliarioEnElTableroResource;
 use App\Models\Business;
 use App\Models\Order\OrderGeolocation;
 use App\Models\Order\OrdersSales;
@@ -48,14 +51,14 @@ class TorreDeControlController extends Controller
      * pantalla de ruido. Fuera de la ventana se devuelve `null`, que la
      * pantalla cuenta como «sin posición».
      */
+    /*
+     * LOS ESTADOS VIENEN DE `OrdersSales`, no de una copia privada.
+     * Estaban declarados aqui y en otras ocho clases: la misma decision
+     * tomada nueve veces. Ver la cabecera de esas constantes en el modelo.
+     */
     private const HORAS_DE_POSICION = 12;
 
-    /** El estado del pedido que significa «lo lleva encima». */
-    private const EN_CAMINO = 3;
-
-    public function __construct(private CustodiaDeEfectivo $custodia)
-    {
-    }
+    public function __construct(private CustodiaDeEfectivo $custodia) {}
 
     public function index(Request $request)
     {
@@ -64,57 +67,58 @@ class TorreDeControlController extends Controller
         $negocio->loadMissing('domiciliaries.user');
 
         $flota = $negocio->domiciliaries;
-        $ids   = $flota->pluck('domiciliary_id')->map(fn ($id) => (int) $id)->all();
+        $ids = $flota->pluck('domiciliary_id')->map(fn ($id) => (int) $id)->all();
 
-        $pedidos   = $this->pedidosABordo((int) $negocio->busines_id, $ids);
-        $posicion  = $this->ultimaPosicion($ids);
-        $tope      = $negocio->max_courier_cash !== null ? (float) $negocio->max_courier_cash : null;
+        $pedidos = $this->pedidosABordo((int) $negocio->busines_id, $ids);
+        $posicion = $this->ultimaPosicion($ids);
+        $tope = $negocio->max_courier_cash !== null ? (float) $negocio->max_courier_cash : null;
         $simultaneos = (int) Ajustes::valor('operacion.entregas_simultaneas');
 
-        $torre = $flota->map(function ($d) use ($pedidos, $posicion, $tope) {
-            $id       = (int) $d->domiciliary_id;
-            $suyos    = $pedidos->get($id, collect());
-            $efectivo = round($this->custodia->saldo($id), 2);
+        /*
+         * EL EFECTIVO DE TODA LA FLOTA, EN UNA CONSULTA.
+         *
+         * Aquí se llamaba a `saldo()` dentro del recorrido: una consulta por
+         * moto. Medido, esta ruta hacía 33 consultas para una flota de diez y
+         * diez eran esta misma línea. La torre se recarga cada quince segundos
+         * mientras el panel está abierto, así que no es una vez: es diez
+         * consultas cada quince segundos por cada tendero con la pantalla
+         * puesta.
+         *
+         * NO SE TOCA la consulta de posición de más abajo, que también es una
+         * por moto: esa es deliberada y su docblock explica por qué —la
+         * alternativa traía cuarenta mil filas para leer veinte—. Un número
+         * alto de consultas no es un N+1 que haya que arreglar; lo que hay que
+         * mirar es si crece y si lo que lo sustituye es mejor.
+         */
+        $saldos = $this->custodia->saldosDe($ids);
 
-            return [
-                'domiciliary_id' => $id,
-                'user_id'        => (int) $d->user_id,
-                'name'           => $d->user?->name,
-                'phone'          => $d->user?->phone,
-                'disponible'     => (bool) $d->available,
+        $torre = $flota->map(function ($d) use ($pedidos, $posicion, $tope, $saldos) {
+            $id = (int) $d->domiciliary_id;
+            $suyos = $pedidos->get($id, collect());
+            $efectivo = round($saldos[$id] ?? 0.0, 2);
 
-                'pedidos'        => $suyos->values(),
-                'a_bordo'        => $suyos->count(),
-                /*
-                 * Desde cuándo lleva repartiendo: el despacho del pedido MÁS
-                 * VIEJO que carga, no el último. Es la cifra que hace saltar
-                 * al tendero —«lleva hora y media con ese pedido»—, y
-                 * tomando el último se escondería justamente ese caso cada
-                 * vez que se le despacha uno nuevo.
-                 */
-                'desde'          => $suyos->pluck('despachado_el')->filter()->sort()->first(),
-
-                'efectivo'       => $efectivo,
-                'tope_efectivo'  => $tope,
-                'le_cabe'        => $tope === null ? null : max(0, round($tope - $efectivo, 2)),
-                'sobre_el_tope'  => $tope !== null && $efectivo > $tope,
-
-                'posicion'       => $posicion->get($id),
-            ];
+            return (new DomiciliarioEnElTableroResource(
+                $d,
+                id: $id,
+                suyos: $suyos,
+                efectivo: $efectivo,
+                tope: $tope,
+                posicion: $posicion->get($id),
+            ))->resolve();
         });
 
         return response()->json([
-            'busines_id'         => (int) $negocio->busines_id,
-            'actualizado'        => now()->toIso8601String(),
-            'tope_efectivo'      => $tope,
+            'busines_id' => (int) $negocio->busines_id,
+            'actualizado' => now()->toIso8601String(),
+            'tope_efectivo' => $tope,
             'maximo_simultaneos' => $simultaneos,
             /*
              * La pantalla no tiene que saber cuántas horas atrás se buscó: se
              * le dice, y así el texto de «sin posición» puede ser concreto en
              * vez de un «no sabemos» que no explica nada.
              */
-            'horas_de_posicion'  => self::HORAS_DE_POSICION,
-            'flota'              => $torre->values(),
+            'horas_de_posicion' => self::HORAS_DE_POSICION,
+            'flota' => $torre->values(),
         ]);
     }
 
@@ -127,7 +131,17 @@ class TorreDeControlController extends Controller
      * lo que decide si se le puede despachar otro contra entrega—.
      *
      * @param  list<int>  $ids
-     * @return Collection<int, Collection<int, array>>
+     *                          La clave de fuera es `int|string` y no `int`: `groupBy()` devuelve las
+     *                          claves tal como las da el motor, y un `domiciliary_id` puede llegar
+     *                          como cadena. Decia `int` y nadie lo notaba porque la relacion de
+     *                          `OrdersSales` no estaba tipada y PHPStan no podia ver lo que sale.
+     * @return Collection<int|string, Collection<int, array{
+     *     domiciliary_id: int, orderSales_id: int, cliente: string|null,
+     *     telefono: string|null, direccion: string|null,
+     *     recoge_en_tienda: bool, total: float,
+     *     productos: Collection<int, array{nombre: string, cantidad: float, unidad: string}>,
+     *     en_efectivo: bool, despachado_el: string|null, minutos: int|null,
+     * }>>
      */
     private function pedidosABordo(int $businessId, array $ids): Collection
     {
@@ -137,39 +151,44 @@ class TorreDeControlController extends Controller
 
         return OrdersSales::where('busines_id', $businessId)
             ->whereIn('domiciliary_id', $ids)
-            ->where('state', self::EN_CAMINO)
+            ->where('state', OrdersSales::EN_CAMINO)
             ->with(['buyer.user', 'address', 'details.product:products_id,name,image'])
             ->get()
             ->map(fn (OrdersSales $o) => [
                 'domiciliary_id' => (int) $o->domiciliary_id,
-                'orderSales_id'  => (int) $o->orderSales_id,
-                'cliente'        => $o->buyer?->user?->name,
-                'telefono'       => $o->buyer?->user?->phone,
-                'direccion'      => $o->pickup
+                'orderSales_id' => (int) $o->orderSales_id,
+                'cliente' => $o->buyer?->user?->name,
+                'telefono' => $o->buyer?->user?->phone,
+                'direccion' => $o->pickup
                     ? null
                     : (trim(implode(', ', array_filter([
                         $o->address?->street,
                         $o->address?->address,
                     ]))) ?: null),
                 'recoge_en_tienda' => (bool) $o->pickup,
-                'total'          => (float) $o->total,
+                'total' => (float) $o->total,
                 /*
                  * Qué lleva: el tendero llama al domiciliario o al cliente
                  * con el pedido en la mano, no con un número de orden.
                  */
-                'productos'      => $o->details->map(fn ($d) => [
-                    'nombre'   => $d->product?->name ?? 'Producto',
+                'productos' => $o->details->map(fn ($d) => [
+                    'nombre' => $d->product?->name ?? 'Producto',
                     'cantidad' => (float) ($d->qty_final ?? $d->amount),
-                    'unidad'   => $d->sale_unit,
+                    'unidad' => $d->sale_unit,
                 ])->values(),
                 /*
                  * Si va contra entrega. Es lo que convierte un pedido en plata
                  * encima, y por eso el tendero necesita distinguirlo de un
                  * pedido ya pagado al mirar la fila.
                  */
-                'en_efectivo'    => (int) $o->methods_id === 1,
-                'despachado_el'  => optional($o->dispatched_at)->toIso8601String(),
-                'minutos'        => $o->dispatched_at
+                'en_efectivo' => (int) $o->methods_id === 1,
+                /* `?->` y no `optional()`: lo mismo en tiempo de ejecucion,
+                   pero `optional()` devuelve `mixed` y con eso el tipo de
+                   retorno de este metodo no se puede declarar --los
+                   genericos de Collection son invariantes y piden el tipo
+                   exacto-. */
+                'despachado_el' => $o->dispatched_at?->toIso8601String(),
+                'minutos' => $o->dispatched_at
                     ? (int) $o->dispatched_at->diffInMinutes(now())
                     : null,
             ])
@@ -197,8 +216,21 @@ class TorreDeControlController extends Controller
      * El desempate por `geolocation_id` es para los dos puntos que caen en el
      * mismo segundo: sin él, cuál de los dos sale queda al azar.
      *
+     * El tipo de abajo está escrito a la letra, y tiene que estarlo: los
+     * genéricos de `Collection` son INVARIANTES, así que `Collection<int,
+     * array>` NO acepta un `Collection<int, array{...}>` aunque la forma
+     * concreta sea un array. Decía `array` a secas y pasaba inadvertido
+     * mientras las relaciones no tenían tipo.
+     *
+     * `at` queda en `mixed` porque `optional()` borra el tipo de lo que
+     * envuelve. Se deja como está: cambiarlo a `?->` tocaría la línea que
+     * construye la respuesta del mapa, y no es lo que se vino a hacer.
+     *
+     * El `|null` del camino «sin posición» no va en el tipo porque el
+     * `filter()` del final se lo lleva.
+     *
      * @param  list<int>  $ids
-     * @return Collection<int, array>
+     * @return Collection<int, array{latitude: float, longitude: float, orderSales_id: int, at: mixed, hace_minutos: int|null}>
      */
     private function ultimaPosicion(array $ids): Collection
     {
@@ -216,19 +248,19 @@ class TorreDeControlController extends Controller
                     ->orderByDesc('geolocation_id')
                     ->first();
 
-                if (!$ultimo) {
+                if (! $ultimo) {
                     return [$id => null];
                 }
 
                 return [$id => [
-                    'latitude'      => (float) $ultimo->latitude,
-                    'longitude'     => (float) $ultimo->longitude,
+                    'latitude' => (float) $ultimo->latitude,
+                    'longitude' => (float) $ultimo->longitude,
                     'orderSales_id' => (int) $ultimo->orderSales_id,
-                    'at'            => optional($ultimo->created_at)->toIso8601String(),
+                    'at' => optional($ultimo->created_at)->toIso8601String(),
                     // La edad va calculada desde acá: el reloj del navegador
                     // del tendero puede estar corrido, y «hace 14 min» tiene
                     // que significar catorce minutos de verdad.
-                    'hace_minutos'  => $ultimo->created_at
+                    'hace_minutos' => $ultimo->created_at
                         ? (int) $ultimo->created_at->diffInMinutes(now())
                         : null,
                 ]];

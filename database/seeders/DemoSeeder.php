@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Area;
+use App\Models\Operacion\Settlement;
 use App\Services\LiquidacionService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
@@ -47,8 +48,10 @@ class DemoSeeder extends Seeder
      * imposible de registrar.
      */
     public const DOMINIO = 'demo.example.com';
-    public const CLAVE   = 'Demo2026*';
-    public const NIT     = 'DEMO-';
+
+    public const CLAVE = 'Demo2026*';
+
+    public const NIT = 'DEMO-';
 
     /*
      * TODOS los dominios con los que se sembró alguna vez, no solo el de hoy.
@@ -89,10 +92,10 @@ class DemoSeeder extends Seeder
          * contabilidad. Un `db:seed --force` en un despliegue lo haría sin que
          * nadie se enterara.
          */
-        if (app()->isProduction() && !config('semillas.permitir_en_produccion')) {
+        if (app()->isProduction() && ! config('semillas.permitir_en_produccion')) {
             $this->command?->warn(
                 'DemoSeeder no corre en producción: son datos y usuarios falsos, '
-                . 'con una clave compartida y conocida.',
+                .'con una clave compartida y conocida.',
             );
 
             return;
@@ -105,14 +108,14 @@ class DemoSeeder extends Seeder
 
         $this->command?->info('Sembrando datos de demostración…');
 
-        $areas        = $this->personalPorArea();
-        $conjuntos    = $this->conjuntos();
+        $areas = $this->personalPorArea();
+        $conjuntos = $this->conjuntos();
         $propietarios = $this->propietarios();
-        $negocios     = $this->negocios($propietarios);
+        $negocios = $this->negocios($propietarios);
         $this->catalogo($negocios);
         $domiciliarios = $this->domiciliarios($negocios);
-        $compradores   = $this->compradores($conjuntos);
-        $pedidos       = $this->pedidos($negocios, $domiciliarios, $compradores);
+        $compradores = $this->compradores($conjuntos);
+        $pedidos = $this->pedidos($negocios, $domiciliarios, $compradores);
         $this->pagos($pedidos);
         $this->resenas($negocios, $domiciliarios, $compradores);
         $this->conversaciones($negocios, $domiciliarios, $compradores);
@@ -125,7 +128,7 @@ class DemoSeeder extends Seeder
     }
 
     /* ================================================================== */
-    /* PERSONAS DEL EQUIPO                                                */
+    /* PERSONAS DEL EQUIPO */
 
     /**
      * Dos cuentas por área: quien gestiona y quien solo consulta.
@@ -142,34 +145,34 @@ class DemoSeeder extends Seeder
         $gestores = [];
 
         $nombres = [
-            'sistema'      => ['Diego Salazar', 'Valentina Ruiz'],
-            'gerencia'     => ['Marta Villalba', 'Andrés Peña'],
+            'sistema' => ['Diego Salazar', 'Valentina Ruiz'],
+            'gerencia' => ['Marta Villalba', 'Andrés Peña'],
             'contabilidad' => ['Liliana Cortés', 'Óscar Meza'],
-            'marketing'    => ['Camila Restrepo', 'Julián Ospina'],
-            'comercial'    => ['Ricardo Amaya', 'Paola Guerrero'],
-            'sst'          => ['Sandra Bermúdez', 'Kevin Arrieta'],
-            'calidad'      => ['Natalia Cabrera', 'Hernán Pardo'],
+            'marketing' => ['Camila Restrepo', 'Julián Ospina'],
+            'comercial' => ['Ricardo Amaya', 'Paola Guerrero'],
+            'sst' => ['Sandra Bermúdez', 'Kevin Arrieta'],
+            'calidad' => ['Natalia Cabrera', 'Hernán Pardo'],
         ];
 
         foreach (Area::orderBy('id')->get() as $area) {
             [$nombreGestor, $nombreAuxiliar] = $nombres[$area->code] ?? ['Gestor', 'Auxiliar'];
 
             $gestores[$area->code] = $this->usuario([
-                'name'         => $nombreGestor,
-                'email'        => "{$area->code}@" . self::DOMINIO,
-                'rol'          => 4,
-                'area_id'      => $area->id,
+                'name' => $nombreGestor,
+                'email' => "{$area->code}@".self::DOMINIO,
+                'rol' => 4,
+                'area_id' => $area->id,
                 'access_level' => Area::NIVEL_GESTOR,
-                'phone'        => $this->telefono(),
+                'phone' => $this->telefono(),
             ]);
 
             $this->usuario([
-                'name'         => $nombreAuxiliar,
-                'email'        => "aux.{$area->code}@" . self::DOMINIO,
-                'rol'          => 4,
-                'area_id'      => $area->id,
+                'name' => $nombreAuxiliar,
+                'email' => "aux.{$area->code}@".self::DOMINIO,
+                'rol' => 4,
+                'area_id' => $area->id,
                 'access_level' => Area::NIVEL_CONSULTA,
-                'phone'        => $this->telefono(),
+                'phone' => $this->telefono(),
             ]);
         }
 
@@ -177,7 +180,7 @@ class DemoSeeder extends Seeder
     }
 
     /* ================================================================== */
-    /* COMUNIDAD                                                          */
+    /* COMUNIDAD */
 
     /** @return list<int> complex_id */
     private function conjuntos(): array
@@ -198,12 +201,12 @@ class DemoSeeder extends Seeder
             DB::table('residential_complexes')->updateOrInsert(
                 ['name' => $nombre],
                 [
-                    'address'         => $direccion,
+                    'address' => $direccion,
                     'municipality_id' => $municipio,
-                    'people_count'    => $gente,
-                    'latitude'        => $lat,
-                    'longitude'       => $lng,
-                    'state'           => $estado,
+                    'people_count' => $gente,
+                    'latitude' => $lat,
+                    'longitude' => $lng,
+                    'state' => $estado,
                 ],
             );
 
@@ -228,25 +231,25 @@ class DemoSeeder extends Seeder
 
         foreach ($datos as [$nombre, $usuario, $documento]) {
             $userId = $this->usuario([
-                'name'    => $nombre,
-                'email'   => "{$usuario}@" . self::DOMINIO,
-                'rol'     => 2,
-                'phone'   => $this->telefono(),
+                'name' => $nombre,
+                'email' => "{$usuario}@".self::DOMINIO,
+                'rol' => 2,
+                'phone' => $this->telefono(),
                 'address' => 'Barranquilla, Atlántico',
             ]);
 
             DB::table('owner')->updateOrInsert(
                 ['user_id' => $userId],
                 [
-                    'document_number'   => $documento,
+                    'document_number' => $documento,
                     'contact_secondary' => $this->telefono(),
-                    'notes'             => 'Cuenta de demostración.',
-                    'state'             => 1,
+                    'notes' => 'Cuenta de demostración.',
+                    'state' => 1,
                 ],
             );
 
             $salida[] = [
-                'user_id'  => $userId,
+                'user_id' => $userId,
                 'owner_id' => (int) DB::table('owner')->where('user_id', $userId)->value('owner_id'),
             ];
         }
@@ -269,11 +272,11 @@ class DemoSeeder extends Seeder
             $usuario = strtolower(str_replace(' ', '.', $this->sinTildes($nombre)));
 
             $userId = $this->usuario([
-                'name'          => $nombre,
-                'email'         => "{$usuario}@" . self::DOMINIO,
-                'rol'           => 1,
-                'phone'         => $this->telefono(),
-                'address'       => $this->direccion(),
+                'name' => $nombre,
+                'email' => "{$usuario}@".self::DOMINIO,
+                'rol' => 1,
+                'phone' => $this->telefono(),
+                'address' => $this->direccion(),
                 'qualification' => $i % 4 === 0 ? 0 : round(mt_rand(35, 50) / 10, 2),
             ]);
 
@@ -301,10 +304,10 @@ class DemoSeeder extends Seeder
             DB::table('user_address')->updateOrInsert(
                 ['user_id' => $userId, 'address' => $this->direccion($i)],
                 [
-                    'latitude'        => 10.98 + mt_rand(-250, 250) / 10000,
-                    'longitude'       => -74.79 + mt_rand(-250, 250) / 10000,
+                    'latitude' => 10.98 + mt_rand(-250, 250) / 10000,
+                    'longitude' => -74.79 + mt_rand(-250, 250) / 10000,
                     'municipality_id' => 16,
-                    'state'           => 1,
+                    'state' => 1,
                 ],
             );
 
@@ -315,7 +318,7 @@ class DemoSeeder extends Seeder
     }
 
     /* ================================================================== */
-    /* CATÁLOGO                                                           */
+    /* CATÁLOGO */
 
     /** @return list<int> busines_id */
     private function negocios(array $propietarios): array
@@ -335,22 +338,22 @@ class DemoSeeder extends Seeder
         $ids = [];
 
         foreach ($datos as $i => [$nombre, $tipo, $municipio, $prop, $lat, $lng, $estado]) {
-            $nit = self::NIT . str_pad((string) ($i + 1), 3, '0', STR_PAD_LEFT);
+            $nit = self::NIT.str_pad((string) ($i + 1), 3, '0', STR_PAD_LEFT);
 
             DB::table('business')->updateOrInsert(
                 ['NIT' => $nit],
                 [
-                    'name'            => $nombre,
-                    'razonSocial_DCD' => $nombre . ' S.A.S.',
-                    'phone'           => $this->telefono(),
-                    'address'         => $this->direccion($i),
-                    'description'     => 'Negocio de demostración para probar el panel.',
-                    'latitude'        => $lat,
-                    'longitude'       => $lng,
+                    'name' => $nombre,
+                    'razonSocial_DCD' => $nombre.' S.A.S.',
+                    'phone' => $this->telefono(),
+                    'address' => $this->direccion($i),
+                    'description' => 'Negocio de demostración para probar el panel.',
+                    'latitude' => $lat,
+                    'longitude' => $lng,
                     'municipality_id' => $municipio,
-                    'type'            => $tipo,
-                    'state'           => $estado,
-                    'qualification'   => 0,
+                    'type' => $tipo,
+                    'state' => $estado,
+                    'qualification' => 0,
                 ],
             );
 
@@ -402,7 +405,7 @@ class DemoSeeder extends Seeder
                 DB::table('products_business')->updateOrInsert(
                     ['busines_id' => $negocioId, 'products_id' => $productoId],
                     [
-                        'price'  => mt_rand(1200, 48000),
+                        'price' => mt_rand(1200, 48000),
                         'amount' => $existencias,
                     ],
                 );
@@ -411,7 +414,7 @@ class DemoSeeder extends Seeder
     }
 
     /* ================================================================== */
-    /* OPERACIÓN                                                          */
+    /* OPERACIÓN */
 
     /** @return list<array{user_id:int, domiciliary_id:int}> */
     private function domiciliarios(array $negocios): array
@@ -436,26 +439,26 @@ class DemoSeeder extends Seeder
             $usuario = strtolower(str_replace(' ', '.', $this->sinTildes($nombre)));
 
             $userId = $this->usuario([
-                'name'          => $nombre,
-                'email'         => "{$usuario}@" . self::DOMINIO,
-                'rol'           => 3,
-                'phone'         => $this->telefono(),
-                'address'       => $this->direccion($i),
-                'state'         => $activo,
+                'name' => $nombre,
+                'email' => "{$usuario}@".self::DOMINIO,
+                'rol' => 3,
+                'phone' => $this->telefono(),
+                'address' => $this->direccion($i),
+                'state' => $activo,
                 'qualification' => round(mt_rand(38, 50) / 10, 2),
             ]);
 
             DB::table('domiciliary')->updateOrInsert(
                 ['user_id' => $userId],
                 [
-                    'available'          => $turno,
-                    'document'           => $documento,
+                    'available' => $turno,
+                    'document' => $documento,
                     'contract_signed_at' => $acuerdo
                         ? $this->hoy->copy()->subDays(120 - $i * 9)
                         : null,
-                    'contract_city'      => $acuerdo ? 'Barranquilla' : null,
-                    'qualification'      => round(mt_rand(38, 50) / 10, 2),
-                    'state'              => 1,
+                    'contract_city' => $acuerdo ? 'Barranquilla' : null,
+                    'qualification' => round(mt_rand(38, 50) / 10, 2),
+                    'state' => 1,
                 ],
             );
 
@@ -521,32 +524,32 @@ class DemoSeeder extends Seeder
                 $estado = 4; // entregado
             }
 
-            $subtotal  = mt_rand(18000, 240000);
+            $subtotal = mt_rand(18000, 240000);
             $domicilio = [4000, 5000, 6000, 7000][$i % 4];
             $descuento = $i % 9 === 0 ? (int) round($subtotal * 0.1) : 0;
-            $comision  = (int) round($domicilio * 0.25);
+            $comision = (int) round($domicilio * 0.25);
 
             $pagado = in_array($estado, [4], true) || $i % 3 === 0;
 
             $orderId = DB::table('orderssales')->insertGetId([
-                'buyer_id'        => $comprador,
-                'busines_id'      => $negocioId,
-                'domiciliary_id'  => $estado >= 3 ? $repartidor['domiciliary_id'] : null,
-                'methods_id'      => [1, 2, 5, 6][$i % 4],
-                'forms_id'        => [1, 2][$i % 2],
-                'subtotal'        => $subtotal,
-                'domicilio'       => $domicilio,
-                'discount'        => $descuento,
+                'buyer_id' => $comprador,
+                'busines_id' => $negocioId,
+                'domiciliary_id' => $estado >= 3 ? $repartidor['domiciliary_id'] : null,
+                'methods_id' => [1, 2, 5, 6][$i % 4],
+                'forms_id' => [1, 2][$i % 2],
+                'subtotal' => $subtotal,
+                'domicilio' => $domicilio,
+                'discount' => $descuento,
                 'domiciliary_fee' => $comision,
-                'total'           => $subtotal + $domicilio - $descuento,
-                'currency'        => 'COP',
-                'sale_date'       => $fecha,
-                'state'           => $estado,
-                'payment_state'   => $estado === 5 ? 'cancelled' : ($pagado ? 'approved' : 'pending'),
-                'dispatched_at'   => $estado >= 3 ? $fecha->copy()->addMinutes(mt_rand(12, 40)) : null,
-                'delivery_date'   => $estado === 4 ? $fecha->copy()->addMinutes(mt_rand(35, 95)) : null,
-                'created_at'      => $fecha,
-                'updated_at'      => $fecha,
+                'total' => $subtotal + $domicilio - $descuento,
+                'currency' => 'COP',
+                'sale_date' => $fecha,
+                'state' => $estado,
+                'payment_state' => $estado === 5 ? 'cancelled' : ($pagado ? 'approved' : 'pending'),
+                'dispatched_at' => $estado >= 3 ? $fecha->copy()->addMinutes(mt_rand(12, 40)) : null,
+                'delivery_date' => $estado === 4 ? $fecha->copy()->addMinutes(mt_rand(35, 95)) : null,
+                'created_at' => $fecha,
+                'updated_at' => $fecha,
             ], 'orderSales_id');
 
             $this->detalleDelPedido((int) $orderId, $negocioId, $subtotal);
@@ -575,7 +578,7 @@ class DemoSeeder extends Seeder
         // cuadra con su cabecera es la clase de dato que hace desconfiar de
         // toda la pantalla.
         $restante = $subtotal;
-        $ultimo   = $ofertas->count() - 1;
+        $ultimo = $ofertas->count() - 1;
 
         foreach ($ofertas as $i => $oferta) {
             if ($i === $ultimo) {
@@ -583,16 +586,16 @@ class DemoSeeder extends Seeder
                 $cantidad = 1;
             } else {
                 $cantidad = mt_rand(1, 3);
-                $precio   = min((int) $oferta->price, intdiv(max(100, $restante - 100), $cantidad + 1));
-                $precio   = max(100, $precio);
+                $precio = min((int) $oferta->price, intdiv(max(100, $restante - 100), $cantidad + 1));
+                $precio = max(100, $precio);
                 $restante -= $precio * $cantidad;
             }
 
             DB::table('orderssales_detail')->insert([
                 'orderSales_id' => $orderId,
-                'product_id'    => $oferta->products_id,
-                'amount'        => $cantidad,
-                'unit_price'    => $precio,
+                'product_id' => $oferta->products_id,
+                'amount' => $cantidad,
+                'unit_price' => $precio,
             ]);
         }
     }
@@ -609,41 +612,41 @@ class DemoSeeder extends Seeder
 
             $estado = match (true) {
                 $p->payment_state === 'cancelled' => 'cancelled',
-                $rechazado                        => 'rejected',
-                default                           => 'approved',
+                $rechazado => 'rejected',
+                default => 'approved',
             };
 
             DB::table('payments')->insert([
-                'orderSales_id'       => $p->orderSales_id,
-                'methods_id'          => $p->methods_id,
-                'forms_id'            => $p->forms_id,
+                'orderSales_id' => $p->orderSales_id,
+                'methods_id' => $p->methods_id,
+                'forms_id' => $p->forms_id,
                 // Los nombres que escribe la aplicación de verdad: el panel
                 // separa efectivo de pasarela por este campo, y con 'efectivo'
                 // en vez de 'cash' los 23 pagos en efectivo se contaban como
                 // pasarela. Unos datos de prueba que no usan los valores reales
                 // prueban otra cosa.
-                'provider'            => (int) $p->methods_id === 1 ? 'cash' : 'bold',
-                'provider_payment_id' => 'demo-' . $p->orderSales_id,
-                'amount'              => $p->total,
-                'subtotal'            => $p->subtotal,
-                'total'               => $p->total,
-                'domicilio'           => $p->domicilio,
-                'domiciliary_fee'     => $p->domiciliary_fee,
-                'valor_promocion'     => $p->discount,
+                'provider' => (int) $p->methods_id === 1 ? 'cash' : 'bold',
+                'provider_payment_id' => 'demo-'.$p->orderSales_id,
+                'amount' => $p->total,
+                'subtotal' => $p->subtotal,
+                'total' => $p->total,
+                'domicilio' => $p->domicilio,
+                'domiciliary_fee' => $p->domiciliary_fee,
+                'valor_promocion' => $p->discount,
                 // `payment_status` es el código numérico heredado y `status` el
                 // texto que lee el panel: los dos tienen que contar lo mismo.
-                'payment_status'      => $estado === 'approved' ? 1 : 0,
-                'status'              => $estado,
-                'payment_date'        => $p->sale_date,
-                'state'               => 1,
-                'created_at'          => $p->sale_date,
-                'updated_at'          => $p->sale_date,
+                'payment_status' => $estado === 'approved' ? 1 : 0,
+                'status' => $estado,
+                'payment_date' => $p->sale_date,
+                'state' => 1,
+                'created_at' => $p->sale_date,
+                'updated_at' => $p->sale_date,
             ]);
         }
     }
 
     /* ================================================================== */
-    /* COMUNIDAD: RESEÑAS Y CONVERSACIONES                                */
+    /* COMUNIDAD: RESEÑAS Y CONVERSACIONES */
 
     private function resenas(array $negocios, array $domiciliarios, array $compradores): void
     {
@@ -667,13 +670,13 @@ class DemoSeeder extends Seeder
                 $puntaje = [5, 5, 4, 5, 3, 1][$j];
 
                 DB::table('business_reviews')->insert([
-                    'busines_id'    => $negocioId,
-                    'buyer_id'      => $compradores[($i + $j) % count($compradores)],
+                    'busines_id' => $negocioId,
+                    'buyer_id' => $compradores[($i + $j) % count($compradores)],
                     'qualification' => $puntaje,
-                    'comment'       => $comentarios[$puntaje][$j % count($comentarios[$puntaje])],
-                    'state'         => 1,
-                    'created_at'    => $this->hoy->copy()->subDays(3 + $j * 5 + $i),
-                    'updated_at'    => $this->hoy->copy()->subDays(3 + $j * 5 + $i),
+                    'comment' => $comentarios[$puntaje][$j % count($comentarios[$puntaje])],
+                    'state' => 1,
+                    'created_at' => $this->hoy->copy()->subDays(3 + $j * 5 + $i),
+                    'updated_at' => $this->hoy->copy()->subDays(3 + $j * 5 + $i),
                 ]);
             }
         }
@@ -684,12 +687,12 @@ class DemoSeeder extends Seeder
 
                 DB::table('domiciliary_reviews')->insert([
                     'domiciliary_id' => $d['domiciliary_id'],
-                    'buyer_id'       => $compradores[($i + $j) % count($compradores)],
-                    'qualification'  => $puntaje,
-                    'comment'        => $comentarios[$puntaje][$j % count($comentarios[$puntaje])],
-                    'state'          => 1,
-                    'created_at'     => $this->hoy->copy()->subDays(2 + $j * 7 + $i),
-                    'updated_at'     => $this->hoy->copy()->subDays(2 + $j * 7 + $i),
+                    'buyer_id' => $compradores[($i + $j) % count($compradores)],
+                    'qualification' => $puntaje,
+                    'comment' => $comentarios[$puntaje][$j % count($comentarios[$puntaje])],
+                    'state' => 1,
+                    'created_at' => $this->hoy->copy()->subDays(2 + $j * 7 + $i),
+                    'updated_at' => $this->hoy->copy()->subDays(2 + $j * 7 + $i),
                 ]);
             }
         }
@@ -703,7 +706,7 @@ class DemoSeeder extends Seeder
                        FROM business_reviews r
                       WHERE r.busines_id = b.busines_id
                    ), 0)
-             WHERE b.busines_id IN (' . implode(',', $negocios) . ')
+             WHERE b.busines_id IN ('.implode(',', $negocios).')
         ');
 
         $idsDomi = implode(',', array_column($domiciliarios, 'domiciliary_id'));
@@ -766,13 +769,13 @@ class DemoSeeder extends Seeder
             }
 
             $chatId = DB::table('chats')->insertGetId([
-                'type'       => 'private',
+                'type' => 'private',
                 'created_at' => $this->hoy->copy()->subDays($i + 1),
             ], 'chat_id');
 
             $porRol = [
-                'comprador'    => [$compradorUserId, 1],
-                'tendero'      => [$tenderoUserId, 2],
+                'comprador' => [$compradorUserId, 1],
+                'tendero' => [$tenderoUserId, 2],
                 'domiciliario' => [$domiciliarioUserId, 3],
             ];
 
@@ -780,9 +783,9 @@ class DemoSeeder extends Seeder
                 [$userId, $rol] = $porRol[$quien];
 
                 DB::table('chat_participants')->insert([
-                    'chat_id'   => $chatId,
-                    'user_id'   => $userId,
-                    'role_id'   => $rol,
+                    'chat_id' => $chatId,
+                    'user_id' => $userId,
+                    'role_id' => $rol,
                     'joined_at' => $this->hoy->copy()->subDays($i + 1),
                 ]);
             }
@@ -791,10 +794,10 @@ class DemoSeeder extends Seeder
                 [$userId, $rol] = $porRol[$quien];
 
                 DB::table('messages')->insert([
-                    'chat_id'    => $chatId,
-                    'user_id'    => $userId,
-                    'role_id'    => $rol,
-                    'content'    => $texto,
+                    'chat_id' => $chatId,
+                    'user_id' => $userId,
+                    'role_id' => $rol,
+                    'content' => $texto,
                     'created_at' => $this->hoy->copy()->subDays($i + 1)->addMinutes($j * 3),
                 ]);
             }
@@ -802,7 +805,7 @@ class DemoSeeder extends Seeder
     }
 
     /* ================================================================== */
-    /* MARKETING                                                          */
+    /* MARKETING */
 
     private function marketing(array $negocios): void
     {
@@ -812,8 +815,8 @@ class DemoSeeder extends Seeder
             // Un anunciante que es un negocio de la plataforma: la mezcla de
             // marcas externas y tiendas propias fue la decisión de diseño, y sin
             // un caso de cada uno no se ve.
-            ['Supermercado La Esquina', $negocios[0], 'Gustavo Charris', 'gustavo.charris@' . self::DOMINIO, self::NIT . '001'],
-            ['Droguería Vida Sana',     $negocios[1], 'Yeimy Polo',      'yeimy.polo@' . self::DOMINIO,      self::NIT . '002'],
+            ['Supermercado La Esquina', $negocios[0], 'Gustavo Charris', 'gustavo.charris@'.self::DOMINIO, self::NIT.'001'],
+            ['Droguería Vida Sana',     $negocios[1], 'Yeimy Polo',      'yeimy.polo@'.self::DOMINIO,      self::NIT.'002'],
         ];
 
         $idsAnunciante = [];
@@ -822,14 +825,14 @@ class DemoSeeder extends Seeder
             DB::table('advertisers')->updateOrInsert(
                 ['name' => $nombre],
                 [
-                    'business_id'   => $negocioId,
-                    'contact_name'  => $contacto,
+                    'business_id' => $negocioId,
+                    'contact_name' => $contacto,
                     'contact_email' => $correo,
                     'contact_phone' => $this->telefono(),
-                    'tax_id'        => $nit,
-                    'state'         => 1,
-                    'created_at'    => $this->hoy->copy()->subDays(90),
-                    'updated_at'    => now(),
+                    'tax_id' => $nit,
+                    'state' => 1,
+                    'created_at' => $this->hoy->copy()->subDays(90),
+                    'updated_at' => now(),
                 ],
             );
 
@@ -853,11 +856,11 @@ class DemoSeeder extends Seeder
             DB::table('ad_campaigns')->updateOrInsert(
                 ['advertiser_id' => $idsAnunciante[$anunciante], 'name' => $nombre],
                 [
-                    'objective'  => $objetivo,
-                    'starts_at'  => $inicio->toDateString(),
-                    'ends_at'    => $inicio->copy()->addDays($dura)->toDateString(),
-                    'budget'     => $presupuesto,
-                    'state'      => $estado,
+                    'objective' => $objetivo,
+                    'starts_at' => $inicio->toDateString(),
+                    'ends_at' => $inicio->copy()->addDays($dura)->toDateString(),
+                    'budget' => $presupuesto,
+                    'state' => $estado,
                     'created_at' => $inicio,
                     'updated_at' => now(),
                 ],
@@ -891,12 +894,12 @@ class DemoSeeder extends Seeder
             DB::table('banners')->updateOrInsert(
                 ['campaign_id' => $idsCampana[$campana], 'title' => $titulo],
                 [
-                    'subtitle'   => $subtitulo,
-                    'placement'  => $ubicacion,
-                    'platform'   => $plataforma,
-                    'link_type'  => 'none',
-                    'priority'   => $prioridad,
-                    'state'      => $estado,
+                    'subtitle' => $subtitulo,
+                    'placement' => $ubicacion,
+                    'platform' => $plataforma,
+                    'link_type' => 'none',
+                    'priority' => $prioridad,
+                    'state' => $estado,
                     'created_at' => $this->hoy->copy()->subDays(30),
                     'updated_at' => now(),
                 ],
@@ -934,20 +937,20 @@ class DemoSeeder extends Seeder
             DB::table('coupons')->updateOrInsert(
                 ['code' => $codigo],
                 [
-                    'description'       => $descripcion,
-                    'type'              => $tipo,
-                    'value'             => $valor,
-                    'max_discount'      => $tope,
-                    'min_order'         => $minimo,
-                    'max_uses'          => $maximos,
+                    'description' => $descripcion,
+                    'type' => $tipo,
+                    'value' => $valor,
+                    'max_discount' => $tope,
+                    'min_order' => $minimo,
+                    'max_uses' => $maximos,
                     'max_uses_per_user' => 1,
-                    'uses_count'        => $usados,
-                    'business_id'       => $negocio === null ? null : $negocios[$negocio],
-                    'starts_at'         => $inicio->toDateString(),
-                    'ends_at'           => $inicio->copy()->addDays($dura)->toDateString(),
-                    'state'             => $estado,
-                    'created_at'        => $inicio,
-                    'updated_at'        => now(),
+                    'uses_count' => $usados,
+                    'business_id' => $negocio === null ? null : $negocios[$negocio],
+                    'starts_at' => $inicio->toDateString(),
+                    'ends_at' => $inicio->copy()->addDays($dura)->toDateString(),
+                    'state' => $estado,
+                    'created_at' => $inicio,
+                    'updated_at' => now(),
                 ],
             );
         }
@@ -967,15 +970,15 @@ class DemoSeeder extends Seeder
             DB::table('featured_businesses')->updateOrInsert(
                 ['business_id' => $negocios[$negocio], 'placement' => $ubicacion],
                 [
-                    'priority'          => $prioridad,
-                    'starts_at'         => $inicio->toDateString(),
-                    'ends_at'           => $inicio->copy()->addDays(60)->toDateString(),
-                    'paid_amount'       => $pagado,
+                    'priority' => $prioridad,
+                    'starts_at' => $inicio->toDateString(),
+                    'ends_at' => $inicio->copy()->addDays(60)->toDateString(),
+                    'paid_amount' => $pagado,
                     'impressions_count' => $impresiones,
-                    'clicks_count'      => $clics,
-                    'state'             => $estado,
-                    'created_at'        => $inicio,
-                    'updated_at'        => now(),
+                    'clicks_count' => $clics,
+                    'state' => $estado,
+                    'created_at' => $inicio,
+                    'updated_at' => now(),
                 ],
             );
         }
@@ -992,14 +995,14 @@ class DemoSeeder extends Seeder
             DB::table('push_campaigns')->updateOrInsert(
                 ['title' => $titulo],
                 [
-                    'body'             => $cuerpo,
-                    'link_type'        => 'none',
-                    'scheduled_at'     => $programadaEn === null ? null : $this->hoy->copy()->addDays($programadaEn)->setTime(9, 0),
-                    'sent_at'          => $enviadaHace === null ? null : $this->hoy->copy()->subDays($enviadaHace)->setTime(10, 30),
+                    'body' => $cuerpo,
+                    'link_type' => 'none',
+                    'scheduled_at' => $programadaEn === null ? null : $this->hoy->copy()->addDays($programadaEn)->setTime(9, 0),
+                    'sent_at' => $enviadaHace === null ? null : $this->hoy->copy()->subDays($enviadaHace)->setTime(10, 30),
                     'recipients_count' => $destinatarios,
-                    'state'            => $estado,
-                    'created_at'       => $this->hoy->copy()->subDays(($enviadaHace ?? 1) + 2),
-                    'updated_at'       => now(),
+                    'state' => $estado,
+                    'created_at' => $this->hoy->copy()->subDays(($enviadaHace ?? 1) + 2),
+                    'updated_at' => now(),
                 ],
             );
         }
@@ -1014,7 +1017,7 @@ class DemoSeeder extends Seeder
      * pantalla diciendo "18.420 impresiones" arriba y una gráfica plana en cero
      * debajo: dos cifras que se contradicen en el mismo pantallazo.
      *
-     * @param list<array{0:int,1:int,2:int}> $banners [id, impresiones/día, clics 1 de cada N]
+     * @param  list<array{0:int,1:int,2:int}>  $banners  [id, impresiones/día, clics 1 de cada N]
      */
     private function eventosDeBanners(array $banners): void
     {
@@ -1039,10 +1042,10 @@ class DemoSeeder extends Seeder
 
                 for ($i = 0; $i < $cuantas; $i++) {
                     $lote[] = [
-                        'banner_id'  => $bannerId,
-                        'type'       => $i % $unoDeCada === 0 ? 'click' : 'impression',
-                        'platform'   => ['app', 'web'][$i % 2],
-                        'day'        => $fecha->toDateString(),
+                        'banner_id' => $bannerId,
+                        'type' => $i % $unoDeCada === 0 ? 'click' : 'impression',
+                        'platform' => ['app', 'web'][$i % 2],
+                        'day' => $fecha->toDateString(),
                         'created_at' => $fecha->copy()->setTime(mt_rand(7, 22), mt_rand(0, 59)),
                     ];
 
@@ -1069,12 +1072,12 @@ class DemoSeeder extends Seeder
                      SELECT COUNT(*) FROM banner_events e
                       WHERE e.banner_id = b.id AND e.type = "click"
                    ), 0)
-             WHERE b.id IN (' . implode(',', $ids) . ')
+             WHERE b.id IN ('.implode(',', $ids).')
         ');
     }
 
     /* ================================================================== */
-    /* SST                                                                */
+    /* SST */
 
     /**
      * Papelería de los repartidores.
@@ -1114,13 +1117,13 @@ class DemoSeeder extends Seeder
 
                 DB::table('domiciliary_documents')->insert([
                     'domiciliary_id' => $d['domiciliary_id'],
-                    'type'           => $tipo,
-                    'number'         => strtoupper(substr($tipo, 0, 3)) . '-' . (100000 + $i * 137 + strlen($tipo)),
-                    'issued_at'      => $vence->copy()->subYear()->toDateString(),
-                    'expires_at'     => $vence->toDateString(),
-                    'state'          => 1,
-                    'created_at'     => $this->hoy->copy()->subDays(60),
-                    'updated_at'     => now(),
+                    'type' => $tipo,
+                    'number' => strtoupper(substr($tipo, 0, 3)).'-'.(100000 + $i * 137 + strlen($tipo)),
+                    'issued_at' => $vence->copy()->subYear()->toDateString(),
+                    'expires_at' => $vence->toDateString(),
+                    'state' => 1,
+                    'created_at' => $this->hoy->copy()->subDays(60),
+                    'updated_at' => now(),
                 ]);
             }
         }
@@ -1128,17 +1131,17 @@ class DemoSeeder extends Seeder
         $incidentes = [
             // repartidor, hace días, tipo, gravedad, lesiones, incapacidad, sitio, descripción, estado
             [2, 5,  'accidente_transito', 'moderado', 1, 3,  'Calle 84 con Carrera 51',
-             'Colisión con un vehículo particular que giró sin señalizar. La moto quedó con el rin delantero doblado.', 1],
+                'Colisión con un vehículo particular que giró sin señalizar. La moto quedó con el rin delantero doblado.', 1],
             [5, 12, 'caida',              'leve',     1, 0,  'Conjunto Villa Carolina, rampa de acceso',
-             'Resbaló en la rampa mojada mientras subía el pedido. Solo raspaduras.', 2],
+                'Resbaló en la rampa mojada mientras subía el pedido. Solo raspaduras.', 2],
             [0, 20, 'robo',               'grave',    0, 0,  'Carrera 38 con Calle 74',
-             'Dos sujetos en moto lo interceptaron y se llevaron el celular y el pedido.', 2],
+                'Dos sujetos en moto lo interceptaron y se llevaron el celular y el pedido.', 2],
             [7, 3,  'falla_vehiculo',     'leve',     0, 0,  'Vía 40',
-             'Se quedó sin frenos traseros a mitad de ruta. Alcanzó a detenerse sin golpe.', 0],
+                'Se quedó sin frenos traseros a mitad de ruta. Alcanzó a detenerse sin golpe.', 0],
             [1, 8,  'condicion_insegura', 'leve',     0, 0,  'Bodega de Supermercado La Esquina',
-             'El pasillo de recogida estaba obstruido con cajas y sin iluminación.', 0],
+                'El pasillo de recogida estaba obstruido con cajas y sin iluminación.', 0],
             [4, 35, 'agresion',           'moderado', 0, 1,  'Barrio El Bosque',
-             'Un cliente lo agredió verbalmente y le lanzó el pedido tras un retraso de 15 minutos.', 2],
+                'Un cliente lo agredió verbalmente y le lanzó el pedido tras un retraso de 15 minutos.', 2],
         ];
 
         foreach ($incidentes as [$quien, $haceDias, $tipo, $gravedad, $lesiones, $incapacidad, $sitio, $descripcion, $estado]) {
@@ -1146,29 +1149,29 @@ class DemoSeeder extends Seeder
 
             DB::table('safety_incidents')->insert([
                 'domiciliary_id' => $domiciliarios[$quien]['domiciliary_id'],
-                'occurred_at'    => $cuando,
-                'type'           => $tipo,
-                'severity'       => $gravedad,
-                'had_injuries'   => $lesiones,
-                'days_off'       => $incapacidad,
-                'location'       => $sitio,
-                'description'    => $descripcion,
+                'occurred_at' => $cuando,
+                'type' => $tipo,
+                'severity' => $gravedad,
+                'had_injuries' => $lesiones,
+                'days_off' => $incapacidad,
+                'location' => $sitio,
+                'description' => $descripcion,
                 // Un incidente cerrado sin acciones no se puede cerrar: el
                 // servidor lo rechaza, y con razón — cerrar sin decir qué se
                 // hizo es archivar el problema, no resolverlo.
-                'actions'        => $estado === 2
+                'actions' => $estado === 2
                     ? 'Se cubrió la incapacidad, se reforzó la charla de seguridad vial y se revisó el estado del vehículo.'
                     : null,
-                'closed_at'      => $estado === 2 ? $cuando->copy()->addDays(4) : null,
-                'state'          => $estado,
-                'created_at'     => $cuando,
-                'updated_at'     => now(),
+                'closed_at' => $estado === 2 ? $cuando->copy()->addDays(4) : null,
+                'state' => $estado,
+                'created_at' => $cuando,
+                'updated_at' => now(),
             ]);
         }
     }
 
     /* ================================================================== */
-    /* CALIDAD: PQRS                                                      */
+    /* CALIDAD: PQRS */
 
     private function calidad(
         array $compradores,
@@ -1180,43 +1183,43 @@ class DemoSeeder extends Seeder
         $casos = [
             // tipo, canal, prioridad, hace días, asunto, descripción, estado
             ['reclamo',    'app',      'alta',  1,
-             'Pedido cobrado y no entregado',
-             'El cobro salió aprobado pero el pedido nunca llegó y el domiciliario no contesta.', 0],
+                'Pedido cobrado y no entregado',
+                'El cobro salió aprobado pero el pedido nunca llegó y el domiciliario no contesta.', 0],
             ['queja',      'whatsapp', 'alta',  2,
-             'Domiciliario grosero',
-             'El repartidor discutió con el portero y se fue sin entregar.', 1],
+                'Domiciliario grosero',
+                'El repartidor discutió con el portero y se fue sin entregar.', 1],
             ['reclamo',    'llamada',  'media', 4,
-             'Producto vencido',
-             'La leche venía con fecha de hace dos semanas.', 1],
+                'Producto vencido',
+                'La leche venía con fecha de hace dos semanas.', 1],
             ['peticion',   'app',      'baja',  6,
-             'Ampliar cobertura a Malambo',
-             'Solicito que habiliten entregas en el barrio Mesolandia.', 0],
+                'Ampliar cobertura a Malambo',
+                'Solicito que habiliten entregas en el barrio Mesolandia.', 0],
             ['queja',      'app',      'media', 9,
-             'Cobro doble del domicilio',
-             'Me cobraron dos veces el valor del domicilio en el mismo pedido.', 2],
+                'Cobro doble del domicilio',
+                'Me cobraron dos veces el valor del domicilio en el mismo pedido.', 2],
             ['sugerencia', 'correo',   'baja',  12,
-             'Poder programar el pedido',
-             'Sería útil dejar el pedido listo la noche anterior y que llegue en la mañana.', 2],
+                'Poder programar el pedido',
+                'Sería útil dejar el pedido listo la noche anterior y que llegue en la mañana.', 2],
             ['felicitacion', 'app',    'baja',  14,
-             'Excelente servicio',
-             'El domiciliario esperó a que bajara con la silla de ruedas. Muy amable.', 3],
+                'Excelente servicio',
+                'El domiciliario esperó a que bajara con la silla de ruedas. Muy amable.', 3],
             ['reclamo',    'panel',    'alta',  18,
-             'Pedido incompleto y sin respuesta',
-             'Faltaron tres productos y llevo una semana sin respuesta del negocio.', 2],
+                'Pedido incompleto y sin respuesta',
+                'Faltaron tres productos y llevo una semana sin respuesta del negocio.', 2],
             ['queja',      'whatsapp', 'media', 21,
-             'Demora de más de dos horas',
-             'El pedido tardó 2 horas y 15 minutos en un trayecto de 10 minutos.', 3],
+                'Demora de más de dos horas',
+                'El pedido tardó 2 horas y 15 minutos en un trayecto de 10 minutos.', 3],
             ['peticion',   'app',      'media', 25,
-             'Factura electrónica',
-             'Necesito la factura a nombre de mi empresa para el pedido del 20.', 2],
+                'Factura electrónica',
+                'Necesito la factura a nombre de mi empresa para el pedido del 20.', 2],
             // Vencida a propósito: con prioridad alta el plazo es de 2 días y
             // esta lleva 8 abierta. La pantalla existe para que eso salte.
             ['reclamo',    'llamada',  'alta',  8,
-             'Reembolso pendiente hace una semana',
-             'Cancelaron mi pedido y todavía no me devuelven el dinero.', 1],
+                'Reembolso pendiente hace una semana',
+                'Cancelaron mi pedido y todavía no me devuelven el dinero.', 1],
             ['queja',      'app',      'baja',  30,
-             'La app se cierra al pagar',
-             'Al confirmar el pago la aplicación se cierra sola en un teléfono Android.', 3],
+                'La app se cierra al pagar',
+                'Al confirmar el pago la aplicación se cierra sola en un teléfono Android.', 3],
         ];
 
         DB::table('pqrs_notes')->whereIn(
@@ -1237,33 +1240,33 @@ class DemoSeeder extends Seeder
             $resuelta = in_array($estado, [2, 3], true);
 
             DB::table('pqrs')->insert([
-                'code'           => 'DEMO-' . str_pad((string) ($i + 1), 4, '0', STR_PAD_LEFT),
-                'type'           => $tipo,
-                'channel'        => $canal,
-                'priority'       => $prioridad,
-                'user_id'        => $compradorUserId,
-                'order_id'       => $pedidos[$i % count($pedidos)],
-                'business_id'    => $negocios[$i % count($negocios)],
+                'code' => 'DEMO-'.str_pad((string) ($i + 1), 4, '0', STR_PAD_LEFT),
+                'type' => $tipo,
+                'channel' => $canal,
+                'priority' => $prioridad,
+                'user_id' => $compradorUserId,
+                'order_id' => $pedidos[$i % count($pedidos)],
+                'business_id' => $negocios[$i % count($negocios)],
                 'domiciliary_id' => $i % 3 === 0
                     ? $domiciliarios[$i % count($domiciliarios)]['domiciliary_id']
                     : null,
-                'subject'        => $asunto,
-                'description'    => $descripcion,
-                'state'          => $estado,
-                'assigned_to'    => $areas['calidad'] ?? null,
-                'due_at'         => $creada->copy()->addDays($plazos[$prioridad]),
-                'resolved_at'    => $resuelta ? $creada->copy()->addDays(1) : null,
-                'resolution'     => $resuelta
+                'subject' => $asunto,
+                'description' => $descripcion,
+                'state' => $estado,
+                'assigned_to' => $areas['calidad'] ?? null,
+                'due_at' => $creada->copy()->addDays($plazos[$prioridad]),
+                'resolved_at' => $resuelta ? $creada->copy()->addDays(1) : null,
+                'resolution' => $resuelta
                     ? 'Se contactó al usuario, se verificó con el negocio y se aplicó la compensación acordada.'
                     : null,
-                'created_at'     => $creada,
-                'updated_at'     => now(),
+                'created_at' => $creada,
+                'updated_at' => now(),
             ]);
         }
     }
 
     /* ================================================================== */
-    /* CONTABILIDAD                                                       */
+    /* CONTABILIDAD */
 
     /**
      * Cortes de cuentas del mes pasado.
@@ -1287,9 +1290,9 @@ class DemoSeeder extends Seeder
         $quien = $areas['contabilidad'] ?? null;
 
         $estados = [
-            \App\Models\Operacion\Settlement::PAGADA,
-            \App\Models\Operacion\Settlement::APROBADA,
-            \App\Models\Operacion\Settlement::BORRADOR,
+            Settlement::PAGADA,
+            Settlement::APROBADA,
+            Settlement::BORRADOR,
         ];
 
         $n = 0;
@@ -1327,20 +1330,20 @@ class DemoSeeder extends Seeder
     {
         $cambios = ['state' => $estado];
 
-        if ($estado >= \App\Models\Operacion\Settlement::APROBADA) {
+        if ($estado >= Settlement::APROBADA) {
             $cambios['approved_at'] = $this->hoy->copy()->subDays(6);
         }
 
-        if ($estado === \App\Models\Operacion\Settlement::PAGADA) {
+        if ($estado === Settlement::PAGADA) {
             $cambios['paid_at'] = $this->hoy->copy()->subDays(3);
-            $cambios['payment_reference'] = 'TRF-' . str_pad((string) $liq->id, 6, '0', STR_PAD_LEFT);
+            $cambios['payment_reference'] = 'TRF-'.str_pad((string) $liq->id, 6, '0', STR_PAD_LEFT);
         }
 
         $liq->update($cambios);
     }
 
     /* ================================================================== */
-    /* UTILIDADES                                                         */
+    /* UTILIDADES */
 
     /**
      * Alta o actualización de una persona, sin tocarle la contraseña si ya
@@ -1352,14 +1355,14 @@ class DemoSeeder extends Seeder
         $existente = DB::table('user')->where('email', $datos['email'])->first();
 
         $comunes = [
-            'name'              => $datos['name'],
-            'phone'             => $datos['phone'] ?? null,
-            'address'           => $datos['address'] ?? null,
-            'rol'               => $datos['rol'],
-            'area_id'           => $datos['area_id'] ?? null,
-            'access_level'      => $datos['access_level'] ?? Area::NIVEL_CONSULTA,
-            'qualification'     => $datos['qualification'] ?? 0,
-            'state'             => $datos['state'] ?? 1,
+            'name' => $datos['name'],
+            'phone' => $datos['phone'] ?? null,
+            'address' => $datos['address'] ?? null,
+            'rol' => $datos['rol'],
+            'area_id' => $datos['area_id'] ?? null,
+            'access_level' => $datos['access_level'] ?? Area::NIVEL_CONSULTA,
+            'qualification' => $datos['qualification'] ?? 0,
+            'state' => $datos['state'] ?? 1,
             'email_verified_at' => now(),
         ];
 
@@ -1371,8 +1374,8 @@ class DemoSeeder extends Seeder
 
         return (int) DB::table('user')->insertGetId(
             $comunes + [
-                'email'      => $datos['email'],
-                'password'   => Hash::make(self::CLAVE),
+                'email' => $datos['email'],
+                'password' => Hash::make(self::CLAVE),
                 // La fecha la pone la aplicacion: `CURRENT_TIMESTAMP` es el
                 // reloj del servidor, que en el VPS no es el de Bogota.
                 'created_at' => now(),
@@ -1384,14 +1387,14 @@ class DemoSeeder extends Seeder
 
     private function telefono(): string
     {
-        return '30' . mt_rand(0, 9) . ' ' . mt_rand(200, 899) . ' ' . mt_rand(1000, 9999);
+        return '30'.mt_rand(0, 9).' '.mt_rand(200, 899).' '.mt_rand(1000, 9999);
     }
 
     private function direccion(int $i = 0): string
     {
         $vias = ['Calle', 'Carrera', 'Diagonal', 'Transversal'];
 
-        return $vias[$i % 4] . ' ' . mt_rand(1, 98) . ' #' . mt_rand(1, 90) . '-' . mt_rand(10, 99);
+        return $vias[$i % 4].' '.mt_rand(1, 98).' #'.mt_rand(1, 90).'-'.mt_rand(10, 99);
     }
 
     private function sinTildes(string $texto): string
@@ -1410,7 +1413,7 @@ class DemoSeeder extends Seeder
         array $pedidos,
     ): void {
         $this->command?->newLine();
-        $this->command?->info('Listo. Todas las cuentas usan la contraseña: ' . self::CLAVE);
+        $this->command?->info('Listo. Todas las cuentas usan la contraseña: '.self::CLAVE);
         $this->command?->newLine();
 
         $filas = [];
@@ -1421,15 +1424,15 @@ class DemoSeeder extends Seeder
 
             $filas[] = [
                 $area->name,
-                "{$area->code}@" . self::DOMINIO,
+                "{$area->code}@".self::DOMINIO,
                 'Gestor',
-                count($permisos) . ' ve / ' . $gestiona . ' gestiona',
+                count($permisos).' ve / '.$gestiona.' gestiona',
             ];
             $filas[] = [
                 '',
-                "aux.{$area->code}@" . self::DOMINIO,
+                "aux.{$area->code}@".self::DOMINIO,
                 'Solo consulta',
-                count($permisos) . ' ve / 0 gestiona',
+                count($permisos).' ve / 0 gestiona',
             ];
         }
 

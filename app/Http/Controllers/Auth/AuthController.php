@@ -1,38 +1,27 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Auth;
 
-use App\Services\Totp;
 use App\Http\Controllers\Controller;
-use App\Models\Buyer\Buyer;
-use App\Models\Buyer\BuyerComplex;
-use App\Models\Buyer\ResidentialComplex;
-use App\Models\User\UserAddress;
+use App\Http\Requests\Auth\EntrarRequest;
+use App\Http\Resources\Usuario\UsuarioResource;
 use App\Models\User;
-use Carbon\Carbon;
+use App\Services\Totp;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Password;
-use Illuminate\Auth\Events\Registered;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\URL;
-use Illuminate\Support\Str;
-use App\Mail\VerifyEmailCustomMail;
 
 class AuthController extends Controller
 {
     // Login
-    public function login(Request $request)
+    public function login(EntrarRequest $request)
     {
-        $credentials = $request->validate([
-            'email'    => 'required|email',
-            'password' => 'required|string',
-        ]);
+        $credentials = $request->validated();
 
         $user = User::where('email', $credentials['email'])->first();
 
-        if (!$user || !Hash::check($credentials['password'], $user->password)) {
+        if (! $user || ! Hash::check($credentials['password'], $user->password)) {
             return response()->json(['message' => 'Credenciales incorrectas'], 401);
         }
 
@@ -47,17 +36,17 @@ class AuthController extends Controller
          * Se comprueba ANTES que el correo verificado porque es la razón más
          * grave, y así el mensaje que recibe es el correcto.
          */
-        if (!$user->state) {
+        if (! $user->state) {
             return response()->json([
                 'message' => 'Tu cuenta está deshabilitada. Comunícate con el administrador.',
-                'reason'  => 'account_disabled',
+                'reason' => 'account_disabled',
             ], 403);
         }
 
         // ⛔ BLOQUEAR SI NO VERIFICÓ CORREO
-        if (!$user->hasVerifiedEmail()) {
+        if (! $user->hasVerifiedEmail()) {
             return response()->json([
-                'message' => 'Debes verificar tu correo antes de iniciar sesión'
+                'message' => 'Debes verificar tu correo antes de iniciar sesión',
             ], 403);
         }
 
@@ -78,14 +67,14 @@ class AuthController extends Controller
             if ($codigo === '') {
                 return response()->json([
                     'message' => 'Escribe el código de tu aplicación de autenticación.',
-                    'reason'  => 'two_factor_required',
+                    'reason' => 'two_factor_required',
                 ], 401);
             }
 
-            if (!$this->segundoFactorValido($user, $codigo)) {
+            if (! $this->segundoFactorValido($user, $codigo)) {
                 return response()->json([
                     'message' => 'El código no es válido o ya se usó.',
-                    'reason'  => 'two_factor_invalid',
+                    'reason' => 'two_factor_invalid',
                 ], 401);
             }
         }
@@ -100,7 +89,7 @@ class AuthController extends Controller
          * suya, que es lo único para lo que existe esa lista.
          */
         $user->tokens()->latest('id')->limit(1)->update([
-            'ip'         => $request->ip(),
+            'ip' => $request->ip(),
             'user_agent' => substr((string) $request->userAgent(), 0, 255),
         ]);
 
@@ -113,7 +102,7 @@ class AuthController extends Controller
         }
 
         return response()->json([
-            'user'  => $user,
+            'user' => new UsuarioResource($user),
             'token' => $token,
         ]);
     }
@@ -174,6 +163,6 @@ class AuthController extends Controller
     // Perfil
     public function profile(Request $request)
     {
-        return response()->json($request->user());
+        return response()->json(new UsuarioResource($request->user()));
     }
 }

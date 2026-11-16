@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Support;
 
 use Illuminate\Support\Facades\DB;
@@ -32,20 +34,20 @@ class AreasSemilla
     {
         return [
             'sistema' => [
-                'name'        => 'Tecnología',
+                'name' => 'Tecnología',
                 'description' => 'Acceso completo. Mantiene la plataforma y reparte los permisos de las demás áreas.',
-                'is_system'   => true,
+                'is_system' => true,
                 // El asterisco se expande a todo el catálogo al sembrar: así un
                 // módulo nuevo queda cubierto sin tener que acordarse de venir
                 // a agregarlo acá.
-                'ver'         => ['*'],
-                'gestionar'   => ['*'],
+                'ver' => ['*'],
+                'gestionar' => ['*'],
             ],
 
             'gerencia' => [
-                'name'        => 'Gerencia',
+                'name' => 'Gerencia',
                 'description' => 'Ve todo el negocio para decidir. No opera el día a día: no cambia pedidos, catálogo ni pagos.',
-                'is_system'   => false,
+                'is_system' => false,
                 /*
                  * Todo el negocio, pero NO las dos secciones de administración
                  * de la propia herramienta:
@@ -57,7 +59,7 @@ class AreasSemilla
                  *  · `ajustes` es configuración técnica (almacenamiento R2), no
                  *    información de negocio.
                  */
-                'ver'         => [
+                'ver' => [
                     'panel', 'ordenes', 'domiciliarios', 'pagos', 'facturas',
                     'liquidaciones', 'sst.documentos', 'sst.incidentes', 'pqrs',
                     'negocios', 'productos', 'categorias', 'categorias-negocio',
@@ -71,14 +73,14 @@ class AreasSemilla
                 // Deliberadamente vacío. Gerencia necesita la foto completa,
                 // pero que pueda editarlo todo convierte su cuenta en una
                 // segunda cuenta de administrador sin que nadie lo decidiera.
-                'gestionar'   => [],
+                'gestionar' => [],
             ],
 
             'contabilidad' => [
-                'name'        => 'Contabilidad',
+                'name' => 'Contabilidad',
                 'description' => 'Cuadra la caja: pagos, liquidaciones a negocios y domiciliarios, y lo comprometido en pauta.',
-                'is_system'   => false,
-                'ver'         => [
+                'is_system' => false,
+                'ver' => [
                     'panel', 'ordenes', 'pagos', 'facturas', 'liquidaciones',
                     'negocios', 'propietarios', 'domiciliarios',
                     'reportes', 'auditoria', 'marketing',
@@ -91,14 +93,14 @@ class AreasSemilla
                  * mal. Se le da a Contabilidad porque es quien detecta el error
                  * al cuadrar, y anular deja constancia en vez de borrar.
                  */
-                'gestionar'   => ['pagos', 'facturas', 'liquidaciones', 'efectivo'],
+                'gestionar' => ['pagos', 'facturas', 'liquidaciones', 'efectivo'],
             ],
 
             'marketing' => [
-                'name'        => 'Marketing',
+                'name' => 'Marketing',
                 'description' => 'Pauta, cupones, destacados y notificaciones. Consulta el catálogo y la comunidad para segmentar.',
-                'is_system'   => false,
-                'ver'         => [
+                'is_system' => false,
+                'ver' => [
                     'panel', 'reportes',
                     'marketing', 'marketing.anunciantes', 'marketing.campanas',
                     'marketing.banners', 'marketing.cupones',
@@ -108,7 +110,7 @@ class AreasSemilla
                     'negocios', 'productos', 'categorias', 'categorias-negocio',
                     'conjuntos', 'usuarios', 'resenas',
                 ],
-                'gestionar'   => [
+                'gestionar' => [
                     'marketing', 'marketing.anunciantes', 'marketing.campanas',
                     'marketing.banners', 'marketing.cupones',
                     'marketing.destacados', 'marketing.notificaciones',
@@ -116,10 +118,10 @@ class AreasSemilla
             ],
 
             'comercial' => [
-                'name'        => 'Comercial',
+                'name' => 'Comercial',
                 'description' => 'Capta y mantiene negocios, propietarios y catálogo. Vende el posicionamiento destacado.',
-                'is_system'   => false,
-                'ver'         => [
+                'is_system' => false,
+                'ver' => [
                     'panel', 'ordenes', 'reportes',
                     'negocios', 'productos', 'categorias', 'categorias-negocio',
                     'propietarios', 'conjuntos', 'resenas',
@@ -131,7 +133,7 @@ class AreasSemilla
                     'solicitudes',
                     'marketing', 'marketing.destacados',
                 ],
-                'gestionar'   => [
+                'gestionar' => [
                     'negocios', 'productos', 'categorias', 'categorias-negocio',
                     'propietarios', 'conjuntos', 'solicitudes',
                     // El destaque lo vende Comercial aunque el módulo viva en
@@ -141,24 +143,24 @@ class AreasSemilla
             ],
 
             'sst' => [
-                'name'        => 'SST',
+                'name' => 'SST',
                 'description' => 'Seguridad y salud en el trabajo: vinculación, documentación y condiciones de los domiciliarios.',
-                'is_system'   => false,
-                'ver'         => [
+                'is_system' => false,
+                'ver' => [
                     'panel', 'domiciliarios', 'ordenes', 'reportes',
                     'sst.documentos', 'sst.incidentes',
                 ],
                 // Gestiona la ficha del domiciliario porque ahí viven el acuerdo
                 // de vinculación y su papelería, y ahora también su
                 // documentación vigente y los incidentes que lo involucran.
-                'gestionar'   => ['domiciliarios', 'sst.documentos', 'sst.incidentes'],
+                'gestionar' => ['domiciliarios', 'sst.documentos', 'sst.incidentes'],
             ],
 
             'calidad' => [
-                'name'        => 'Calidad',
+                'name' => 'Calidad',
                 'description' => 'Vigila la experiencia: reseñas, conversaciones y cómo se están cumpliendo los pedidos.',
-                'is_system'   => false,
-                'ver'         => [
+                'is_system' => false,
+                'ver' => [
                     'panel', 'resenas', 'chats', 'pqrs', 'ordenes',
                     // Un reclamo de "me cobraron mal" se resuelve mirando el
                     // comprobante de ese pedido; sin acceso hay que pedírselo a
@@ -177,7 +179,7 @@ class AreasSemilla
                 ],
                 // Puede retirar una reseña que incumple las normas y lleva los
                 // PQRS de punta a punta; no edita pedidos ni negocios.
-                'gestionar'   => ['resenas', 'pqrs', 'solicitudes'],
+                'gestionar' => ['resenas', 'pqrs', 'solicitudes'],
             ],
         ];
     }
@@ -195,21 +197,21 @@ class AreasSemilla
         foreach (self::definiciones() as $codigo => $d) {
             $existente = DB::table('areas')->where('code', $codigo)->first();
 
-            if (!$existente) {
+            if (! $existente) {
                 $id = DB::table('areas')->insertGetId([
-                    'code'        => $codigo,
-                    'name'        => $d['name'],
+                    'code' => $codigo,
+                    'name' => $d['name'],
                     'description' => $d['description'],
-                    'is_system'   => $d['is_system'],
-                    'state'       => 1,
-                    'created_at'  => now(),
-                    'updated_at'  => now(),
+                    'is_system' => $d['is_system'],
+                    'state' => 1,
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]);
             } else {
                 $id = $existente->id;
 
                 // Un reparto ya ajustado desde el panel no se pisa sin permiso.
-                if (!$forzar && !$d['is_system']) {
+                if (! $forzar && ! $d['is_system']) {
                     continue;
                 }
             }
@@ -222,7 +224,7 @@ class AreasSemilla
     {
         $todos = PanelModules::claves();
 
-        $ver       = in_array('*', $ver, true) ? $todos : $ver;
+        $ver = in_array('*', $ver, true) ? $todos : $ver;
         $gestionar = in_array('*', $gestionar, true) ? $todos : $gestionar;
 
         // Gestionar sin ver no significa nada: se normaliza acá para que la
@@ -234,14 +236,14 @@ class AreasSemilla
         $filas = [];
 
         foreach ($ver as $modulo) {
-            if (!PanelModules::existe($modulo)) {
+            if (! PanelModules::existe($modulo)) {
                 continue; // una clave vieja tras renombrar el catálogo
             }
 
             $filas[] = [
-                'area_id'    => $areaId,
-                'module'     => $modulo,
-                'can_view'   => true,
+                'area_id' => $areaId,
+                'module' => $modulo,
+                'can_view' => true,
                 'can_manage' => in_array($modulo, $gestionar, true),
                 'created_at' => now(),
                 'updated_at' => now(),

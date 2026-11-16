@@ -14,13 +14,14 @@
  */
 
 use Illuminate\Support\Facades\Config;
+use Illuminate\Testing\TestResponse;
 
 /** Simula la comprobación previa que hace el navegador antes de la petición. */
-function preflight(string $origen): \Illuminate\Testing\TestResponse
+function preflight(string $origen): TestResponse
 {
     return test()->call('OPTIONS', '/v1/app/config', [], [], [], [
-        'HTTP_ORIGIN'                         => $origen,
-        'HTTP_ACCESS_CONTROL_REQUEST_METHOD'  => 'GET',
+        'HTTP_ORIGIN' => $origen,
+        'HTTP_ACCESS_CONTROL_REQUEST_METHOD' => 'GET',
         'HTTP_ACCESS_CONTROL_REQUEST_HEADERS' => 'authorization,content-type',
     ]);
 }

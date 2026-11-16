@@ -1,8 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models\Marketing;
 
 use App\Models\Business;
+use App\Support\FiltroDeFechas;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -25,16 +28,17 @@ class FeaturedBusiness extends Model
     ];
 
     protected $casts = [
-        'business_id'       => 'integer',
-        'priority'          => 'integer',
-        'starts_at'         => 'date',
-        'ends_at'           => 'date',
-        'paid_amount'       => 'decimal:2',
+        'business_id' => 'integer',
+        'priority' => 'integer',
+        'starts_at' => 'date',
+        'ends_at' => 'date',
+        'paid_amount' => 'decimal:2',
         'impressions_count' => 'integer',
-        'clicks_count'      => 'integer',
-        'state'             => 'integer',
+        'clicks_count' => 'integer',
+        'state' => 'integer',
     ];
 
+    /** @return BelongsTo<Business, $this> */
     public function business(): BelongsTo
     {
         return $this->belongsTo(Business::class, 'business_id', 'busines_id');
@@ -53,8 +57,11 @@ class FeaturedBusiness extends Model
     {
         $hoy = now()->toDateString();
 
-        return $q->where($q->qualifyColumn('state'), 1)
-            ->whereDate($q->qualifyColumn('starts_at'), '<=', $hoy)
-            ->whereDate($q->qualifyColumn('ends_at'), '>=', $hoy);
+        $q = $q->where($q->qualifyColumn('state'), 1);
+
+        // Como rangos: ver `FiltroDeFechas`.
+        $q = FiltroDeFechas::hasta($q, $q->qualifyColumn('starts_at'), $hoy);
+
+        return FiltroDeFechas::desde($q, $q->qualifyColumn('ends_at'), $hoy);
     }
 }

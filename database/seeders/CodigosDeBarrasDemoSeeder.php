@@ -49,7 +49,7 @@ class CodigosDeBarrasDemoSeeder extends Seeder
         }
 
         $this->command?->info(
-            'Con código: ' . Product::whereNotNull('barcode')->count()
+            'Con código: '.Product::whereNotNull('barcode')->count()
         );
     }
 
@@ -73,6 +73,6 @@ class CodigosDeBarrasDemoSeeder extends Seeder
 
         $verificador = (10 - ($suma % 10)) % 10;
 
-        return $doce . $verificador;
+        return $doce.$verificador;
     }
 }

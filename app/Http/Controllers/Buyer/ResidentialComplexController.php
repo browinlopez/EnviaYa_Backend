@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Buyer;
 
 use App\Http\Controllers\Controller;
@@ -40,9 +42,9 @@ class ResidentialComplexController extends Controller
             ]);
 
         return response()->json([
-            'status'  => true,
+            'status' => true,
             'message' => 'Conjuntos disponibles',
-            'data'    => $conjuntos,
+            'data' => $conjuntos,
         ]);
     }
 }

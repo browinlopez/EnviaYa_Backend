@@ -19,10 +19,9 @@ return new class extends Migration
             $table->integer('amount')->default(0);
             $table->decimal('qualification', 3, 2)->default(0.00);
 
-             $table->timestamps();
+            $table->timestamps();
         });
     }
-
 
     /**
      * Reverse the migrations.

@@ -75,7 +75,7 @@ test('sin afiliación la ficha no revela los precios', function () {
 
     $this->postJson('/v1/businesses/show', [
         'busines_id' => $e['businessId'],
-        'user_id'    => $e['user']->user_id,
+        'user_id' => $e['user']->user_id,
     ])
         ->assertOk()
         ->assertJsonPath('is_affiliated', false)
@@ -87,13 +87,13 @@ test('con afiliación la ficha sí muestra el precio', function () {
     Sanctum::actingAs($e['user']);
 
     DB::table('business_user_affiliations')->insert([
-        'user_id'    => $e['user']->user_id,
+        'user_id' => $e['user']->user_id,
         'busines_id' => $e['businessId'],
     ]);
 
     $this->postJson('/v1/businesses/show', [
         'busines_id' => $e['businessId'],
-        'user_id'    => $e['user']->user_id,
+        'user_id' => $e['user']->user_id,
     ])
         ->assertOk()
         ->assertJsonPath('is_affiliated', true)
@@ -122,7 +122,7 @@ test('el listado completo responde a un comprador con sesión', function () {
     $e = negocioConCatalogo();
     Sanctum::actingAs($e['user']);
 
-    $r = test()->getJson('/v1/businesses/index?user_id=' . $e['user']->user_id)
+    $r = test()->getJson('/v1/businesses/index?user_id='.$e['user']->user_id)
         ->assertOk();
 
     expect($r->json('user_authenticated'))->toBeTrue()
@@ -205,8 +205,8 @@ test('el listado ligero pesa una fraccion del completo', function () {
 test('los favoritos con light=1 van sin catalogo ni reseñas', function () {
     $e = negocioConCatalogo();
 
-    \Illuminate\Support\Facades\DB::table('business_user_favorites')->insert([
-        'user_id'    => $e['user']->user_id,
+    DB::table('business_user_favorites')->insert([
+        'user_id' => $e['user']->user_id,
         'busines_id' => $e['businessId'],
     ]);
 
@@ -214,7 +214,7 @@ test('los favoritos con light=1 van sin catalogo ni reseñas', function () {
 
     $this->postJson('/v1/favorites/index', [
         'user_id' => $e['user']->user_id,
-        'light'   => 1,
+        'light' => 1,
     ])
         ->assertOk()
         ->assertJsonPath('favorites.0.products', [])
@@ -228,8 +228,8 @@ test('los favoritos sin la bandera siguen trayendo el catalogo', function () {
     // Por las versiones de la app ya instaladas, que no la mandan.
     $e = negocioConCatalogo();
 
-    \Illuminate\Support\Facades\DB::table('business_user_favorites')->insert([
-        'user_id'    => $e['user']->user_id,
+    DB::table('business_user_favorites')->insert([
+        'user_id' => $e['user']->user_id,
         'busines_id' => $e['businessId'],
     ]);
 

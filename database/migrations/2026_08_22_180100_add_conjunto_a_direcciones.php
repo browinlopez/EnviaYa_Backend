@@ -24,7 +24,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('user_address', function (Blueprint $table) {
-            if (!Schema::hasColumn('user_address', 'complex_id')) {
+            if (! Schema::hasColumn('user_address', 'complex_id')) {
                 // `residential_complexes.complex_id` es bigint: acá sí coincide.
                 $table->unsignedBigInteger('complex_id')->nullable()->after('street');
                 $table->foreign('complex_id')
@@ -32,11 +32,11 @@ return new class extends Migration
                     ->nullOnDelete();
             }
 
-            if (!Schema::hasColumn('user_address', 'tower')) {
+            if (! Schema::hasColumn('user_address', 'tower')) {
                 $table->string('tower', 40)->nullable()->after('complex_id');
             }
 
-            if (!Schema::hasColumn('user_address', 'apartment')) {
+            if (! Schema::hasColumn('user_address', 'apartment')) {
                 $table->string('apartment', 40)->nullable()->after('tower');
             }
         });

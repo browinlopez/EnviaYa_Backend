@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models\Operacion;
 
 use App\Models\User;
@@ -15,10 +17,17 @@ class Pqrs extends Model
 {
     protected $table = 'pqrs';
 
-    public const ABIERTO    = 0;
+    public const ABIERTO = 0;
+
     public const EN_GESTION = 1;
-    public const RESUELTO   = 2;
-    public const CERRADO    = 3;
+
+    public const RESUELTO = 2;
+
+    public const CERRADO = 3;
+
+    /** El vocabulario completo: lo pide `ActualizarPqrsRequest`, que antes
+     * escribia `in:0,1,2,3` a mano. */
+    public const ESTADOS = [self::ABIERTO, self::EN_GESTION, self::RESUELTO, self::CERRADO];
 
     /**
      * Plazo de respuesta en días hábiles aproximados, por prioridad.
@@ -50,21 +59,23 @@ class Pqrs extends Model
     ];
 
     protected $casts = [
-        'user_id'        => 'integer',
-        'order_id'       => 'integer',
-        'business_id'    => 'integer',
+        'user_id' => 'integer',
+        'order_id' => 'integer',
+        'business_id' => 'integer',
         'domiciliary_id' => 'integer',
-        'state'          => 'integer',
-        'assigned_to'    => 'integer',
-        'due_at'         => 'datetime',
-        'resolved_at'    => 'datetime',
+        'state' => 'integer',
+        'assigned_to' => 'integer',
+        'due_at' => 'datetime',
+        'resolved_at' => 'datetime',
     ];
 
+    /** @return HasMany<PqrsNote, $this> */
     public function notes(): HasMany
     {
         return $this->hasMany(PqrsNote::class, 'pqrs_id')->orderByDesc('id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to', 'user_id');
@@ -95,7 +106,7 @@ class Pqrs extends Model
     /** ¿Se pasó del plazo sin resolverse? */
     public function vencido(): bool
     {
-        if (!$this->due_at || in_array($this->state, [self::RESUELTO, self::CERRADO], true)) {
+        if (! $this->due_at || in_array($this->state, [self::RESUELTO, self::CERRADO], true)) {
             return false;
         }
 

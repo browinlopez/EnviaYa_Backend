@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use App\Models\Order\OrdersSales;
@@ -22,7 +24,7 @@ class ReglasDeDespacho
     private const EFECTIVO = 1;
 
     /**
-     * @return array|null  El impedimento con su `reason` y sus cifras, o null.
+     * @return array|null El impedimento con su `reason` y sus cifras, o null.
      */
     public function impedimento(OrdersSales $order, $domiciliary): ?array
     {
@@ -34,9 +36,9 @@ class ReglasDeDespacho
         $papeles = app(PapelesDelDomiciliario::class);
         if ($faltan = $papeles->faltantes($domiciliary)) {
             return [
-                'message' => 'Todavía no puede recibir pedidos: le falta ' . $papeles->enPalabras($faltan) . '.',
-                'reason'  => 'papeles_incompletos',
-                'faltan'  => $faltan,
+                'message' => 'Todavía no puede recibir pedidos: le falta '.$papeles->enPalabras($faltan).'.',
+                'reason' => 'papeles_incompletos',
+                'faltan' => $faltan,
             ];
         }
 
@@ -46,10 +48,10 @@ class ReglasDeDespacho
          * aceptando un pedido y el tendero despachándoselo. Si viviera
          * solo en el cliente, cualquiera de los dos podría saltársela.
          */
-        if (!$domiciliary->available) {
+        if (! $domiciliary->available) {
             return [
                 'message' => 'El domiciliario no está disponible en este momento.',
-                'reason'  => 'unavailable',
+                'reason' => 'unavailable',
             ];
         }
 
@@ -57,14 +59,14 @@ class ReglasDeDespacho
 
         $enCurso = OrdersSales::where('domiciliary_id', $domiciliary->domiciliary_id)
             ->confirmados()
-            ->where('state', 3)
+            ->where('state', OrdersSales::EN_CAMINO)
             ->where('orderSales_id', '!=', $order->orderSales_id)
             ->count();
 
         if ($enCurso >= $maxSimultaneos) {
             return [
                 'message' => "Ya hay {$enCurso} pedidos en curso. Se debe entregar alguno antes de aceptar otro.",
-                'reason'  => 'limit_reached',
+                'reason' => 'limit_reached',
                 'active_orders' => $enCurso,
                 'max_active_orders' => $maxSimultaneos,
             ];
@@ -98,8 +100,8 @@ class ReglasDeDespacho
             if ($quedaria > (float) $tope) {
                 return [
                     'message' => 'Con este pedido pasaría el máximo de efectivo que puede llevar encima. Tiene que consignar antes.',
-                    'reason'  => 'cash_limit_reached',
-                    'cash_now'   => round($encima, 2),
+                    'reason' => 'cash_limit_reached',
+                    'cash_now' => round($encima, 2),
                     'cash_after' => round($quedaria, 2),
                     'cash_limit' => (float) $tope,
                 ];

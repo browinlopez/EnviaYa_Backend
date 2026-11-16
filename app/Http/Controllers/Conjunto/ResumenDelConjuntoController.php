@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Conjunto;
 
 use App\Exports\Conjunto\ReporteDelConjuntoExport;
@@ -18,9 +20,7 @@ use Maatwebsite\Excel\Facades\Excel;
  */
 class ResumenDelConjuntoController extends Controller
 {
-    public function __construct(private PulsoDelConjunto $pulso)
-    {
-    }
+    public function __construct(private PulsoDelConjunto $pulso) {}
 
     /** Lo que está pasando ahora. Lo ven el dueño y el celador. */
     public function resumen(Request $request)
@@ -68,7 +68,7 @@ class ResumenDelConjuntoController extends Controller
         $datos = $this->pulso->reporte($complexId, $desde, $hasta);
 
         $nombre = 'reporte-conjunto-'
-            . $desde->toDateString() . '-a-' . $hasta->toDateString() . '.xlsx';
+            .$desde->toDateString().'-a-'.$hasta->toDateString().'.xlsx';
 
         return Excel::download(
             new ReporteDelConjuntoExport($datos, (string) $conjunto),

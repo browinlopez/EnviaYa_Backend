@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Console\Commands;
 
 use App\Models\Business;
@@ -9,8 +11,8 @@ use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 
 /**
@@ -60,7 +62,7 @@ class CrearTendero extends Command
 
     public function handle(): int
     {
-        if (!Rol::find(self::ROL_TENDERO)) {
+        if (! Rol::find(self::ROL_TENDERO)) {
             $this->error('No existe el rol 2 (tendero) en la tabla `rol`.');
             $this->line('Siémbralo antes: php artisan db:seed --class=RolesAndPermissionsSeeder');
 
@@ -69,7 +71,7 @@ class CrearTendero extends Command
 
         $negocioId = (int) $this->option('negocio');
 
-        if (!$negocioId) {
+        if (! $negocioId) {
             $negocios = Business::where('state', 1)->orderBy('name')
                 ->get(['busines_id', 'name', 'address']);
 
@@ -94,14 +96,14 @@ class CrearTendero extends Command
 
         $negocio = Business::find($negocioId);
 
-        if (!$negocio) {
+        if (! $negocio) {
             $this->error("No existe el negocio {$negocioId}.");
 
             return self::FAILURE;
         }
 
-        $email  = $this->option('email') ?: $this->ask('Correo');
-        $nombre = $this->option('nombre') ?: ('Tendero ' . $negocio->name);
+        $email = $this->option('email') ?: $this->ask('Correo');
+        $nombre = $this->option('nombre') ?: ('Tendero '.$negocio->name);
 
         /*
          * La clave se genera si no la dan, y se imprime UNA vez. Pasarla por
@@ -109,18 +111,18 @@ class CrearTendero extends Command
          * registros de quien orquesta el contenedor.
          */
         $generada = false;
-        $clave    = $this->option('clave');
+        $clave = $this->option('clave');
 
-        if (!$clave) {
-            $clave    = Str::password(16);
+        if (! $clave) {
+            $clave = Str::password(16);
             $generada = true;
         }
 
         $validacion = Validator::make(
             ['email' => $email, 'name' => $nombre, 'password' => $clave],
             [
-                'email'    => ['required', 'email'],
-                'name'     => ['required', 'string', 'min:2'],
+                'email' => ['required', 'email'],
+                'name' => ['required', 'string', 'min:2'],
                 'password' => ['required', Password::min(8)],
             ],
         );
@@ -154,12 +156,12 @@ class CrearTendero extends Command
             $usuario = User::updateOrCreate(
                 ['email' => $email],
                 [
-                    'name'     => $nombre,
+                    'name' => $nombre,
                     'password' => Hash::make($clave),
-                    'rol'      => self::ROL_TENDERO,
-                    'phone'    => $this->option('telefono') ?: $negocio->phone,
-                    'address'  => $negocio->address,
-                    'state'    => 1,
+                    'rol' => self::ROL_TENDERO,
+                    'phone' => $this->option('telefono') ?: $negocio->phone,
+                    'address' => $negocio->address,
+                    'state' => 1,
                     /*
                      * Verificado de entrada: esta cuenta la crea la plataforma,
                      * no se registra sola, así que no hay ningún correo que
@@ -196,7 +198,7 @@ class CrearTendero extends Command
 
         if ($generada) {
             $this->newLine();
-            $this->line('    <options=bold>Contraseña:</> ' . $clave);
+            $this->line('    <options=bold>Contraseña:</> '.$clave);
             $this->line('    <fg=yellow>No se vuelve a mostrar.</>');
         }
 

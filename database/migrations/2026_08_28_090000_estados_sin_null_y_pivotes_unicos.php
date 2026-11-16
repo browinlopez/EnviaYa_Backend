@@ -42,28 +42,28 @@ return new class extends Migration
 {
     /** tabla => valor por defecto del estado. */
     private const ESTADOS = [
-        'business_reviews'    => 1,
-        'buyer'               => 1,
-        'category'            => 1,
-        'domiciliary'         => 1,
+        'business_reviews' => 1,
+        'buyer' => 1,
+        'category' => 1,
+        'domiciliary' => 1,
         'domiciliary_reviews' => 1,
-        'notifications'       => 1,
-        'order_geolocation'   => 1,
-        'orderssales'         => 1,
-        'owner'               => 1,
-        'payment_forms'       => 1,
-        'payment_methods'     => 1,
-        'payments'            => 1,
-        'products'            => 1,
-        'user'                => 1,
-        'user_address'        => 1,
+        'notifications' => 1,
+        'order_geolocation' => 1,
+        'orderssales' => 1,
+        'owner' => 1,
+        'payment_forms' => 1,
+        'payment_methods' => 1,
+        'payments' => 1,
+        'products' => 1,
+        'user' => 1,
+        'user_address' => 1,
     ];
 
     /** tabla => la pareja que no puede repetirse. */
     private const PAREJAS = [
-        'buyer_complex'        => ['buyer_id', 'complex_id'],
-        'chat_participants'    => ['chat_id', 'user_id'],
-        'orders_promotions'    => ['orderSales_id', 'promotion_id'],
+        'buyer_complex' => ['buyer_id', 'complex_id'],
+        'chat_participants' => ['chat_id', 'user_id'],
+        'orders_promotions' => ['orderSales_id', 'promotion_id'],
         'payment_method_forms' => ['methods_id', 'forms_id'],
     ];
 
@@ -125,7 +125,7 @@ return new class extends Migration
 
         $repetidas = DB::table($tabla)
             ->select($columnas)
-            ->selectRaw('MIN(' . $pk . ') as conservar, COUNT(*) as cuantas')
+            ->selectRaw('MIN('.$pk.') as conservar, COUNT(*) as cuantas')
             ->groupBy($columnas)
             ->havingRaw('COUNT(*) > 1')
             ->get();

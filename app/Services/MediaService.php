@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use Illuminate\Http\UploadedFile;
@@ -27,13 +29,14 @@ use RuntimeException;
 class MediaService
 {
     private const DISCO = 'r2';
+
     private const MAX_BYTES = 8 * 1024 * 1024; // 8 MB
 
     /** Raíces permitidas: restringirlas evita escribir en cualquier sitio. */
     public const RAICES = [
-        'negocios'  => 'negocios',
+        'negocios' => 'negocios',
         'productos' => 'productos',
-        'usuarios'  => 'usuarios',
+        'usuarios' => 'usuarios',
         'conjuntos' => 'conjuntos',
         // Solo las de NEGOCIO: son las que la app pinta en su carrusel. Las de
         // producto no tienen columna de imagen en la base.
@@ -58,13 +61,13 @@ class MediaService
      * separadas derivan. Una prueba recorre las raíces para comprobarlo.
      */
     public const MODULOS = [
-        'negocios'   => 'negocios',
-        'productos'  => 'productos',
-        'usuarios'   => 'usuarios',
-        'conjuntos'  => 'conjuntos',
+        'negocios' => 'negocios',
+        'productos' => 'productos',
+        'usuarios' => 'usuarios',
+        'conjuntos' => 'conjuntos',
         // Las de NEGOCIO, que es lo único que lleva imagen.
         'categorias' => 'categorias-negocio',
-        'banners'    => 'marketing.banners',
+        'banners' => 'marketing.banners',
     ];
 
     public function moduloDe(string $entidad): ?string
@@ -95,7 +98,7 @@ class MediaService
 
     public function admiteVarios(string $entidad): bool
     {
-        return !in_array($entidad, self::UNA_SOLA_IMAGEN, true);
+        return ! in_array($entidad, self::UNA_SOLA_IMAGEN, true);
     }
 
     public function soloDocumentos(string $entidad): bool
@@ -105,7 +108,7 @@ class MediaService
 
     public function raizValida(string $entidad): string
     {
-        if (!isset(self::RAICES[$entidad])) {
+        if (! isset(self::RAICES[$entidad])) {
             throw new RuntimeException("Tipo de entidad no admitido: {$entidad}.");
         }
 
@@ -140,13 +143,13 @@ class MediaService
         $this->raizValida($entidad);
 
         return match ($entidad) {
-            'negocios'   => DB::table('business')->where('busines_id', $id)->value('name'),
-            'productos'  => DB::table('products')->where('products_id', $id)->value('name'),
-            'usuarios'   => DB::table('user')->where('user_id', $id)->value('name'),
-            'conjuntos'  => DB::table('residential_complexes')->where('complex_id', $id)->value('name'),
+            'negocios' => DB::table('business')->where('busines_id', $id)->value('name'),
+            'productos' => DB::table('products')->where('products_id', $id)->value('name'),
+            'usuarios' => DB::table('user')->where('user_id', $id)->value('name'),
+            'conjuntos' => DB::table('residential_complexes')->where('complex_id', $id)->value('name'),
             'categorias' => DB::table('category_business')->where('id', $id)->value('name'),
             // El banner no tiene columna `name`: su rótulo es el título.
-            'banners'    => DB::table('banners')->where('id', $id)->value('title'),
+            'banners' => DB::table('banners')->where('id', $id)->value('title'),
         };
     }
 
@@ -154,19 +157,19 @@ class MediaService
     {
         $slug = Str::slug((string) ($nombre ?? ''), '-') ?: 'sin-nombre';
 
-        return $this->raizValida($entidad) . '/' . (int) $codigo . '-' . $slug;
+        return $this->raizValida($entidad).'/'.(int) $codigo.'-'.$slug;
     }
 
     public function configurado(): bool
     {
-        $c = config('filesystems.disks.' . self::DISCO);
+        $c = config('filesystems.disks.'.self::DISCO);
 
-        return !empty($c['key']) && !empty($c['secret']) && !empty($c['endpoint']);
+        return ! empty($c['key']) && ! empty($c['secret']) && ! empty($c['endpoint']);
     }
 
     public function tienePublico(): bool
     {
-        return (bool) config('filesystems.disks.' . self::DISCO . '.url');
+        return (bool) config('filesystems.disks.'.self::DISCO.'.url');
     }
 
     /* ==================================================================
@@ -181,20 +184,20 @@ class MediaService
         string $tipo = 'galeria',
         ?int $usuarioId = null,
     ): array {
-        if (!$this->configurado()) {
+        if (! $this->configurado()) {
             throw new RuntimeException(
-                'El almacenamiento R2 no está configurado. Falta R2_ACCESS_KEY_ID, ' .
+                'El almacenamiento R2 no está configurado. Falta R2_ACCESS_KEY_ID, '.
                 'R2_SECRET_ACCESS_KEY o R2_ENDPOINT en el archivo .env del servidor.'
             );
         }
 
-        if (!in_array($tipo, self::TIPOS, true)) {
+        if (! in_array($tipo, self::TIPOS, true)) {
             throw new RuntimeException("Tipo de archivo no admitido: {$tipo}.");
         }
 
         // En entidades de imagen única todo entra como principal: aceptar
         // "galeria" crearía archivos que nada muestra y solo ocupan espacio.
-        if (!$this->admiteVarios($entidad)) {
+        if (! $this->admiteVarios($entidad)) {
             $tipo = 'logo';
         }
 
@@ -213,9 +216,9 @@ class MediaService
         // archivo no se pisen.
         $base = Str::slug(pathinfo($archivo->getClientOriginalName(), PATHINFO_FILENAME), '-');
         $ext = strtolower($archivo->getClientOriginalExtension() ?: $archivo->guessExtension() ?: 'bin');
-        $final = now()->format('Ymd-His') . '-' . Str::lower(Str::random(6)) . '-' . ($base ?: 'archivo') . '.' . $ext;
+        $final = now()->format('Ymd-His').'-'.Str::lower(Str::random(6)).'-'.($base ?: 'archivo').'.'.$ext;
 
-        $key = $this->carpeta($entidad, $codigo, $nombre) . '/' . $tipo . '/' . $final;
+        $key = $this->carpeta($entidad, $codigo, $nombre).'/'.$tipo.'/'.$final;
 
         try {
             Storage::disk(self::DISCO)->put($key, file_get_contents($archivo->getRealPath()), [
@@ -245,23 +248,23 @@ class MediaService
             }
 
             return DB::table('media_files')->insertGetId([
-                'entity_type'   => $entidad,
-                'entity_id'     => $codigo,
-                'tipo'          => $tipo,
-                'object_key'    => $key,
+                'entity_type' => $entidad,
+                'entity_id' => $codigo,
+                'tipo' => $tipo,
+                'object_key' => $key,
                 'original_name' => $archivo->getClientOriginalName(),
-                'mime_type'     => $archivo->getMimeType(),
-                'size_bytes'    => $archivo->getSize(),
-                'is_primary'    => $esPrincipal,
-                'uploaded_by'   => $usuarioId,
-                'created_at'    => now(),
-                'updated_at'    => now(),
+                'mime_type' => $archivo->getMimeType(),
+                'size_bytes' => $archivo->getSize(),
+                'is_primary' => $esPrincipal,
+                'uploaded_by' => $usuarioId,
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
         });
 
         // La imagen anterior se retira: si la entidad solo admite una, dejarla
         // en el bucket seria pagar almacenamiento por algo invisible.
-        if (!$this->admiteVarios($entidad)) {
+        if (! $this->admiteVarios($entidad)) {
             $this->purgarAnteriores($entidad, $codigo, $key);
         }
 
@@ -298,14 +301,14 @@ class MediaService
         string $tipo = 'documentos',
         ?int $usuarioId = null,
     ): array {
-        if (!$this->configurado()) {
+        if (! $this->configurado()) {
             throw new RuntimeException(
-                'El almacenamiento R2 no está configurado. Falta R2_ACCESS_KEY_ID, ' .
+                'El almacenamiento R2 no está configurado. Falta R2_ACCESS_KEY_ID, '.
                 'R2_SECRET_ACCESS_KEY o R2_ENDPOINT en el archivo .env del servidor.'
             );
         }
 
-        if (!in_array($tipo, self::TIPOS, true)) {
+        if (! in_array($tipo, self::TIPOS, true)) {
             throw new RuntimeException("Tipo de archivo no admitido: {$tipo}.");
         }
 
@@ -313,7 +316,7 @@ class MediaService
             throw new RuntimeException('El archivo generado supera los 8 MB permitidos.');
         }
 
-        $key = $this->carpeta($entidad, $codigo, $nombre) . '/' . $tipo . '/' . $nombreArchivo;
+        $key = $this->carpeta($entidad, $codigo, $nombre).'/'.$tipo.'/'.$nombreArchivo;
 
         try {
             Storage::disk(self::DISCO)->put($key, $contenido, ['ContentType' => $mime]);
@@ -322,18 +325,18 @@ class MediaService
         }
 
         $id = DB::table('media_files')->insertGetId([
-            'entity_type'   => $entidad,
-            'entity_id'     => $codigo,
-            'tipo'          => $tipo,
-            'object_key'    => $key,
+            'entity_type' => $entidad,
+            'entity_id' => $codigo,
+            'tipo' => $tipo,
+            'object_key' => $key,
             'original_name' => $nombreArchivo,
-            'mime_type'     => $mime,
-            'size_bytes'    => strlen($contenido),
+            'mime_type' => $mime,
+            'size_bytes' => strlen($contenido),
             // Un documento nunca es la imagen principal de nadie.
-            'is_primary'    => false,
-            'uploaded_by'   => $usuarioId,
-            'created_at'    => now(),
-            'updated_at'    => now(),
+            'is_primary' => false,
+            'uploaded_by' => $usuarioId,
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
 
         return $this->presentar((object) [
@@ -381,21 +384,21 @@ class MediaService
      */
     private function sincronizarPrincipal(string $entidad, int|string $codigo, ?string $key): void
     {
-        if (!$this->tienePublico()) {
+        if (! $this->tienePublico()) {
             return;
         }
 
         $url = $key ? $this->url($key) : null;
 
         match ($entidad) {
-            'negocios'  => DB::table('business')->where('busines_id', $codigo)->update(['logo' => $url]),
+            'negocios' => DB::table('business')->where('busines_id', $codigo)->update(['logo' => $url]),
             'productos' => DB::table('products')->where('products_id', $codigo)->update(['image' => $url]),
             'categorias' => DB::table('category_business')->where('id', $codigo)->update(['image' => $url]),
             // La fachada del conjunto. Es lo que responde de un vistazo «¿estoy
             // en el conjunto correcto?» en un panel donde el celador de un
             // edificio y el de otro ven la misma pantalla azul.
             'conjuntos' => DB::table('residential_complexes')->where('complex_id', $codigo)->update(['photo' => $url]),
-            default     => null,
+            default => null,
         };
     }
 
@@ -409,7 +412,7 @@ class MediaService
 
         // Se comprueba la pertenencia contra la base: sin esto, un id
         // manipulado podría borrar archivos de otra entidad.
-        if (!$fila) {
+        if (! $fila) {
             throw new RuntimeException('El archivo no pertenece a este registro.');
         }
 
@@ -447,7 +450,7 @@ class MediaService
             ->where('entity_id', $codigo)
             ->first();
 
-        if (!$fila) {
+        if (! $fila) {
             throw new RuntimeException('El archivo no pertenece a este registro.');
         }
 
@@ -475,20 +478,20 @@ class MediaService
             ->orderByDesc('is_primary')
             ->orderByDesc('id')
             ->get()
-            ->map(fn($f) => $this->presentar($f))
+            ->map(fn ($f) => $this->presentar($f))
             ->all();
     }
 
     private function presentar(object $f): array
     {
         return [
-            'id'         => (int) $f->id,
-            'key'        => $f->object_key,
-            'url'        => $this->url($f->object_key),
-            'name'       => $f->original_name ?: basename($f->object_key),
-            'size'       => (int) ($f->size_bytes ?? 0),
-            'mime'       => $f->mime_type,
-            'tipo'       => $f->tipo,
+            'id' => (int) $f->id,
+            'key' => $f->object_key,
+            'url' => $this->url($f->object_key),
+            'name' => $f->original_name ?: basename($f->object_key),
+            'size' => (int) ($f->size_bytes ?? 0),
+            'mime' => $f->mime_type,
+            'tipo' => $f->tipo,
             'is_primary' => (bool) $f->is_primary,
         ];
     }
@@ -506,26 +509,26 @@ class MediaService
     {
         $f = DB::table('media_files')->where('id', $mediaId)->first();
 
-        if (!$f || !Storage::disk(self::DISCO)->exists($f->object_key)) {
+        if (! $f || ! Storage::disk(self::DISCO)->exists($f->object_key)) {
             abort(404, 'El archivo ya no está disponible.');
         }
 
         $nombre = $f->original_name ?: basename($f->object_key);
 
         return Storage::disk(self::DISCO)->response($f->object_key, $nombre, [
-            'Content-Type'           => $f->mime_type ?: 'application/octet-stream',
-            'Content-Disposition'    => 'inline; filename="' . addcslashes($nombre, '"\\') . '"',
-            'Cache-Control'          => 'private, max-age=300',
+            'Content-Type' => $f->mime_type ?: 'application/octet-stream',
+            'Content-Disposition' => 'inline; filename="'.addcslashes($nombre, '"\\').'"',
+            'Cache-Control' => 'private, max-age=300',
             'X-Content-Type-Options' => 'nosniff',
         ]);
     }
 
     public function url(string $key): string
     {
-        $publico = config('filesystems.disks.' . self::DISCO . '.url');
+        $publico = config('filesystems.disks.'.self::DISCO.'.url');
 
         if ($publico) {
-            return rtrim($publico, '/') . '/' . ltrim($key, '/');
+            return rtrim($publico, '/').'/'.ltrim($key, '/');
         }
 
         // Sin dominio público solo queda la URL firmada. Sirve para verla en
@@ -544,13 +547,13 @@ class MediaService
 
         if (str_contains($m, '403') || stripos($m, 'AccessDenied') !== false) {
             return 'Cloudflare rechazó la operación (403). El token de R2 es de solo lectura: '
-                . 'crea uno con permiso "Object Read & Write" sobre el bucket.';
+                .'crea uno con permiso "Object Read & Write" sobre el bucket.';
         }
 
         if (str_contains($m, '404') || stripos($m, 'NoSuchBucket') !== false) {
             return 'El bucket configurado en R2_BUCKET no existe o el endpoint no corresponde a esa cuenta.';
         }
 
-        return 'No se pudo operar sobre el almacenamiento: ' . Str::limit($m, 180);
+        return 'No se pudo operar sobre el almacenamiento: '.Str::limit($m, 180);
     }
 }

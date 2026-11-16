@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Negocio;
 
 use App\Http\Controllers\Controller;
@@ -52,23 +54,23 @@ class DocumentosDelDomiciliarioController extends Controller
             ->findOrFail($id);
 
         $datos = $request->validate([
-            'type'       => 'required|in:' . implode(',', self::TIPOS),
+            'type' => 'required|in:'.implode(',', self::TIPOS),
             // Foto o PDF: es lo que sale de un celular o de un escáner.
-            'file'       => 'required|file|mimes:jpg,jpeg,png,webp,pdf|max:8192',
-            'number'     => 'nullable|string|max:60',
+            'file' => 'required|file|mimes:jpg,jpeg,png,webp,pdf|max:8192',
+            'number' => 'nullable|string|max:60',
             /* Un SOAT sin fecha no puede avisar cuando se vence, que es para
                lo que se pide. `required_if` y no una regla a mano: Laravel no
                corre las reglas propias sobre un campo que no llegó, y así un
                SOAT sin fecha entraba igual. */
-            'expires_at' => 'nullable|required_if:type,' . implode(',', self::CON_VENCIMIENTO) . '|date|after:today',
+            'expires_at' => 'nullable|required_if:type,'.implode(',', self::CON_VENCIMIENTO).'|date|after:today',
         ], [
             'expires_at.required_if' => 'Ponle la fecha en que se vence.',
-            'file.mimes'       => 'Sube una foto (JPG, PNG o WEBP) o un PDF.',
-            'file.max'         => 'El archivo pesa más de 8 MB.',
+            'file.mimes' => 'Sube una foto (JPG, PNG o WEBP) o un PDF.',
+            'file.max' => 'El archivo pesa más de 8 MB.',
             'expires_at.after' => 'Esa fecha ya pasó: así el documento ya está vencido.',
         ]);
 
-        if (!$medios->configurado()) {
+        if (! $medios->configurado()) {
             return response()->json([
                 'message' => 'El almacenamiento de archivos no está configurado en el servidor.',
             ], 503);
@@ -99,12 +101,12 @@ class DocumentosDelDomiciliarioController extends Controller
 
             DomiciliaryDocument::create([
                 'domiciliary_id' => $d->domiciliary_id,
-                'type'           => $datos['type'],
-                'number'         => $datos['number'] ?? null,
-                'expires_at'     => $datos['expires_at'] ?? null,
-                'media_id'       => (int) $archivo['id'],
-                'notes'          => mb_substr('Lo subió la tienda ' . ($tienda ?? ''), 0, 255),
-                'state'          => 1,
+                'type' => $datos['type'],
+                'number' => $datos['number'] ?? null,
+                'expires_at' => $datos['expires_at'] ?? null,
+                'media_id' => (int) $archivo['id'],
+                'notes' => mb_substr('Lo subió la tienda '.($tienda ?? ''), 0, 255),
+                'state' => 1,
             ]);
         });
 

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Support;
 
 use Illuminate\Console\Command;
@@ -32,6 +34,7 @@ use Illuminate\Support\Str;
 class ClaveDeSemilla
 {
     private static ?string $clave = null;
+
     private static bool $anunciada = false;
 
     public static function resolver(?Command $command = null): string
@@ -46,12 +49,12 @@ class ClaveDeSemilla
                 ? $delEntorno
                 : Str::password(16, symbols: false);
 
-            if ($delEntorno === '' && !self::$anunciada) {
+            if ($delEntorno === '' && ! self::$anunciada) {
                 self::$anunciada = true;
 
                 $command?->newLine();
                 $command?->warn('No hay SEED_PASSWORD en el entorno, así que se generó una clave:');
-                $command?->line('  ' . self::$clave);
+                $command?->line('  '.self::$clave);
                 $command?->line('  Cópiala ahora: no se vuelve a mostrar y no queda en ningún archivo.');
                 $command?->newLine();
             }

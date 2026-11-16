@@ -1,8 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models\Product;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Un producto como lo piensa quien compra: «Salsa de tomate San Jorge».
@@ -20,17 +24,21 @@ use Illuminate\Database\Eloquent\Model;
 class ProductGroup extends Model
 {
     protected $table = 'product_groups';
+
     protected $primaryKey = 'group_id';
+
     public $timestamps = true;
 
     protected $fillable = ['name', 'brand', 'category_id', 'image', 'description', 'origen'];
 
-    public function products()
+    /** @return HasMany<Product, $this> */
+    public function products(): HasMany
     {
         return $this->hasMany(Product::class, 'group_id', 'group_id');
     }
 
-    public function category()
+    /** @return BelongsTo<Category, $this> */
+    public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class, 'category_id', 'category_id');
     }
@@ -49,6 +57,6 @@ class ProductGroup extends Model
             return $this->image;
         }
 
-        return $this->products->firstWhere(fn ($p) => !empty($p->image))?->image;
+        return $this->products->firstWhere(fn ($p) => ! empty($p->image))?->image;
     }
 }

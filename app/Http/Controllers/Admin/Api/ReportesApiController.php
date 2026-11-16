@@ -1,37 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Admin\Api;
 
-use App\Support\Consultas\AyudasDeAdmin;
-use App\Services\GeneradorDeReportes;
-use App\Services\Ajustes;
 use App\Http\Controllers\Controller;
-use App\Models\Area;
-use App\Models\Conjunto\ComplexStaff;
-use App\Models\Operacion\DomiciliaryDocument;
-use App\Models\Reviews\BusinessReview;
-use App\Models\Reviews\DomiciliaryReview;
-use App\Models\User;
-use App\Services\BusinessMediaService;
-use App\Services\ContratoService;
-use App\Services\MediaService;
-use App\Services\VinculosDelRol;
-use App\Support\ListadoPaginado;
-use Carbon\Carbon;
+use App\Services\GeneradorDeReportes;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 
 class ReportesApiController extends Controller
 {
     public function __construct(
         private readonly GeneradorDeReportes $reportes,
-    ) {
-    }
-
-    use AyudasDeAdmin;
+    ) {}
 
     /**
      * EL DESGLOSE POR NEGOCIO DE UNA CIFRA.
@@ -53,15 +34,15 @@ class ReportesApiController extends Controller
         $metrica = $request->query('metric', 'revenue');
 
         $columnas = [
-            'revenue'    => 'revenue',
-            'orders'     => 'orders',
-            'delivered'  => 'delivered',
-            'cancelled'  => 'cancelled',
+            'revenue' => 'revenue',
+            'orders' => 'orders',
+            'delivered' => 'delivered',
+            'cancelled' => 'cancelled',
             'avg_ticket' => 'avg_ticket',
-            'buyers'     => 'buyers',
+            'buyers' => 'buyers',
         ];
 
-        if (!isset($columnas[$metrica])) {
+        if (! isset($columnas[$metrica])) {
             return response()->json([
                 'message' => 'Esa cifra no tiene desglose por negocio.',
                 'metrics' => array_keys($columnas),
@@ -71,12 +52,12 @@ class ReportesApiController extends Controller
         $datos = $this->reportes->reportePorNegocio($ventana, $filtros);
 
         return response()->json([
-            'metric'     => $metrica,
-            'period'     => [
+            'metric' => $metrica,
+            'period' => [
                 'from' => $ventana['desde']->toDateString(),
-                'to'   => $ventana['hasta']->toDateString(),
+                'to' => $ventana['hasta']->toDateString(),
             ],
-            'filters'    => $this->reportes->filtrosLegibles($filtros),
+            'filters' => $this->reportes->filtrosLegibles($filtros),
             'businesses' => collect($datos['businesses'])
                 ->sortByDesc($columnas[$metrica])
                 ->values(),
@@ -89,11 +70,11 @@ class ReportesApiController extends Controller
         $filtros = $this->reportes->filtrosDelReporte($request);
 
         $datos = match ($kind) {
-            'financial'   => $this->reportes->reporteFinanciero($ventana, $filtros),
-            'commercial'  => $this->reportes->reporteComercial($ventana, $filtros),
+            'financial' => $this->reportes->reporteFinanciero($ventana, $filtros),
+            'commercial' => $this->reportes->reporteComercial($ventana, $filtros),
             'operational' => $this->reportes->reporteOperacional($ventana, $filtros),
-            'businesses'  => $this->reportes->reportePorNegocio($ventana, $filtros),
-            default       => null,
+            'businesses' => $this->reportes->reportePorNegocio($ventana, $filtros),
+            default => null,
         };
 
         if ($datos === null) {
@@ -101,17 +82,16 @@ class ReportesApiController extends Controller
         }
 
         return response()->json($datos + [
-            'period'  => [
-                'from'     => $ventana['desde']->toDateString(),
-                'to'       => $ventana['hasta']->toDateString(),
-                'days'     => $ventana['dias'],
+            'period' => [
+                'from' => $ventana['desde']->toDateString(),
+                'to' => $ventana['hasta']->toDateString(),
+                'days' => $ventana['dias'],
                 'previous' => [
                     'from' => $ventana['desde_antes']->toDateString(),
-                    'to'   => $ventana['hasta_antes']->toDateString(),
+                    'to' => $ventana['hasta_antes']->toDateString(),
                 ],
             ],
             'filters' => $this->reportes->filtrosLegibles($filtros),
         ]);
     }
-
 }

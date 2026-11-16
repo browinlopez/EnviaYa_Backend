@@ -1,17 +1,21 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models\Invoice;
 
 use App\Models\Audit\Audit;
 use App\Models\Order\OrdersSales;
 use App\Models\Payment\Payment;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Invoice extends Audit
 {
     use HasFactory;
 
     protected $table = 'invoices';
+
     protected $primaryKey = 'invoice_id';
 
     protected $fillable = [
@@ -64,16 +68,20 @@ class Invoice extends Audit
 
     /**
      * Invoice belongs to an order.
+     *
+     * @return BelongsTo<OrdersSales, $this>
      */
-    public function order()
+    public function order(): BelongsTo
     {
         return $this->belongsTo(OrdersSales::class, 'orderSales_id', 'orderSales_id');
     }
 
     /**
      * Invoice belongs to a payment (if invoice generated after payment).
+     *
+     * @return BelongsTo<Payment, $this>
      */
-    public function payment()
+    public function payment(): BelongsTo
     {
         return $this->belongsTo(Payment::class, 'payments_id', 'payments_id');
     }

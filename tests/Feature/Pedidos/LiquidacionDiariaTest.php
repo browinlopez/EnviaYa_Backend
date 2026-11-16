@@ -18,7 +18,6 @@ use Illuminate\Support\Facades\DB;
  *  3. Un pedido con el pago rechazado deja de entrar: se le estaba
  *     transfiriendo al negocio dinero que nadie llegó a cobrar.
  */
-
 function pedidoLiquidable(array $datos = []): array
 {
     Rol::firstOrCreate(['rol_id' => 3], ['name' => 'domiciliario', 'guard_name' => 'web']);

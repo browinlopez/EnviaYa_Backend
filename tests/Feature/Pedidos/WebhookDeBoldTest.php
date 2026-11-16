@@ -32,31 +32,31 @@ function pedidoEsperandoCobroDeBold(): array
     $e = escenarioDeTope(null, metodo: 2);
 
     DB::table('orderssales')->where('orderSales_id', $e['orderId'])->update([
-        'state'         => 1,
+        'state' => 1,
         // Escondido hasta que el cobro se confirme.
         'payment_state' => 'pending_online',
     ]);
 
-    $referencia = 'ref-' . uniqid();
+    $referencia = 'ref-'.uniqid();
 
     $intento = PaymentIntent::create([
-        'orderSales_id'     => $e['orderId'],
-        'provider'          => 'bold',
+        'orderSales_id' => $e['orderId'],
+        'provider' => 'bold',
         'bold_reference_id' => $referencia,
-        'amount'            => 60000,
-        'currency'          => 'COP',
-        'status'            => 'pending',
+        'amount' => 60000,
+        'currency' => 'COP',
+        'status' => 'pending',
     ]);
 
     $pago = Payment::create([
-        'orderSales_id'       => $e['orderId'],
-        'methods_id'          => 2,
-        'provider'            => 'bold',
+        'orderSales_id' => $e['orderId'],
+        'methods_id' => 2,
+        'provider' => 'bold',
         'provider_payment_id' => null,
-        'amount'              => 60000,
-        'total'               => 60000,
-        'payment_status'      => 0,
-        'status'              => 'pending',
+        'amount' => 60000,
+        'total' => 60000,
+        'payment_status' => 0,
+        'status' => 'pending',
     ]);
 
     return $e + compact('referencia', 'intento', 'pago');
@@ -80,7 +80,7 @@ function avisoDeBold(array $payload, ?string $secreto = 'secreto-de-prueba')
     }
 
     return test()->call('POST', '/v1/webhooks/bold', [], [], [], [
-        'CONTENT_TYPE'          => 'application/json',
+        'CONTENT_TYPE' => 'application/json',
         'HTTP_X_BOLD_SIGNATURE' => $cabeceras['x-bold-signature'] ?? '',
     ], $cuerpo);
 }
@@ -95,10 +95,10 @@ it('un cobro aprobado saca el pedido a la luz', function () {
     $e = pedidoEsperandoCobroDeBold();
 
     avisoDeBold([
-        'id'      => 'notif-1',
-        'type'    => 'SALE_APPROVED',
+        'id' => 'notif-1',
+        'type' => 'SALE_APPROVED',
         'subject' => 'tx-123',
-        'data'    => ['metadata' => ['reference' => $e['referencia']]],
+        'data' => ['metadata' => ['reference' => $e['referencia']]],
     ])->assertOk();
 
     $pedido = OrdersSales::find($e['orderId']);
@@ -126,10 +126,10 @@ it('EN PRODUCCION sin llave se rechaza todo, aunque venga bien firmado', functio
     $e = pedidoEsperandoCobroDeBold();
 
     avisoDeBold([
-        'id'      => 'notif-sin-secreto',
-        'type'    => 'SALE_APPROVED',
+        'id' => 'notif-sin-secreto',
+        'type' => 'SALE_APPROVED',
         'subject' => 'tx-123',
-        'data'    => ['metadata' => ['reference' => $e['referencia']]],
+        'data' => ['metadata' => ['reference' => $e['referencia']]],
     ])->assertStatus(400);
 
     expect(OrdersSales::find($e['orderId'])->payment_state)->toBe('pending_online');
@@ -139,10 +139,10 @@ it('una firma que no cuadra no mueve nada', function () {
     $e = pedidoEsperandoCobroDeBold();
 
     avisoDeBold([
-        'id'      => 'notif-falsa',
-        'type'    => 'SALE_APPROVED',
+        'id' => 'notif-falsa',
+        'type' => 'SALE_APPROVED',
         'subject' => 'tx-123',
-        'data'    => ['metadata' => ['reference' => $e['referencia']]],
+        'data' => ['metadata' => ['reference' => $e['referencia']]],
     ], 'otro-secreto-distinto')->assertStatus(400);
 
     expect(OrdersSales::find($e['orderId'])->payment_state)->toBe('pending_online');
@@ -156,10 +156,10 @@ it('el mismo aviso dos veces no cuenta dos pagos', function () {
     $e = pedidoEsperandoCobroDeBold();
 
     $aviso = [
-        'id'      => 'notif-repetida',
-        'type'    => 'SALE_APPROVED',
+        'id' => 'notif-repetida',
+        'type' => 'SALE_APPROVED',
         'subject' => 'tx-123',
-        'data'    => ['metadata' => ['reference' => $e['referencia']]],
+        'data' => ['metadata' => ['reference' => $e['referencia']]],
     ];
 
     avisoDeBold($aviso)->assertOk();
@@ -172,10 +172,10 @@ it('un cobro rechazado deja el pedido marcado como tal', function () {
     $e = pedidoEsperandoCobroDeBold();
 
     avisoDeBold([
-        'id'      => 'notif-rechazo',
-        'type'    => 'SALE_REJECTED',
+        'id' => 'notif-rechazo',
+        'type' => 'SALE_REJECTED',
         'subject' => 'tx-123',
-        'data'    => ['metadata' => ['reference' => $e['referencia']]],
+        'data' => ['metadata' => ['reference' => $e['referencia']]],
     ])->assertOk();
 
     expect(OrdersSales::find($e['orderId'])->payment_state)
@@ -188,10 +188,10 @@ it('un aviso de un pago que no existe queda registrado y responde 200', function
      * fallo solo haria que Bold reintentara algo que nunca vamos a poder casar.
      */
     avisoDeBold([
-        'id'      => 'notif-huerfana',
-        'type'    => 'SALE_APPROVED',
+        'id' => 'notif-huerfana',
+        'type' => 'SALE_APPROVED',
         'subject' => 'tx-que-no-existe',
-        'data'    => ['metadata' => ['reference' => 'ref-que-no-existe']],
+        'data' => ['metadata' => ['reference' => 'ref-que-no-existe']],
     ])->assertOk()->assertJsonPath('matched', false);
 
     expect(PaymentEvent::where('payload->id', 'notif-huerfana')->exists())->toBeTrue();
@@ -203,10 +203,10 @@ it('todo aviso queda guardado, aunque no cambie nada', function () {
     $e = pedidoEsperandoCobroDeBold();
 
     avisoDeBold([
-        'id'      => 'notif-informativa',
-        'type'    => 'SALE_PENDING',
+        'id' => 'notif-informativa',
+        'type' => 'SALE_PENDING',
         'subject' => 'tx-123',
-        'data'    => ['metadata' => ['reference' => $e['referencia']]],
+        'data' => ['metadata' => ['reference' => $e['referencia']]],
     ])->assertOk();
 
     expect(PaymentEvent::where('payload->id', 'notif-informativa')->exists())->toBeTrue()
@@ -230,20 +230,20 @@ it('VOID_REJECTED no le quita el pago a un pedido que SI esta pagado', function 
 
     // Primero el cobro entra y el pedido queda pagado y a la vista.
     avisoDeBold([
-        'id'      => 'notif-venta-ok',
-        'type'    => 'SALE_APPROVED',
+        'id' => 'notif-venta-ok',
+        'type' => 'SALE_APPROVED',
         'subject' => 'tx-123',
-        'data'    => ['metadata' => ['reference' => $e['referencia']]],
+        'data' => ['metadata' => ['reference' => $e['referencia']]],
     ])->assertOk();
 
     expect(OrdersSales::find($e['orderId'])->payment_state)->toBe('paid');
 
     // Y ahora llega el aviso de que una anulacion NO se pudo hacer.
     avisoDeBold([
-        'id'      => 'notif-anulacion-fallida',
-        'type'    => 'VOID_REJECTED',
+        'id' => 'notif-anulacion-fallida',
+        'type' => 'VOID_REJECTED',
         'subject' => 'tx-123',
-        'data'    => ['metadata' => ['reference' => $e['referencia']]],
+        'data' => ['metadata' => ['reference' => $e['referencia']]],
     ])->assertOk();
 
     // El pedido sigue pagado: la venta nunca se deshizo.
@@ -258,17 +258,17 @@ it('VOID_APPROVED si deshace la venta', function () {
     $e = pedidoEsperandoCobroDeBold();
 
     avisoDeBold([
-        'id'      => 'notif-venta-ok-2',
-        'type'    => 'SALE_APPROVED',
+        'id' => 'notif-venta-ok-2',
+        'type' => 'SALE_APPROVED',
         'subject' => 'tx-123',
-        'data'    => ['metadata' => ['reference' => $e['referencia']]],
+        'data' => ['metadata' => ['reference' => $e['referencia']]],
     ])->assertOk();
 
     avisoDeBold([
-        'id'      => 'notif-anulada',
-        'type'    => 'VOID_APPROVED',
+        'id' => 'notif-anulada',
+        'type' => 'VOID_APPROVED',
         'subject' => 'tx-123',
-        'data'    => ['metadata' => ['reference' => $e['referencia']]],
+        'data' => ['metadata' => ['reference' => $e['referencia']]],
     ])->assertOk();
 
     expect(OrdersSales::find($e['orderId'])->payment_state)
@@ -292,10 +292,10 @@ it('EN PRUEBAS se acepta la firma con clave vacia, que es como firma Bold', func
     $e = pedidoEsperandoCobroDeBold();
 
     avisoDeBold([
-        'id'      => 'notif-firmada-con-nada',
-        'type'    => 'SALE_APPROVED',
+        'id' => 'notif-firmada-con-nada',
+        'type' => 'SALE_APPROVED',
         'subject' => 'tx-123',
-        'data'    => ['metadata' => ['reference' => $e['referencia']]],
+        'data' => ['metadata' => ['reference' => $e['referencia']]],
     ], secreto: '')->assertOk();
 
     expect(OrdersSales::find($e['orderId'])->payment_state)->toBe('paid');
@@ -313,10 +313,10 @@ it('EN PRUEBAS tambien se acepta la nuestra, porque no se sabe cual firma', func
     $e = pedidoEsperandoCobroDeBold();
 
     avisoDeBold([
-        'id'      => 'notif-firmada-con-la-nuestra',
-        'type'    => 'SALE_APPROVED',
+        'id' => 'notif-firmada-con-la-nuestra',
+        'type' => 'SALE_APPROVED',
         'subject' => 'tx-123',
-        'data'    => ['metadata' => ['reference' => $e['referencia']]],
+        'data' => ['metadata' => ['reference' => $e['referencia']]],
     ], secreto: 'secreto-de-prueba')->assertOk();
 
     expect(OrdersSales::find($e['orderId'])->payment_state)->toBe('paid');
@@ -329,10 +329,10 @@ it('EN PRUEBAS una firma de otra llave sigue sin pasar', function () {
     $e = pedidoEsperandoCobroDeBold();
 
     avisoDeBold([
-        'id'      => 'notif-llave-ajena',
-        'type'    => 'SALE_APPROVED',
+        'id' => 'notif-llave-ajena',
+        'type' => 'SALE_APPROVED',
         'subject' => 'tx-123',
-        'data'    => ['metadata' => ['reference' => $e['referencia']]],
+        'data' => ['metadata' => ['reference' => $e['referencia']]],
     ], secreto: 'llave-de-otro')->assertStatus(400);
 
     expect(OrdersSales::find($e['orderId'])->payment_state)->toBe('pending_online');

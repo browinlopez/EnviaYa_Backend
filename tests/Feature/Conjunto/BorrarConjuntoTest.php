@@ -38,8 +38,8 @@ function comoQuienBorra(): User
     Rol::firstOrCreate(['rol_id' => 5], ['name' => 'dueno_conjunto', 'guard_name' => 'web']);
 
     $u = User::factory()->create([
-        'rol'          => 4,
-        'area_id'      => Area::where('code', 'sistema')->firstOrFail()->id,
+        'rol' => 4,
+        'area_id' => Area::where('code', 'sistema')->firstOrFail()->id,
         'access_level' => Area::NIVEL_GESTOR,
     ]);
 
@@ -116,7 +116,7 @@ test('con residentes vinculados sigue sin borrarse, como antes', function () {
     $conjunto = unConjuntoVacio();
 
     Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
-    $vecino  = User::factory()->create(['rol' => 1]);
+    $vecino = User::factory()->create(['rol' => 1]);
     $buyerId = DB::table('buyer')->insertGetId([
         'user_id' => $vecino->user_id, 'qualification' => 0,
         'belongs_to_complex' => 1, 'state' => 1,

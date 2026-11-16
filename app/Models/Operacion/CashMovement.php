@@ -1,10 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models\Operacion;
 
 use App\Models\Domiciliary;
 use App\Models\Order\OrdersSales;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Un apunte del libro de efectivo de un domiciliario.
@@ -22,9 +25,25 @@ class CashMovement extends Model
 {
     protected $table = 'cash_movements';
 
-    public const RECAUDO      = 'recaudo';
+    public const RECAUDO = 'recaudo';
+
     public const CONSIGNACION = 'consignacion';
-    public const AJUSTE       = 'ajuste';
+
+    /**
+     * HOY NO LO ESCRIBE NADIE, y aun asi importa.
+     *
+     * No hay endpoint para ajustar a mano un descuadre: la funcion no
+     * esta hecha. Pero el valor vive en `cash_movements.type`, y
+     * `pendientesConLaTienda()` filtra por `type = RECAUDO`, asi que lo
+     * que decide esta constante es que un ajuste NO se cuente como plata
+     * recaudada. El dia que se cambiara a 'recaudo' se le cobraria al
+     * domiciliario un descuadre perdonado.
+     *
+     * Por eso `CustodiaDeEfectivoTest` la fija con su literal y comprueba
+     * que los tres tipos sean distintos: es lo unico que el resto del
+     * codigo necesita de ellos.
+     */
+    public const AJUSTE = 'ajuste';
 
     protected $fillable = [
         'domiciliary_id',
@@ -38,17 +57,20 @@ class CashMovement extends Model
 
     protected $casts = ['amount' => 'decimal:2'];
 
-    public function domiciliary()
+    /** @return BelongsTo<Domiciliary, $this> */
+    public function domiciliary(): BelongsTo
     {
         return $this->belongsTo(Domiciliary::class, 'domiciliary_id', 'domiciliary_id');
     }
 
-    public function order()
+    /** @return BelongsTo<OrdersSales, $this> */
+    public function order(): BelongsTo
     {
         return $this->belongsTo(OrdersSales::class, 'order_id', 'orderSales_id');
     }
 
-    public function deposit()
+    /** @return BelongsTo<CashDeposit, $this> */
+    public function deposit(): BelongsTo
     {
         return $this->belongsTo(CashDeposit::class, 'deposit_id');
     }

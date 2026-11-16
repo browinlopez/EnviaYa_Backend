@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Console\Commands;
 
 use App\Models\Buyer\ResidentialComplex;
@@ -9,8 +11,8 @@ use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 
 /**
@@ -41,7 +43,7 @@ class CrearDuenoDeConjunto extends Command
 
     public function handle(): int
     {
-        if (!Rol::find(ComplexStaff::ROL_DUENO)) {
+        if (! Rol::find(ComplexStaff::ROL_DUENO)) {
             $this->error('Falta el rol 5 (dueño de conjunto) en la tabla `rol`.');
             $this->line('Lo crea la migración `create_complex_staff`: corre php artisan migrate.');
 
@@ -50,7 +52,7 @@ class CrearDuenoDeConjunto extends Command
 
         $complexId = (int) $this->option('conjunto');
 
-        if (!$complexId) {
+        if (! $complexId) {
             $conjuntos = ResidentialComplex::where('state', 1)
                 ->orderBy('name')
                 ->get(['complex_id', 'name', 'address']);
@@ -73,28 +75,28 @@ class CrearDuenoDeConjunto extends Command
 
         $conjunto = ResidentialComplex::find($complexId);
 
-        if (!$conjunto) {
+        if (! $conjunto) {
             $this->error("No existe un conjunto con el identificador {$complexId}.");
 
             return self::FAILURE;
         }
 
-        $email  = $this->option('email')  ?: $this->ask('Correo');
+        $email = $this->option('email') ?: $this->ask('Correo');
         $nombre = $this->option('nombre') ?: $this->ask('Nombre visible');
 
         $generada = false;
-        $clave    = $this->option('clave');
+        $clave = $this->option('clave');
 
-        if (!$clave) {
-            $clave    = Str::password(16);
+        if (! $clave) {
+            $clave = Str::password(16);
             $generada = true;
         }
 
         $validacion = Validator::make(
             ['email' => $email, 'name' => $nombre, 'password' => $clave],
             [
-                'email'    => ['required', 'email'],
-                'name'     => ['required', 'string', 'min:2'],
+                'email' => ['required', 'email'],
+                'name' => ['required', 'string', 'min:2'],
                 'password' => ['required', Password::min(8)],
             ],
         );
@@ -118,10 +120,10 @@ class CrearDuenoDeConjunto extends Command
             $u = User::updateOrCreate(
                 ['email' => $email],
                 [
-                    'name'              => $nombre,
-                    'password'          => Hash::make($clave),
-                    'rol'               => ComplexStaff::ROL_DUENO,
-                    'state'             => 1,
+                    'name' => $nombre,
+                    'password' => Hash::make($clave),
+                    'rol' => ComplexStaff::ROL_DUENO,
+                    'state' => 1,
                     'email_verified_at' => now(),
                 ],
             );
@@ -130,8 +132,8 @@ class CrearDuenoDeConjunto extends Command
                 ['user_id' => $u->user_id],
                 [
                     'complex_id' => $conjunto->complex_id,
-                    'role'       => ComplexStaff::DUENO,
-                    'state'      => true,
+                    'role' => ComplexStaff::DUENO,
+                    'state' => true,
                 ],
             );
 
@@ -151,7 +153,7 @@ class CrearDuenoDeConjunto extends Command
         if ($generada) {
             $this->newLine();
             $this->warn('Contraseña generada (no se vuelve a mostrar):');
-            $this->line('    ' . $clave);
+            $this->line('    '.$clave);
         }
 
         $this->newLine();

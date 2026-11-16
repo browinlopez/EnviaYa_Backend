@@ -18,18 +18,17 @@ use Laravel\Sanctum\Sanctum;
  * teléfono pueda entrar, que un código de recuperación se gaste, que quitarlo
  * exija la contraseña, y que se pueda cerrar la sesión que no reconoces.
  */
-
 function usuarioDePanel(): User
 {
     Rol::firstOrCreate(['rol_id' => 4], ['name' => 'admin', 'guard_name' => 'web']);
 
     return User::factory()->create([
-        'rol'               => 4,
-        'area_id'           => Area::where('code', 'contabilidad')->firstOrFail()->id,
-        'access_level'      => Area::NIVEL_GESTOR,
-        'state'             => 1,
+        'rol' => 4,
+        'area_id' => Area::where('code', 'contabilidad')->firstOrFail()->id,
+        'access_level' => Area::NIVEL_GESTOR,
+        'state' => 1,
         'email_verified_at' => now(),
-        'password'          => Hash::make('clave-de-verdad'),
+        'password' => Hash::make('clave-de-verdad'),
     ]);
 }
 
@@ -49,7 +48,7 @@ function conSegundoFactor(User $u): array
 }
 
 /* ==================================================================== */
-/* ALTA                                                                 */
+/* ALTA */
 
 it('no se activa hasta demostrar que la app genera los códigos', function () {
     $u = usuarioDePanel();
@@ -109,13 +108,13 @@ it('el secreto no sale nunca en una respuesta de usuario', function () {
 });
 
 /* ==================================================================== */
-/* ENTRAR                                                               */
+/* ENTRAR */
 
 it('con segundo factor activo, la contraseña sola ya no basta', function () {
     [$u] = conSegundoFactor(usuarioDePanel());
 
     $r = $this->postJson('/v1/login', [
-        'email'    => $u->email,
+        'email' => $u->email,
         'password' => 'clave-de-verdad',
     ])->assertStatus(401);
 
@@ -127,8 +126,8 @@ it('con el código del teléfono entra', function () {
     [$u, $secreto] = conSegundoFactor(usuarioDePanel());
 
     $this->postJson('/v1/login', [
-        'email'           => $u->email,
-        'password'        => 'clave-de-verdad',
+        'email' => $u->email,
+        'password' => 'clave-de-verdad',
         'two_factor_code' => Totp::codigo($secreto),
     ])->assertOk()->assertJsonStructure(['token', 'user']);
 });
@@ -139,8 +138,8 @@ it('el código no sirve si la contraseña está mal', function () {
     // Y responde lo mismo que ante cualquier credencial incorrecta: decir "la
     // clave está mal pero el código bien" confirmaría medio secreto.
     $this->postJson('/v1/login', [
-        'email'           => $u->email,
-        'password'        => 'la-que-no-es',
+        'email' => $u->email,
+        'password' => 'la-que-no-es',
         'two_factor_code' => Totp::codigo($secreto),
     ])->assertStatus(401);
 });
@@ -151,8 +150,8 @@ it('un código de recuperación entra y SE GASTA', function () {
     $uno = $codigos[0];
 
     $this->postJson('/v1/login', [
-        'email'           => $u->email,
-        'password'        => 'clave-de-verdad',
+        'email' => $u->email,
+        'password' => 'clave-de-verdad',
         'two_factor_code' => $uno,
     ])->assertOk();
 
@@ -163,8 +162,8 @@ it('un código de recuperación entra y SE GASTA', function () {
     expect($u->fresh()->two_factor_recovery_codes)->toHaveCount(7);
 
     $this->postJson('/v1/login', [
-        'email'           => $u->email,
-        'password'        => 'clave-de-verdad',
+        'email' => $u->email,
+        'password' => 'clave-de-verdad',
         'two_factor_code' => $uno,
     ])->assertStatus(401);
 });
@@ -175,13 +174,13 @@ it('quien no tiene segundo factor entra como siempre', function () {
     // Activarlo es voluntario: obligar a todo el mundo de golpe deja fuera a
     // quien no tenga el teléfono a mano ese día.
     $this->postJson('/v1/login', [
-        'email'    => $u->email,
+        'email' => $u->email,
         'password' => 'clave-de-verdad',
     ])->assertOk();
 });
 
 /* ==================================================================== */
-/* QUITARLO                                                             */
+/* QUITARLO */
 
 it('desactivarlo exige la contraseña', function () {
     [$u] = conSegundoFactor(usuarioDePanel());
@@ -216,21 +215,21 @@ it('los códigos nuevos invalidan los anteriores', function () {
     // Regenerar existe para cuando se sospecha que la lista se vio: si los
     // anteriores siguieran valiendo, no serviría de nada.
     $this->postJson('/v1/login', [
-        'email'           => $u->email,
-        'password'        => 'clave-de-verdad',
+        'email' => $u->email,
+        'password' => 'clave-de-verdad',
         'two_factor_code' => $viejos[0],
     ])->assertStatus(401);
 });
 
 /* ==================================================================== */
-/* SESIONES                                                             */
+/* SESIONES */
 
 it('las sesiones dicen de dónde salieron', function () {
     $u = usuarioDePanel();
 
     $this->withHeaders(['User-Agent' => 'Mozilla/5.0 (Windows NT 10.0) Chrome/120'])
         ->postJson('/v1/login', [
-            'email'    => $u->email,
+            'email' => $u->email,
             'password' => 'clave-de-verdad',
         ])->assertOk();
 
@@ -254,7 +253,7 @@ it('se pueden cerrar todas las demás sin cerrar la propia', function () {
     // ordenador prestado.
     foreach (range(1, 3) as $i) {
         $this->postJson('/v1/login', [
-            'email'    => $u->email,
+            'email' => $u->email,
             'password' => 'clave-de-verdad',
         ])->assertOk();
     }
@@ -277,11 +276,11 @@ it('se pueden cerrar todas las demás sin cerrar la propia', function () {
 });
 
 it('nadie cierra la sesión de otra persona', function () {
-    $mia   = usuarioDePanel();
+    $mia = usuarioDePanel();
     $ajena = usuarioDePanel();
 
     $this->postJson('/v1/login', [
-        'email'    => $ajena->email,
+        'email' => $ajena->email,
         'password' => 'clave-de-verdad',
     ])->assertOk();
 

@@ -26,7 +26,8 @@ use App\Services\Push\TransportePush;
 /** Un transporte de mentira que solo anota a quién le tocó. */
 function transporteEspia(): object
 {
-    return new class {
+    return new class
+    {
         public array $recibidos = [];
 
         public function enviar(array $tokens, string $t, string $c, array $d = []): array
@@ -62,8 +63,8 @@ function telefono(string $token, string $plataforma): string
      * produccion que reviento con «Unknown column 'state'».
      */
     DeviceToken::create([
-        'user_id'  => $user->user_id,
-        'token'    => $token,
+        'user_id' => $user->user_id,
+        'token' => $token,
         'platform' => $plataforma,
     ]);
 

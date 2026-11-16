@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models\Operacion;
 
 use App\Models\Domiciliary;
@@ -13,9 +15,15 @@ class SafetyIncident extends Model
 {
     protected $table = 'safety_incidents';
 
-    public const ABIERTO       = 0;
+    public const ABIERTO = 0;
+
     public const EN_INVESTIGACION = 1;
-    public const CERRADO       = 2;
+
+    public const CERRADO = 2;
+
+    /** El vocabulario completo: lo pide `IncidenteRequest`, que antes
+     * escribia `in:0,1,2` a mano. */
+    public const ESTADOS = [self::ABIERTO, self::EN_INVESTIGACION, self::CERRADO];
 
     protected $fillable = [
         'domiciliary_id',
@@ -34,15 +42,16 @@ class SafetyIncident extends Model
 
     protected $casts = [
         'domiciliary_id' => 'integer',
-        'order_id'       => 'integer',
-        'occurred_at'    => 'datetime',
-        'had_injuries'   => 'boolean',
-        'days_off'       => 'integer',
-        'state'          => 'integer',
-        'closed_at'      => 'datetime',
-        'reported_by'    => 'integer',
+        'order_id' => 'integer',
+        'occurred_at' => 'datetime',
+        'had_injuries' => 'boolean',
+        'days_off' => 'integer',
+        'state' => 'integer',
+        'closed_at' => 'datetime',
+        'reported_by' => 'integer',
     ];
 
+    /** @return BelongsTo<Domiciliary, $this> */
     public function domiciliary(): BelongsTo
     {
         return $this->belongsTo(Domiciliary::class, 'domiciliary_id', 'domiciliary_id');

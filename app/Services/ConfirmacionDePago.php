@@ -1,10 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
-use App\Events\OrderCreated;
 use App\Models\Order\OrdersSales;
-use Illuminate\Support\Facades\Log;
 
 /**
  * El momento en que un intento de compra se convierte en un pedido.
@@ -38,7 +38,7 @@ class ConfirmacionDePago
         $order->payment_state = 'paid';
         $order->save();
 
-        if (!$estabaEsperando) {
+        if (! $estabaEsperando) {
             /*
              * Ya era un pedido visible —típicamente uno contra entrega, que se
              * anunció al crearse—. Volver a emitir lo pintaría dos veces en la

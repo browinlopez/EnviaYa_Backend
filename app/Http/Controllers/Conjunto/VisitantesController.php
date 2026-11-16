@@ -1,9 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Conjunto;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Conjunto\RegistrarVisitanteRequest;
 use App\Services\PulsoDelConjunto;
+use App\Support\FiltroDeFechas;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -27,24 +31,24 @@ use Illuminate\Support\Facades\DB;
  */
 class VisitantesController extends Controller
 {
-    private const CLASES = ['visitante', 'servicio', 'domicilio_externo'];
+    /*
+     * PUBLICA porque la lee `RegistrarVisitanteRequest`, que es quien valida
+     * el campo. El vocabulario es de este controlador; la regla que lo aplica
+     * vive en el FormRequest y lo lee de aqui en vez de repetirlo.
+     */
+    public const CLASES = ['visitante', 'servicio', 'domicilio_externo'];
 
-    public function registrar(Request $request)
+    public function registrar(RegistrarVisitanteRequest $request)
     {
         $complexId = (int) $request->attributes->get('complex_id');
 
-        $datos = $request->validate([
-            'kind'             => 'required|string|in:' . implode(',', self::CLASES),
-            'visitor_name'     => 'required|string|max:120',
-            'visitor_document' => 'nullable|string|max:40',
-            'visitor_phone'    => 'nullable|string|max:40',
-            'visitor_company'  => 'nullable|string|max:120',
-            'vehicle_plate'    => 'nullable|string|max:20',
-            'tower'            => 'nullable|string|max:30',
-            'apartment'        => 'nullable|string|max:30',
-            'authorized_by'    => 'nullable|string|max:120',
-            'notes'            => 'nullable|string|max:1000',
-        ]);
+        /*
+         * Las reglas de campo viven en `RegistrarVisitanteRequest` —§04— y lo
+         * que sigue aqui abajo NO se movio con ellas: pregunta a la base si
+         * este conjunto exige constancia, y traerlo al FormRequest cambiaria
+         * el texto de los dos mensajes. Esta explicado en esa clase.
+         */
+        $datos = $request->validated();
 
         /*
          * El conjunto puede exigir que quede CONSTANCIA de quién dio permiso.
@@ -65,24 +69,24 @@ class VisitantesController extends Controller
         if ($exige && empty($datos['authorized_by'])) {
             return response()->json([
                 'message' => 'Este conjunto exige dejar constancia de quién dio permiso. Anota quién autorizó.',
-                'errors'  => ['authorized_by' => ['Falta anotar quién dio permiso.']],
+                'errors' => ['authorized_by' => ['Falta anotar quién dio permiso.']],
             ], 422);
         }
 
         $id = DB::table('complex_entries')->insertGetId($datos + [
-            'complex_id'     => $complexId,
+            'complex_id' => $complexId,
             // Sin domiciliario y sin método de identificación del sistema: no
             // hay nada que verificar, sólo lo que el celador anotó.
             'domiciliary_id' => null,
-            'method'         => 'manual',
-            'orders_count'   => 0,
-            'registered_by'  => $request->user()->user_id,
-            'created_at'     => now(),
-            'updated_at'     => now(),
+            'method' => 'manual',
+            'orders_count' => 0,
+            'registered_by' => $request->user()->user_id,
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
 
         return response()->json([
-            'message'  => 'Entrada registrada.',
+            'message' => 'Entrada registrada.',
             'entry_id' => $id,
         ], 201);
     }
@@ -105,7 +109,7 @@ class VisitantesController extends Controller
 
         // 404 y no 403: confirmar que existe pero es de otro conjunto ya sería
         // decir algo del edificio del vecino.
-        if (!$entrada) {
+        if (! $entrada) {
             return response()->json(['message' => 'Esa entrada no es de tu conjunto.'], 404);
         }
 
@@ -122,9 +126,9 @@ class VisitantesController extends Controller
         }
 
         DB::table('complex_entries')->where('id', $id)->update([
-            'exited_at'          => now(),
+            'exited_at' => now(),
             'exit_registered_by' => $request->user()->user_id,
-            'updated_at'         => now(),
+            'updated_at' => now(),
         ]);
 
         return response()->json(['message' => 'Salida registrada.']);
@@ -144,7 +148,9 @@ class VisitantesController extends Controller
              * anotó. Arrastrarlas haría crecer el conteo para siempre y la
              * cifra dejaría de significar nada.
              */
-            ->whereDate('e.created_at', now()->toDateString())
+            // Como rango y no `whereDate`: ver `FiltroDeFechas`. Medido
+            // sobre esta misma tabla, 1388 filas abiertas contra 1.
+            ->tap(fn ($q) => FiltroDeFechas::unDia($q, 'e.created_at', now()))
             ->leftJoin('domiciliary as d', 'd.domiciliary_id', '=', 'e.domiciliary_id')
             ->leftJoin('user as u', 'u.user_id', '=', 'd.user_id')
             ->orderByDesc('e.created_at')

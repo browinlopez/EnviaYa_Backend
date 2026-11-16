@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models\Operacion;
 
 use App\Models\Business;
@@ -16,9 +18,16 @@ class Settlement extends Model
     protected $table = 'settlements';
 
     public const BORRADOR = 0;
+
     public const APROBADA = 1;
-    public const PAGADA   = 2;
-    public const ANULADA  = 3;
+
+    public const PAGADA = 2;
+
+    public const ANULADA = 3;
+
+    /** El vocabulario completo: lo pide `ActualizarLiquidacionRequest`,
+     * que antes escribia `in:0,1,2,3` a mano. */
+    public const ESTADOS = [self::BORRADOR, self::APROBADA, self::PAGADA, self::ANULADA];
 
     protected $fillable = [
         'type',
@@ -43,35 +52,38 @@ class Settlement extends Model
     ];
 
     protected $casts = [
-        'business_id'    => 'integer',
+        'business_id' => 'integer',
         'domiciliary_id' => 'integer',
-        'period_start'   => 'date',
-        'period_end'     => 'date',
-        'orders_count'   => 'integer',
-        'gross'          => 'decimal:2',
-        'delivery_fees'  => 'decimal:2',
-        'discounts'      => 'decimal:2',
-        'platform_fee'   => 'decimal:2',
-        'credit_sales'   => 'decimal:2',
-        'carried_in'     => 'decimal:2',
+        'period_start' => 'date',
+        'period_end' => 'date',
+        'orders_count' => 'integer',
+        'gross' => 'decimal:2',
+        'delivery_fees' => 'decimal:2',
+        'discounts' => 'decimal:2',
+        'platform_fee' => 'decimal:2',
+        'credit_sales' => 'decimal:2',
+        'carried_in' => 'decimal:2',
         'carried_from_id' => 'integer',
-        'net_payable'    => 'decimal:2',
-        'state'          => 'integer',
-        'approved_at'    => 'datetime',
-        'paid_at'        => 'datetime',
-        'created_by'     => 'integer',
+        'net_payable' => 'decimal:2',
+        'state' => 'integer',
+        'approved_at' => 'datetime',
+        'paid_at' => 'datetime',
+        'created_by' => 'integer',
     ];
 
+    /** @return HasMany<SettlementItem, $this> */
     public function items(): HasMany
     {
         return $this->hasMany(SettlementItem::class, 'settlement_id');
     }
 
+    /** @return BelongsTo<Business, $this> */
     public function business(): BelongsTo
     {
         return $this->belongsTo(Business::class, 'business_id', 'busines_id');
     }
 
+    /** @return BelongsTo<Domiciliary, $this> */
     public function domiciliary(): BelongsTo
     {
         return $this->belongsTo(Domiciliary::class, 'domiciliary_id', 'domiciliary_id');

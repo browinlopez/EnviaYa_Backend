@@ -1,23 +1,21 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Operacion\DomiciliaryDocument;
-use App\Models\Operacion\LandingRequest;
+use App\Http\Requests\Admin\ActualizarPqrsRequest;
+use App\Http\Requests\Admin\AnotarEnPqrsRequest;
+use App\Http\Requests\Admin\CrearPqrsRequest;
+use App\Http\Requests\Admin\FiltrarPqrsRequest;
 use App\Models\Operacion\Pqrs;
 use App\Models\Operacion\PqrsNote;
-use App\Models\Operacion\SafetyIncident;
-use App\Models\Operacion\Settlement;
-use App\Services\LiquidacionService;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use RuntimeException;
+use App\Support\FiltroDeFechas;
 
 class PqrsApiController extends Controller
 {
-
-    public function pqrs(Request $request)
+    public function pqrs(FiltrarPqrsRequest $request)
     {
         $q = Pqrs::query()
             ->leftJoin('user as u', 'u.user_id', '=', 'pqrs.user_id')
@@ -42,21 +40,22 @@ class PqrsApiController extends Controller
 
         return response()->json([
             'data' => $filas->map(function ($p) {
-                $modelo = (new Pqrs())->forceFill((array) $p);
+                $modelo = (new Pqrs)->forceFill((array) $p);
                 $p->overdue = $modelo->vencido();
+
                 return $p;
             }),
             'summary' => [
-                'abiertos'   => Pqrs::where('state', Pqrs::ABIERTO)->count(),
+                'abiertos' => Pqrs::where('state', Pqrs::ABIERTO)->count(),
                 'en_gestion' => Pqrs::where('state', Pqrs::EN_GESTION)->count(),
-                'vencidos'   => Pqrs::whereIn('state', [Pqrs::ABIERTO, Pqrs::EN_GESTION])
+                'vencidos' => Pqrs::whereIn('state', [Pqrs::ABIERTO, Pqrs::EN_GESTION])
                     ->whereNotNull('due_at')
                     ->where('due_at', '<', now())
                     ->count(),
-                'resueltos_mes' => Pqrs::where('state', '>=', Pqrs::RESUELTO)
-                    ->whereMonth('resolved_at', now()->month)
-                    ->whereYear('resolved_at', now()->year)
-                    ->count(),
+                'resueltos_mes' => FiltroDeFechas::elMes(
+                    Pqrs::where('state', '>=', Pqrs::RESUELTO),
+                    'resolved_at', (int) now()->year, (int) now()->month,
+                )->count(),
                 'plazos' => Pqrs::PLAZOS,
             ],
         ]);
@@ -70,27 +69,13 @@ class PqrsApiController extends Controller
         return response()->json($p);
     }
 
-    public function storePqrs(Request $request)
+    public function storePqrs(CrearPqrsRequest $request)
     {
-        $datos = $request->validate([
-            'type'           => 'required|in:peticion,queja,reclamo,sugerencia,felicitacion',
-            'channel'        => 'sometimes|in:app,whatsapp,llamada,correo,panel',
-            'priority'       => 'sometimes|in:baja,media,alta',
-            'user_id'        => 'sometimes|nullable|integer|exists:user,user_id',
-            'order_id'       => 'sometimes|nullable|integer|exists:orderssales,orderSales_id',
-            'business_id'    => 'sometimes|nullable|integer|exists:business,busines_id',
-            'domiciliary_id' => 'sometimes|nullable|integer|exists:domiciliary,domiciliary_id',
-            'contact_name'   => 'sometimes|nullable|string|max:150',
-            'contact_email'  => 'sometimes|nullable|email|max:150',
-            'contact_phone'  => 'sometimes|nullable|string|max:30',
-            'subject'        => 'required|string|max:200',
-            'description'    => 'required|string',
-            'assigned_to'    => 'sometimes|nullable|integer|exists:user,user_id',
-        ]);
+        $datos = $request->validated();
 
         $prioridad = $datos['priority'] ?? 'media';
 
-        $datos['code']   = Pqrs::siguienteRadicado();
+        $datos['code'] = Pqrs::siguienteRadicado();
         // El plazo se fija al radicar y no se recalcula: subirle la urgencia a
         // un caso atrasado no puede hacerlo aparecer como si estuviera a tiempo.
         $datos['due_at'] = now()->addDays(Pqrs::PLAZOS[$prioridad]);
@@ -99,24 +84,19 @@ class PqrsApiController extends Controller
 
         return response()->json([
             'message' => "Radicado {$p->code} creado.",
-            'id'      => $p->id,
-            'code'    => $p->code,
+            'id' => $p->id,
+            'code' => $p->code,
         ], 201);
     }
 
-    public function updatePqrs(Request $request, $id)
+    public function updatePqrs(ActualizarPqrsRequest $request, $id)
     {
         $p = Pqrs::findOr($id, fn () => abort(404, 'El PQRS no existe.'));
 
-        $datos = $request->validate([
-            'priority'    => 'sometimes|in:baja,media,alta',
-            'state'       => 'sometimes|integer|in:0,1,2,3',
-            'assigned_to' => 'sometimes|nullable|integer|exists:user,user_id',
-            'resolution'  => 'sometimes|nullable|string',
-        ]);
+        $datos = $request->validated();
 
         $nuevoEstado = (int) ($datos['state'] ?? $p->state);
-        $resolucion  = $datos['resolution'] ?? $p->resolution;
+        $resolucion = $datos['resolution'] ?? $p->resolution;
 
         // Resolver sin decir cómo deja al cliente sin respuesta y al caso sin
         // historia: es lo que se necesita cuando vuelve a reclamar.
@@ -135,19 +115,16 @@ class PqrsApiController extends Controller
         return response()->json(['message' => 'PQRS actualizado.']);
     }
 
-    public function addPqrsNote(Request $request, $id)
+    public function addPqrsNote(AnotarEnPqrsRequest $request, $id)
     {
         Pqrs::findOr($id, fn () => abort(404, 'El PQRS no existe.'));
 
-        $datos = $request->validate([
-            'note'        => 'required|string',
-            'is_internal' => 'sometimes|boolean',
-        ]);
+        $datos = $request->validated();
 
         PqrsNote::create([
-            'pqrs_id'     => $id,
-            'user_id'     => $request->user()?->user_id,
-            'note'        => $datos['note'],
+            'pqrs_id' => $id,
+            'user_id' => $request->user()?->user_id,
+            'note' => $datos['note'],
             'is_internal' => $datos['is_internal'] ?? false,
         ]);
 

@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Console\Commands;
 
 use App\Events\DomiciliaryLocationUpdated;
 use App\Models\Order\OrderGeolocation;
-use Illuminate\Console\Command;
 use App\Models\User;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -51,7 +53,7 @@ class SimularTorre extends Command
     {
         // Lista PERMITIDA y no prohibida: en un staging con datos reales
         // escribiría posiciones falsas de domiciliarios reales.
-        if (!app()->environment(['local', 'testing'])) {
+        if (! app()->environment(['local', 'testing'])) {
             $this->error('No se simulan posiciones en producción.');
 
             return self::FAILURE;
@@ -85,8 +87,8 @@ class SimularTorre extends Command
         $motos = [];
         foreach ($ids as $id) {
             $motos[$id] = [
-                'lat'   => self::CENTRO[0] + $this->azar(-0.025, 0.025),
-                'lng'   => self::CENTRO[1] + $this->azar(-0.025, 0.025),
+                'lat' => self::CENTRO[0] + $this->azar(-0.025, 0.025),
+                'lng' => self::CENTRO[1] + $this->azar(-0.025, 0.025),
                 'rumbo' => $this->azar(0, 2 * M_PI),
             ];
         }
@@ -94,7 +96,7 @@ class SimularTorre extends Command
         $vueltas = max(1, (int) $this->option('vueltas'));
         $cada = max(1, (int) $this->option('cada'));
 
-        $this->info(count($ids) . " motos dando vueltas por Barranquilla. Ctrl+C para parar.");
+        $this->info(count($ids).' motos dando vueltas por Barranquilla. Ctrl+C para parar.');
 
         for ($v = 1; $v <= $vueltas; $v++) {
             foreach ($motos as $id => &$m) {
@@ -111,16 +113,16 @@ class SimularTorre extends Command
 
                 $geo = OrderGeolocation::create([
                     'domiciliary_id' => $id,
-                    'orderSales_id'  => null,
-                    'latitude'       => round($m['lat'], 6),
-                    'longitude'      => round($m['lng'], 6),
-                    'state'          => self::SIMULADA,
+                    'orderSales_id' => null,
+                    'latitude' => round($m['lat'], 6),
+                    'longitude' => round($m['lng'], 6),
+                    'state' => self::SIMULADA,
                 ]);
 
                 try {
                     broadcast(new DomiciliaryLocationUpdated($geo, $negocio));
                 } catch (\Throwable $e) {
-                    $this->warn('Reverb no respondió: ' . $e->getMessage());
+                    $this->warn('Reverb no respondió: '.$e->getMessage());
                 }
             }
             unset($m);
@@ -141,31 +143,31 @@ class SimularTorre extends Command
     private function crearDePrueba(int $negocio, int $cuantos): void
     {
         for ($i = 0; $i < $cuantos; $i++) {
-            $correo = 'moto' . ($i + 1) . self::DOMINIO;
+            $correo = 'moto'.($i + 1).self::DOMINIO;
             if (DB::table('user')->where('email', $correo)->exists()) {
                 continue;
             }
 
             DB::transaction(function () use ($i, $correo, $negocio) {
                 $userId = DB::table('user')->insertGetId([
-                    'name'              => self::NOMBRES[$i],
-                    'email'             => $correo,
-                    'password'          => bcrypt(Str::random(32)),
-                    'phone'             => '30' . str_pad((string) (10000000 + $i * 7919), 8, '0', STR_PAD_LEFT),
-                    'rol'               => 3,
-                    'state'             => 1,
-                    'qualification'     => 0,
+                    'name' => self::NOMBRES[$i],
+                    'email' => $correo,
+                    'password' => bcrypt(Str::random(32)),
+                    'phone' => '30'.str_pad((string) (10000000 + $i * 7919), 8, '0', STR_PAD_LEFT),
+                    'rol' => 3,
+                    'state' => 1,
+                    'qualification' => 0,
                     'email_verified_at' => now(),
-                    'created_at'        => now(),
-                    'updated_at'        => now(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]);
 
                 $domiId = DB::table('domiciliary')->insertGetId([
-                    'user_id'       => $userId,
-                    'document'      => (string) (900000000 + $i),
-                    'available'     => $i % 3 === 2 ? 0 : 1,
+                    'user_id' => $userId,
+                    'document' => (string) (900000000 + $i),
+                    'available' => $i % 3 === 2 ? 0 : 1,
                     'qualification' => 0,
-                    'state'         => 1,
+                    'state' => 1,
                 ], 'domiciliary_id');
 
                 DB::table('business_domiciliary')->insert([
@@ -177,7 +179,7 @@ class SimularTorre extends Command
 
     private function borrarDePrueba(): int
     {
-        $users = DB::table('user')->where('email', 'like', '%' . self::DOMINIO)->pluck('user_id');
+        $users = DB::table('user')->where('email', 'like', '%'.self::DOMINIO)->pluck('user_id');
         $domis = DB::table('domiciliary')->whereIn('user_id', $users)->pluck('domiciliary_id');
 
         DB::transaction(function () use ($users, $domis) {

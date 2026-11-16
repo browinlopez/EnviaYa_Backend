@@ -20,12 +20,12 @@ return new class extends Migration
             $table->decimal('subtotal', 10, 2)->default(0);
             $table->decimal('total', 10, 2)->default(0);       // Nuevo campo total
             $table->decimal('domicilio', 10, 2)->default(0);   // Nuevo campo domicilio
-             $table->decimal('valor_promocion', 10, 2)->default(0);
+            $table->decimal('valor_promocion', 10, 2)->default(0);
             $table->integer('payment_status');
             $table->timestamp('payment_date')->nullable();
             $table->tinyInteger('state')->nullable();
 
-              // timestamps de Laravel
+            // timestamps de Laravel
             $table->timestamps();
 
             $table->index('orderSales_id', 'fk_payments_orderSales');

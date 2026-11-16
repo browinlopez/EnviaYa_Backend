@@ -45,8 +45,8 @@ test('con la contraseña correcta el correo sí cambia', function () {
 });
 
 test('mandar el correo vacio no lo borra', function () {
-    $u = \App\Models\User::factory()->create(['email' => 'sigue@prueba.test']);
-    \Laravel\Sanctum\Sanctum::actingAs($u);
+    $u = User::factory()->create(['email' => 'sigue@prueba.test']);
+    Sanctum::actingAs($u);
 
     $this->putJson('/v1/users/update', ['name' => 'Nuevo nombre', 'email' => ''])->assertOk();
 

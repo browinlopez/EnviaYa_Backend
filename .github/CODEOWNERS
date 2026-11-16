@@ -1,0 +1,56 @@
+# Quién responde por cada zona de riesgo — §50
+#
+# LEE ESTO ANTES DE ACTIVAR «Require review from Code Owners» EN GITHUB,
+# porque hoy ese ajuste BLOQUEARÍA todos los merges.
+#
+# §50 pide «pull request obligatorio; al menos una revisión según riesgo» y un
+# CODEOWNERS para las áreas de alto riesgo. La segunda mitad está acá. La
+# primera no se puede cumplir hoy y conviene decirlo en vez de dejar un
+# ajuste a medias: en la historia de este repositorio hay 473 commits de una
+# persona y 18 de otra, y GitHub NO permite aprobar tu propio pull request.
+# Con un solo desarrollador activo, exigir la revisión de un propietario de
+# código es cerrar la puerta por dentro.
+#
+# Así que este archivo sirve de aviso y de registro —qué zonas son las
+# delicadas y quién responde por ellas— y se vuelve una compuerta de verdad
+# el día que haya una segunda persona con permiso de escritura. Ese día basta
+# con marcar la casilla; no hay que escribir nada más.
+#
+# QUÉ SÍ CONVIENE ACTIVAR YA, que es lo que protege sin bloquear:
+#
+#   · checks obligatorios: el flujo `pruebas` y `pruebas-mysql`;
+#   · prohibir el empuje forzado y el borrado de la rama;
+#   · incluir a los administradores, para que la regla valga también para
+#     quien la puso.
+#
+# El comando exacto está en `docs/laravel-12/ANTES-DE-EMPUJAR.md`.
+
+# Autenticación y sesiones: de acá sale quién es cada quien.
+/app/Http/Controllers/Auth/              @browinlopez
+/app/Http/Middleware/                    @browinlopez
+/app/Http/Requests/Auth/                 @browinlopez
+
+# Dinero: la pasarela, los cobros, el efectivo y las liquidaciones.
+/app/Http/Controllers/Payment/           @browinlopez
+/app/Services/BoldService.php            @browinlopez
+/app/Services/PagoEnLinea.php            @browinlopez
+/app/Services/ConfirmacionDePago.php     @browinlopez
+/app/Services/CustodiaDeEfectivo.php     @browinlopez
+/app/Services/LiquidacionService.php     @browinlopez
+
+# El esquema: una migración mal hecha no se revierte con un despliegue.
+/database/migrations/                    @browinlopez
+
+# El contrato de la API: lo consumen dos apps publicadas en las tiendas.
+/routes/api.php                          @browinlopez
+/app/Http/Resources/                     @browinlopez
+/tests/Feature/Contrato/                 @browinlopez
+/docs/laravel-12/openapi.json            @browinlopez
+
+# El propio pipeline, y las acciones externas que ejecuta.
+/.github/workflows/                      @browinlopez
+
+# La configuración que decide dónde acaban los datos.
+/config/filesystems.php                  @browinlopez
+/config/backup.php                       @browinlopez
+/app/Support/DestinoDelRespaldo.php      @browinlopez

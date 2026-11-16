@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Rol;
+use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
@@ -15,15 +17,14 @@ use Laravel\Sanctum\Sanctum;
  * Antes duraba media hora, y la misma tienda repartiendo dos veces en la
  * tarde al mismo edificio pagaba dos veces.
  */
-
 beforeEach(function () {
     config(['services.google.maps_server_key' => 'clave-de-prueba']);
     Cache::flush();
 
     // La ruta es de quien esta mirando un pedido, no es publica: sin sesion
     // responde 401, que es justo lo que debe hacer.
-    \App\Models\Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
-    Sanctum::actingAs(\App\Models\User::factory()->create(['rol' => 1]));
+    Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
+    Sanctum::actingAs(User::factory()->create(['rol' => 1]));
 });
 
 /**
@@ -104,7 +105,7 @@ test('un fallo de Google no se queda guardado', function () {
 
     pedirRuta('10.9878,-74.7889', '10.9950,-74.7800');
 
-    expect(Cache::has('ruta:v2:' . md5('10.98780,-74.78890|10.99500,-74.78000')))->toBeFalse();
+    expect(Cache::has('ruta:v2:'.md5('10.98780,-74.78890|10.99500,-74.78000')))->toBeFalse();
 });
 
 test('las coordenadas mal formadas se rechazan antes de gastar una llamada', function () {
@@ -211,7 +212,7 @@ test('la ruta de un pedido ajeno no se sirve', function () {
     $e = pedidoConCoordenadas();
     fakeRutaOk();
 
-    $curioso = \App\Models\User::factory()->create(['rol' => 1]);
+    $curioso = User::factory()->create(['rol' => 1]);
     Sanctum::actingAs($curioso);
 
     test()->getJson("/v1/rutas?order_id={$e['orderId']}")->assertStatus(404);

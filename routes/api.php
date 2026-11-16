@@ -1,106 +1,105 @@
 <?php
 
-use App\Http\Controllers\Soporte\AyudaDesdeLaAppController;
-use App\Http\Controllers\Payment\BancosPseController;
-use App\Http\Controllers\Order\RutaDelPedidoController;
-
-use App\Http\Controllers\Auth\AccesoBiometricoController;
-use App\Http\Controllers\Domiciliary\PedidosDelDomiciliarioController;
 use App\Http\Controllers\Admin\Api\AdminApiController;
+use App\Http\Controllers\Admin\Api\AjustesApiController;
+use App\Http\Controllers\Admin\Api\AnunciantesApiController;
+use App\Http\Controllers\Admin\Api\AreasApiController;
 use App\Http\Controllers\Admin\Api\AuditoriaApiController;
-use App\Http\Controllers\Admin\Api\FallosDeLaAppApiController;
+use App\Http\Controllers\Admin\Api\BannersApiController;
+use App\Http\Controllers\Admin\Api\CampanasApiController;
 use App\Http\Controllers\Admin\Api\CategoriasApiController;
 use App\Http\Controllers\Admin\Api\ChatsApiController;
 use App\Http\Controllers\Admin\Api\ConjuntosApiController;
+use App\Http\Controllers\Admin\Api\CuponesApiController;
+use App\Http\Controllers\Admin\Api\DestacadosApiController;
+use App\Http\Controllers\Admin\Api\DocumentosApiController;
 use App\Http\Controllers\Admin\Api\DomiciliariosApiController;
+use App\Http\Controllers\Admin\Api\FacturasApiController;
+use App\Http\Controllers\Admin\Api\FallosDeLaAppApiController;
+use App\Http\Controllers\Admin\Api\IncidentesApiController;
+use App\Http\Controllers\Admin\Api\MarketingApiController;
 use App\Http\Controllers\Admin\Api\MediosApiController;
 use App\Http\Controllers\Admin\Api\NegociosApiController;
+use App\Http\Controllers\Admin\Api\OperacionApiController;
 use App\Http\Controllers\Admin\Api\PagosApiController;
 use App\Http\Controllers\Admin\Api\PedidosApiController;
+use App\Http\Controllers\Admin\Api\PqrsApiController;
 use App\Http\Controllers\Admin\Api\ProductosApiController;
 use App\Http\Controllers\Admin\Api\PropietariosApiController;
 use App\Http\Controllers\Admin\Api\ReportesApiController;
-use App\Http\Controllers\Admin\Api\ResenasApiController;
-use App\Http\Controllers\Admin\Api\UsuariosApiController;
-use App\Http\Controllers\Admin\Api\FacturasApiController;
-use App\Http\Controllers\Admin\Api\AjustesApiController;
-use App\Http\Controllers\Admin\Api\AreasApiController;
-use App\Http\Controllers\Admin\Api\MarketingApiController;
-use App\Http\Controllers\Admin\Api\AnunciantesApiController;
-use App\Http\Controllers\Admin\Api\BannersApiController;
-use App\Http\Controllers\Admin\Api\CampanasApiController;
-use App\Http\Controllers\Admin\Api\CuponesApiController;
-use App\Http\Controllers\Admin\Api\DestacadosApiController;
-use App\Http\Controllers\Admin\Api\OperacionApiController;
-use App\Http\Controllers\Admin\Api\DocumentosApiController;
-use App\Http\Controllers\Admin\Api\IncidentesApiController;
-use App\Http\Controllers\Admin\Api\PqrsApiController;
-use App\Http\Controllers\Admin\Api\SolicitudesApiController;
 use App\Http\Controllers\Admin\Api\ReportesExcelController;
+use App\Http\Controllers\Admin\Api\ResenasApiController;
 use App\Http\Controllers\Admin\Api\SeguridadApiController;
+use App\Http\Controllers\Admin\Api\SolicitudesApiController;
+use App\Http\Controllers\Admin\Api\UsuariosApiController;
 use App\Http\Controllers\AppConfigController;
-use App\Http\Controllers\ErroresDeLaAppController;
+use App\Http\Controllers\Auth\AccesoBiometricoController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\ClaveController;
 use App\Http\Controllers\Auth\RegistroController;
 use App\Http\Controllers\Auth\VerificacionDeCorreoController;
-use App\Http\Controllers\Buyer\ResidentialComplexController;
 use App\Http\Controllers\Business\AffiliationController;
 use App\Http\Controllers\Business\BusinessController;
-use App\Http\Controllers\Business\ConsultaDeNegociosController;
 use App\Http\Controllers\Business\CategoryBusinessController;
+use App\Http\Controllers\Business\ConsultaDeNegociosController;
 use App\Http\Controllers\Business\FavoriteController;
+use App\Http\Controllers\Buyer\MiCreditoController;
+use App\Http\Controllers\Buyer\ResidentialComplexController;
 use App\Http\Controllers\Category\CategoryController;
 use App\Http\Controllers\Chat\ChatController;
 use App\Http\Controllers\CoberturaController;
+use App\Http\Controllers\Conjunto\CeladoresController;
+use App\Http\Controllers\Conjunto\MiConjuntoController;
+use App\Http\Controllers\Conjunto\PorteriaController;
+use App\Http\Controllers\Conjunto\ResidentesController;
+use App\Http\Controllers\Conjunto\ResumenDelConjuntoController;
+use App\Http\Controllers\Conjunto\VisitantesController;
 use App\Http\Controllers\DeviceTokenController;
 use App\Http\Controllers\Domiciliary\ContratoDelDomiciliarioController;
 use App\Http\Controllers\Domiciliary\DomiciliaryController;
 use App\Http\Controllers\Domiciliary\IngresosDelDomiciliarioController;
-use App\Http\Controllers\Domiciliary\VinculosDelDomiciliarioController;
-use App\Http\Controllers\Operacion\EfectivoController;
-use App\Http\Controllers\Conjunto\PorteriaController;
-use App\Http\Controllers\Conjunto\MiConjuntoController;
-use App\Http\Controllers\Conjunto\CeladoresController;
-use App\Http\Controllers\Conjunto\ResidentesController;
-use App\Http\Controllers\Conjunto\ResumenDelConjuntoController;
-use App\Http\Controllers\Conjunto\VisitantesController;
-use App\Http\Controllers\Negocio\HistorialDePedidosController;
+use App\Http\Controllers\Domiciliary\PedidosDelDomiciliarioController;
+use App\Http\Controllers\ErroresDeLaAppController;
+use App\Http\Controllers\LandingRequestController;
+use App\Http\Controllers\Marketing\AdsController;
+use App\Http\Controllers\Negocio\AltaDeDomiciliarioController;
 use App\Http\Controllers\Negocio\CancelacionDelPedidoController;
 use App\Http\Controllers\Negocio\CargaDeCatalogoController;
 use App\Http\Controllers\Negocio\CatalogoController;
 use App\Http\Controllers\Negocio\ClientesDelNegocioController;
 use App\Http\Controllers\Negocio\CreditosDelNegocioController;
-use App\Http\Controllers\Negocio\FichaDelDomiciliarioController;
 use App\Http\Controllers\Negocio\DocumentosDelDomiciliarioController;
-use App\Http\Controllers\Negocio\AltaDeDomiciliarioController;
-use App\Http\Controllers\Buyer\MiCreditoController;
+use App\Http\Controllers\Negocio\EfectivoDeLaTiendaController;
+use App\Http\Controllers\Negocio\FichaDelDomiciliarioController;
+use App\Http\Controllers\Negocio\HistorialDePedidosController;
+use App\Http\Controllers\Negocio\MasVendidosController;
 use App\Http\Controllers\Negocio\MiNegocioController;
+use App\Http\Controllers\Negocio\PesajeDelPedidoController;
 use App\Http\Controllers\Negocio\ProductosDelNegocioController;
 use App\Http\Controllers\Negocio\PromocionesController;
 use App\Http\Controllers\Negocio\RendimientoDeDomiciliariosController;
 use App\Http\Controllers\Negocio\TorreDeControlController;
-use App\Http\Controllers\Negocio\PesajeDelPedidoController;
-use App\Http\Controllers\Order\CotizacionController;
-use App\Http\Controllers\LandingRequestController;
-use App\Http\Controllers\Marketing\AdsController;
-use App\Http\Controllers\Order\OrderController;
+use App\Http\Controllers\Operacion\EfectivoController;
 use App\Http\Controllers\Order\ComprobanteDelPedidoController;
 use App\Http\Controllers\Order\ConsultaDePedidosController;
+use App\Http\Controllers\Order\CotizacionController;
 use App\Http\Controllers\Order\GeolocalizacionDePedidoController;
 use App\Http\Controllers\Order\MediosDePagoController;
-use App\Http\Controllers\Payment\PaymentController;
+use App\Http\Controllers\Order\OrderController;
+use App\Http\Controllers\Order\RutaDelPedidoController;
+use App\Http\Controllers\Payment\BancosPseController;
 use App\Http\Controllers\Payment\BoldWebhookController;
-use App\Http\Controllers\Product\ProductController;
+use App\Http\Controllers\Payment\PaymentController;
 use App\Http\Controllers\Product\DestacadosDeProductoController;
 use App\Http\Controllers\Product\EsquemaDeProductoController;
-use App\Http\Controllers\Review\ReviewController;
+use App\Http\Controllers\Product\ProductController;
 use App\Http\Controllers\Review\ResenasDeDomiciliarioController;
 use App\Http\Controllers\Review\ResenasDeNegocioController;
-use App\Http\Controllers\Review\ResenasDeUsuarioController;
-use App\Http\Controllers\User\UserController;
+use App\Http\Controllers\Review\ReviewController;
+use App\Http\Controllers\Soporte\AyudaDesdeLaAppController;
 use App\Http\Controllers\User\DireccionesController;
 use App\Http\Controllers\User\NotificacionesController;
+use App\Http\Controllers\User\UserController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -134,13 +133,30 @@ Route::middleware('throttle:5,10')->group(function () {
  * usuarios comparten IP por el CGNAT del operador, así que el vecino gasta
  * los intentos de uno.
  *
- * Reenviar no es peligroso: manda SIEMPRE al correo de la cuenta y nunca
- * revela si existe. Lo único que se evita es usarlo para inundar un buzón
- * ajeno, y para eso 10 por minuto sobra.
+ * Reenviar manda SIEMPRE al correo de la cuenta, así que no sirve para
+ * llevarse el enlace de nadie. Lo que el límite evita es usarlo para
+ * inundar un buzón ajeno, y para eso 10 por minuto sobra.
+ *
+ * AQUÍ DECÍA «nunca revela si existe», Y SÍ LO REVELA: un correo que no
+ * existe recibe «Si el correo existe, se enviará un enlace» y uno
+ * registrado y ya verificado recibe «El correo ya está verificado». Se
+ * distinguen. Está dicho en el controlador y queda como decisión en
+ * `docs/laravel-12/ANTES-DE-EMPUJAR.md`, porque unificar los mensajes
+ * tiene un precio: quien ya está verificado leería «se enviará un
+ * enlace» y no recibiría nada.
  */
 Route::middleware('throttle:10,1')->group(function () {
     Route::post('/resend-verification-email', [VerificacionDeCorreoController::class, 'resendVerificationEmail']);
-    Route::post('/email/resend-verification', [VerificacionDeCorreoController::class, 'resendVerificationEmail']);
+    /*
+     * AQUI HABIA UNA SEGUNDA GRAFIA de la misma ruta,
+     * `/email/resend-verification`, al mismo metodo de este mismo
+     * controlador. Retirada el 16 de noviembre de 2026: ningun cliente
+     * la llamaba --solo tres pruebas, repuntadas-- y el metodo sigue
+     * alcanzable por la linea de arriba, que es la que llama la app.
+     *
+     * Esta en `scripts/rutas-candidatas.json` y
+     * `LasRetiradasNoVuelvenTest` comprueba que no vuelva.
+     */
 });
 
 // --- Catálogo público: lo que la app muestra antes de loguearse ---
@@ -282,7 +298,7 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
        viaje dentro de la app, donde cualquiera la saca. */
     Route::middleware('throttle:60,1')->get('/rutas', RutaDelPedidoController::class);
 
-    //Auth
+    // Auth
     Route::get('/profile', [AuthController::class, 'profile']);
     Route::post('/logout', [AuthController::class, 'logout']);
 
@@ -376,10 +392,28 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::put('/notifications/read', [NotificacionesController::class, 'markNotificationAsRead']);
         Route::put('/notifications/read-all', [NotificacionesController::class, 'markAllNotificationsAsRead']);
 
-        // Listar usuarios
-        Route::get('/', [UserController::class, 'index']);
+        /*
+         * AQUI ESTABA `GET /v1/users`, y lo que devolvia era el listado del
+         * personal --`where('rol', 4)`-- con nombre, CORREO, telefono y
+         * direccion de cada uno, dentro de un grupo cuyo unico guardia es
+         * `auth:sanctum`. Es decir: a cualquiera con sesion. Medido contra la
+         * respuesta real, un COMPRADOR recibia 200 y dieciseis filas.
+         *
+         * Y no la llamaba nadie. Dos buscadores independientes, cada uno con
+         * su grupo de control: `scripts/rutas_sin_llamada_http.py` no la ve
+         * como camino en ninguno de los cuatro clientes, y
+         * `scripts/rutas_sin_llamante.py` no la encuentra en ninguna version
+         * publicada --1.0.0 a 1.0.12-- ni en los 202 commits de la historia
+         * de la app. Lo que los clientes llaman es `/admin/users`, que esta
+         * detras de `modulo:usuarios`, mas `/users/notifications`,
+         * `/users/password` y `/users/update`.
+         *
+         * Figuro viva un tiempo por un falso positivo: el detector buscaba
+         * `users` como subcadena y eso sale en `/admin/users` y en la clave
+         * de cache `useQuery(["users"])`. Un falso positivo en un detector de
+         * codigo muerto no da error: deja la ruta viva.
+         */
         // Detalle usuario
-        Route::post('/show', [UserController::class, 'show']);
         // Actualizar el perfil propio (solo datos de contacto)
         Route::put('/update', [UserController::class, 'update']);
         // Cambiar la contraseña propia (exige la actual)
@@ -394,18 +428,14 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         // controlador: el identificador solo no basta para autorizar.
         Route::delete('/addresses/{id}', [DireccionesController::class, 'deleteAddress']);
         // Perfil buyer
-        Route::post('/buyer', [UserController::class, 'getBuyerProfile']);
     });
 
-    //Productos tendero
+    // Productos tendero
     Route::prefix('product')->group(function () {
         // Formulario dinámico: campos y categorías según el tipo del negocio
         Route::get('schema', [EsquemaDeProductoController::class, 'schema']);
         Route::post('index', [ProductController::class, 'index']);
         Route::post('create', [ProductController::class, 'store']);
-        Route::post('show', [ProductController::class, 'show']);
-        Route::put('update', [ProductController::class, 'update']);
-        Route::post('top-products', [DestacadosDeProductoController::class, 'topRated']);
         Route::post('topProductsBusiness', [DestacadosDeProductoController::class, 'mostPopularProducts']);
     });
 
@@ -421,8 +451,6 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
      * formulario de un producto, y no dicen nada de nadie.
      */
     Route::prefix('categories')->group(function () {
-        Route::get('/show', [CategoryController::class, 'show']);
-
         Route::middleware('admin')->group(function () {
             Route::post('/create', [CategoryController::class, 'store']);
             Route::put('/update', [CategoryController::class, 'update']);
@@ -430,18 +458,20 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         });
     });
 
+    /*
+     * De `categories-business` solo queda la lectura.
+     *
+     * Las cuatro escrituras —crear, renombrar, borrar y ver una— se
+     * retiraron el 11 de noviembre de 2026: ningun cliente las llamaba, ni
+     * en su codigo de hoy ni en los 202 commits de la historia de la app.
+     * El grupo `admin` que las envolvia se fue con ellas, porque un grupo de
+     * middleware sin rutas dentro no protege nada.
+     */
     Route::prefix('categories-business')->group(function () {
         Route::get('index', [CategoryBusinessController::class, 'index']);
-        Route::post('show', [CategoryBusinessController::class, 'show']);
-
-        Route::middleware('admin')->group(function () {
-            Route::post('store', [CategoryBusinessController::class, 'store']);
-            Route::post('update', [CategoryBusinessController::class, 'update']);
-            Route::post('destroy', [CategoryBusinessController::class, 'destroy']);
-        });
     });
 
-    //Ordenes
+    // Ordenes
     Route::prefix('orders')->group(function () {
         Route::post('user', [ConsultaDePedidosController::class, 'ordersUser']); // Usuario comprador
         Route::post('business', [ConsultaDePedidosController::class, 'ordersBusiness']); // Tendero / negocio
@@ -463,7 +493,6 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::put('{id}/cancel', [OrderController::class, 'cancel']);
         Route::post('geolocation', [GeolocalizacionDePedidoController::class, 'storeGeolocation']);
         Route::get('geolocation/latest', [ConsultaDePedidosController::class, 'latest']);
-        Route::get('/pending-review', [ConsultaDePedidosController::class, 'ordersPendingReview']);
 
         /*
          * EL COMPROBANTE DE MI PEDIDO.
@@ -477,18 +506,16 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
     });
 
     Route::get('paymentMethods', [MediosDePagoController::class, 'paymentMethods']); // Listar metodos de pago
-    Route::get('paymentForms', [MediosDePagoController::class, 'paymentForms']); // Listar formas de pago
 
-    //Chat
+    // Chat
     Route::prefix('chats')->group(function () {
-        Route::post('/create', [ChatController::class, 'createChat']);     // crear chat
         Route::post('/user-chats', [ChatController::class, 'getUserChats']); // listar chats de un user
         Route::post('/messages', [ChatController::class, 'getMessages']);   // listar mensajes
         Route::post('/updateMessage', [ChatController::class, 'updateMessage']); // Actualizar mensaje estado
         Route::post('/send-message', [ChatController::class, 'sendMessage']); // enviar mensaje
     });
 
-    //Negocios
+    // Negocios
     Route::prefix('businesses')->group(function () {
         Route::get('index', [ConsultaDeNegociosController::class, 'index']);
         Route::get('top-businesses', [ConsultaDeNegociosController::class, 'indexByQualification']);
@@ -502,7 +529,6 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
             Route::post('/getAffiliatedUsers', [AffiliationController::class, 'getAffiliatedUsers']);
             Route::post('/DesafiliationUser', [AffiliationController::class, 'DesafiliationUser']);
             Route::post('toggleBusinesses', [AffiliationController::class, 'toggle']);
-            Route::get('usersBusinesses', [AffiliationController::class, 'listUsers']);
             /*
              * Buscar a una persona por su telefono es cosa de quien puede
              * afiliarla: el tendero. Estaba abierto a cualquier cuenta
@@ -623,9 +649,9 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
 
         /* El efectivo que los domiciliarios le entregan a la tienda en el
            mostrador. Ver EfectivoDeLaTiendaController. */
-        Route::get('mas-vendidos', [\App\Http\Controllers\Negocio\MasVendidosController::class, 'index']);
-        Route::get('efectivo', [\App\Http\Controllers\Negocio\EfectivoDeLaTiendaController::class, 'index']);
-        Route::post('efectivo/{id}/entregas', [\App\Http\Controllers\Negocio\EfectivoDeLaTiendaController::class, 'recibir'])
+        Route::get('mas-vendidos', [MasVendidosController::class, 'index']);
+        Route::get('efectivo', [EfectivoDeLaTiendaController::class, 'index']);
+        Route::post('efectivo/{id}/entregas', [EfectivoDeLaTiendaController::class, 'recibir'])
             ->whereNumber('id');
 
         // Pedidos. `updateStatus` ya comprobaba pertenencia por su cuenta
@@ -786,9 +812,8 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::delete('promociones/{id}', [PromocionesController::class, 'destroy']);
     });
 
-    //Domiciliario
+    // Domiciliario
     Route::prefix('domiciliaries')->group(function () {
-        Route::get('/listDomiciliary', [DomiciliaryController::class, 'listDomiciliary']);      // Listar todos
         Route::get('/listDomiciliariesByBusiness', [DomiciliaryController::class, 'listDomiciliariesByBusiness']);      // Listar todos
         // Dar de alta a un domiciliario ata una persona a la plataforma
         // —contrato, documentos, cuenta para cobrar—: lo hace el equipo.
@@ -796,9 +821,6 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
             ->middleware('admin');
         Route::post('/showDomiciliary', [DomiciliaryController::class, 'showDomiciliary']);      // Obtener uno
         Route::post('/updateDomiciliary', [DomiciliaryController::class, 'updateDomiciliary']);  // Actualizar
-        Route::post('/deleteDomiciliary', [DomiciliaryController::class, 'deleteDomiciliary']);  // Eliminar
-        Route::post('/assignToBusiness', [VinculosDelDomiciliarioController::class, 'assignToBusiness']);
-        Route::post('/listbussiness', [VinculosDelDomiciliarioController::class, 'listBusinessesByDomiciliary']);
         Route::post('/incomeDomiciliary', [IngresosDelDomiciliarioController::class, 'incomeDomiciliary']);
 
         /*
@@ -859,31 +881,19 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
      * que no puede actualizar hasta que la tienda apruebe la versión nueva.
      *
      * La lista completa, y cómo decidir con el registro de auditoría en la
-     * mano, está en `Documentacion/03-Operacion/SUPERFICIE-DE-API-SIN-USO.md`.
+     * mano, está en `Documentacion/SUPERFICIE-DE-API-SIN-USO.md`, al lado de este
+     * proyecto.
      */
     Route::prefix('reviews')->group(function () {
         Route::post('store', [ReviewController::class, 'store']);
 
         // Negocios
         // (business/by es público, está arriba en la zona de catálogo)
-        Route::get('business/all', [ResenasDeNegocioController::class, 'listBusinessReviews']);
-        Route::post('business/create', [ResenasDeNegocioController::class, 'createBusinessReview']);
-        Route::put('business/update', [ResenasDeNegocioController::class, 'updateBusinessReview']);
-        Route::delete('business/delete', [ResenasDeNegocioController::class, 'deleteBusinessReview']);
 
         // Domiciliarios
-        Route::get('domiciliaries/all', [ResenasDeDomiciliarioController::class, 'listDomiciliaryReviews']);
         Route::post('domiciliary/by', [ResenasDeDomiciliarioController::class, 'listReviewsByDomiciliary']);
-        Route::post('domiciliary/create', [ResenasDeDomiciliarioController::class, 'createDomiciliaryReview']);
-        Route::put('domiciliary/update', [ResenasDeDomiciliarioController::class, 'updateDomiciliaryReview']);
-        Route::delete('domiciliary/delete', [ResenasDeDomiciliarioController::class, 'deleteDomiciliaryReview']);
 
         // Usuarios
-        Route::get('users/all', [ResenasDeUsuarioController::class, 'listAllUserReviews']);
-        Route::get('user/by', [ResenasDeUsuarioController::class, 'listUserReviewsByUser']);
-        Route::post('user/create', [ResenasDeUsuarioController::class, 'createUserReview']);
-        Route::put('user/update', [ResenasDeUsuarioController::class, 'updateUserReview']);
-        Route::delete('user/delete', [ResenasDeUsuarioController::class, 'deleteUserReview']);
     });
 
     /*

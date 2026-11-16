@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
@@ -46,7 +48,7 @@ class PodarUbicaciones extends Command
 
     public function handle(): int
     {
-        $dias  = max(1, (int) $this->option('dias'));
+        $dias = max(1, (int) $this->option('dias'));
         $tanda = max(100, (int) $this->option('tanda'));
         $corte = now()->subDays($dias);
 
@@ -66,7 +68,7 @@ class PodarUbicaciones extends Command
          * escribe: una prueba a mano no puede dejar dicho que el borrado se
          * cumplio ese dia.
          */
-        if (!$this->option('seco')) {
+        if (! $this->option('seco')) {
             DB::table('platform_settings')->updateOrInsert(
                 ['key' => 'operacion.ultima_poda_ubicaciones'],
                 ['value' => now()->toDateTimeString(), 'updated_at' => now(), 'created_at' => now()],
@@ -74,9 +76,9 @@ class PodarUbicaciones extends Command
         }
 
         $this->newLine();
-        $this->line('  <fg=gray>Se conservan los últimos</>  ' . $dias . ' días (desde ' . $corte->format('Y-m-d') . ')');
-        $this->line('  <fg=gray>Posiciones en total</>       ' . number_format(DB::table('order_geolocation')->count(), 0, ',', '.'));
-        $this->line('  <fg=gray>Anteriores al corte</>       ' . number_format($total, 0, ',', '.'));
+        $this->line('  <fg=gray>Se conservan los últimos</>  '.$dias.' días (desde '.$corte->format('Y-m-d').')');
+        $this->line('  <fg=gray>Posiciones en total</>       '.number_format(DB::table('order_geolocation')->count(), 0, ',', '.'));
+        $this->line('  <fg=gray>Anteriores al corte</>       '.number_format($total, 0, ',', '.'));
         $this->newLine();
 
         if ($total === 0) {
@@ -102,7 +104,7 @@ class PodarUbicaciones extends Command
             $borradas += $n;
         } while ($n > 0);
 
-        $this->info('  Retiradas ' . number_format($borradas, 0, ',', '.') . ' posiciones.');
+        $this->info('  Retiradas '.number_format($borradas, 0, ',', '.').' posiciones.');
 
         return self::SUCCESS;
     }

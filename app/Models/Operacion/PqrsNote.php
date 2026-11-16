@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models\Operacion;
 
 use App\Models\User;
@@ -22,11 +24,12 @@ class PqrsNote extends Model
     protected $fillable = ['pqrs_id', 'user_id', 'note', 'is_internal'];
 
     protected $casts = [
-        'pqrs_id'     => 'integer',
-        'user_id'     => 'integer',
+        'pqrs_id' => 'integer',
+        'user_id' => 'integer',
         'is_internal' => 'boolean',
     ];
 
+    /** @return BelongsTo<User, $this> */
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id', 'user_id');

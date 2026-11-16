@@ -1,8 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Console\Commands;
 
+use App\Models\Order\OrdersSales;
 use App\Services\LiquidacionService;
+use App\Support\FiltroDeFechas;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -50,7 +54,7 @@ class LiquidarElDia extends Command
             : ['business', 'domiciliary'];
 
         foreach ($tipos as $tipo) {
-            if (!in_array($tipo, ['business', 'domiciliary'], true)) {
+            if (! in_array($tipo, ['business', 'domiciliary'], true)) {
                 $this->error("Tipo no válido: {$tipo}");
 
                 return self::FAILURE;
@@ -60,14 +64,15 @@ class LiquidarElDia extends Command
         $this->info("Liquidando {$fecha}…");
 
         $generadas = 0;
-        $saltadas  = 0;
+        $saltadas = 0;
 
         foreach ($tipos as $tipo) {
             $columna = $tipo === 'business' ? 'busines_id' : 'domiciliary_id';
 
-            $destinatarios = DB::table('orderssales')
-                ->whereDate('sale_date', $fecha)
-                ->where('state', 4)
+            $destinatarios = FiltroDeFechas::unDia(
+                DB::table('orderssales'), 'sale_date', $fecha
+            )
+                ->where('state', OrdersSales::ENTREGADO)
                 ->whereNotNull($columna)
                 ->distinct()
                 ->pluck($columna);

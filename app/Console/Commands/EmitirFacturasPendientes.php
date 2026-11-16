@@ -1,7 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Console\Commands;
 
+use App\Models\Order\OrdersSales;
 use App\Services\FacturaService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -33,7 +36,7 @@ class EmitirFacturasPendientes extends Command
     public function handle(FacturaService $facturas): int
     {
         $q = DB::table('orderssales as o')
-            ->where('o.state', 4)
+            ->where('o.state', OrdersSales::ENTREGADO)
             ->whereNotExists(fn ($sub) => $sub
                 ->from('invoices as i')
                 ->whereColumn('i.orderSales_id', 'o.orderSales_id'))
@@ -72,7 +75,7 @@ class EmitirFacturasPendientes extends Command
             } catch (\Throwable $e) {
                 // Un pedido que falla no detiene a los demás: es mejor emitir
                 // 84 de 85 y decir cuál falló, que no emitir ninguno.
-                $fallos[] = "#{$id}: " . $e->getMessage();
+                $fallos[] = "#{$id}: ".$e->getMessage();
             }
 
             $barra->advance();
@@ -83,7 +86,7 @@ class EmitirFacturasPendientes extends Command
         $this->info("Emitidas: {$emitidas}.");
 
         if ($fallos !== []) {
-            $this->warn('No se pudieron emitir ' . count($fallos) . ':');
+            $this->warn('No se pudieron emitir '.count($fallos).':');
             foreach (array_slice($fallos, 0, 10) as $f) {
                 $this->line("  · {$f}");
             }

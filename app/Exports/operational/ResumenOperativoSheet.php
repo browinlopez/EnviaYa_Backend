@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Exports\operational;
 
 use App\Models\Order\OrdersSales;
@@ -16,8 +18,7 @@ class ResumenOperativoSheet implements FromArray, WithTitle
             ->whereNotNull('delivery_date')
             ->get();
 
-        $tiempos = $orders->map(fn($o) =>
-            $o->delivery_date && $o->sale_date
+        $tiempos = $orders->map(fn ($o) => $o->delivery_date && $o->sale_date
                 ? now()->parse($o->delivery_date)->diffInMinutes($o->sale_date)
                 : null
         )->filter();

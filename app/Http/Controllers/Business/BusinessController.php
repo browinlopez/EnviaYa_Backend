@@ -1,12 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Business;
 
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Business\ActualizarNegocioRequest;
+use App\Http\Requests\Business\CrearNegocioRequest;
 use App\Models\Business;
-use App\Models\User;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class BusinessController extends Controller
@@ -14,20 +16,8 @@ class BusinessController extends Controller
     use ComprobarPertenencia;
 
     // Crear negocio con transacción
-    public function store(Request $request)
+    public function store(CrearNegocioRequest $request)
     {
-        $request->validate([
-            'name' => 'required|string',
-            'phone' => 'nullable|string',
-            'address' => 'nullable|string',
-            'latitude' => 'nullable|numeric',
-            'longitude' => 'nullable|numeric',
-            'municipality_id' => 'required|integer|exists:municipalities,id',
-            'NIT' => 'nullable|string',
-            'razonSocial_DCD' => 'nullable|string',
-            'logo' => 'nullable|string',
-            'type' => 'required|integer',
-        ]);
 
         DB::beginTransaction();
 
@@ -43,41 +33,28 @@ class BusinessController extends Controller
                 'razonSocial_DCD' => $request->razonSocial_DCD,
                 'logo' => $request->logo,
                 'type' => $request->type,
-                'state' => true
+                'state' => true,
             ]);
 
             DB::commit();
 
             return response()->json([
                 'message' => 'Negocio creado correctamente',
-                'business' => $business->load('municipality')
+                'business' => $business->load('municipality'),
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'message' => 'Error al crear el negocio',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
 
     // Actualizar negocio
-    public function update(Request $request)
+    public function update(ActualizarNegocioRequest $request)
     {
-        $request->validate([
-            'busines_id' => 'required|integer|exists:business,busines_id',
-            'name' => 'nullable|string',
-            'phone' => 'nullable|string',
-            'address' => 'nullable|string',
-            'municipality_id' => 'nullable|integer|exists:municipalities,id',
-            'NIT' => 'nullable|string',
-            'razonSocial_DCD' => 'nullable|string',
-            'logo' => 'nullable|string',
-            'type' => 'nullable|integer|in:1,2',
-            'state' => 'nullable|boolean',
-            'owner_ids' => 'nullable|array',
-            'owner_ids.*' => 'integer|exists:owner,owner_id'
-        ]);
 
         /*
          * Cambiar el nombre, el NIT o la razon social de OTRA tienda.
@@ -101,7 +78,7 @@ class BusinessController extends Controller
                 'razonSocial_DCD',
                 'logo',
                 'type',
-                'state'
+                'state',
             ]));
 
             if ($request->filled('owner_ids')) {
@@ -112,13 +89,14 @@ class BusinessController extends Controller
 
             return response()->json([
                 'message' => 'Negocio actualizado correctamente',
-                'business' => $business->load('owners', 'products', 'reviews', 'municipality')
+                'business' => $business->load('owners', 'products', 'reviews', 'municipality'),
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'message' => 'Error al actualizar el negocio',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

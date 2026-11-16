@@ -1,9 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Admin\Api;
 
-use App\Services\Push\Notificador;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\CampanaPushRequest;
+use App\Http\Requests\Admin\VistaPreviaDePushRequest;
 use App\Models\DeviceToken;
 use App\Models\Marketing\AdCampaign;
 use App\Models\Marketing\Advertiser;
@@ -11,21 +14,22 @@ use App\Models\Marketing\Banner;
 use App\Models\Marketing\Coupon;
 use App\Models\Marketing\FeaturedBusiness;
 use App\Models\Marketing\PushCampaign;
-use App\Services\MediaService;
+use App\Services\Push\Notificador;
+use App\Support\FiltroDeFechas;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class MarketingApiController extends Controller
 {
-
     /**
      * KPIs del módulo. `range` en días, como el resto del panel.
      */
     public function overview(Request $request)
     {
-        $dias  = max(1, min(365, (int) $request->query('range', 30)));
+        $dias = max(1, min(365, (int) $request->query('range', 30)));
         $desde = now()->subDays($dias)->toDateString();
-        $hoy   = now()->toDateString();
+        $hoy = now()->toDateString();
 
         $eventos = DB::table('banner_events')
             ->where('day', '>=', $desde)
@@ -34,7 +38,7 @@ class MarketingApiController extends Controller
             ->first();
 
         $impresiones = (int) ($eventos->impresiones ?? 0);
-        $clics       = (int) ($eventos->clics ?? 0);
+        $clics = (int) ($eventos->clics ?? 0);
 
         /*
          * Ingreso comprometido, no facturado: suma lo pactado en las campañas
@@ -45,25 +49,26 @@ class MarketingApiController extends Controller
         $comprometido = (float) AdCampaign::where('state', AdCampaign::ACTIVA)->sum('budget')
             + (float) FeaturedBusiness::vigente()->sum('paid_amount');
 
-        $canjes = DB::table('coupon_redemptions')
-            ->whereDate('created_at', '>=', $desde)
+        $canjes = FiltroDeFechas::desde(
+            DB::table('coupon_redemptions'), 'created_at', $desde
+        )
             ->selectRaw('COUNT(*) as total, COALESCE(SUM(discount), 0) as descontado')
             ->first();
 
         return response()->json([
             'range' => $dias,
             'totals' => [
-                'advertisers'       => Advertiser::where('state', 1)->count(),
-                'campaigns_active'  => AdCampaign::where('state', AdCampaign::ACTIVA)->count(),
-                'banners_live'      => Banner::entregable()->count(),
-                'impressions'       => $impresiones,
-                'clicks'            => $clics,
-                'ctr'               => $impresiones > 0 ? round($clics / $impresiones * 100, 2) : 0,
+                'advertisers' => Advertiser::where('state', 1)->count(),
+                'campaigns_active' => AdCampaign::where('state', AdCampaign::ACTIVA)->count(),
+                'banners_live' => Banner::entregable()->count(),
+                'impressions' => $impresiones,
+                'clicks' => $clics,
+                'ctr' => $impresiones > 0 ? round($clics / $impresiones * 100, 2) : 0,
                 'committed_revenue' => round($comprometido, 2),
-                'coupons_active'    => Coupon::vigente()->count(),
-                'redemptions'       => (int) ($canjes->total ?? 0),
-                'discount_given'    => round((float) ($canjes->descontado ?? 0), 2),
-                'featured_live'     => FeaturedBusiness::vigente()->count(),
+                'coupons_active' => Coupon::vigente()->count(),
+                'redemptions' => (int) ($canjes->total ?? 0),
+                'discount_given' => round((float) ($canjes->descontado ?? 0), 2),
+                'featured_live' => FeaturedBusiness::vigente()->count(),
             ],
             // Serie diaria para la gráfica. Se rellenan los días sin eventos:
             // una serie con huecos dibuja una línea que salta y miente sobre
@@ -86,18 +91,18 @@ class MarketingApiController extends Controller
             ])
             ->keyBy(fn ($f) => (string) $f->day);
 
-        $serie  = [];
-        $cursor = \Carbon\CarbonImmutable::parse($desde);
-        $fin    = \Carbon\CarbonImmutable::parse($hasta);
+        $serie = [];
+        $cursor = CarbonImmutable::parse($desde);
+        $fin = CarbonImmutable::parse($hasta);
 
         while ($cursor <= $fin) {
             $clave = $cursor->toDateString();
-            $fila  = $filas[$clave] ?? null;
+            $fila = $filas[$clave] ?? null;
 
             $serie[] = [
-                'day'         => $clave,
+                'day' => $clave,
                 'impressions' => (int) ($fila->impressions ?? 0),
-                'clicks'      => (int) ($fila->clicks ?? 0),
+                'clicks' => (int) ($fila->clicks ?? 0),
             ];
 
             $cursor = $cursor->addDay();
@@ -113,12 +118,12 @@ class MarketingApiController extends Controller
             ->limit($limite)
             ->get()
             ->map(fn (Banner $b) => [
-                'id'          => $b->id,
-                'title'       => $b->title,
-                'advertiser'  => $b->campaign?->advertiser?->name,
+                'id' => $b->id,
+                'title' => $b->title,
+                'advertiser' => $b->campaign?->advertiser?->name,
                 'impressions' => $b->impressions_count,
-                'clicks'      => $b->clicks_count,
-                'ctr'         => $b->impressions_count > 0
+                'clicks' => $b->clicks_count,
+                'ctr' => $b->impressions_count > 0
                     ? round($b->clicks_count / $b->impressions_count * 100, 2)
                     : 0,
             ])
@@ -128,7 +133,6 @@ class MarketingApiController extends Controller
     /* ==================================================================
        ANUNCIANTES
        ================================================================== */
-
 
     public function pushCampaigns(Notificador $notificador)
     {
@@ -143,7 +147,7 @@ class MarketingApiController extends Controller
              * entrega nada: decirlo al final, cuando ya se envió, es tarde.
              */
             'transport' => [
-                'name'  => $transporte->nombre(),
+                'name' => $transporte->nombre(),
                 'ready' => $transporte->configurado(),
             ],
             // Cuántos teléfonos hay registrados en total. Es el techo de
@@ -159,15 +163,11 @@ class MarketingApiController extends Controller
      * destinatarios" antes de pulsar es la única oportunidad de notar que el
      * filtro estaba mal puesto.
      */
-    public function pushPreview(Request $request)
+    public function pushPreview(VistaPreviaDePushRequest $request)
     {
-        $segmento = $request->validate([
-            'segment'                  => 'sometimes|nullable|array',
-            'segment.roles'            => 'sometimes|nullable|array',
-            'segment.municipalities'   => 'sometimes|nullable|array',
-            'segment.complexes'        => 'sometimes|nullable|array',
-            'segment.only_with_orders' => 'sometimes|boolean',
-        ])['segment'] ?? [];
+        /* `['segment'] ?? []` y no `validated()` a secas: la consulta de abajo
+           espera el CONTENIDO del segmento, no el sobre que lo envuelve. */
+        $segmento = $request->validated()['segment'] ?? [];
 
         $usuarios = $this->consultaSegmento($segmento)->pluck('u.user_id');
 
@@ -184,9 +184,9 @@ class MarketingApiController extends Controller
         ]);
     }
 
-    public function storePushCampaign(Request $request)
+    public function storePushCampaign(CampanaPushRequest $request)
     {
-        $datos = $this->validarPush($request);
+        $datos = $request->validated();
         $datos['created_by'] = $request->user()?->user_id;
 
         $p = PushCampaign::create($datos);
@@ -198,13 +198,19 @@ class MarketingApiController extends Controller
     {
         $p = PushCampaign::findOr($id, fn () => abort(404, 'La notificación no existe.'));
 
-        if (!$p->editable()) {
+        if (! $p->editable()) {
             return response()->json([
                 'message' => 'Esta notificación ya se envió y no se puede modificar.',
             ], 422);
         }
 
-        $p->update($this->validarPush($request, true));
+        /*
+         * EN LINEA Y NO EN UN FormRequest, a proposito: la busqueda de arriba
+         * contesta 404 cuando el registro no existe, y eso tiene que ir ANTES
+         * que un error de validacion. Las reglas no se repiten: se piden a
+         * `CampanaPushRequest` en modo parcial.
+         */
+        $p->update($request->validate(CampanaPushRequest::reglas(parcial: true)));
 
         return response()->json(['message' => 'Notificación actualizada.']);
     }
@@ -253,11 +259,11 @@ class MarketingApiController extends Controller
          * como no enviada, y volver a pulsar la mandaría dos veces.
          */
         $p->forceFill([
-            'state'            => PushCampaign::ENVIADA,
-            'sent_at'          => now(),
+            'state' => PushCampaign::ENVIADA,
+            'sent_at' => now(),
             'recipients_count' => $destinatarios,
-            'delivered_count'  => 0,
-            'failed_count'     => 0,
+            'delivered_count' => 0,
+            'failed_count' => 0,
         ])->save();
 
         $dispositivos = $notificador->encolar($p, $usuarios);
@@ -271,11 +277,11 @@ class MarketingApiController extends Controller
                 ? "Ninguno de los {$destinatarios} destinatarios tiene un dispositivo registrado."
                 : "En camino a {$dispositivos} dispositivo(s) de {$destinatarios} destinatario(s).",
             'recipients' => $destinatarios,
-            'devices'    => $dispositivos,
+            'devices' => $dispositivos,
             // Se dice explícitamente para que el panel no afirme algo falso.
-            'delivered'  => $transporte->configurado(),
-            'transport'  => $transporte->nombre(),
-            'note'       => $transporte->configurado()
+            'delivered' => $transporte->configurado(),
+            'transport' => $transporte->nombre(),
+            'note' => $transporte->configurado()
                 ? null
                 : 'No hay transporte de push configurado en el servidor: no se entregará nada. Falta FCM_CREDENTIALS.',
         ]);
@@ -305,7 +311,7 @@ class MarketingApiController extends Controller
     {
         $q = DB::table('user as u')->where('u.state', 1);
 
-        if (!empty($s['roles'])) {
+        if (! empty($s['roles'])) {
             $q->whereIn('u.rol', array_map('intval', $s['roles']));
         }
 
@@ -316,7 +322,7 @@ class MarketingApiController extends Controller
          * como join: un join devolvería la misma persona una vez por dirección
          * y el conteo de destinatarios saldría inflado.
          */
-        if (!empty($s['municipalities'])) {
+        if (! empty($s['municipalities'])) {
             $q->whereExists(function ($sub) use ($s) {
                 $sub->from('user_address as ua')
                     ->whereColumn('ua.user_id', 'u.user_id')
@@ -326,7 +332,7 @@ class MarketingApiController extends Controller
         }
 
         // El vínculo con el conjunto cuelga de `buyer`, no de `user`.
-        if (!empty($s['complexes'])) {
+        if (! empty($s['complexes'])) {
             $q->whereIn('u.user_id', function ($sub) use ($s) {
                 $sub->from('buyer_complex as bc')
                     ->join('buyer as bu', 'bu.buyer_id', '=', 'bc.buyer_id')
@@ -337,7 +343,7 @@ class MarketingApiController extends Controller
         }
 
         // `orderssales` referencia al comprador (`buyer_id`), no al usuario.
-        if (!empty($s['only_with_orders'])) {
+        if (! empty($s['only_with_orders'])) {
             $q->whereExists(function ($sub) {
                 $sub->from('orderssales as o')
                     ->join('buyer as bo', 'bo.buyer_id', '=', 'o.buyer_id')
@@ -355,20 +361,5 @@ class MarketingApiController extends Controller
          */
 
         return $q;
-    }
-
-    private function validarPush(Request $request, bool $parcial = false): array
-    {
-        $regla = $parcial ? 'sometimes' : 'required';
-
-        return $request->validate([
-            'title'        => "{$regla}|string|max:120",
-            'body'         => "{$regla}|string|max:500",
-            'link_type'    => 'sometimes|in:none,url,business,product,category',
-            'link_value'   => 'sometimes|nullable|string|max:500',
-            'segment'      => 'sometimes|nullable|array',
-            'scheduled_at' => 'sometimes|nullable|date',
-            'state'        => 'sometimes|integer|in:0,1,3',
-        ]);
     }
 }

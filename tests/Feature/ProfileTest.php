@@ -4,6 +4,19 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 test('profile page is displayed', function () {
+    /*
+     * SIN VITE: estas pruebas piden una vista de Breeze, y sus layouts
+     * usan `@vite(...)`, que lanza si falta `public/build/manifest.json`.
+     * Ese fichero esta en `.gitignore` y el CI no construye assets, asi
+     * que en el runner la pagina daba 500 mientras aqui daba 200 —por una
+     * carpeta de septiembre de 2025 que nadie versiona—.
+     *
+     * Lo que esto comprueba es que la pagina RESPONDA: que la ruta exista,
+     * que el middleware deje pasar y que la vista compile. No que haya
+     * hojas de estilo.
+     */
+    $this->withoutVite();
+
     $user = User::factory()->create();
 
     $response = $this
@@ -86,7 +99,7 @@ test('correct password must be provided to delete account', function () {
 });
 
 /* ===================================================================== */
-/*  BORRAR LA CUENTA NO DEJA FICHAS SUELTAS                              */
+/*  BORRAR LA CUENTA NO DEJA FICHAS SUELTAS */
 /* ===================================================================== */
 
 test('borrar la cuenta se lleva su ficha de comprador si no tiene historial', function () {

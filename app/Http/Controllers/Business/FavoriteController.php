@@ -1,30 +1,34 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Business;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Business\AlternarFavoritoRequest;
+use App\Http\Requests\Business\MisFavoritosRequest;
+use App\Http\Resources\Negocio\NegocioFavoritoResource;
+use App\Http\Resources\Negocio\PropietarioResource;
+use App\Http\Resources\Negocio\ResenaDelNegocioResource;
+use App\Http\Resources\Producto\ProductoFavoritoResource;
 use App\Models\Business\BusinessUserFavorite;
-use App\Services\NegocioParaLaApp;
 use App\Services\TarifaPorDistancia;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class FavoriteController extends Controller
 {
+    /*
+     * Sin el presentador: la forma de cada pieza vive en su Resource. Ver
+     * `PropietarioResource`, `ProductoFavoritoResource` y
+     * `ResenaDelNegocioResource`.
+     */
     public function __construct(
-        private readonly NegocioParaLaApp $presentador,
         private readonly TarifaPorDistancia $distancias,
-    ) {
-    }
+    ) {}
 
-    public function toggleFavorite(Request $request)
+    public function toggleFavorite(AlternarFavoritoRequest $request)
     {
-        $request->validate([
-            'user_id'    => 'required|integer|exists:user,user_id',
-            'busines_id' => 'required|integer|exists:business,busines_id',
-        ]);
 
-        $userId     = $request->user_id;
+        $userId = $request->user_id;
         $businessId = $request->busines_id;
 
         $favorite = BusinessUserFavorite::where('user_id', $userId)
@@ -34,24 +38,22 @@ class FavoriteController extends Controller
         if ($favorite) {
             // ya existe, eliminarlo
             $favorite->delete();
+
             return response()->json(['message' => 'Eliminado de favoritos']);
         } else {
             // no existe, crearlo
             BusinessUserFavorite::create([
-                'user_id'    => $userId,
+                'user_id' => $userId,
                 'busines_id' => $businessId,
             ]);
+
             return response()->json(['message' => 'Agregado a favoritos']);
         }
     }
 
-
     // Listar favoritos del usuario
-    public function myFavorites(Request $request)
+    public function myFavorites(MisFavoritosRequest $request)
     {
-        $request->validate([
-            'user_id' => 'required|integer|exists:user,user_id',
-        ]);
 
         $userId = $request->user_id;
 
@@ -116,68 +118,32 @@ class FavoriteController extends Controller
                 $lon,
             );
 
-            return [
-                'favorite_id'   => $favorite->id,
-                'business_id'   => $business->busines_id,
-                'latitude'      => $business->latitude !== null ? (float) $business->latitude : null,
-                'longitude'     => $business->longitude !== null ? (float) $business->longitude : null,
-                'distance_km'   => $km === null ? null : round($km, 2),
-                'delivery_fee'  => $this->distancias->paraDistancia($km),
-                'in_range'      => $this->distancias->reparteHasta($km),
-                'name'          => $business->name,
-                // La tarjeta la pinta debajo del nombre; sin ella decía «Sin
-                // descripción» de una tienda que sí la tiene.
-                'description'   => $business->description,
-                'phone'         => $business->phone,
-                'address'       => $business->address,
-                'qualification' => (float) $business->qualification,
-                'razon_social'  => $business->razonSocial_DCD,
-                'NIT'           => $business->NIT,
-                'logo'          => $business->logo ?? 'https://example.com/default-logo.png',
-                'state'         => (bool) $business->state,
-                'type'          => $business->type,
-                'municipality'  => $business->municipality ? [
-                    'id'   => $business->municipality->id,
-                    'name' => $business->municipality->name,
-                ] : null,
-                'owner_count'   => $business->owners->count(),
+            return (new NegocioFavoritoResource(
+                $business,
+                favoritoId: (int) $favorite->id,
+                reparto: [
+                    'distance_km' => $km === null ? null : round($km, 2),
+                    'delivery_fee' => $this->distancias->paraDistancia($km),
+                    'in_range' => $this->distancias->reparteHasta($km),
+                ],
                 /*
-                 * DEL PROPIETARIO SOLO SALE LO QUE HACE FALTA PARA COMPRAR.
-                 *
-                 * Acá salían su número de documento, su fecha de nacimiento,
-                 * su teléfono secundario y las notas internas que le haya
-                 * puesto el equipo. La misma fuga se cerró en los dos listados
-                 * del catálogo y ESTE se quedó sin tocar: bastaba con marcar
-                 * la tienda como favorita para volver a leerlo todo. Ahora usa
-                 * el mismo presentador que los otros, para que no pueda volver
-                 * a divergir.
+                 * OJO CON EL PRECIO: `ProductoFavoritoResource` NO comprueba
+                 * la afiliacion, al contrario que los dos listados del
+                 * catalogo. Esta medido y escrito en la cabecera de esa clase
+                 * y en la de `NegocioFavoritoResource`; es un asunto de
+                 * producto sin decidir, no una errata.
                  */
-                'owners'        => $this->presentador->propietarios($business),
-                'products' => $ligero ? [] : $business->products->map(function ($product) {
-                    return [
-                        'product_id'  => $product->products_id,
-                        'name'        => $product->name,
-                        'description' => $product->description,
-                        'category_id' => $product->category_id,
-                        'image'       => $product->image,
-                        'state'       => (bool) $product->state,
-                        'price'       => $product->pivot->price ?? null,
-                    ];
-                }),
-                'reviews' => $ligero ? [] : $business->reviews->map(function ($review) {
-                    return [
-                        'review_id'  => $review->reviews_id ?? null,
-                        'buyer_id'   => $review->buyer_id,
-                        'rating'     => (float) $review->qualification ?? 0,
-                        'comment'    => $review->comment ?? '',
-                        'created_at' => $review->created_at ?? null,
-                    ];
-                }),
-            ];
+                productos: $ligero
+                    ? []
+                    : ProductoFavoritoResource::collection($business->products)->resolve(),
+                resenas: $ligero
+                    ? []
+                    : ResenaDelNegocioResource::collection($business->reviews)->resolve(),
+            ))->resolve();
         });
 
         return response()->json([
-            'favorites' => $formatted
+            'favorites' => $formatted,
         ]);
     }
 }

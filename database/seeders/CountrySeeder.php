@@ -2,10 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 
 class CountrySeeder extends Seeder
 {
@@ -20,7 +18,7 @@ class CountrySeeder extends Seeder
         }
 
         $countries = [
-            ['name' => 'Colombia', 'iso_code' => 'COL', ],
+            ['name' => 'Colombia', 'iso_code' => 'COL'],
             ['name' => 'Argentina', 'iso_code' => 'ARG'],
             ['name' => 'Brazil', 'iso_code' => 'BRA'],
             ['name' => 'Chile', 'iso_code' => 'CHL'],

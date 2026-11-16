@@ -1,13 +1,16 @@
 <?php
 
 use App\Models\Operacion\Settlement;
+use App\Models\Operacion\StoreCreditMovement;
 use App\Models\Order\OrdersSales;
 use App\Models\Rol;
 use App\Models\User;
 use App\Services\CobroContraEntrega;
 use App\Services\CreditoDeTienda;
 use App\Services\LiquidacionService;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 
 /**
@@ -74,10 +77,10 @@ function credPedir(array $e, int $unidades, int $metodo = CreditoDeTienda::METOD
     Sanctum::actingAs($e['comprador']);
 
     return test()->postJson('/v1/orders/orders', [
-        'user_id'    => $e['comprador']->user_id,
+        'user_id' => $e['comprador']->user_id,
         'busines_id' => $e['negocio'],
         'address_id' => $e['direccion'],
-        'products'   => [['product_id' => $e['producto'], 'amount' => $unidades]],
+        'products' => [['product_id' => $e['producto'], 'amount' => $unidades]],
         'methods_id' => $metodo,
     ]);
 }
@@ -94,7 +97,7 @@ function credEntregado(array $e, int $metodo, float $subtotal, float $domicilio,
         'buyer_id' => $e['buyerId'], 'busines_id' => $e['negocio'], 'methods_id' => $metodo,
         'subtotal' => $subtotal, 'domicilio' => $domicilio, 'total' => $subtotal + $domicilio,
         'discount' => 0, 'platform_fee' => round($subtotal * 0.03, 2),
-        'sale_date' => $fecha . ' 10:00:00', 'state' => 4, 'payment_state' => 'paid',
+        'sale_date' => $fecha.' 10:00:00', 'state' => 4, 'payment_state' => 'paid',
     ], 'orderSales_id');
 }
 
@@ -220,12 +223,12 @@ it('el abono del cliente libera el cupo, pero no más de lo que debe', function 
 
 it('el abono puede llevar su comprobante y el libro lo enseña', function () {
     config([
-        'filesystems.disks.r2.key'      => 'prueba',
-        'filesystems.disks.r2.secret'   => 'prueba',
+        'filesystems.disks.r2.key' => 'prueba',
+        'filesystems.disks.r2.secret' => 'prueba',
         'filesystems.disks.r2.endpoint' => 'https://r2.prueba',
-        'filesystems.disks.r2.url'      => 'https://archivos.prueba',
+        'filesystems.disks.r2.url' => 'https://archivos.prueba',
     ]);
-    \Illuminate\Support\Facades\Storage::fake('r2');
+    Storage::fake('r2');
 
     $e = credEscenario();
     app(CreditoDeTienda::class)->asignar($e['negocio'], (int) $e['comprador']->user_id, 50000);
@@ -236,15 +239,15 @@ it('el abono puede llevar su comprobante y el libro lo enseña', function () {
 
     // Un archivo que no es foto ni PDF se rechaza y NO se registra el abono.
     $this->post("/v1/negocio/creditos/{$id}/abonos", [
-        'amount'      => 1000,
-        'comprobante' => \Illuminate\Http\UploadedFile::fake()->create('virus.exe', 10),
+        'amount' => 1000,
+        'comprobante' => UploadedFile::fake()->create('virus.exe', 10),
     ], ['Accept' => 'application/json'])->assertUnprocessable()->assertJsonValidationErrors('comprobante');
     expect(DB::table('store_credit_movements')->where('type', 'abono')->count())->toBe(0);
 
     $this->post("/v1/negocio/creditos/{$id}/abonos", [
-        'amount'      => 1000,
-        'notes'       => 'Nequi',
-        'comprobante' => \Illuminate\Http\UploadedFile::fake()->image('nequi.jpg'),
+        'amount' => 1000,
+        'notes' => 'Nequi',
+        'comprobante' => UploadedFile::fake()->image('nequi.jpg'),
     ], ['Accept' => 'application/json'])->assertCreated();
 
     $abono = collect($this->getJson("/v1/negocio/creditos/{$id}/movimientos")->assertOk()->json('movimientos'))
@@ -302,7 +305,7 @@ it('EL EJEMPLO: 10.000 + 2.000 a crédito se le descuentan a la tienda', functio
 it('un día solo a crédito deja la tienda en rojo y se arrastra al corte siguiente', function () {
     $e = credEscenario();
     $ayer = now()->subDay()->toDateString();
-    $hoy  = now()->toDateString();
+    $hoy = now()->toDateString();
 
     credEntregado($e, CreditoDeTienda::METODO, 10000, 2000, $ayer);
     $rojo = app(LiquidacionService::class)->generar('business', $e['negocio'], $ayer, $ayer);
@@ -401,4 +404,211 @@ it('las entregas del domiciliario cuentan también las que fueron a crédito', f
 
     // Y ya no se le dice cuánto gana, ni acá ni en ningún otro campo.
     expect($r->json())->not->toHaveKey('total_income');
+});
+
+/* ------------------------------------------- lo que el barrido encontro -- */
+
+/**
+ * ESTAS DOS SALIERON DE UN BARRIDO DE SABOTAJE, el 14 de noviembre de 2026.
+ *
+ * Se cambiaron a mano quince constantes que deciden dinero o permisos, una por
+ * una, corriendo la suite entera con cada cambio. Doce las cazo alguna prueba.
+ * Tres no, y dos eran de aqui: `OrdersSales::A_CREDITO` y
+ * `OrdersSales::SIN_PAGO`. Con DIECIOCHO pruebas cubriendo el credito.
+ *
+ * POR QUE NO LAS VIO NINGUNA, que es lo que hay que aprender:
+ *
+ *  1. La prueba del valor dice
+ *     `expect($pedido->payment_state)->toBe(OrdersSales::A_CREDITO)`. Compara
+ *     la constante CONTRA SI MISMA: si alguien le cambia el valor, cambian los
+ *     dos lados y la prueba sigue pasando. No es una prueba del valor, es una
+ *     prueba de que el servidor escribio lo que la constante dice.
+ *
+ *  2. `credEntregado()` --el ayudante del que cuelga la liquidacion-- inserta
+ *     `payment_state => 'paid'` A MANO, que es un estado que el flujo real NO
+ *     produce al crear un pedido a credito. Asi que «EL EJEMPLO» prueba la
+ *     aritmetica del corte, pero nunca que un pedido a credito de verdad
+ *     sobreviva al filtro `confirmados()`.
+ *
+ * Y UNA CORRECCION, porque el barrido lo dijo mal primero: el dano NO es que
+ * el pedido se caiga de la liquidacion. Al entregar, `CobroContraEntrega` pone
+ * `payment_state = 'paid'` y el corte identifica el credito por `methods_id`,
+ * asi que a esa altura ya no depende de esta constante. El dano es ANTES: con
+ * `A_CREDITO` dentro de `SIN_PAGO` --o valiendo lo mismo que
+ * `ESPERANDO_PAGO`-- el pedido queda invisible para `confirmados()`, o sea
+ * para la tienda, el domiciliario, el historial y las reglas de despacho.
+ * El cliente gasta su cupo en un pedido que nadie prepara.
+ */
+it('el valor de A_CREDITO es contrato: se comprueba con el literal', function () {
+    /*
+     * CON EL LITERAL Y NO CON LA CONSTANTE. El valor viaja a la columna
+     * `payment_state` de la base y sale en las respuestas publicadas, asi que
+     * cambiarlo es cambiar datos ya escritos y clientes ya instalados.
+     */
+    expect(OrdersSales::A_CREDITO)->toBe('store_credit');
+
+    // Y que no se confunda con ninguno de los otros estados de pago.
+    expect(OrdersSales::A_CREDITO)
+        ->not->toBe(OrdersSales::ESPERANDO_PAGO)
+        ->and(OrdersSales::A_CREDITO)->not->toBe(OrdersSales::PAGO_RECHAZADO);
+
+    /* Y los dos que SI son «sin pago», tambien con literales: son los dos que
+       `confirmados()` esconde, y la lista no puede crecer sin que se note. */
+    expect(OrdersSales::SIN_PAGO)->toBe(['pending_online', 'rejected']);
+    expect(OrdersSales::SIN_PAGO)->not->toContain(OrdersSales::A_CREDITO);
+});
+
+it('un pedido a credito recien hecho SI lo ve la tienda', function () {
+    /*
+     * LA PRUEBA QUE FALTABA, y es de integracion a proposito: el pedido se crea
+     * por la ruta de verdad --`credPedir` hace el POST-- asi que su
+     * `payment_state` lo escribe `ArmadoDelPedido` y no un `insert` del
+     * ayudante.
+     *
+     * Se comprueba contra el scope `confirmados()` porque es el filtro que
+     * comparten los SIETE sitios donde la tienda y el domiciliario miran sus
+     * pedidos: la ficha del negocio, el historial, la lista del repartidor,
+     * la consulta del comprador y las reglas de despacho. Si el pedido pasa el
+     * scope, pasa en los siete.
+     */
+    $e = credEscenario();
+    app(CreditoDeTienda::class)->asignar($e['negocio'], (int) $e['comprador']->user_id, 50000);
+
+    $r = credPedir($e, 2)->assertCreated();
+    $id = (int) ($r->json('order.order_id') ?? $r->json('order.orderSales_id'));
+
+    // Primero: nacio a credito de verdad, no 'paid' ni esperando pasarela.
+    expect(DB::table('orderssales')->where('orderSales_id', $id)->value('payment_state'))
+        ->toBe('store_credit');
+
+    // Y lo importante: NO esta escondido.
+    expect(OrdersSales::confirmados()->where('orderSales_id', $id)->exists())->toBeTrue();
+
+    /*
+     * CONTROL: que el scope esconda algo de verdad. Sin esto, «el pedido se ve»
+     * tambien seria cierto con un `confirmados()` que no filtrara nada, y la
+     * prueba pasaria estando ciega.
+     */
+    DB::table('orderssales')->where('orderSales_id', $id)
+        ->update(['payment_state' => OrdersSales::ESPERANDO_PAGO]);
+
+    expect(OrdersSales::confirmados()->where('orderSales_id', $id)->exists())->toBeFalse();
+});
+
+/**
+ * UN CORTE PAGADO NO ES UN CORTE ANULADO -- Y LA PRUEBA DE ARRIBA NO LO VEIA.
+ *
+ * Del barrido del 14 de noviembre de 2026: poniendo `Settlement::ANULADA = 2`
+ * --el valor de `PAGADA`-- pasaban las 1365 pruebas. Incluida «el rojo se
+ * arrastra UNA vez, y anular el corte que lo absorbio lo libera», que es
+ * justo sobre esto.
+ *
+ * POR QUE NO LO VEIA: esa prueba ESCRIBE `state => Settlement::ANULADA` y la
+ * consulta de `corteEnRojoPendiente()` EXCLUYE `Settlement::ANULADA`. Los dos
+ * lados salen de la misma constante, asi que cambiarle el valor los mueve
+ * juntos y el resultado no se altera. Es el mismo patron que el primer barrido
+ * encontro con `A_CREDITO`.
+ *
+ * Lo que hay que probar es el OTRO lado: que un corte con un estado DISTINTO
+ * de anulado --pagado, que es el caso normal-- siga contando como vivo.
+ *
+ * EL DANO: `corteEnRojoPendiente()` busca el ultimo corte en rojo que ningun
+ * otro haya absorbido, descartando los anulados. Si un corte PAGADO se tomara
+ * por anulado, el rojo que ese corte ya absorbio volveria a aparecer como
+ * pendiente, y **a la tienda se le cobraria dos veces la misma deuda
+ * arrastrada**.
+ */
+it('un corte PAGADO sigue contando como vivo: la deuda no se cobra dos veces', function () {
+    $e = credEscenario();
+    $d1 = now()->subDays(2)->toDateString();
+    $d2 = now()->subDay()->toDateString();
+
+    // Dia 1: solo credito -> el corte queda en rojo.
+    credEntregado($e, CreditoDeTienda::METODO, 10000, 2000, $d1);
+    app(LiquidacionService::class)->generar('business', $e['negocio'], $d1, $d1);
+
+    // Dia 2: efectivo -> este corte absorbe el rojo del dia 1.
+    credEntregado($e, 1, 20000, 2000, $d2);
+    $absorbe = app(LiquidacionService::class)->generar('business', $e['negocio'], $d2, $d2);
+
+    /* CONTROL, antes de tocar nada: absorbido, no queda deuda pendiente. Sin
+       esto, «no hay deuda» tambien seria cierto si el escenario no hubiera
+       armado ningun rojo, y la prueba pasaria estando ciega. */
+    expect(app(CreditoDeTienda::class)->deudaDeLaTienda($e['negocio']))->toBe(0.0);
+
+    /*
+     * Y AHORA SE MARCA COMO PAGADO, que es lo que le pasa a un corte normal
+     * cuando se le transfiere la plata a la tienda. PAGADO no es ANULADO: el
+     * corte sigue vivo y sigue habiendo absorbido ese rojo.
+     */
+    $absorbe->update(['state' => Settlement::PAGADA]);
+
+    expect(app(CreditoDeTienda::class)->deudaDeLaTienda($e['negocio']))->toBe(0.0);
+});
+
+it('los cuatro estados de un corte son contrato y son distintos', function () {
+    /*
+     * CON LITERALES. Viven en la columna `settlements.state` de cortes ya
+     * generados; cambiar un numero reclasifica cortes viejos.
+     */
+    expect(Settlement::BORRADOR)->toBe(0);
+    expect(Settlement::APROBADA)->toBe(1);
+    expect(Settlement::PAGADA)->toBe(2);
+    expect(Settlement::ANULADA)->toBe(3);
+
+    $estados = [Settlement::BORRADOR, Settlement::APROBADA, Settlement::PAGADA, Settlement::ANULADA];
+    expect(count(array_unique($estados)))->toBe(4);
+
+    // La que de verdad importa: anulado no puede ser ninguno de los otros
+    // tres, porque de eso depende que un corte cuente o no.
+    expect(Settlement::ANULADA)->not->toBe(Settlement::PAGADA);
+    expect(Settlement::ANULADA)->not->toBe(Settlement::APROBADA);
+    expect(Settlement::ANULADA)->not->toBe(Settlement::BORRADOR);
+});
+
+it('los cuatro tipos de movimiento de credito son distintos', function () {
+    /*
+     * LA CUARTA DE LAS «MUERTAS», Y LA UNICA QUE LO ERA DE VERDAD.
+     *
+     * `StoreCreditMovement::AJUSTE` no la escribe nadie en `app/` Y NINGUNA
+     * PRUEBA LA NOMBRABA, asi que era la unica constante publica del proyecto
+     * que el barrido de sabotaje no podia juzgar: cambiarla no rompia nada, y
+     * el barrido habria dicho «sin defensa» cuando lo que pasaba es que nadie
+     * la miraba. Un hallazgo falso, y un instrumento que los da se deja de
+     * leer. Sus tres compañeras de grupo SI tenian prueba con literales
+     * --`CashMovement::AJUSTE`, `OrdersSales::ESTADOS` y `::SIN_PESAJE`--.
+     *
+     * CON LITERALES, porque estos valores viven en `store_credit_movements.type`
+     * de filas que ya existen: renombrar uno deja los movimientos viejos sin
+     * clasificar.
+     */
+    expect(StoreCreditMovement::CONSUMO)->toBe('consumo');
+    expect(StoreCreditMovement::REVERSO)->toBe('reverso');
+    expect(StoreCreditMovement::ABONO)->toBe('abono');
+    expect(StoreCreditMovement::AJUSTE)->toBe('ajuste');
+
+    $tipos = [
+        StoreCreditMovement::CONSUMO,
+        StoreCreditMovement::REVERSO,
+        StoreCreditMovement::ABONO,
+        StoreCreditMovement::AJUSTE,
+    ];
+
+    expect(count(array_unique($tipos)))->toBe(4);
+
+    /*
+     * LA QUE DE VERDAD IMPORTA, y conviene decir exactamente cuanto importa.
+     *
+     * `reversar()` decide la idempotencia POR TIPO: busca la fila `CONSUMO`
+     * del pedido y, si ya hay una `REVERSO`, no devuelve nada. Si `AJUSTE`
+     * valiera lo mismo que `REVERSO`, una fila de ajuste haria creer que el
+     * cupo ya se devolvio y cancelar ese pedido no lo liberaria nunca.
+     *
+     * HOY ESA CONSECUENCIA ES LATENTE, NO VIVA: nada escribe `AJUSTE`, asi
+     * que no hay fila que pueda confundirse. Lo que esto fija es que el dia
+     * que haya endpoint para cuadrar un descuadre no estrene el defecto.
+     */
+    expect(StoreCreditMovement::AJUSTE)->not->toBe(StoreCreditMovement::REVERSO);
+    expect(StoreCreditMovement::AJUSTE)->not->toBe(StoreCreditMovement::CONSUMO);
+    expect(StoreCreditMovement::AJUSTE)->not->toBe(StoreCreditMovement::ABONO);
 });

@@ -34,7 +34,7 @@ test('la calle escrita se guarda', function () {
     test()->postJson('/v1/users/addresses/add', [
         'user_id' => $user->user_id,
         'address' => 'Calle 84, Barranquilla',
-        'street'  => 'Carrera 51B #82-40 apto 501',
+        'street' => 'Carrera 51B #82-40 apto 501',
     ])->assertCreated();
 
     expect(DB::table('user_address')->where('user_id', $user->user_id)->value('street'))
@@ -63,8 +63,8 @@ test('al domiciliario le llegan las dos juntas', function () {
     $addressId = DB::table('user_address')->insertGetId([
         'user_id' => $user->user_id,
         'address' => 'Calle 84, Barranquilla',
-        'street'  => 'Carrera 51B #82-40 apto 501',
-        'state'   => 1,
+        'street' => 'Carrera 51B #82-40 apto 501',
+        'state' => 1,
     ], 'address_id');
 
     $buyerId = DB::table('buyer')->where('user_id', $user->user_id)->value('buyer_id');

@@ -27,9 +27,36 @@
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="CACHE_STORE" value="array"/>
+        <!-- Sin esto las pruebas tomaban `BROADCAST_CONNECTION` del `.env`,
+             que apunta a Reverb: cada evento intentaba una llamada HTTP a
+             localhost:8080. Fallaba rapido cuando no habia nada escuchando y
+             se tragaba el `try/catch`, asi que no se notaba; pero el
+             resultado dependia de si quien corre las pruebas tiene Reverb
+             levantado. -->
+        <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="DB_CONNECTION" value="sqlite"/>
         <env name="DB_DATABASE" value=":memory:"/>
+        <!--
+            El presupuesto de tiempo en base de datos, apagado en las pruebas.
+
+            No es por ruido: es que «por peticion» no significa nada en un
+            proceso de pruebas. El contador acumulado no se reinicia entre una
+            prueba y la siguiente —eso lo hace Octane, y aqui no hay Octane—,
+            asi que la suma crece durante todo el archivo y el aviso acabaria
+            saltando por el montaje de la prueba numero cuarenta, apuntando a
+            una ruta que no tiene nada que ver. Medido: una sola prueba llega a
+            248 ms de acumulado.
+
+            Las pruebas que SI lo ejercitan lo encienden ellas, con su
+            presupuesto y reiniciando el contador antes
+            (PresupuestoDeConsultasTest).
+        -->
+        <env name="DB_PRESUPUESTO_MS" value="0"/>
         <env name="MAIL_MAILER" value="array"/>
+        <!-- Una linea de latencia por peticion de la suite no mide nada: la
+             base es SQLite en memoria y no hay red. Las pruebas de la medida
+             la encienden ellas mismas. -->
+        <env name="MEDIR_PETICIONES" value="false"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>

@@ -19,16 +19,15 @@ beforeEach(function () {
  * entra al panel y lo ve vacío porque `me/permissions` devuelve `[]`. Eso
  * parece un fallo del panel y es una cuenta a medio hacer.
  */
-
 test('la cuenta de Tecnología sale con todo lo que el panel necesita', function () {
     $this->artisan('admin:crear', [
-        '--email'  => 'sistemas@ejemplo.test',
+        '--email' => 'sistemas@ejemplo.test',
         '--nombre' => 'Sistemas',
-        '--clave'  => 'ClaveDePrueba1*',
+        '--clave' => 'ClaveDePrueba1*',
     ])->assertSuccessful();
 
     $usuario = User::where('email', 'sistemas@ejemplo.test')->first();
-    $area    = Area::where('code', 'sistema')->first();
+    $area = Area::where('code', 'sistema')->first();
 
     expect($usuario)->not->toBeNull()
         ->and((int) $usuario->rol)->toBe(4)
@@ -40,12 +39,12 @@ test('la cuenta de Tecnología sale con todo lo que el panel necesita', function
 
 test('Tecnología puede ver y gestionar todos los módulos', function () {
     $this->artisan('admin:crear', [
-        '--email'  => 'sistemas@ejemplo.test',
+        '--email' => 'sistemas@ejemplo.test',
         '--nombre' => 'Sistemas',
-        '--clave'  => 'ClaveDePrueba1*',
+        '--clave' => 'ClaveDePrueba1*',
     ])->assertSuccessful();
 
-    $area     = Area::where('code', 'sistema')->first();
+    $area = Area::where('code', 'sistema')->first();
     $permisos = $area->permisos(Area::NIVEL_GESTOR);
 
     expect($permisos)->not->toBeEmpty();
@@ -58,13 +57,13 @@ test('Tecnología puede ver y gestionar todos los módulos', function () {
 
 test('la clave sirve para autenticarse de verdad', function () {
     $this->artisan('admin:crear', [
-        '--email'  => 'sistemas@ejemplo.test',
+        '--email' => 'sistemas@ejemplo.test',
         '--nombre' => 'Sistemas',
-        '--clave'  => 'ClaveDePrueba1*',
+        '--clave' => 'ClaveDePrueba1*',
     ])->assertSuccessful();
 
     $this->postJson('/v1/login', [
-        'email'    => 'sistemas@ejemplo.test',
+        'email' => 'sistemas@ejemplo.test',
         'password' => 'ClaveDePrueba1*',
     ])->assertOk();
 });
@@ -86,17 +85,17 @@ test('repone el acceso de una cuenta que ya existe en vez de fallar', function (
     expect(User::where('email', 'sistemas@ejemplo.test')->count())->toBe(1);
 
     $this->postJson('/v1/login', [
-        'email'    => 'sistemas@ejemplo.test',
+        'email' => 'sistemas@ejemplo.test',
         'password' => 'SegundaClave1*',
     ])->assertOk();
 });
 
 test('un área que no existe no crea nada a medias', function () {
     $this->artisan('admin:crear', [
-        '--email'  => 'nadie@ejemplo.test',
+        '--email' => 'nadie@ejemplo.test',
         '--nombre' => 'Nadie',
-        '--clave'  => 'ClaveDePrueba1*',
-        '--area'   => 'departamento-inventado',
+        '--clave' => 'ClaveDePrueba1*',
+        '--area' => 'departamento-inventado',
     ])->assertFailed();
 
     expect(User::where('email', 'nadie@ejemplo.test')->exists())->toBeFalse();
@@ -104,9 +103,9 @@ test('un área que no existe no crea nada a medias', function () {
 
 test('rechaza una clave corta antes de tocar la base', function () {
     $this->artisan('admin:crear', [
-        '--email'  => 'nadie@ejemplo.test',
+        '--email' => 'nadie@ejemplo.test',
         '--nombre' => 'Nadie',
-        '--clave'  => 'corta',
+        '--clave' => 'corta',
     ])->assertFailed();
 
     expect(User::where('email', 'nadie@ejemplo.test')->exists())->toBeFalse();
@@ -114,10 +113,10 @@ test('rechaza una clave corta antes de tocar la base', function () {
 
 test('el nivel de consulta recorta los permisos', function () {
     $this->artisan('admin:crear', [
-        '--email'  => 'mirón@ejemplo.test',
+        '--email' => 'mirón@ejemplo.test',
         '--nombre' => 'Solo mira',
-        '--clave'  => 'ClaveDePrueba1*',
-        '--nivel'  => Area::NIVEL_CONSULTA,
+        '--clave' => 'ClaveDePrueba1*',
+        '--nivel' => Area::NIVEL_CONSULTA,
     ])->assertSuccessful();
 
     $usuario = User::where('email', 'mirón@ejemplo.test')->first();

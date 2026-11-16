@@ -1,13 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models\Buyer;
 
 use App\Models\Audit\Audit;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ResidentialComplex extends Audit
 {
     protected $table = 'residential_complexes';
+
     protected $primaryKey = 'complex_id';
+
     /*
      * Ahora sí lleva `created_at` / `updated_at`.
      *
@@ -38,7 +43,8 @@ class ResidentialComplex extends Audit
         'apartments_per_tower',
     ];
 
-    public function buyers()
+    /** @return HasMany<BuyerComplex, $this> */
+    public function buyers(): HasMany
     {
         return $this->hasMany(BuyerComplex::class, 'complex_id', 'complex_id');
     }

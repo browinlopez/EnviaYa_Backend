@@ -22,7 +22,6 @@ use Laravel\Sanctum\Sanctum;
  * Cada prueba usa a un COMPRADOR contra lo de un tercero. No hace falta ser
  * tendero para intentarlo, y ese es justamente el problema.
  */
-
 function unComprador(): User
 {
     Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
@@ -46,7 +45,7 @@ function unNegocioAjeno(): int
 }
 
 /* ===================================================================== */
-/*  PEDIDOS Y DINERO DE OTRA TIENDA                                      */
+/*  PEDIDOS Y DINERO DE OTRA TIENDA */
 /* ===================================================================== */
 
 test('un comprador no puede leer los pedidos de una tienda ajena', function () {
@@ -91,8 +90,8 @@ test('un comprador no puede cambiarle el nombre ni el NIT a una tienda ajena', f
 
     $this->putJson('/v1/businesses/update', [
         'busines_id' => $ajeno,
-        'name'       => 'SECUESTRADA',
-        'NIT'        => '000',
+        'name' => 'SECUESTRADA',
+        'NIT' => '000',
     ])->assertStatus(403);
 
     expect(DB::table('business')->where('busines_id', $ajeno)->value('name'))
@@ -100,7 +99,7 @@ test('un comprador no puede cambiarle el nombre ni el NIT a una tienda ajena', f
 });
 
 /* ===================================================================== */
-/*  AFILIACIONES: LOS CLIENTES DE OTRA TIENDA                            */
+/*  AFILIACIONES: LOS CLIENTES DE OTRA TIENDA */
 /* ===================================================================== */
 
 test('un comprador se puede afiliar y desafiliar a sí mismo desde la ficha', function () {
@@ -162,7 +161,7 @@ test('un comprador no puede listar los clientes de una tienda ajena', function (
 });
 
 /* ===================================================================== */
-/*  DATOS PERSONALES                                                     */
+/*  DATOS PERSONALES */
 /* ===================================================================== */
 
 test('nadie puede leer las direcciones de otra persona', function () {
@@ -229,7 +228,7 @@ test('cada quien si puede darse de baja', function () {
 });
 
 /* ===================================================================== */
-/*  EL CATALOGO DE LA PLATAFORMA                                         */
+/*  EL CATALOGO DE LA PLATAFORMA */
 /* ===================================================================== */
 
 test('un comprador no puede crear ni borrar categorias de la plataforma', function () {

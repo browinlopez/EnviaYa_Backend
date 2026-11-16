@@ -1,7 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models\Marketing;
 
+use App\Support\FiltroDeFechas;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -20,8 +23,10 @@ class Coupon extends Model
      * `PoliticaDeDomicilio`: son dos bolsillos distintos, y mezclarlos fue
      * justo lo que se evitó desde el principio.
      */
-    public const TIPO_PORCENTAJE   = 'percent';
-    public const TIPO_FIJO         = 'fixed';
+    public const TIPO_PORCENTAJE = 'percent';
+
+    public const TIPO_FIJO = 'fixed';
+
     public const TIPO_ENVIO_GRATIS = 'free_shipping';
 
     public const TIPOS = [self::TIPO_PORCENTAJE, self::TIPO_FIJO, self::TIPO_ENVIO_GRATIS];
@@ -46,18 +51,18 @@ class Coupon extends Model
     ];
 
     protected $casts = [
-        'value'             => 'decimal:2',
-        'max_discount'      => 'decimal:2',
-        'min_order'         => 'decimal:2',
-        'max_uses'          => 'integer',
+        'value' => 'decimal:2',
+        'max_discount' => 'decimal:2',
+        'min_order' => 'decimal:2',
+        'max_uses' => 'integer',
         'max_uses_per_user' => 'integer',
-        'uses_count'        => 'integer',
-        'business_id'       => 'integer',
-        'category_id'       => 'integer',
-        'advertiser_id'     => 'integer',
-        'starts_at'         => 'date',
-        'ends_at'           => 'date',
-        'state'             => 'integer',
+        'uses_count' => 'integer',
+        'business_id' => 'integer',
+        'category_id' => 'integer',
+        'advertiser_id' => 'integer',
+        'starts_at' => 'date',
+        'ends_at' => 'date',
+        'state' => 'integer',
     ];
 
     /**
@@ -72,11 +77,13 @@ class Coupon extends Model
         $this->attributes['code'] = strtoupper(trim((string) $valor));
     }
 
+    /** @return HasMany<CouponRedemption, $this> */
     public function redemptions(): HasMany
     {
         return $this->hasMany(CouponRedemption::class, 'coupon_id');
     }
 
+    /** @return BelongsTo<Advertiser, $this> */
     public function advertiser(): BelongsTo
     {
         return $this->belongsTo(Advertiser::class, 'advertiser_id');
@@ -90,9 +97,12 @@ class Coupon extends Model
     {
         $hoy = now()->toDateString();
 
-        return $q->where($q->qualifyColumn('state'), 1)
-            ->whereDate($q->qualifyColumn('starts_at'), '<=', $hoy)
-            ->whereDate($q->qualifyColumn('ends_at'), '>=', $hoy);
+        $q = $q->where($q->qualifyColumn('state'), 1);
+
+        // Como rangos: ver `FiltroDeFechas`.
+        $q = FiltroDeFechas::hasta($q, $q->qualifyColumn('starts_at'), $hoy);
+
+        return FiltroDeFechas::desde($q, $q->qualifyColumn('ends_at'), $hoy);
     }
 
     /** ¿Se agotó el cupo global? */

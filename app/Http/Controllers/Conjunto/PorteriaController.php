@@ -1,12 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Conjunto;
 
 use App\Events\CodigoDeAccesoUsado;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Conjunto\VerificarEnPorteriaRequest;
+use App\Http\Resources\Domiciliario\DomiciliarioEnLaPorteriaResource;
 use App\Models\Domiciliary;
 use App\Services\AccesoAlConjunto;
 use App\Services\PulsoDelConjunto;
+use App\Support\FiltroDeFechas;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -27,24 +32,20 @@ class PorteriaController extends Controller
     public function __construct(
         private AccesoAlConjunto $acceso,
         private PulsoDelConjunto $pulso,
-    ) {
-    }
+    ) {}
 
-    public function verificar(Request $request)
+    public function verificar(VerificarEnPorteriaRequest $request)
     {
-        $datos = $request->validate([
-            'code'     => 'required_without:document|nullable|string|max:20',
-            'document' => 'required_without:code|nullable|string|max:50',
-        ]);
+        $datos = $request->validated();
 
         $complexId = (int) $request->attributes->get('complex_id');
 
-        $porCodigo    = !empty($datos['code']);
+        $porCodigo = ! empty($datos['code']);
         $domiciliario = $porCodigo
             ? $this->acceso->resolverCodigo($datos['code'])
             : $this->acceso->resolverCedula($datos['document']);
 
-        if (!$domiciliario) {
+        if (! $domiciliario) {
             return response()->json([
                 'message' => $porCodigo
                     // Se distingue a propósito: un código caducado es lo más
@@ -74,7 +75,7 @@ class PorteriaController extends Controller
                 'allowed' => false,
                 'domiciliary' => [
                     'domiciliary_id' => $domiciliario->domiciliary_id,
-                    'name'           => $domiciliario->user->name ?? null,
+                    'name' => $domiciliario->user->name ?? null,
                 ],
             ]);
         }
@@ -82,14 +83,14 @@ class PorteriaController extends Controller
         // Solo se registra la entrada cuando procede: una entrada anotada de
         // alguien a quien no se dejó pasar ensuciaría el historial.
         $entrada = DB::table('complex_entries')->insertGetId([
-            'complex_id'     => $complexId,
+            'complex_id' => $complexId,
             'domiciliary_id' => $domiciliario->domiciliary_id,
-            'method'         => $porCodigo ? 'codigo' : 'cedula',
-            'orders_count'   => $pedidos->count(),
-            'orders'         => $pedidos->toJson(),
-            'registered_by'  => $request->user()->user_id,
-            'created_at'     => now(),
-            'updated_at'     => now(),
+            'method' => $porCodigo ? 'codigo' : 'cedula',
+            'orders_count' => $pedidos->count(),
+            'orders' => $pedidos->toJson(),
+            'registered_by' => $request->user()->user_id,
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
 
         /*
@@ -117,11 +118,11 @@ class PorteriaController extends Controller
         }
 
         return response()->json([
-            'message'     => 'Puede entrar.',
-            'allowed'     => true,
-            'entry_id'    => $entrada,
+            'message' => 'Puede entrar.',
+            'allowed' => true,
+            'entry_id' => $entrada,
             'domiciliary' => $this->ficha($domiciliario, $complexId),
-            'orders'      => $pedidos,
+            'orders' => $pedidos,
         ]);
     }
 
@@ -172,12 +173,19 @@ class PorteriaController extends Controller
             $consulta->whereNull('e.exited_at');
         }
 
+        /*
+         * COMO RANGO, y el de `hasta` NO es la traduccion obvia: ver
+         * `FiltroDeFechas::hasta()`. `date(col) <= '2026-11-05'` incluye
+         * todo el dia 5; escribir `col <= '2026-11-05'` lo recorta a las
+         * 00:00:00 y se pierde el dia entero menos el primer segundo, sin
+         * un error: solo un numero mas pequenio.
+         */
         if ($desde = $request->query('desde')) {
-            $consulta->whereDate('e.created_at', '>=', $desde);
+            FiltroDeFechas::desde($consulta, 'e.created_at', $desde);
         }
 
         if ($hasta = $request->query('hasta')) {
-            $consulta->whereDate('e.created_at', '<=', $hasta);
+            FiltroDeFechas::hasta($consulta, 'e.created_at', $hasta);
         }
 
         $filas = $consulta
@@ -218,18 +226,9 @@ class PorteriaController extends Controller
      */
     private function ficha(Domiciliary $d, int $complexId): array
     {
-        return [
-            'domiciliary_id' => $d->domiciliary_id,
-            'name'           => $d->user->name ?? null,
-            'document'       => $d->document,
-            'phone'          => $d->user->phone ?? null,
-            'qualification'  => $d->qualification !== null ? (float) $d->qualification : null,
-            // Si se marcó disponible en su app. No impide entrar —ya tiene los
-            // pedidos encima— pero explica por qué a veces no aparece en la
-            // lista del tendero.
-            'available'      => (bool) $d->available,
-            'activo'         => (bool) $d->state,
-            'historial'      => $this->pulso->historialEnElConjunto($complexId, (int) $d->domiciliary_id),
-        ];
+        return (new DomiciliarioEnLaPorteriaResource(
+            $d,
+            historial: $this->pulso->historialEnElConjunto($complexId, (int) $d->domiciliary_id),
+        ))->resolve();
     }
 }

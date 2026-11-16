@@ -1,13 +1,17 @@
 <?php
 
-use App\Models\Product\CatalogUpload;
-use Illuminate\Support\Facades\DB;
-use App\Models\User;
-use App\Models\Rol;
-use App\Models\Domiciliary;
 use App\Models\Conjunto\ComplexStaff;
+use App\Models\Domiciliary;
+use App\Models\Payment\Payment;
+use App\Models\Product\CatalogUpload;
+use App\Models\Product\Product;
+use App\Models\Rol;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
+use Tests\TestCase;
 
 /*
 |--------------------------------------------------------------------------
@@ -20,8 +24,8 @@ use Laravel\Sanctum\Sanctum;
 |
 */
 
-pest()->extend(Tests\TestCase::class)
-    ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
+pest()->extend(TestCase::class)
+    ->use(RefreshDatabase::class)
     ->in('Feature');
 
 /*
@@ -60,32 +64,32 @@ expect()->extend('toBeOne', function () {
  */
 function tenderoConCatalogo(): array
 {
-    \App\Models\Rol::firstOrCreate(['rol_id' => 2], ['name' => 'tendero', 'guard_name' => 'web']);
+    Rol::firstOrCreate(['rol_id' => 2], ['name' => 'tendero', 'guard_name' => 'web']);
 
-    $user = \App\Models\User::factory()->create(['rol' => 2]);
+    $user = User::factory()->create(['rol' => 2]);
 
-    $ownerId = \Illuminate\Support\Facades\DB::table('owner')->insertGetId(['user_id' => $user->user_id, 'state' => 1], 'owner_id');
+    $ownerId = DB::table('owner')->insertGetId(['user_id' => $user->user_id, 'state' => 1], 'owner_id');
 
-    $tipo = \Illuminate\Support\Facades\DB::table('category_business')->insertGetId(['name' => 'Tienda'], 'id');
+    $tipo = DB::table('category_business')->insertGetId(['name' => 'Tienda'], 'id');
 
-    $mio = \Illuminate\Support\Facades\DB::table('business')->insertGetId([
+    $mio = DB::table('business')->insertGetId([
         'name' => 'La Esquina', 'qualification' => 0, 'state' => 1, 'type' => $tipo,
     ], 'busines_id');
 
-    \Illuminate\Support\Facades\DB::table('owner_busines')->insert(['owner_id' => $ownerId, 'busines_id' => $mio, 'state' => 1]);
+    DB::table('owner_busines')->insert(['owner_id' => $ownerId, 'busines_id' => $mio, 'state' => 1]);
 
-    $vecino = \Illuminate\Support\Facades\DB::table('business')->insertGetId([
+    $vecino = DB::table('business')->insertGetId([
         'name' => 'La de Enfrente', 'qualification' => 0, 'state' => 1, 'type' => $tipo,
     ], 'busines_id');
 
-    $categoria = \Illuminate\Support\Facades\DB::table('category')->insertGetId(['name' => 'Abarrotes'], 'category_id');
+    $categoria = DB::table('category')->insertGetId(['name' => 'Abarrotes'], 'category_id');
 
     return compact('user', 'mio', 'vecino', 'categoria');
 }
 
-function productoDeCatalogo(string $nombre, ?string $barcode = null, ?int $categoria = null): \App\Models\Product\Product
+function productoDeCatalogo(string $nombre, ?string $barcode = null, ?int $categoria = null): Product
 {
-    return \App\Models\Product\Product::create([
+    return Product::create([
         'name' => $nombre, 'barcode' => $barcode, 'category_id' => $categoria,
         'state' => 1, 'origen' => 'equipo',
     ]);
@@ -93,7 +97,7 @@ function productoDeCatalogo(string $nombre, ?string $barcode = null, ?int $categ
 
 function enLaTienda(int $businessId, int $productId, float $precio = 5000, int $cantidad = 3): void
 {
-    \Illuminate\Support\Facades\DB::table('products_business')->insert([
+    DB::table('products_business')->insert([
         'busines_id' => $businessId, 'products_id' => $productId,
         'price' => $precio, 'amount' => $cantidad, 'qualification' => 0,
     ]);
@@ -109,51 +113,51 @@ function enLaTienda(int $businessId, int $productId, float $precio = 5000, int $
 function escenarioDeTope(?float $tope, int $metodo = 1, int $total = 60000): array
 {
     foreach ([1 => 'comprador', 2 => 'tendero', 3 => 'domiciliario'] as $id => $nombre) {
-        \App\Models\Rol::firstOrCreate(['rol_id' => $id], ['name' => $nombre, 'guard_name' => 'web']);
+        Rol::firstOrCreate(['rol_id' => $id], ['name' => $nombre, 'guard_name' => 'web']);
     }
 
     // `orderssales.methods_id` es clave foránea: sin la fila, el insert falla.
     foreach ([1 => 'Efectivo', 2 => 'Tarjeta'] as $id => $nombre) {
-        \Illuminate\Support\Facades\DB::table('payment_methods')->insertOrIgnore([
+        DB::table('payment_methods')->insertOrIgnore([
             'methods_id' => $id, 'name' => $nombre, 'state' => 1,
         ]);
     }
 
-    $repartidor = \App\Models\User::factory()->create(['rol' => 3]);
-    $domiId = \Illuminate\Support\Facades\DB::table('domiciliary')->insertGetId([
+    $repartidor = User::factory()->create(['rol' => 3]);
+    $domiId = DB::table('domiciliary')->insertGetId([
         'user_id' => $repartidor->user_id, 'available' => 1,
         'qualification' => 0, 'state' => 1,
     ], 'domiciliary_id');
 
-    $tendero = \App\Models\User::factory()->create(['rol' => 2]);
+    $tendero = User::factory()->create(['rol' => 2]);
 
     // `business.type` es clave foránea a `category_business`.
-    $tipo = \Illuminate\Support\Facades\DB::table('category_business')->insertGetId(['name' => 'Tienda'], 'id');
+    $tipo = DB::table('category_business')->insertGetId(['name' => 'Tienda'], 'id');
 
-    $businessId = \Illuminate\Support\Facades\DB::table('business')->insertGetId([
+    $businessId = DB::table('business')->insertGetId([
         'name' => 'Tienda', 'qualification' => 0, 'state' => 1, 'type' => $tipo,
         'max_courier_cash' => $tope,
     ], 'busines_id');
 
-    $ownerId = \Illuminate\Support\Facades\DB::table('owner')->insertGetId([
+    $ownerId = DB::table('owner')->insertGetId([
         'user_id' => $tendero->user_id, 'state' => 1,
     ], 'owner_id');
 
-    \Illuminate\Support\Facades\DB::table('owner_busines')->insert([
+    DB::table('owner_busines')->insert([
         'owner_id' => $ownerId, 'busines_id' => $businessId, 'state' => 1,
     ]);
 
-    \Illuminate\Support\Facades\DB::table('business_domiciliary')->insert([
+    DB::table('business_domiciliary')->insert([
         'busines_id' => $businessId, 'domiciliary_id' => $domiId, 'state' => 1,
     ]);
 
-    $comprador = \App\Models\User::factory()->create(['rol' => 1]);
-    $buyerId = \Illuminate\Support\Facades\DB::table('buyer')->insertGetId([
+    $comprador = User::factory()->create(['rol' => 1]);
+    $buyerId = DB::table('buyer')->insertGetId([
         'user_id' => $comprador->user_id, 'qualification' => 0, 'state' => 1,
     ]);
 
     // Aceptado y esperando a que alguien lo lleve.
-    $orderId = \Illuminate\Support\Facades\DB::table('orderssales')->insertGetId([
+    $orderId = DB::table('orderssales')->insertGetId([
         'buyer_id' => $buyerId, 'busines_id' => $businessId,
         'methods_id' => $metodo,
         'subtotal' => $total - 2000, 'domicilio' => 2000, 'total' => $total,
@@ -184,19 +188,19 @@ function archivoBiff2(array $encabezados, array $filas): UploadedFile
          */
         $v = mb_convert_encoding($v, 'CP1252', 'UTF-8');
 
-        $cuerpo = pack('vv', $fila, $col) . "\x00\x00\x00" . chr(strlen($v)) . $v;
+        $cuerpo = pack('vv', $fila, $col)."\x00\x00\x00".chr(strlen($v)).$v;
 
-        return pack('vv', 0x04, strlen($cuerpo)) . $cuerpo;
+        return pack('vv', 0x04, strlen($cuerpo)).$cuerpo;
     };
 
     $numero = function (int $fila, int $col, float $v): string {
-        $cuerpo = pack('vv', $fila, $col) . "\x00\x00\x00" . pack('d', $v);
+        $cuerpo = pack('vv', $fila, $col)."\x00\x00\x00".pack('d', $v);
 
-        return pack('vv', 0x03, strlen($cuerpo)) . $cuerpo;
+        return pack('vv', 0x03, strlen($cuerpo)).$cuerpo;
     };
 
     // BOF: lo primero de todo archivo BIFF2, y lo que lo identifica.
-    $bytes = "\x09\x00\x04\x00" . pack('vv', 0, 0x10);
+    $bytes = "\x09\x00\x04\x00".pack('vv', 0, 0x10);
 
     foreach ($encabezados as $c => $h) {
         $bytes .= $texto(0, $c, $h);
@@ -231,7 +235,6 @@ function cargarDesdePdv(array $t, UploadedFile $archivo, ?int $categoria = null)
     return CatalogUpload::find($r->json('data.catalog_upload_id'))->fresh();
 }
 
-
 /*
  * UN PEDIDO MÍNIMO: comprador, negocio, producto, dirección y método.
  *
@@ -243,42 +246,42 @@ function cargarDesdePdv(array $t, UploadedFile $archivo, ?int $categoria = null)
  */
 function escenarioPedido(): array
 {
-    \App\Models\Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
+    Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
 
-    $user = \App\Models\User::factory()->create(['rol' => 1]);
+    $user = User::factory()->create(['rol' => 1]);
     Sanctum::actingAs($user);
 
-    $buyerId = \Illuminate\Support\Facades\DB::table('buyer')->insertGetId([
-        'user_id'            => $user->user_id,
-        'qualification'      => 0,
-        'belongs_to_complex' => 0,
-        'state'              => 1,
-    ]);
-
-    $businessId = \Illuminate\Support\Facades\DB::table('business')->insertGetId([
-        'name'          => 'Tienda del Pedido',
+    $buyerId = DB::table('buyer')->insertGetId([
+        'user_id' => $user->user_id,
         'qualification' => 0,
-        'state'         => 1,
+        'belongs_to_complex' => 0,
+        'state' => 1,
     ]);
 
-    $productId = \Illuminate\Support\Facades\DB::table('products')->insertGetId([
-        'name'  => 'Arroz',
+    $businessId = DB::table('business')->insertGetId([
+        'name' => 'Tienda del Pedido',
+        'qualification' => 0,
+        'state' => 1,
+    ]);
+
+    $productId = DB::table('products')->insertGetId([
+        'name' => 'Arroz',
         'state' => 1,
     ], 'products_id');
 
     // El precio SIEMPRE sale de acá, nunca del cliente. La tabla pivote se
     // llama `products_business` (en plural), no `product_business`.
-    \Illuminate\Support\Facades\DB::table('products_business')->insert([
-        'busines_id'  => $businessId,
+    DB::table('products_business')->insert([
+        'busines_id' => $businessId,
         'products_id' => $productId,
-        'price'       => 10000,
-        'amount'      => 100,
+        'price' => 10000,
+        'amount' => 100,
     ]);
 
-    $addressId = \Illuminate\Support\Facades\DB::table('user_address')->insertGetId([
+    $addressId = DB::table('user_address')->insertGetId([
         'user_id' => $user->user_id,
         'address' => 'Carrera 1 # 2-3',
-        'state'   => 1,
+        'state' => 1,
     ]);
 
     /*
@@ -291,10 +294,10 @@ function escenarioPedido(): array
      * Con un id cualquiera, una prueba de algo propio del efectivo pasa en
      * verde sin haber ejercitado el camino del efectivo.
      */
-    \Illuminate\Support\Facades\DB::table('payment_methods')->insertOrIgnore([
+    DB::table('payment_methods')->insertOrIgnore([
         'methods_id' => 1,
-        'name'       => 'Efectivo',
-        'state'      => 1,
+        'name' => 'Efectivo',
+        'state' => 1,
     ]);
 
     $methodId = 1;
@@ -305,11 +308,11 @@ function escenarioPedido(): array
 function cuerpoPedido(array $e, array $extra = []): array
 {
     return array_merge([
-        'user_id'    => $e['user']->user_id,
+        'user_id' => $e['user']->user_id,
         'busines_id' => $e['businessId'],
         'address_id' => $e['addressId'],
         'methods_id' => $e['methodId'],
-        'products'   => [['product_id' => $e['productId'], 'amount' => 3]],
+        'products' => [['product_id' => $e['productId'], 'amount' => 3]],
     ], $extra);
 }
 
@@ -325,37 +328,37 @@ function cuerpoPedido(array $e, array $extra = []): array
  */
 function pedidoCancelable(int $metodo = 1, bool $cobrado = false): array
 {
-    \App\Models\Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
-    \App\Models\Rol::firstOrCreate(['rol_id' => 2], ['name' => 'tendero', 'guard_name' => 'web']);
+    Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
+    Rol::firstOrCreate(['rol_id' => 2], ['name' => 'tendero', 'guard_name' => 'web']);
 
-    $comprador = \App\Models\User::factory()->create(['rol' => 1]);
-    $tendero = \App\Models\User::factory()->create(['rol' => 2]);
+    $comprador = User::factory()->create(['rol' => 1]);
+    $tendero = User::factory()->create(['rol' => 2]);
 
-    $buyerId = \Illuminate\Support\Facades\DB::table('buyer')->insertGetId([
+    $buyerId = DB::table('buyer')->insertGetId([
         'user_id' => $comprador->user_id, 'state' => 1,
     ], 'buyer_id');
 
-    $tipo = \Illuminate\Support\Facades\DB::table('category_business')->insertGetId(['name' => 'Tienda'], 'id');
-    $negocio = \Illuminate\Support\Facades\DB::table('business')->insertGetId([
+    $tipo = DB::table('category_business')->insertGetId(['name' => 'Tienda'], 'id');
+    $negocio = DB::table('business')->insertGetId([
         'name' => 'Tienda de la prueba', 'qualification' => 0, 'state' => 1, 'type' => $tipo,
         'latitude' => 11.0, 'longitude' => -74.8,
     ], 'busines_id');
 
     // La cadena real: user → owner → owner_busines → business.
-    $ownerId = \Illuminate\Support\Facades\DB::table('owner')->insertGetId([
+    $ownerId = DB::table('owner')->insertGetId([
         'user_id' => $tendero->user_id, 'state' => 1,
     ], 'owner_id');
-    \Illuminate\Support\Facades\DB::table('owner_busines')->insert([
+    DB::table('owner_busines')->insert([
         'owner_id' => $ownerId, 'busines_id' => $negocio, 'state' => 1,
     ]);
 
-    \Illuminate\Support\Facades\DB::table('payment_methods')->insertOrIgnore([
+    DB::table('payment_methods')->insertOrIgnore([
         ['methods_id' => 1, 'name' => 'Efectivo', 'state' => 1],
         ['methods_id' => 2, 'name' => 'Tarjeta', 'state' => 1],
         ['methods_id' => 5, 'name' => 'Pago por QR', 'state' => 1],
     ]);
 
-    $id = \Illuminate\Support\Facades\DB::table('orderssales')->insertGetId([
+    $id = DB::table('orderssales')->insertGetId([
         'buyer_id' => $buyerId, 'busines_id' => $negocio,
         'methods_id' => $metodo,
         'total' => 18500, 'subtotal' => 12500, 'domicilio' => 6000,
@@ -363,7 +366,7 @@ function pedidoCancelable(int $metodo = 1, bool $cobrado = false): array
     ], 'orderSales_id');
 
     if ($cobrado) {
-        \App\Models\Payment\Payment::create([
+        Payment::create([
             'orderSales_id' => $id,
             'methods_id' => $metodo,
             'provider' => 'bold',
@@ -379,7 +382,6 @@ function pedidoCancelable(int $metodo = 1, bool $cobrado = false): array
 
     return compact('comprador', 'tendero', 'negocio', 'id');
 }
-
 
 /*
  * EL CONJUNTO CON SU PERSONAL, Y UN REPARTIDOR CON PEDIDO DENTRO.

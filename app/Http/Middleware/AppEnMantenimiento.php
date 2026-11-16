@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Middleware;
 
 use App\Services\Ajustes;
@@ -53,7 +55,7 @@ class AppEnMantenimiento
 
     public function handle(Request $request, Closure $next): Response
     {
-        if (!Ajustes::valor('app.mantenimiento')) {
+        if (! Ajustes::valor('app.mantenimiento')) {
             return $next($request);
         }
 
@@ -68,7 +70,7 @@ class AppEnMantenimiento
         }
 
         return response()->json([
-            'message'     => (string) Ajustes::valor('app.mantenimiento_mensaje'),
+            'message' => (string) Ajustes::valor('app.mantenimiento_mensaje'),
             'maintenance' => true,
         ], 503);
     }

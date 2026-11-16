@@ -25,7 +25,7 @@ return new class extends Migration
             $table->text('comment')->nullable();
             $table->tinyInteger('state')->nullable();
 
-             // timestamps
+            // timestamps
             $table->timestamps(); // <-- crea created_at y updated_at
 
             // índices y claves foráneas
@@ -40,7 +40,6 @@ return new class extends Migration
                 ->onDelete('set null');
         });
     }
-
 
     /**
      * Reverse the migrations.

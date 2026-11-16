@@ -24,6 +24,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
+use OwenIt\Auditing\Models\Audit;
 
 uses(RefreshDatabase::class);
 
@@ -39,8 +40,8 @@ function comoDelPanel(string $nivel = Area::NIVEL_GESTOR): User
     Rol::firstOrCreate(['rol_id' => 4], ['name' => 'admin', 'guard_name' => 'web']);
 
     $u = User::factory()->create([
-        'rol'          => 4,
-        'area_id'      => Area::where('code', 'sistema')->firstOrFail()->id,
+        'rol' => 4,
+        'area_id' => Area::where('code', 'sistema')->firstOrFail()->id,
         'access_level' => $nivel,
     ]);
 
@@ -55,21 +56,21 @@ function sinVerificar(array $extra = []): User
     Rol::firstOrCreate(['rol_id' => 3], ['name' => 'domiciliario', 'guard_name' => 'web']);
 
     return User::factory()->create(array_merge([
-        'rol'                           => 3,
-        'email_verified_at'             => null,
-        'email_verified_by'             => null,
-        'email_verification_token'      => Str::random(60),
+        'rol' => 3,
+        'email_verified_at' => null,
+        'email_verified_by' => null,
+        'email_verification_token' => Str::random(60),
         'email_verification_expires_at' => Carbon::now()->addHour(),
     ], $extra));
 }
 
 /* ===================================================================== */
-/*  VERIFICARLO A MANO                                                   */
+/*  VERIFICARLO A MANO */
 /* ===================================================================== */
 
 test('el panel puede dar por bueno un correo que nunca se abrio', function () {
     $admin = comoDelPanel();
-    $domi  = sinVerificar(['email' => 'domi.prueba@ejemplo.com']);
+    $domi = sinVerificar(['email' => 'domi.prueba@ejemplo.com']);
 
     $this->postJson("/v1/admin/users/{$domi->user_id}/verify-email")->assertOk();
 
@@ -91,7 +92,7 @@ test('quien abrio su propio enlace no queda marcado como manual', function () {
      * sentido a la otra: si esto también dejara autor, la columna no
      * distinguiría nada.
      */
-    $this->get('/verify-email?token=' . $domi->email_verification_token)
+    $this->get('/verify-email?token='.$domi->email_verification_token)
         ->assertOk();
 
     $domi->refresh();
@@ -104,10 +105,10 @@ test('el listado deja ver cual de las dos cosas paso', function () {
     $admin = comoDelPanel();
 
     $aMano = sinVerificar(['email' => 'a.mano@ejemplo.com']);
-    $solo  = sinVerificar(['email' => 'por.correo@ejemplo.com']);
+    $solo = sinVerificar(['email' => 'por.correo@ejemplo.com']);
 
     $this->postJson("/v1/admin/users/{$aMano->user_id}/verify-email")->assertOk();
-    $this->get('/verify-email?token=' . $solo->email_verification_token)->assertOk();
+    $this->get('/verify-email?token='.$solo->email_verification_token)->assertOk();
 
     $filas = collect($this->getJson('/v1/admin/users')->assertOk()->json('data'));
 
@@ -138,14 +139,14 @@ test('el resumen cuenta aparte las que se dieron por buenas a mano', function ()
 });
 
 /* ===================================================================== */
-/*  LO QUE NO SE PUEDE HACER                                             */
+/*  LO QUE NO SE PUEDE HACER */
 /* ===================================================================== */
 
 test('no sobrescribe una verificacion que ya era buena', function () {
     comoDelPanel();
     $domi = sinVerificar();
 
-    $this->get('/verify-email?token=' . $domi->email_verification_token)->assertOk();
+    $this->get('/verify-email?token='.$domi->email_verification_token)->assertOk();
 
     /*
      * Convertir una verificación comprobada en una afirmada por alguien es una
@@ -187,16 +188,16 @@ test('sin sesion no se verifica nada', function () {
 });
 
 /* ===================================================================== */
-/*  QUE SIRVA PARA LO QUE SE HIZO                                        */
+/*  QUE SIRVA PARA LO QUE SE HIZO */
 /* ===================================================================== */
 
 test('el domiciliario de prueba ya puede iniciar sesion', function () {
     comoDelPanel();
 
     $domi = sinVerificar([
-        'email'    => 'domi.prueba@ejemplo.com',
+        'email' => 'domi.prueba@ejemplo.com',
         'password' => bcrypt('unaClaveLarga123'),
-        'state'    => 1,
+        'state' => 1,
     ]);
 
     /*
@@ -205,14 +206,14 @@ test('el domiciliario de prueba ya puede iniciar sesion', function () {
      * app se quedaba fuera y había que tocar la base a mano.
      */
     $this->postJson('/v1/login', [
-        'email'    => 'domi.prueba@ejemplo.com',
+        'email' => 'domi.prueba@ejemplo.com',
         'password' => 'unaClaveLarga123',
     ])->assertStatus(403);
 
     $this->postJson("/v1/admin/users/{$domi->user_id}/verify-email")->assertOk();
 
     $this->postJson('/v1/login', [
-        'email'    => 'domi.prueba@ejemplo.com',
+        'email' => 'domi.prueba@ejemplo.com',
         'password' => 'unaClaveLarga123',
     ])->assertOk();
 });
@@ -226,7 +227,7 @@ test('queda registrado en la auditoria con su autor', function () {
     config(['audit.console' => true]);
 
     $admin = comoDelPanel();
-    $domi  = sinVerificar();
+    $domi = sinVerificar();
 
     $this->postJson("/v1/admin/users/{$domi->user_id}/verify-email")->assertOk();
 
@@ -235,7 +236,7 @@ test('queda registrado en la auditoria con su autor', function () {
      * esto: el cambio queda con fecha y con autor sin tener que escribirlo a
      * mano en ningún sitio.
      */
-    $rastro = \OwenIt\Auditing\Models\Audit::where('auditable_type', User::class)
+    $rastro = Audit::where('auditable_type', User::class)
         ->where('auditable_id', $domi->user_id)
         ->latest('id')
         ->first();

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models\Marketing;
 
 use App\Models\Business;
@@ -27,14 +29,16 @@ class Advertiser extends Model
 
     protected $casts = [
         'business_id' => 'integer',
-        'state'       => 'integer',
+        'state' => 'integer',
     ];
 
+    /** @return BelongsTo<Business, $this> */
     public function business(): BelongsTo
     {
         return $this->belongsTo(Business::class, 'business_id', 'busines_id');
     }
 
+    /** @return HasMany<AdCampaign, $this> */
     public function campaigns(): HasMany
     {
         return $this->hasMany(AdCampaign::class, 'advertiser_id');

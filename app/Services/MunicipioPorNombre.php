@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use Illuminate\Support\Facades\DB;
@@ -23,9 +25,9 @@ use Illuminate\Support\Facades\DB;
 class MunicipioPorNombre
 {
     /**
-     * @param  string|null  $nombre        Ciudad que devolvió el teléfono.
+     * @param  string|null  $nombre  Ciudad que devolvió el teléfono.
      * @param  string|null  $departamento  Sirve para desempatar nombres repetidos.
-     * @return int|null  Null si no se reconoce: la dirección se guarda igual.
+     * @return int|null Null si no se reconoce: la dirección se guarda igual.
      */
     public static function resolver(?string $nombre, ?string $departamento = null): ?int
     {

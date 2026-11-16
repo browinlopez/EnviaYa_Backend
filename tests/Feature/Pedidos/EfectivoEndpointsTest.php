@@ -17,7 +17,6 @@ use Laravel\Sanctum\Sanctum;
  * intentar saldar— el saldo de otro, que es el mismo error que ya se había
  * corregido en los pedidos.
  */
-
 function repartidorConSaldo(float $monto = 32000): array
 {
     Rol::firstOrCreate(['rol_id' => 3], ['name' => 'domiciliario', 'guard_name' => 'web']);
@@ -44,7 +43,7 @@ function contable(): User
 
     $area = Area::where('code', 'sistema')->first();
     $user = User::factory()->create(['rol' => 4]);
-    $user->area_id      = $area->id;
+    $user->area_id = $area->id;
     $user->access_level = Area::NIVEL_GESTOR;
     $user->save();
 
@@ -64,12 +63,12 @@ test('el domiciliario ve su saldo y sus movimientos', function () {
 
 test('el saldo sale de la sesion, no de un parametro', function () {
     // Si se pudiera pedir por identificador, cualquiera vería el de otro.
-    $mio  = repartidorConSaldo(1000);
+    $mio = repartidorConSaldo(1000);
     $otro = repartidorConSaldo(99000);
 
     Sanctum::actingAs($mio['user']);
 
-    $this->getJson('/v1/domiciliaries/cash-balance?domiciliary_id=' . $otro['domiId'])
+    $this->getJson('/v1/domiciliaries/cash-balance?domiciliary_id='.$otro['domiId'])
         ->assertOk()
         ->assertJsonPath('balance', 1000);
 });

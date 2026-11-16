@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Middleware;
 
 use App\Models\Area;
@@ -34,13 +36,13 @@ use Symfony\Component\HttpFoundation\Response;
 class EnsureCategoryAccess
 {
     private const MODULO = [
-        'product'  => 'categorias',
+        'product' => 'categorias',
         'business' => 'categorias-negocio',
     ];
 
     public function handle(Request $request, Closure $next): Response
     {
-        $scope  = (string) $request->input('scope', 'product');
+        $scope = (string) $request->input('scope', 'product');
         $modulo = self::MODULO[$scope] ?? null;
 
         if ($modulo === null) {
@@ -50,9 +52,11 @@ class EnsureCategoryAccess
         }
 
         $user = $request->user();
-        $area = $user?->area_id ? Area::find($user->area_id) : null;
+        // La relacion, no `Area::find`: se consulta una vez por peticion
+        // aunque pasen varios middlewares de permisos. Ver `User::area()`.
+        $area = $user?->area;
 
-        if (!$area || (int) $area->state !== 1) {
+        if (! $area || (int) $area->state !== 1) {
             return response()->json([
                 'message' => 'Tu cuenta no tiene un área asignada. Pídele a Tecnología que te asigne una.',
             ], 403);
@@ -67,7 +71,7 @@ class EnsureCategoryAccess
             ? $area->puedeGestionar($modulo, $nivel)
             : $area->puedeVer($modulo, $nivel);
 
-        if (!$permitido) {
+        if (! $permitido) {
             $que = $scope === 'business' ? 'de negocio' : 'de producto';
 
             return response()->json([

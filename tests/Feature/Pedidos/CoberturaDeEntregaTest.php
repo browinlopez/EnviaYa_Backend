@@ -29,34 +29,34 @@ function escenarioCobertura(?float $latNegocio = 11.0168543, ?float $lonNegocio 
     Sanctum::actingAs($user);
 
     DB::table('buyer')->insert([
-        'user_id'            => $user->user_id,
-        'qualification'      => 0,
+        'user_id' => $user->user_id,
+        'qualification' => 0,
         'belongs_to_complex' => 0,
-        'state'              => 1,
+        'state' => 1,
     ]);
 
     $businessId = DB::table('business')->insertGetId([
-        'name'          => 'Tienda con reparto limitado',
+        'name' => 'Tienda con reparto limitado',
         'qualification' => 0,
-        'state'         => 1,
-        'latitude'      => $latNegocio,
-        'longitude'     => $lonNegocio,
+        'state' => 1,
+        'latitude' => $latNegocio,
+        'longitude' => $lonNegocio,
     ]);
 
     $productId = DB::table('products')->insertGetId([
-        'name'  => 'Arroz',
+        'name' => 'Arroz',
         'state' => 1,
     ], 'products_id');
 
     DB::table('products_business')->insert([
-        'busines_id'  => $businessId,
+        'busines_id' => $businessId,
         'products_id' => $productId,
-        'price'       => 10000,
-        'amount'      => 100,
+        'price' => 10000,
+        'amount' => 100,
     ]);
 
     $methodId = DB::table('payment_methods')->insertGetId([
-        'name'  => 'Efectivo',
+        'name' => 'Efectivo',
         'state' => 1,
     ]);
 
@@ -67,22 +67,22 @@ function escenarioCobertura(?float $latNegocio = 11.0168543, ?float $lonNegocio 
 function direccionEn(array $e, ?float $lat, ?float $lon): int
 {
     return DB::table('user_address')->insertGetId([
-        'user_id'   => $e['user']->user_id,
-        'address'   => 'Calle de prueba',
-        'latitude'  => $lat,
+        'user_id' => $e['user']->user_id,
+        'address' => 'Calle de prueba',
+        'latitude' => $lat,
         'longitude' => $lon,
-        'state'     => 1,
+        'state' => 1,
     ]);
 }
 
 function pedidoHacia(array $e, int $addressId, array $extra = []): array
 {
     return array_merge([
-        'user_id'    => $e['user']->user_id,
+        'user_id' => $e['user']->user_id,
         'busines_id' => $e['businessId'],
         'address_id' => $addressId,
         'methods_id' => $e['methodId'],
-        'products'   => [['product_id' => $e['productId'], 'amount' => 1]],
+        'products' => [['product_id' => $e['productId'], 'amount' => 1]],
     ], $extra);
 }
 

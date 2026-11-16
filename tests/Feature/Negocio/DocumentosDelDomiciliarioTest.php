@@ -52,16 +52,16 @@ function tiendaParaPapeles(): array
 
     return [
         'tendero' => $tendero,
-        'suyo'    => $nuevoDomi($mia),
-        'ajeno'   => $nuevoDomi($otra),
+        'suyo' => $nuevoDomi($mia),
+        'ajeno' => $nuevoDomi($otra),
     ];
 }
 
 beforeEach(function () {
     // Almacenamiento falso: ninguna prueba escribe en el bucket de verdad.
     config([
-        'filesystems.disks.r2.key'      => 'prueba',
-        'filesystems.disks.r2.secret'   => 'prueba',
+        'filesystems.disks.r2.key' => 'prueba',
+        'filesystems.disks.r2.secret' => 'prueba',
         'filesystems.disks.r2.endpoint' => 'https://r2.prueba',
     ]);
     Storage::fake('r2');
@@ -87,9 +87,9 @@ test('subir uno nuevo archiva el anterior y la ficha lo da por tenido', function
 
     foreach (['soat-viejo.jpg', 'soat-nuevo.pdf'] as $nombre) {
         $this->post("/v1/negocio/domiciliarios/{$t['suyo']}/documentos", [
-            'type'       => 'soat',
+            'type' => 'soat',
             'expires_at' => $vence,
-            'file'       => UploadedFile::fake()->create($nombre, 200, str_ends_with($nombre, 'pdf') ? 'application/pdf' : 'image/jpeg'),
+            'file' => UploadedFile::fake()->create($nombre, 200, str_ends_with($nombre, 'pdf') ? 'application/pdf' : 'image/jpeg'),
         ], ['Accept' => 'application/json'])->assertCreated();
     }
 

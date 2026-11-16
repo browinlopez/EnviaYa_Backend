@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Console\Commands;
 
 use App\Models\Product\Product;
@@ -56,7 +58,7 @@ class AliasDeCatalogo extends Command
         $productoId = (int) $this->option('producto');
         $nombre = (string) $this->option('nombre');
 
-        if (!$productoId || $nombre === '') {
+        if (! $productoId || $nombre === '') {
             $this->error('Hacen falta --producto y --nombre.');
 
             return self::FAILURE;
@@ -64,7 +66,7 @@ class AliasDeCatalogo extends Command
 
         $producto = Product::find($productoId);
 
-        if (!$producto) {
+        if (! $producto) {
             $this->error("No existe el producto {$productoId}.");
 
             return self::FAILURE;
@@ -85,7 +87,7 @@ class AliasDeCatalogo extends Command
             $this->warn(sprintf('  Ya apuntaba a [%d]. Se reemplaza.', $ocupado->products_id));
         }
 
-        if (!$aplicar) {
+        if (! $aplicar) {
             $this->newLine();
             $this->line('  Nada se escribió. Añade <options=bold>--aplicar</>');
             $this->newLine();
@@ -133,6 +135,7 @@ class AliasDeCatalogo extends Command
 
                     if ($alias === '') {
                         $vacios++;
+
                         continue;
                     }
 
@@ -150,16 +153,17 @@ class AliasDeCatalogo extends Command
 
             if (count($ids) > 1) {
                 $ambiguos[$alias] = $ids;
+
                 continue;
             }
 
             $nuevos[] = [
                 'products_id' => $ids[0],
-                'alias'       => $alias,
-                'busines_id'  => ProductAlias::TODAS,
-                'origen'      => 'migracion',
-                'created_at'  => now(),
-                'updated_at'  => now(),
+                'alias' => $alias,
+                'busines_id' => ProductAlias::TODAS,
+                'origen' => 'migracion',
+                'created_at' => now(),
+                'updated_at' => now(),
             ];
         }
 
@@ -176,7 +180,7 @@ class AliasDeCatalogo extends Command
             $this->line(sprintf('      <fg=yellow>%s</> -> %s', $alias, implode(', ', $ids)));
         }
 
-        if (!$aplicar) {
+        if (! $aplicar) {
             $this->newLine();
             $this->line('  Para escribir: <options=bold>php artisan catalogo:alias --aplicar</>');
             $this->newLine();

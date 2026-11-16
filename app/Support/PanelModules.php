@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Support;
 
 /**
@@ -30,15 +32,15 @@ class PanelModules
     public const CATALOGO = [
         'panel' => ['Panel', 'General'],
 
-        'ordenes'       => ['Órdenes', 'Operación'],
+        'ordenes' => ['Órdenes', 'Operación'],
         'domiciliarios' => ['Domiciliarios', 'Operación'],
-        'pagos'         => ['Pagos', 'Operación'],
+        'pagos' => ['Pagos', 'Operación'],
         // Comprobantes de las entregas. Van junto a Pagos y no en un grupo
         // propio: quien concilia la caja mira las dos cosas seguidas.
-        'facturas'      => ['Comprobantes', 'Operación'],
+        'facturas' => ['Comprobantes', 'Operación'],
         'liquidaciones' => ['Liquidaciones', 'Operación'],
         // El efectivo que los domiciliarios tienen encima y sus consignaciones.
-        'efectivo'      => ['Efectivo', 'Operación'],
+        'efectivo' => ['Efectivo', 'Operación'],
 
         // Seguridad y salud en el trabajo. Grupo propio porque responde a otra
         // pregunta que el resto del panel: no "cómo va la operación" sino
@@ -46,40 +48,40 @@ class PanelModules
         'sst.documentos' => ['Documentación', 'SST'],
         'sst.incidentes' => ['Incidentes', 'SST'],
 
-        'negocios'           => ['Negocios', 'Catálogo'],
-        'productos'          => ['Productos', 'Catálogo'],
-        'categorias'         => ['Categorías', 'Catálogo'],
+        'negocios' => ['Negocios', 'Catálogo'],
+        'productos' => ['Productos', 'Catálogo'],
+        'categorias' => ['Categorías', 'Catálogo'],
         'categorias-negocio' => ['Cat. de negocio', 'Catálogo'],
 
-        'marketing'                => ['Resumen de marketing', 'Marketing'],
-        'marketing.anunciantes'    => ['Anunciantes', 'Marketing'],
-        'marketing.campanas'       => ['Campañas', 'Marketing'],
-        'marketing.banners'        => ['Banners', 'Marketing'],
-        'marketing.cupones'        => ['Cupones', 'Marketing'],
-        'marketing.destacados'     => ['Destacados', 'Marketing'],
+        'marketing' => ['Resumen de marketing', 'Marketing'],
+        'marketing.anunciantes' => ['Anunciantes', 'Marketing'],
+        'marketing.campanas' => ['Campañas', 'Marketing'],
+        'marketing.banners' => ['Banners', 'Marketing'],
+        'marketing.cupones' => ['Cupones', 'Marketing'],
+        'marketing.destacados' => ['Destacados', 'Marketing'],
         'marketing.notificaciones' => ['Notificaciones', 'Marketing'],
 
-        'usuarios'     => ['Usuarios', 'Comunidad'],
+        'usuarios' => ['Usuarios', 'Comunidad'],
         'propietarios' => ['Propietarios', 'Comunidad'],
-        'conjuntos'    => ['Conjuntos', 'Comunidad'],
-        'resenas'      => ['Reseñas', 'Comunidad'],
-        'chats'        => ['Conversaciones', 'Comunidad'],
-        'pqrs'         => ['PQRS', 'Comunidad'],
+        'conjuntos' => ['Conjuntos', 'Comunidad'],
+        'resenas' => ['Reseñas', 'Comunidad'],
+        'chats' => ['Conversaciones', 'Comunidad'],
+        'pqrs' => ['PQRS', 'Comunidad'],
         // Lo que llega por los formularios de la web pública. Va en Comunidad
         // y no en Catálogo porque quien escribe todavía no es un negocio ni un
         // domiciliario: es alguien de fuera pidiendo entrar.
-        'solicitudes'  => ['Solicitudes de la web', 'Comunidad'],
+        'solicitudes' => ['Solicitudes de la web', 'Comunidad'],
 
-        'reportes'  => ['Reportes', 'Control'],
+        'reportes' => ['Reportes', 'Control'],
         'auditoria' => ['Auditoría', 'Control'],
         /*
          * Lo que se rompe en el telefono de la gente. Va en Control y junto a
          * Auditoria porque responde la misma clase de pregunta —que paso— y no
          * "como va la operacion".
          */
-        'fallos'    => ['Fallos de la app', 'Control'],
-        'areas'     => ['Roles y accesos', 'Control'],
-        'ajustes'   => ['Ajustes', 'Control'],
+        'fallos' => ['Fallos de la app', 'Control'],
+        'areas' => ['Roles y accesos', 'Control'],
+        'ajustes' => ['Ajustes', 'Control'],
     ];
 
     /** @return list<string> */

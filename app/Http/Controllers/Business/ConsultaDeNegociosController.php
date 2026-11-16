@@ -1,25 +1,35 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Business;
 
-use App\Services\NegocioParaLaApp;
-use App\Services\PlazoPorDistancia;
-use App\Services\TarifaPorDistancia;
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Business\VerNegocioRequest;
+use App\Http\Resources\Negocio\NegocioDelListadoResource;
+use App\Http\Resources\Negocio\PropietarioResource;
+use App\Http\Resources\Negocio\ResenaDelNegocioResource;
+use App\Http\Resources\Producto\ProductoDeLaFichaResource;
+use App\Http\Resources\Producto\ProductoDelNegocioResource;
+use App\Http\Resources\Producto\ProductoDestacadoResource;
+use App\Http\Resources\Promocion\PromocionDeLaFichaResource;
 use App\Models\Business;
 use App\Models\Promotion;
 use App\Models\User;
+use App\Services\PlazoPorDistancia;
+use App\Services\TarifaPorDistancia;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class ConsultaDeNegociosController extends Controller
 {
+    /*
+     * Sin el presentador: la forma de cada pieza vive en su Resource. Las dos
+     * del producto —la de la vitrina y la de los destacados— son DISTINTAS, y
+     * la diferencia esta medida en la cabecera de `ProductoDestacadoResource`.
+     */
     public function __construct(private readonly TarifaPorDistancia $distancias,
-        private readonly PlazoPorDistancia $plazos,
-        private readonly NegocioParaLaApp $presentador)
-    {
-    }
+        private readonly PlazoPorDistancia $plazos) {}
 
     use ComprobarPertenencia;
 
@@ -67,10 +77,34 @@ class ConsultaDeNegociosController extends Controller
          * app. Se filtra al cargar la relación y no al mapear, para no traerlos
          * siquiera.
          */
-        $businesses = Business::with([
-            'owners', 'municipality', 'reviews',
-            'products' => fn ($q) => $q->where('products.state', 1),
-        ])
+        /*
+         * EN MODO LIGERO NO SE CARGAN LAS RESEÑAS NI LOS PRODUCTOS.
+         *
+         * `light=1` es lo que pide la app al arrancar, y su respuesta ya
+         * devuelve `'products' => []` y `'reviews' => []`. Pero el `with` era
+         * incondicional: el servidor cargaba TODOS los productos activos y
+         * TODAS las reseñas de cada tienda del catálogo, los recorría, y los
+         * tiraba al serializar.
+         *
+         * Medido con seis tiendas: 5 consultas en los dos modos. Lo que cuesta
+         * no son las dos consultas de más —son dos, no dos por tienda— sino lo
+         * que traen: con cien tiendas de cien productos, `light` hidrataba
+         * diez mil modelos de Eloquent para no enseñar ninguno. Y es la
+         * llamada de más tráfico de la plataforma.
+         *
+         * `indexByQualification()` ya lo hacía así. Esto era la asimetría: el
+         * mismo parámetro ahorraba trabajo en un endpoint y no en el otro.
+         */
+        $ligero = $request->boolean('light');
+
+        $relaciones = ['owners', 'municipality'];
+
+        if (! $ligero) {
+            $relaciones['reviews'] = fn ($q) => $q;
+            $relaciones['products'] = fn ($q) => $q->where('products.state', 1);
+        }
+
+        $businesses = Business::with($relaciones)
             ->where('state', 1)
             /*
              * Y tampoco la que está en pausa.
@@ -87,7 +121,7 @@ class ConsultaDeNegociosController extends Controller
             ->recibiendo()
             ->when(count($affiliatedIds) > 0, function ($q) use ($affiliatedIds) {
                 // Ordena los negocios afiliados primero
-                $q->orderByRaw("FIELD(busines_id," . implode(',', $affiliatedIds) . ") DESC");
+                $q->orderByRaw('FIELD(busines_id,'.implode(',', $affiliatedIds).') DESC');
             })
             ->orderBy('name')
             ->get();
@@ -111,9 +145,10 @@ class ConsultaDeNegociosController extends Controller
          * nadie la volvio a poner bien. Va OPCIONAL, como alli: las versiones
          * de la app ya instaladas siguen recibiendo el catalogo y no se quedan
          * con la ficha vacia.
+         *
+         * Se lee arriba, antes de armar la consulta, porque ahora tambien
+         * decide QUE SE CARGA y no solo que se serializa.
          */
-        $ligero = $request->boolean('light');
-
         $formatted = $businesses->map(function ($business) use ($affiliatedIds, $userId, $lat, $lon, $ligero) {
             $isAffiliated = in_array($business->busines_id, $affiliatedIds);
 
@@ -132,59 +167,24 @@ class ConsultaDeNegociosController extends Controller
                 $lon,
             );
 
-            return [
-                'business_id'   => $business->busines_id,
-                // Para pintarlos en el mapa cuando no hay ninguno cerca.
-                'latitude'      => $business->latitude !== null ? (float) $business->latitude : null,
-                'longitude'     => $business->longitude !== null ? (float) $business->longitude : null,
-                'distance_km'   => $km === null ? null : round($km, 2),
-                'delivery_fee'  => $this->distancias->paraDistancia($km),
-                // Lo que tarda desde ESTA tienda: la de la esquina no puede
-                // anunciar el mismo plazo que la del otro barrio.
-                'delivery_time_minutes' => $this->plazos->minutosPara($km),
-                'in_range'      => $this->distancias->reparteHasta($km),
-                'name'          => $business->name,
-                'phone'         => $business->phone,
-                'address'       => $business->address,
-                'qualification' => (float) $business->qualification,
-                'razon_social'  => $business->razonSocial_DCD,
-                'NIT'           => $business->NIT,
-                'logo'          => $business->logo ?? 'https://example.com/default-logo.png',
-                'state'         => (bool) $business->state,
-                'accepting_orders' => (bool) $business->accepting_orders,
-                'type'          => $business->type,
-                'municipality'  => $business->municipality ? [
-                    'id'   => $business->municipality->id,
-                    'name' => $business->municipality->name,
-                ] : null,
-                'owner_count'   => $business->owners->count(),
-                /*
-                 * DEL PROPIETARIO SOLO SALE LO QUE HACE FALTA PARA COMPRAR.
-                 *
-                 * Acá salían también su número de documento, su fecha de nacimiento, su
-                 * teléfono secundario y las notas internas que le haya puesto el
-                 * equipo. (Iba además un `document_type` que siempre valía null:
-                 * la columna real es `document_type_id`.) Nada de eso lo usa la
-                 * app —solo lee
-                 * `user_id`, para abrir el chat— y `indexByQualification` es un
-                 * endpoint PÚBLICO: cualquiera sin cuenta podía listar la cédula de
-                 * todos los tenderos aliados.
-                 *
-                 * Si algún día el panel necesita esos campos, van por la API de
-                 * administración, que ya exige rol 4 y módulo.
-                 */
-                'owners'        => $this->presentador->propietarios($business),
-                /*
-                 * Las claves siguen viajando, vacias: la app las lee sin
-                 * comprobar si existen, y quitarlas del todo la obligaria a
-                 * defenderse de un `undefined` en cada pantalla.
-                 */
-                'products' => $ligero
+            return (new NegocioDelListadoResource(
+                $business,
+                reparto: [
+                    'distance_km' => $km === null ? null : round($km, 2),
+                    'delivery_fee' => $this->distancias->paraDistancia($km),
+                    'delivery_time_minutes' => $this->plazos->minutosPara($km),
+                    'in_range' => $this->distancias->reparteHasta($km),
+                ],
+                productos: $ligero
                     ? []
-                    : $this->presentador->productos($business, $isAffiliated, $userId),
-                'reviews' => $ligero ? [] : $this->presentador->resenas($business),
-                'is_affiliated' => $isAffiliated,
-            ];
+                    : ProductoDelNegocioResource::deLaTienda($business, $isAffiliated, $userId),
+                resenas: $ligero
+                    ? []
+                    : ResenaDelNegocioResource::collection($business->reviews)->resolve(),
+                estaAfiliado: $isAffiliated,
+                // Este listado NO manda `description`; el de calificacion si.
+                conDescripcion: false,
+            ))->resolve();
         });
 
         /*
@@ -207,8 +207,8 @@ class ConsultaDeNegociosController extends Controller
             'user_authenticated' => $userAuthenticated,
             // Si es false, la app dice "no hay tiendas que repartan a tu zona"
             // y enseña igual la lista, ordenada de la más cercana en adelante.
-            'hay_cercanos'       => $formatted->contains(fn ($n) => $n['in_range'] ?? false),
-            'businesses'         => $formatted
+            'hay_cercanos' => $formatted->contains(fn ($n) => $n['in_range'] ?? false),
+            'businesses' => $formatted,
         ]);
     }
 
@@ -264,7 +264,7 @@ class ConsultaDeNegociosController extends Controller
 
         $relaciones = ['owners', 'municipality'];
 
-        if (!$ligero) {
+        if (! $ligero) {
             $relaciones = array_merge($relaciones, [
                 'reviews', 'products.category', 'products.group',
                 'products' => fn ($q) => $q->where('products.state', 1),
@@ -302,110 +302,42 @@ class ConsultaDeNegociosController extends Controller
                 $lon,
             );
 
-            return [
-                'business_id'   => $business->busines_id,
-                'latitude'      => $business->latitude !== null ? (float) $business->latitude : null,
-                'longitude'     => $business->longitude !== null ? (float) $business->longitude : null,
-                'distance_km'   => $km === null ? null : round($km, 2),
-                'delivery_fee'  => $this->distancias->paraDistancia($km),
-                // Lo que tarda desde ESTA tienda: la de la esquina no puede
-                // anunciar el mismo plazo que la del otro barrio.
-                'delivery_time_minutes' => $this->plazos->minutosPara($km),
-                'in_range'      => $this->distancias->reparteHasta($km),
-                'name'          => $business->name,
-                'phone'         => $business->phone,
-                'address'       => $business->address,
-                'description'       => $business->description,
-                'qualification' => (float) $business->qualification,
-                'razon_social'  => $business->razonSocial_DCD,
-                'NIT'           => $business->NIT,
-                'logo'          => $business->logo ?? 'https://example.com/default-logo.png',
-                'state'         => (bool) $business->state,
-                'accepting_orders' => (bool) $business->accepting_orders,
-                'type'          => $business->type,
-                'municipality'  => $business->municipality ? [
-                    'id'   => $business->municipality->id,
-                    'name' => $business->municipality->name,
-                ] : null,
-                'owner_count'   => $business->owners->count(),
+            return (new NegocioDelListadoResource(
+                $business,
+                reparto: [
+                    'distance_km' => $km === null ? null : round($km, 2),
+                    'delivery_fee' => $this->distancias->paraDistancia($km),
+                    'delivery_time_minutes' => $this->plazos->minutosPara($km),
+                    'in_range' => $this->distancias->reparteHasta($km),
+                ],
                 /*
-                 * DEL PROPIETARIO SOLO SALE LO QUE HACE FALTA PARA COMPRAR.
-                 *
-                 * Acá salían también su número de documento, su fecha de nacimiento, su
-                 * teléfono secundario y las notas internas que le haya puesto el
-                 * equipo. (Iba además un `document_type` que siempre valía null:
-                 * la columna real es `document_type_id`.) Nada de eso lo usa la
-                 * app —solo lee
-                 * `user_id`, para abrir el chat— y `indexByQualification` es un
-                 * endpoint PÚBLICO: cualquiera sin cuenta podía listar la cédula de
-                 * todos los tenderos aliados.
-                 *
-                 * Si algún día el panel necesita esos campos, van por la API de
-                 * administración, que ya exige rol 4 y módulo.
+                 * OJO: NO ES LA MISMA FORMA DE PRODUCTO que el listado por
+                 * cercania. Doce campos alli y siete aqui; la diferencia esta
+                 * medida y escrita en la cabecera de
+                 * `ProductoDestacadoResource`, y es un asunto de producto sin
+                 * decidir. Pasarla por aqui la deja a la vista, en vez de
+                 * enterrada en un `return` de cincuenta lineas.
                  */
-                'owners'        => $this->presentador->propietarios($business),
-                // productos del negocio
-                'products' => $ligero ? [] : $business->products->map(function ($product) use ($isAffiliated, $userId) {
-                    return [
-                        'product_id'  => $product->products_id,
-                        'name'        => $product->name,
-                        'description' => $product->description,
-                        'category'    => $product->category ? $product->category->name : null,
-                        'image'       => $product->image,
-                        'state'       => (bool) $product->state,
-                        /*
-                         * EL GRUPO DE VARIANTES, PARA QUE LA APP PINTE UNA
-                         * TARJETA Y NO OCHO.
-                         *
-                         * Va junto al producto y no en una lista aparte porque
-                         * lo que se vende sigue siendo ESTE producto: el grupo
-                         * solo dice de qué tarjeta cuelga y qué pone el chip.
-                         * Así una app vieja ignora los dos campos y sigue
-                         * funcionando igual que ayer.
-                         *
-                         * `variante` llega aunque no haya grupo: es el texto
-                         * de la presentación y sirve para mostrarlo bajo el
-                         * nombre aunque el producto sea único.
-                         */
-                        'variante'    => $product->variante,
-                        'group'       => $product->group ? [
-                            'group_id' => (int) $product->group->group_id,
-                            'name'     => $product->group->name,
-                            'image'    => $product->group->image,
-                        ] : null,
-                        // Si no hay user_id → precio 0
-                        // Si hay user_id → mostrar precio solo si está afiliado
-                        'price'       => $userId ? ($isAffiliated ? ($product->pivot->price ?? 0) : 0) : 0,
-                        /*
-                         * COMO SE VENDE: por unidad o al peso. Con una unidad
-                         * de peso, `price` es el precio por esa medida y la
-                         * pantalla ofrece botones de plata --«3.000 de
-                         * queso»-- y de porcion en vez del +/- de siempre.
-                         */
-                        'sale_unit' => $product->pivot->sale_unit ?? 'unidad',
-                        'min_qty'   => $product->pivot->min_qty !== null ? (float) $product->pivot->min_qty : null,
-                        'step_qty'  => $product->pivot->step_qty !== null ? (float) $product->pivot->step_qty : null,
-                    ];
-                }),
-                // reviews del negocio
-                'reviews' => $ligero ? [] : $this->presentador->resenas($business),
-                'is_affiliated' => $isAffiliated,
-            ];
+                productos: $ligero
+                    ? []
+                    : ProductoDestacadoResource::deLaTienda($business, $isAffiliated, $userId),
+                resenas: $ligero
+                    ? []
+                    : ResenaDelNegocioResource::collection($business->reviews)->resolve(),
+                estaAfiliado: $isAffiliated,
+                conDescripcion: true,
+            ))->resolve();
         });
 
         return response()->json([
             'user_authenticated' => $userAuthenticated,
-            'businesses'         => $formatted
+            'businesses' => $formatted,
         ]);
     }
 
     // Mostrar negocio con relaciones
-    public function show(Request $request)
+    public function show(VerNegocioRequest $request)
     {
-        $request->validate([
-            'busines_id' => 'required|integer|exists:business,busines_id',
-            'user_id'    => 'sometimes|nullable|integer|exists:user,user_id',
-        ]);
 
         /*
          * EL PRECIO SOLO LO VE QUIEN ESTÁ AFILIADO.
@@ -480,36 +412,31 @@ class ConsultaDeNegociosController extends Controller
                 fn (Promotion $p) => $p->descuentoSobre($p->minimoParaAplicar(), 1000),
             )->first();
 
-            return [
-                'promotion_id' => (int) $mejor->promotion_id,
-                'texto'        => (string) $mejor->description,
-                'regla'        => $mejor->reglaEnPalabras(),
-                'hasta_texto'  => $mejor->hastaEnPalabras(),
-            ];
+            return (new PromocionDeLaFichaResource($mejor))->resolve();
         };
 
         return response()->json([
-            'business_id'   => $business->busines_id,
-            'name'          => $business->name,
-            'phone'         => $business->phone,
-            'address'       => $business->address,
+            'business_id' => $business->busines_id,
+            'name' => $business->name,
+            'phone' => $business->phone,
+            'address' => $business->address,
             'qualification' => (float) $business->qualification,
-            'razon_social'  => $business->razonSocial_DCD,
-            'NIT'           => $business->NIT,
-            'logo'          => $business->logo ?? 'https://example.com/default-logo.png',
-            'type'           => $business->type,
-            'state'         => (bool) $business->state,
+            'razon_social' => $business->razonSocial_DCD,
+            'NIT' => $business->NIT,
+            'logo' => $business->logo ?? 'https://example.com/default-logo.png',
+            'type' => $business->type,
+            'state' => (bool) $business->state,
             /*
              * ACÁ ES DONDE IMPORTA. La ficha sí se sirve en pausa, y con esto
              * la app puede decir «no está recibiendo pedidos ahora» y apagar
              * el carrito, en vez de dejar pedir para fallar al final.
              */
             'accepting_orders' => (bool) $business->accepting_orders,
-            'municipality'  => $business->municipality ? [
-                'id'   => $business->municipality->id,
+            'municipality' => $business->municipality ? [
+                'id' => $business->municipality->id,
                 'name' => $business->municipality->name,
             ] : null,
-            'owner_count'   => $business->owners->count(),
+            'owner_count' => $business->owners->count(),
             /*
              * DEL PROPIETARIO SOLO SALE LO QUE HACE FALTA PARA COMPRAR.
              *
@@ -525,7 +452,7 @@ class ConsultaDeNegociosController extends Controller
              * Si algún día el panel necesita esos campos, van por la API de
              * administración, que ya exige rol 4 y módulo.
              */
-            'owners'        => $this->presentador->propietarios($business),
+            'owners' => PropietarioResource::collection($business->owners)->resolve(),
             'is_affiliated' => $estaAfiliado,
             /*
              * SIN PRECIO NO SE OFRECE.
@@ -543,54 +470,21 @@ class ConsultaDeNegociosController extends Controller
             'products' => $business->products
                 ->filter(fn ($p) => (float) ($p->pivot->price ?? 0) > 0)
                 ->values()
-                ->map(function ($product) use ($estaAfiliado, $promoDe) {
-                return [
-                    'product_id' => $product->products_id,
-                    'name'       => $product->name,
-                    'description' => $product->description,
-                    'category_id' => $product->category_id,
-                    // La ficha agrupa por nombre de categoría, igual que el
-                    // listado; con solo el id no podía pintar las secciones.
-                    'category'   => $product->category?->name,
-                    'image'      => $product->image,
-                    'state'      => (bool) $product->state,
-                    'price'      => $estaAfiliado ? ($product->pivot->price ?? 0) : 0,
-                    // Como se vende: por unidad o al peso. Ver arriba.
-                    'sale_unit'  => $product->pivot->sale_unit ?? 'unidad',
-                    'min_qty'    => $product->pivot->min_qty !== null ? (float) $product->pivot->min_qty : null,
-                    'step_qty'   => $product->pivot->step_qty !== null ? (float) $product->pivot->step_qty : null,
-                    /*
-                     * `null` cuando no hay ninguna. La app pinta la etiqueta
-                     * solo si viene algo.
-                     *
-                     * Y NUNCA sobre lo que se vende al peso: el motor de
-                     * descuentos excluye esas lineas --un «lleva 3, paga 2»
-                     * sobre 1,18 kg no esta definido-- asi que la etiqueta
-                     * prometeria una rebaja que el carrito no va a aplicar.
-                     * Es peor que no ensenar nada: el cliente llega al total
-                     * esperando otro numero.
-                     */
-                    'promocion'  => in_array($product->pivot->sale_unit ?? 'unidad', ['kg', 'libra', 'gramo'], true)
-                        ? null
-                        : $promoDe((int) $product->products_id),
-                ];
-            }),
+                ->map(fn ($product) => (new ProductoDeLaFichaResource(
+                    $product, $estaAfiliado, $promoDe,
+                ))->resolve()),
 
             /*
-             * Las promociones de la tienda, para la franja de arriba. Solo las
-             * que DESCUENTAN: una que solo avisa —«traemos pan a las 4»— ya
-             * llegó por la campana y anunciarla otra vez en la ficha sería
-             * ruido sobre algo que no cambia ningún precio.
-             */
+                 * Las promociones de la tienda, para la franja de arriba. Solo las
+                 * que DESCUENTAN: una que solo avisa —«traemos pan a las 4»— ya
+                 * llegó por la campana y anunciarla otra vez en la ficha sería
+                 * ruido sobre algo que no cambia ningún precio.
+                 */
             'promociones' => $promociones
                 ->filter(fn (Promotion $p) => $p->descuenta())
-                ->map(fn (Promotion $p) => [
-                    'promotion_id' => (int) $p->promotion_id,
-                    'texto'        => (string) $p->description,
-                    'regla'        => $p->reglaEnPalabras(),
-                    'hasta_texto'  => $p->hastaEnPalabras(),
-                ])->values(),
-            'reviews' => $this->presentador->resenas($business),
+                ->map(fn (Promotion $p) => (new PromocionDeLaFichaResource($p))->resolve())
+                ->values(),
+            'reviews' => ResenaDelNegocioResource::collection($business->reviews)->resolve(),
         ]);
     }
 }

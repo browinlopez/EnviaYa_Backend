@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services\Push;
 
 use App\Models\DeviceToken;
@@ -30,8 +32,7 @@ class PushSegunPlataforma implements TransportePush
     public function __construct(
         private readonly PushFirebase $firebase,
         private readonly PushApns $apple,
-    ) {
-    }
+    ) {}
 
     public function nombre(): string
     {
@@ -70,6 +71,7 @@ class PushSegunPlataforma implements TransportePush
         foreach ($tokens as $token) {
             if (($plataformas[$token] ?? null) === 'ios') {
                 $paraApple[] = $token;
+
                 continue;
             }
 

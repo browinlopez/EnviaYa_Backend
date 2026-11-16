@@ -14,7 +14,6 @@ use Laravel\Sanctum\Sanctum;
  * hoy los indicadores de Órdenes, que se calculan sobre lo filtrado en el
  * navegador.
  */
-
 function adminSistema(): User
 {
     Rol::firstOrCreate(['rol_id' => 4], ['name' => 'admin', 'guard_name' => 'web']);
@@ -38,21 +37,21 @@ function sembrarPagos(int $n): void
     for ($i = 1; $i <= $n; $i++) {
         $orden = DB::table('orderssales')->insertGetId([
             'busines_id' => $negocio,
-            'total'      => 1000 * $i,
-            'subtotal'   => 1000 * $i,
-            'domicilio'  => 0,
-            'state'      => 1,
-            'sale_date'  => now()->subDays($i),
+            'total' => 1000 * $i,
+            'subtotal' => 1000 * $i,
+            'domicilio' => 0,
+            'state' => 1,
+            'sale_date' => now()->subDays($i),
         ], 'orderSales_id');
 
         DB::table('payments')->insert([
             'orderSales_id' => $orden,
-            'amount'        => 1000 * $i,
-            'total'         => 1000 * $i,
+            'amount' => 1000 * $i,
+            'total' => 1000 * $i,
             'payment_status' => 'approved',
-            'status'        => 'approved',
-            'created_at'    => now(),
-            'updated_at'    => now(),
+            'status' => 'approved',
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
     }
 }

@@ -1,24 +1,22 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Domiciliary;
 
-use App\Services\Ajustes;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Domiciliary\IngresosDelDomiciliarioRequest;
 use App\Models\Domiciliary;
-use App\Models\Payment\Payment;
-use App\Models\User;
+use App\Models\Order\OrdersSales;
+use App\Services\AccesoAlConjunto;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 
 class IngresosDelDomiciliarioController extends Controller
 {
-    public function incomeDomiciliary(Request $request)
+    public function incomeDomiciliary(IngresosDelDomiciliarioRequest $request)
     {
-        $request->validate([
-            'domiciliary_id' => 'required|integer|exists:domiciliary,domiciliary_id',
-        ]);
 
         $domiciliary_id = $request->domiciliary_id;
 
@@ -53,7 +51,7 @@ class IngresosDelDomiciliarioController extends Controller
         $porDia = function (Carbon $desde, Carbon $hasta) use ($domiciliary_id) {
             $filas = DB::table('orderssales')
                 ->where('domiciliary_id', $domiciliary_id)
-                ->where('state', 4)
+                ->where('state', OrdersSales::ENTREGADO)
                 ->whereBetween('delivery_date', [$desde, $hasta])
                 ->get(['delivery_date']);
 
@@ -67,7 +65,7 @@ class IngresosDelDomiciliarioController extends Controller
             return collect($dias)->map(fn ($total) => (object) ['total' => $total]);
         };
 
-        $currentWeek  = $porDia(now()->startOfWeek(), now()->endOfWeek());
+        $currentWeek = $porDia(now()->startOfWeek(), now()->endOfWeek());
         $previousWeek = $porDia(now()->subWeek()->startOfWeek(), now()->subWeek()->endOfWeek());
 
         /* =========================
@@ -104,7 +102,7 @@ class IngresosDelDomiciliarioController extends Controller
     ========================== */
         $totalEntregas = DB::table('orderssales')
             ->where('domiciliary_id', $domiciliary_id)
-            ->where('state', 4)
+            ->where('state', OrdersSales::ENTREGADO)
             ->count();
 
         /*
@@ -137,12 +135,12 @@ class IngresosDelDomiciliarioController extends Controller
     {
         $domiciliario = Domiciliary::where('user_id', $request->user()->user_id)->first();
 
-        if (!$domiciliario) {
+        if (! $domiciliario) {
             return response()->json(['message' => 'Esta cuenta no es de un domiciliario.'], 403);
         }
 
         return response()->json(
-            app(\App\Services\AccesoAlConjunto::class)->generar($domiciliario)
+            app(AccesoAlConjunto::class)->generar($domiciliario)
         );
     }
 }

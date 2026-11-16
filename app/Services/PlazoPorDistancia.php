@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 /**
@@ -38,7 +40,7 @@ class PlazoPorDistancia
         }
 
         $porKm = (float) Ajustes::valor('operacion.minutos_por_km');
-        $tope  = (int) Ajustes::valor('operacion.tiempo_entrega_max');
+        $tope = (int) Ajustes::valor('operacion.tiempo_entrega_max');
 
         $minutos = $base + ($km * $porKm);
         $minutos = (int) (ceil($minutos / self::PASO_MINUTOS) * self::PASO_MINUTOS);

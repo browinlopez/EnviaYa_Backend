@@ -26,12 +26,12 @@ use Illuminate\Support\Facades\DB;
 function promocionDeLaTienda(int $businessId, array $extra = []): Promotion
 {
     return Promotion::create(array_merge([
-        'busines_id'          => $businessId,
-        'description'         => 'Mitad de precio en todo',
-        'tipo'                => Promotion::PORCENTAJE,
+        'busines_id' => $businessId,
+        'description' => 'Mitad de precio en todo',
+        'tipo' => Promotion::PORCENTAJE,
         'percentage_discount' => 0.5,
-        'state'               => Promotion::ENVIADA,
-        'start_date'          => now()->subDay(),
+        'state' => Promotion::ENVIADA,
+        'start_date' => now()->subDay(),
     ], $extra));
 }
 
@@ -139,12 +139,12 @@ test('cuando dos pedidos se pelean el último uso, solo uno lo gasta', function 
     $promo = promocionDeLaTienda($e['businessId'], ['max_usos' => 1, 'usos' => 1]);
 
     $otro = OrdersSales::create([
-        'buyer_id'   => $e['buyerId'],
+        'buyer_id' => $e['buyerId'],
         'busines_id' => $e['businessId'],
         'methods_id' => $e['methodId'],
-        'total'      => 30000,
-        'sale_date'  => now(),
-        'state'      => 1,
+        'total' => 30000,
+        'sale_date' => now(),
+        'state' => 1,
     ]);
 
     expect(fn () => app(RedencionDePromociones::class)->canjear($otro, [
@@ -191,4 +191,67 @@ test('cancelar dos veces no descuenta el uso dos veces', function () {
     app(RedencionDePromociones::class)->devolver($orden);
 
     expect((int) $promo->fresh()->usos)->toBe(0);
+});
+
+/* ----------------------------- lo que el segundo barrido encontro -------- */
+
+/**
+ * CANCELAR DOS VECES NO DEVUELVE DOS USOS -- Y LA PRUEBA DE ARRIBA NO LO VEIA.
+ *
+ * Del barrido del 14 de noviembre de 2026: poniendo
+ * `RedencionDePromociones::APLICADA = 0` --el mismo valor que `DEVUELTA`--
+ * pasaban las 1365 pruebas. Incluida «cancelar dos veces no descuenta el uso
+ * dos veces», que esta justo arriba y es exactamente este caso.
+ *
+ * POR QUE NO LO VEIA: esa prueba arranca con `usos = 0`, gasta uno y afirma
+ * que tras dos cancelaciones queda en **0**. Y el servicio tiene un
+ * `where('usos', '>', 0)` que impide dejar el contador en negativo. Con el
+ * doble descuento, 1 -> 0 -> (la guarda lo para) 0. **La guarda de abajo tapa
+ * el defecto de arriba** y el resultado sale igual.
+ *
+ * Es una prueba correcta sobre lo que afirma --nunca queda negativo-- que NO
+ * puede distinguir «la segunda llamada no encontro nada» de «la segunda
+ * llamada descontO y la guarda lo recortO». Para separarlas hay que arrancar
+ * con el contador lo bastante alto como para que la guarda no llegue a actuar.
+ *
+ * EL DANO: cada cancelacion repetida regala un uso. Una promocion de «los
+ * primeros 50» acaba rebajando mas de cincuenta ventas, que es plata de la
+ * tienda.
+ */
+test('con el contador alto se ve que la segunda cancelacion no descuenta', function () {
+    $e = escenarioPedido();
+
+    // Arranca en 2 para que la guarda `usos > 0` NO pueda enmascarar nada:
+    // tras el pedido son 3, y de ahi hay sitio para bajar dos veces.
+    $promo = promocionDeLaTienda($e['businessId'], ['max_usos' => 10, 'usos' => 2]);
+
+    $this->postJson('/v1/orders/orders', cuerpoPedido($e))->assertSuccessful();
+    $orden = OrdersSales::latest('orderSales_id')->first();
+
+    expect((int) $promo->fresh()->usos)->toBe(3);
+
+    app(RedencionDePromociones::class)->devolver($orden);
+
+    expect((int) $promo->fresh()->usos)->toBe(2);
+
+    app(RedencionDePromociones::class)->devolver($orden);
+
+    /*
+     * DOS, no uno. Acá está el defecto que la otra prueba no podía ver: con
+     * `APLICADA` y `DEVUELTA` valiendo lo mismo, la segunda llamada vuelve a
+     * encontrar la fila y descuenta otra vez, y como el contador va por 2 la
+     * guarda no lo recorta.
+     */
+    expect((int) $promo->fresh()->usos)->toBe(2);
+});
+
+test('aplicada y devuelta son estados DISTINTOS', function () {
+    /*
+     * CON LITERALES. El estado se escribe en `orders_promotions.state` de
+     * filas que ya existen, y de distinguirlos depende que cancelar dos veces
+     * no regale un uso.
+     */
+    expect(RedencionDePromociones::APLICADA)->toBe(1);
+    expect(RedencionDePromociones::DEVUELTA)->toBe(0);
+    expect(RedencionDePromociones::APLICADA)->not->toBe(RedencionDePromociones::DEVUELTA);
 });

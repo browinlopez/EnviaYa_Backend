@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services\Push;
 
 /**
@@ -19,7 +21,7 @@ interface TransportePush
     /**
      * @param  list<string>  $tokens
      * @param  array<string, string>  $datos  Carga útil para la app (a dónde llevar al tocar).
-     * @return array<string, ResultadoPush>  token => resultado
+     * @return array<string, ResultadoPush> token => resultado
      */
     public function enviar(array $tokens, string $titulo, string $cuerpo, array $datos = []): array;
 

@@ -145,7 +145,7 @@ $patrones = array_values(array_filter(array_map(
 $subdominiosDe = static fn (string $anfitrion): string =>
     // Sin comas: la lista de patrones se parte por comas, así que un
     // cuantificador como {2,3} rompería el patrón en dos mitades inválidas.
-    '#^https://([a-z0-9-]+\.)*' . preg_quote($anfitrion, '#') . '$#i';
+    '#^https://([a-z0-9-]+\.)*'.preg_quote($anfitrion, '#').'$#i';
 
 if ($patrones === []) {
     $anfitrion = parse_url((string) env('SITIO_URL', 'https://vecipaya.com'), PHP_URL_HOST)

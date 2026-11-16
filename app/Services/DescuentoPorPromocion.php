@@ -1,8 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use App\Models\Promotion;
+use Illuminate\Support\Collection;
 
 /**
  * LO QUE REBAJAN LAS PROMOCIONES DE LA TIENDA SOBRE UN CARRITO
@@ -34,8 +37,8 @@ use App\Models\Promotion;
 class DescuentoPorPromocion
 {
     /**
-     * @param  iterable  $lineas   Lo pedido: [{product_id, amount}, ...]
-     * @param  \Illuminate\Support\Collection  $precios  products_id => precio del servidor
+     * @param  iterable  $lineas  Lo pedido: [{product_id, amount}, ...]
+     * @param  Collection  $precios  products_id => precio del servidor
      * @return array{
      *   descuento: float,
      *   aplicadas: list<array{promotion_id:int,texto:string,regla:?string,ahorro:float}>,
@@ -69,8 +72,8 @@ class DescuentoPorPromocion
 
         foreach ($lineas as $linea) {
             $productoId = (int) ($linea['product_id'] ?? 0);
-            $cantidad   = (int) ($linea['amount'] ?? 0);
-            $precio     = (float) ($precios[$productoId] ?? 0);
+            $cantidad = (int) ($linea['amount'] ?? 0);
+            $precio = (float) ($precios[$productoId] ?? 0);
 
             /*
              * LAS LINEAS AL PESO NO ENTRAN AL MOTOR DE PROMOCIONES.
@@ -92,7 +95,7 @@ class DescuentoPorPromocion
             $mejorAhorro = 0.0;
 
             foreach ($promociones as $promocion) {
-                if (!$this->alcanza($promocion, $productoId)) {
+                if (! $this->alcanza($promocion, $productoId)) {
                     continue;
                 }
 
@@ -113,9 +116,9 @@ class DescuentoPorPromocion
                 if ($ahorro <= 0 && $cantidad < $promocion->minimoParaAplicar()) {
                     $cerca[$promocion->promotion_id] = [
                         'promotion_id' => (int) $promocion->promotion_id,
-                        'texto'        => (string) $promocion->description,
-                        'faltan'       => $promocion->minimoParaAplicar() - $cantidad,
-                        'producto'     => $this->nombreDe($promocion, $productoId),
+                        'texto' => (string) $promocion->description,
+                        'faltan' => $promocion->minimoParaAplicar() - $cantidad,
+                        'producto' => $this->nombreDe($promocion, $productoId),
                     ];
                 }
             }
@@ -129,9 +132,9 @@ class DescuentoPorPromocion
             $id = (int) $mejor->promotion_id;
             $ahorroPorPromocion[$id] = [
                 'promotion_id' => $id,
-                'texto'        => (string) $mejor->description,
-                'regla'        => $mejor->reglaEnPalabras(),
-                'ahorro'       => round(($ahorroPorPromocion[$id]['ahorro'] ?? 0) + $mejorAhorro, 2),
+                'texto' => (string) $mejor->description,
+                'regla' => $mejor->reglaEnPalabras(),
+                'ahorro' => round(($ahorroPorPromocion[$id]['ahorro'] ?? 0) + $mejorAhorro, 2),
             ];
         }
 
@@ -139,7 +142,7 @@ class DescuentoPorPromocion
             'descuento' => round($total, 2),
             'aplicadas' => array_values($ahorroPorPromocion),
             // Solo se avisa de lo que NO se aplicó ya por otra vía.
-            'cerca'     => array_values(array_diff_key($cerca, $ahorroPorPromocion)),
+            'cerca' => array_values(array_diff_key($cerca, $ahorroPorPromocion)),
         ];
     }
 

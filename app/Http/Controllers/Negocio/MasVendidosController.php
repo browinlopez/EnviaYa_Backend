@@ -1,9 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Negocio;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Http\Requests\Negocio\MasVendidosRequest;
+use App\Models\Order\OrdersSales;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -19,16 +22,17 @@ use Illuminate\Support\Facades\DB;
  */
 class MasVendidosController extends Controller
 {
-    private const ENTREGADO = 4;
+    /*
+     * LOS ESTADOS VIENEN DE `OrdersSales`, no de una copia privada.
+     * Estaban declarados aqui y en otras ocho clases: la misma decision
+     * tomada nueve veces. Ver la cabecera de esas constantes en el modelo.
+     */
 
-    public function index(Request $request)
+    public function index(MasVendidosRequest $request)
     {
         $negocioId = (int) $request->attributes->get('busines_id');
 
-        $datos = $request->validate([
-            'dias'   => 'sometimes|integer|in:7,30,90,365',
-            'limite' => 'sometimes|integer|min:1|max:50',
-        ]);
+        $datos = $request->validated();
         $dias = (int) ($datos['dias'] ?? 30);
         $limite = (int) ($datos['limite'] ?? 10);
 
@@ -40,7 +44,7 @@ class MasVendidosController extends Controller
                 $j->on('pb.products_id', '=', 'd.product_id')->where('pb.busines_id', '=', $negocioId);
             })
             ->where('o.busines_id', $negocioId)
-            ->where('o.state', self::ENTREGADO)
+            ->where('o.state', OrdersSales::ENTREGADO)
             ->where('o.sale_date', '>=', now()->subDays($dias)->startOfDay())
             ->groupBy('d.product_id', 'p.name', 'p.image', 'pb.price')
             ->orderByDesc('unidades')
@@ -57,15 +61,15 @@ class MasVendidosController extends Controller
             ]);
 
         return response()->json([
-            'dias'      => $dias,
+            'dias' => $dias,
             'productos' => $filas->map(fn ($f) => [
                 'product_id' => (int) $f->product_id,
-                'nombre'     => $f->name,
-                'imagen'     => $f->image,
-                'precio'     => $f->price === null ? null : (float) $f->price,
-                'unidades'   => round((float) $f->unidades, 2),
-                'facturado'  => round((float) $f->facturado, 2),
-                'pedidos'    => (int) $f->pedidos,
+                'nombre' => $f->name,
+                'imagen' => $f->image,
+                'precio' => $f->price === null ? null : (float) $f->price,
+                'unidades' => round((float) $f->unidades, 2),
+                'facturado' => round((float) $f->facturado, 2),
+                'pedidos' => (int) $f->pedidos,
             ])->values(),
         ]);
     }

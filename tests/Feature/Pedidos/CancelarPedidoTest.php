@@ -25,26 +25,26 @@ function pedidoDe(int $estado = 1): array
     $user = User::factory()->create(['rol' => 1]);
 
     $buyerId = DB::table('buyer')->insertGetId([
-        'user_id'            => $user->user_id,
-        'qualification'      => 0,
+        'user_id' => $user->user_id,
+        'qualification' => 0,
         'belongs_to_complex' => 0,
-        'state'              => 1,
+        'state' => 1,
     ]);
 
     $businessId = DB::table('business')->insertGetId([
-        'name'          => 'Tienda del Pedido',
+        'name' => 'Tienda del Pedido',
         'qualification' => 0,
-        'state'         => 1,
+        'state' => 1,
     ]);
 
     $orderId = DB::table('orderssales')->insertGetId([
-        'buyer_id'   => $buyerId,
+        'buyer_id' => $buyerId,
         'busines_id' => $businessId,
-        'subtotal'   => 10000,
-        'domicilio'  => 2000,
-        'total'      => 12000,
-        'sale_date'  => now(),
-        'state'      => $estado,
+        'subtotal' => 10000,
+        'domicilio' => 2000,
+        'total' => 12000,
+        'sale_date' => now(),
+        'state' => $estado,
     ], 'orderSales_id');
 
     return compact('user', 'orderId');

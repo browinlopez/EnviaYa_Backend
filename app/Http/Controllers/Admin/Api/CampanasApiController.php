@@ -1,24 +1,21 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Admin\Api;
 
-use App\Services\Push\Notificador;
 use App\Http\Controllers\Controller;
-use App\Models\DeviceToken;
+use App\Http\Requests\Admin\CampanaRequest;
+use App\Http\Requests\Admin\FiltrarCampanasRequest;
+use App\Http\Resources\Marketing\CampanaResource;
 use App\Models\Marketing\AdCampaign;
-use App\Models\Marketing\Advertiser;
 use App\Models\Marketing\Banner;
-use App\Models\Marketing\Coupon;
-use App\Models\Marketing\FeaturedBusiness;
-use App\Models\Marketing\PushCampaign;
-use App\Services\MediaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class CampanasApiController extends Controller
 {
-
-    public function campaigns(Request $request)
+    public function campaigns(FiltrarCampanasRequest $request)
     {
         $q = AdCampaign::with('advertiser:id,name')->orderByDesc('starts_at');
 
@@ -47,19 +44,24 @@ class CampanasApiController extends Controller
             $campanas->map(function (AdCampaign $c) use ($metricas) {
                 $m = $metricas[$c->id] ?? null;
 
-                return array_merge($c->toArray(), [
-                    'advertiser_name' => $c->advertiser?->name,
-                    'banners_count'   => (int) ($m->banners_count ?? 0),
-                    'impressions'     => (int) ($m->impressions ?? 0),
-                    'clicks'          => (int) ($m->clicks ?? 0),
-                ]);
+                /*
+                 * Las metricas se le PASAN al Resource: salen de una consulta
+                 * agregada que se hace una vez para todas las campanas, y
+                 * calcularlas dentro serian tres consultas por campana.
+                 */
+                return (new CampanaResource(
+                    $c,
+                    (int) ($m->banners_count ?? 0),
+                    (int) ($m->impressions ?? 0),
+                    (int) ($m->clicks ?? 0),
+                ))->resolve();
             })
         );
     }
 
-    public function storeCampaign(Request $request)
+    public function storeCampaign(CampanaRequest $request)
     {
-        $c = AdCampaign::create($this->validarCampana($request));
+        $c = AdCampaign::create($request->validated());
 
         return response()->json(['message' => 'Campaña creada.', 'id' => $c->id], 201);
     }
@@ -68,7 +70,13 @@ class CampanasApiController extends Controller
     {
         $c = AdCampaign::findOr($id, fn () => abort(404, 'La campaña no existe.'));
 
-        $c->update($this->validarCampana($request, true));
+        /*
+         * EN LINEA Y NO EN UN FormRequest, a proposito: la busqueda de arriba
+         * contesta 404 cuando el registro no existe, y eso tiene que ir ANTES
+         * que un error de validacion. Las reglas no se repiten: se piden a
+         * `CampanaRequest` en modo parcial.
+         */
+        $c->update($request->validate(CampanaRequest::reglas(parcial: true)));
 
         return response()->json(['message' => 'Campaña actualizada.']);
     }
@@ -87,27 +95,6 @@ class CampanasApiController extends Controller
         $c->delete();
 
         return response()->json(['message' => 'Campaña eliminada.']);
-    }
-
-    private function validarCampana(Request $request, bool $parcial = false): array
-    {
-        $regla = $parcial ? 'sometimes' : 'required';
-
-        $datos = $request->validate([
-            'advertiser_id' => "{$regla}|integer|exists:advertisers,id",
-            'name'          => "{$regla}|string|max:150",
-            'description'   => 'sometimes|nullable|string',
-            'objective'     => 'sometimes|in:awareness,traffic,conversion',
-            'starts_at'     => "{$regla}|date",
-            // La fecha final nunca antes de la inicial: una campaña invertida
-            // no falla al guardarse, simplemente no entrega nada, y eso se
-            // descubre tarde y sin mensaje.
-            'ends_at'       => "{$regla}|date|after_or_equal:starts_at",
-            'budget'        => 'sometimes|numeric|min:0',
-            'state'         => 'sometimes|integer|in:0,1,2,3',
-        ]);
-
-        return $datos;
     }
 
     /* ==================================================================

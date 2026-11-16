@@ -5,6 +5,13 @@ use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\Facades\Notification;
 
 test('reset password link screen can be rendered', function () {
+    /*
+     * SIN VITE: ver el comentario de `PasswordConfirmationTest`. El
+     * layout de Breeze usa `@vite(...)`, que lanza si falta el
+     * manifiesto, y el CI no construye assets.
+     */
+    $this->withoutVite();
+
     $response = $this->get('/forgot-password');
 
     $response->assertStatus(200);
@@ -21,6 +28,13 @@ test('reset password link can be requested', function () {
 });
 
 test('reset password screen can be rendered', function () {
+    /*
+     * SIN VITE: ver el comentario de `PasswordConfirmationTest`. El
+     * layout de Breeze usa `@vite(...)`, que lanza si falta el
+     * manifiesto, y el CI no construye assets.
+     */
+    $this->withoutVite();
+
     Notification::fake();
 
     $user = User::factory()->create();

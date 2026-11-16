@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use Dompdf\Dompdf;
@@ -32,9 +34,7 @@ class ContratoService
         'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
     ];
 
-    public function __construct(private MediaService $medios)
-    {
-    }
+    public function __construct(private MediaService $medios) {}
 
     /**
      * Genera el acuerdo y lo archiva.
@@ -58,7 +58,7 @@ class ContratoService
 
         $pdf = $this->renderizar($domiciliario, $firmaDataUrl, $ciudad, $ahora, $adminNombre, $origen);
 
-        $nombreArchivo = 'acuerdo-vinculacion-' . $ahora->format('Ymd-His') . '.pdf';
+        $nombreArchivo = 'acuerdo-vinculacion-'.$ahora->format('Ymd-His').'.pdf';
 
         $archivo = $this->medios->guardarContenido(
             'usuarios',
@@ -74,17 +74,17 @@ class ContratoService
         DB::table('domiciliary')
             ->where('domiciliary_id', $domiciliario->domiciliary_id)
             ->update([
-                'contract_media_id'  => $archivo['id'],
+                'contract_media_id' => $archivo['id'],
                 'contract_signed_at' => $ahora,
-                'contract_city'      => $ciudad,
+                'contract_city' => $ciudad,
             ]);
 
         return [
-            'media_id'  => $archivo['id'],
-            'url'       => $archivo['url'],
-            'name'      => $archivo['name'],
+            'media_id' => $archivo['id'],
+            'url' => $archivo['url'],
+            'name' => $archivo['name'],
             'signed_at' => $ahora->toDateTimeString(),
-            'size'      => strlen($pdf),
+            'size' => strlen($pdf),
         ];
     }
 
@@ -139,10 +139,10 @@ class ContratoService
             }
 
             $bloques[] = [
-                'tipo'  => match ($etiqueta) {
+                'tipo' => match ($etiqueta) {
                     'h1', 'h2' => 'titulo',
-                    'li'       => 'punto',
-                    default    => 'parrafo',
+                    'li' => 'punto',
+                    default => 'parrafo',
                 },
                 'texto' => $texto,
             ];
@@ -164,26 +164,26 @@ class ContratoService
     ): string {
         $html = View::make('contratos.domiciliario', [
             'empresa' => [
-                'nombre'           => config('services.contrato.empresa'),
-                'nit'              => config('services.contrato.nit'),
-                'plataforma'       => config('services.contrato.plataforma'),
-                'representante'    => config('services.contrato.representante'),
+                'nombre' => config('services.contrato.empresa'),
+                'nit' => config('services.contrato.nit'),
+                'plataforma' => config('services.contrato.plataforma'),
+                'representante' => config('services.contrato.representante'),
                 'representante_cc' => config('services.contrato.representante_cc'),
                 // A donde se le notifica a la plataforma: la clausula de
                 // notificaciones lo imprime, y sin esto saldria en blanco.
-                'correo'           => config('services.sitio.correo'),
+                'correo' => config('services.sitio.correo'),
             ],
             'trabajador' => [
-                'nombre'    => $d->name ?? 'Sin nombre',
+                'nombre' => $d->name ?? 'Sin nombre',
                 'documento' => $d->document ?? null,
             ],
             'firma' => [
-                'imagen'        => $firma,
-                'ciudad'        => $ciudad,
-                'dia'           => $ahora->day,
-                'mes'           => self::MESES[$ahora->month],
-                'anio'          => $ahora->year,
-                'generado'      => $ahora->format('d/m/Y \a \l\a\s H:i'),
+                'imagen' => $firma,
+                'ciudad' => $ciudad,
+                'dia' => $ahora->day,
+                'mes' => self::MESES[$ahora->month],
+                'anio' => $ahora->year,
+                'generado' => $ahora->format('d/m/Y \a \l\a\s H:i'),
                 /*
                  * DE DONDE SALIO LA FIRMA, dicho tal cual.
                  *
@@ -195,11 +195,11 @@ class ContratoService
                  * sobre el unico documento que tendria que poder sostenerse.
                  */
                 'capturado_por' => $origen ?: ($adminNombre
-                    ? 'el panel de administración por ' . $adminNombre
+                    ? 'el panel de administración por '.$adminNombre
                     : 'la administración'),
                 // Huella del contenido firmado: si alguien altera el PDF, deja
                 // de coincidir con lo que registró la plataforma.
-                'huella'        => strtoupper(substr(hash('sha256', $firma . $d->user_id . $ahora), 0, 16)),
+                'huella' => strtoupper(substr(hash('sha256', $firma.$d->user_id.$ahora), 0, 16)),
             ],
         ])->render();
 
@@ -207,7 +207,7 @@ class ContratoService
             return $html;
         }
 
-        $opciones = new Options();
+        $opciones = new Options;
         $opciones->set('defaultFont', 'DejaVu Sans');
         // La firma llega como data URL: no hay ninguna descarga que habilitar.
         $opciones->set('isRemoteEnabled', false);
@@ -229,7 +229,7 @@ class ContratoService
      */
     private function decodificarFirma(string $dataUrl): string
     {
-        if (!str_starts_with($dataUrl, self::FIRMA_PREFIJO)) {
+        if (! str_starts_with($dataUrl, self::FIRMA_PREFIJO)) {
             throw new RuntimeException('La firma debe ser una imagen PNG capturada en el panel.');
         }
 

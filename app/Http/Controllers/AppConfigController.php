@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
 use App\Services\Ajustes;
@@ -30,13 +32,13 @@ class AppConfigController extends Controller
 
         $minima = match ($plataforma) {
             'android' => (string) Ajustes::valor('app.version_minima_android'),
-            'ios'     => (string) Ajustes::valor('app.version_minima_ios'),
-            default   => null,
+            'ios' => (string) Ajustes::valor('app.version_minima_ios'),
+            default => null,
         };
 
         return response()->json([
             'maintenance' => [
-                'active'  => $mantenimiento,
+                'active' => $mantenimiento,
                 'message' => (string) Ajustes::valor('app.mantenimiento_mensaje'),
             ],
             /*
@@ -65,16 +67,16 @@ class AppConfigController extends Controller
                  * cálculo, por si la app tiene que estimarlo sin preguntar.
                  */
                 'delivery_time_per_km' => (int) Ajustes::valor('operacion.minutos_por_km'),
-                'delivery_time_max'    => (int) Ajustes::valor('operacion.tiempo_entrega_max'),
+                'delivery_time_max' => (int) Ajustes::valor('operacion.tiempo_entrega_max'),
             ],
             'version' => [
                 // Con `?platform=` viene la que toca; sin él, las dos, para que
                 // la app decida. Así el endpoint sirve igual antes de que la app
                 // sepa mandar su plataforma.
-                'minimum'         => $minima,
+                'minimum' => $minima,
                 'minimum_android' => (string) Ajustes::valor('app.version_minima_android'),
-                'minimum_ios'     => (string) Ajustes::valor('app.version_minima_ios'),
-                'message'         => (string) Ajustes::valor('app.mensaje_actualizacion'),
+                'minimum_ios' => (string) Ajustes::valor('app.version_minima_ios'),
+                'message' => (string) Ajustes::valor('app.mensaje_actualizacion'),
             ],
         ]);
     }

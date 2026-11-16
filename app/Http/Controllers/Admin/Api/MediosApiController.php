@@ -1,30 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Admin\Api;
 
-use App\Services\Ajustes;
 use App\Http\Controllers\Controller;
-use App\Models\Area;
-use App\Models\Conjunto\ComplexStaff;
-use App\Models\Operacion\DomiciliaryDocument;
-use App\Models\Reviews\BusinessReview;
-use App\Models\Reviews\DomiciliaryReview;
-use App\Models\User;
-use App\Services\BusinessMediaService;
-use App\Services\ContratoService;
+use App\Services\Ajustes;
 use App\Services\MediaService;
-use App\Services\VinculosDelRol;
-use App\Support\ListadoPaginado;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 
 class MediosApiController extends Controller
 {
-
     /**
      * Nombre del registro para construir su carpeta, o corta con el 404 que
      * corresponda.
@@ -70,15 +57,15 @@ class MediosApiController extends Controller
 
         return response()->json([
             'configured' => $medios->configurado(),
-            'public'     => $medios->tienePublico(),
-            'bucket'     => $disco['bucket'] ?? null,
+            'public' => $medios->tienePublico(),
+            'bucket' => $disco['bucket'] ?? null,
             // El endpoint lleva la cuenta de Cloudflare en el subdominio; se
             // manda solo el host para no exponer más de lo necesario.
-            'endpoint'   => $disco['endpoint'] ? parse_url($disco['endpoint'], PHP_URL_HOST) : null,
+            'endpoint' => $disco['endpoint'] ? parse_url($disco['endpoint'], PHP_URL_HOST) : null,
             'public_url' => $disco['url'] ?? null,
-            'files'      => (int) $porTipo->sum('files'),
-            'bytes'      => (int) $porTipo->sum('bytes'),
-            'by_entity'  => $porTipo,
+            'files' => (int) $porTipo->sum('files'),
+            'bytes' => (int) $porTipo->sum('bytes'),
+            'by_entity' => $porTipo,
         ]);
     }
 
@@ -108,9 +95,13 @@ class MediosApiController extends Controller
     {
         $nombre = $this->nombreDeEntidad($entidad, $id, $medios);
 
+        /* EN LINEA Y NO EN UN FormRequest: `nombreDeEntidad()` aborta con 404
+           cuando la entidad no maneja archivos o no existe, y eso tiene que
+           contestarse ANTES que un error de validacion. Un FormRequest valida
+           antes de entrar al metodo e invertiria las dos respuestas. */
         $request->validate([
             'file' => 'required|file|max:8192|mimes:jpg,jpeg,png,webp,gif,pdf',
-            'tipo' => 'sometimes|string|in:logo,galeria,documentos',
+            'tipo' => 'sometimes|string|in:'.implode(',', MediaService::TIPOS),
         ]);
 
         $tipo = $request->input('tipo', 'galeria');
@@ -144,6 +135,8 @@ class MediosApiController extends Controller
     {
         $nombre = $this->nombreDeEntidad($entidad, $id, $medios);
 
+        /* En linea por lo mismo que en `uploadMedia`: `nombreDeEntidad()`
+           aborta con 404 y esa respuesta va antes que un 422 de validacion. */
         $datos = $request->validate(['id' => 'required|integer']);
 
         try {

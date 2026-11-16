@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Exports\operational;
 
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
@@ -15,7 +17,7 @@ class ReportesOperativosExport implements WithMultipleSheets
             new CoberturaSheet($this->start, $this->end),
             new CancelacionesSheet($this->start, $this->end),
             new SatisfaccionSheet($this->start, $this->end),
-             new DisponibilidadDomiciliariosSheet($this->start, $this->end),
+            new DisponibilidadDomiciliariosSheet($this->start, $this->end),
         ];
     }
 }

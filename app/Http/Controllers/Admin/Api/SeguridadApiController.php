@@ -1,12 +1,15 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\ConfirmarDosFactoresRequest;
+use App\Http\Requests\Admin\DesactivarDosFactoresRequest;
 use App\Services\Totp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 /**
  * SEGURIDAD DE LA CUENTA PROPIA
@@ -30,11 +33,11 @@ class SeguridadApiController extends Controller
 
         return response()->json([
             'two_factor' => [
-                'enabled'   => $u->tieneSegundoFactor(),
+                'enabled' => $u->tieneSegundoFactor(),
                 // Un secreto generado y sin confirmar: quedó a medias y hay que
                 // decirlo, o la pantalla ofrecería "activar" sobre algo que ya
                 // está empezado.
-                'pending'   => $u->two_factor_secret !== null && $u->two_factor_confirmed_at === null,
+                'pending' => $u->two_factor_secret !== null && $u->two_factor_confirmed_at === null,
                 'confirmed_at' => $u->two_factor_confirmed_at,
                 'recovery_left' => count($u->two_factor_recovery_codes ?? []),
             ],
@@ -66,13 +69,13 @@ class SeguridadApiController extends Controller
         $secreto = Totp::secreto();
 
         $u->forceFill([
-            'two_factor_secret'       => $secreto,
+            'two_factor_secret' => $secreto,
             'two_factor_confirmed_at' => null,
         ])->save();
 
         return response()->json([
             'secret' => $secreto,
-            'uri'    => Totp::uri($secreto, $u->email, config('app.name', "VeciPa'Ya")),
+            'uri' => Totp::uri($secreto, $u->email, config('app.name', "VeciPa'Ya")),
             'message' => 'Escanea el código con tu aplicación y escribe los seis dígitos para confirmar.',
         ]);
     }
@@ -85,19 +88,18 @@ class SeguridadApiController extends Controller
      * teléfono se pierde, se rompe o se cambia; sin ellos, el segundo factor
      * convierte cada teléfono perdido en una cuenta perdida.
      */
-    public function confirmarDosFactores(Request $request)
+    public function confirmarDosFactores(ConfirmarDosFactoresRequest $request)
     {
-        $datos = $request->validate(['code' => 'required|string']);
-
+        $datos = $request->validated();
         $u = $request->user();
 
-        if (!$u->two_factor_secret) {
+        if (! $u->two_factor_secret) {
             return response()->json([
                 'message' => 'Primero hay que dar de alta el segundo factor.',
             ], 422);
         }
 
-        if (!Totp::verificar($u->two_factor_secret, $datos['code'])) {
+        if (! Totp::verificar($u->two_factor_secret, $datos['code'])) {
             return response()->json([
                 'message' => 'El código no coincide. Revisa que la hora del teléfono esté al día.',
             ], 422);
@@ -106,7 +108,7 @@ class SeguridadApiController extends Controller
         $codigos = $this->generarCodigos();
 
         $u->forceFill([
-            'two_factor_confirmed_at'   => now(),
+            'two_factor_confirmed_at' => now(),
             // Se guardan con resumen: un código de recuperación es tan bueno
             // como una contraseña, y guardarlos en claro sería guardar ocho
             // contraseñas de la misma cuenta.
@@ -114,9 +116,9 @@ class SeguridadApiController extends Controller
         ])->save();
 
         return response()->json([
-            'message'        => 'Segundo factor activado.',
+            'message' => 'Segundo factor activado.',
             'recovery_codes' => $codigos,
-            'warning'        => 'Guárdalos ahora: no se vuelven a mostrar. Cada uno sirve una sola vez, para entrar si pierdes el teléfono.',
+            'warning' => 'Guárdalos ahora: no se vuelven a mostrar. Cada uno sirve una sola vez, para entrar si pierdes el teléfono.',
         ]);
     }
 
@@ -127,20 +129,19 @@ class SeguridadApiController extends Controller
      * esta pantalla para quitarle el segundo factor a la cuenta, que es
      * exactamente el ataque del que protege.
      */
-    public function desactivarDosFactores(Request $request)
+    public function desactivarDosFactores(DesactivarDosFactoresRequest $request)
     {
-        $datos = $request->validate(['password' => 'required|string']);
-
+        $datos = $request->validated();
         $u = $request->user();
 
-        if (!Hash::check($datos['password'], $u->password)) {
+        if (! Hash::check($datos['password'], $u->password)) {
             return response()->json(['message' => 'La contraseña no es correcta.'], 422);
         }
 
         $u->forceFill([
-            'two_factor_secret'         => null,
+            'two_factor_secret' => null,
             'two_factor_recovery_codes' => null,
-            'two_factor_confirmed_at'   => null,
+            'two_factor_confirmed_at' => null,
         ])->save();
 
         return response()->json(['message' => 'Segundo factor desactivado.']);
@@ -151,7 +152,7 @@ class SeguridadApiController extends Controller
     {
         $u = $request->user();
 
-        if (!$u->tieneSegundoFactor()) {
+        if (! $u->tieneSegundoFactor()) {
             return response()->json([
                 'message' => 'No tienes el segundo factor activo.',
             ], 422);
@@ -164,7 +165,7 @@ class SeguridadApiController extends Controller
         ])->save();
 
         return response()->json([
-            'message'        => 'Códigos nuevos. Los anteriores ya no sirven.',
+            'message' => 'Códigos nuevos. Los anteriores ya no sirven.',
             'recovery_codes' => $codigos,
         ]);
     }
@@ -188,7 +189,7 @@ class SeguridadApiController extends Controller
             }
 
             // Partido en dos mitades: diez caracteres seguidos se copian peor.
-            $codigos[] = substr($codigo, 0, 5) . '-' . substr($codigo, 5);
+            $codigos[] = substr($codigo, 0, 5).'-'.substr($codigo, 5);
         }
 
         return $codigos;
@@ -215,15 +216,15 @@ class SeguridadApiController extends Controller
             ->limit(50)
             ->get()
             ->map(fn ($t) => [
-                'id'           => $t->id,
-                'name'         => $t->name,
-                'ip'           => $t->ip,
-                'device'       => $this->dispositivo($t->user_agent),
-                'created_at'   => $t->created_at,
+                'id' => $t->id,
+                'name' => $t->name,
+                'ip' => $t->ip,
+                'device' => $this->dispositivo($t->user_agent),
+                'created_at' => $t->created_at,
                 'last_used_at' => $t->last_used_at,
                 // Marcar la propia es imprescindible: sin eso, cerrar "todas las
                 // demás" es un salto de fe.
-                'current'      => $actual && (int) $actual->id === (int) $t->id,
+                'current' => $actual && (int) $actual->id === (int) $t->id,
             ])
             ->all();
     }
@@ -240,7 +241,7 @@ class SeguridadApiController extends Controller
 
         $borrados = $request->user()->tokens()->where('id', $id)->delete();
 
-        abort_if(!$borrados, 404, 'Esa sesión ya no existe.');
+        abort_if(! $borrados, 404, 'Esa sesión ya no existe.');
 
         return response()->json(['message' => 'Sesión cerrada.']);
     }
@@ -276,25 +277,25 @@ class SeguridadApiController extends Controller
      */
     private function dispositivo(?string $agente): string
     {
-        if (!$agente) {
+        if (! $agente) {
             return 'Desconocido';
         }
 
         $navegador = match (true) {
-            str_contains($agente, 'Edg/')     => 'Edge',
-            str_contains($agente, 'OPR/')     => 'Opera',
-            str_contains($agente, 'Chrome')   => 'Chrome',
-            str_contains($agente, 'Firefox')  => 'Firefox',
-            str_contains($agente, 'Safari')   => 'Safari',
+            str_contains($agente, 'Edg/') => 'Edge',
+            str_contains($agente, 'OPR/') => 'Opera',
+            str_contains($agente, 'Chrome') => 'Chrome',
+            str_contains($agente, 'Firefox') => 'Firefox',
+            str_contains($agente, 'Safari') => 'Safari',
             default => 'Navegador',
         };
 
         $sistema = match (true) {
-            str_contains($agente, 'Windows')  => 'Windows',
-            str_contains($agente, 'Android')  => 'Android',
+            str_contains($agente, 'Windows') => 'Windows',
+            str_contains($agente, 'Android') => 'Android',
             str_contains($agente, 'iPhone'), str_contains($agente, 'iPad') => 'iOS',
-            str_contains($agente, 'Mac OS')   => 'macOS',
-            str_contains($agente, 'Linux')    => 'Linux',
+            str_contains($agente, 'Mac OS') => 'macOS',
+            str_contains($agente, 'Linux') => 'Linux',
             default => null,
         };
 

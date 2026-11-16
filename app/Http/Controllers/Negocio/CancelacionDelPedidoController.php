@@ -1,11 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Negocio;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Negocio\CancelarPedidoRequest;
+use App\Http\Resources\Pedido\PedidoResource;
 use App\Models\Order\OrdersSales;
 use App\Services\CancelacionDelPedido;
-use Illuminate\Http\Request;
 
 /**
  * LA TIENDA CANCELA UN PEDIDO QUE NO PUEDE PREPARAR.
@@ -33,15 +36,11 @@ class CancelacionDelPedidoController extends Controller
     /** Los estados desde los que la tienda puede deshacer un pedido. */
     private const CANCELABLES = [1, 2];
 
-    public function __construct(private readonly CancelacionDelPedido $cancelaciones)
-    {
-    }
+    public function __construct(private readonly CancelacionDelPedido $cancelaciones) {}
 
-    public function cancelar(Request $request, $id)
+    public function cancelar(CancelarPedidoRequest $request, $id)
     {
-        $datos = $request->validate([
-            'motivo' => 'required|string|min:3|max:500',
-        ]);
+        $datos = $request->validated();
 
         $businessId = (int) $request->attributes->get('busines_id');
 
@@ -55,7 +54,7 @@ class CancelacionDelPedidoController extends Controller
             ->where('busines_id', $businessId)
             ->first();
 
-        if (!$order) {
+        if (! $order) {
             /*
              * 404 y no 403: responder «prohibido» sobre el número de otra
              * tienda confirmaría que ese pedido existe. Los identificadores
@@ -67,15 +66,15 @@ class CancelacionDelPedidoController extends Controller
         if ((int) $order->state === CancelacionDelPedido::CANCELADO) {
             return response()->json([
                 'message' => 'Este pedido ya estaba cancelado.',
-                'reason'  => 'ya_cancelado',
+                'reason' => 'ya_cancelado',
             ], 409);
         }
 
-        if (!in_array((int) $order->state, self::CANCELABLES, true)) {
+        if (! in_array((int) $order->state, self::CANCELABLES, true)) {
             return response()->json([
                 'message' => 'Este pedido ya salió a reparto: háblalo con el domiciliario '
-                    . 'por el chat del pedido.',
-                'reason'  => 'ya_despachado',
+                    .'por el chat del pedido.',
+                'reason' => 'ya_despachado',
             ], 422);
         }
 
@@ -89,16 +88,16 @@ class CancelacionDelPedidoController extends Controller
         if ($hecho['ya_estaba']) {
             return response()->json([
                 'message' => 'Este pedido ya estaba cancelado.',
-                'reason'  => 'ya_cancelado',
+                'reason' => 'ya_cancelado',
             ], 409);
         }
 
         return response()->json([
             'message' => 'Pedido cancelado. Le avisamos al cliente con el motivo.'
-                . ($hecho['aviso'] ? ' ' . $hecho['aviso'] : ''),
-            'order'      => $order->fresh()->toApi(),
+                .($hecho['aviso'] ? ' '.$hecho['aviso'] : ''),
+            'order' => new PedidoResource($order->fresh()),
             'devolucion' => $hecho['devolucion'],
-            'motivo'     => $hecho['motivo'],
+            'motivo' => $hecho['motivo'],
         ]);
     }
 }

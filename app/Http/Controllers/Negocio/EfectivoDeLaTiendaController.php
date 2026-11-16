@@ -1,13 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Negocio;
 
 use App\Http\Controllers\Controller;
 use App\Models\Domiciliary;
-use App\Models\Operacion\CashDeposit;
+use App\Queries\EfectivoDeLaTienda;
 use App\Services\CustodiaDeEfectivo;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 /**
@@ -28,84 +29,80 @@ use RuntimeException;
  */
 class EfectivoDeLaTiendaController extends Controller
 {
-    public function __construct(private CustodiaDeEfectivo $custodia)
-    {
-    }
+    public function __construct(private CustodiaDeEfectivo $custodia) {}
 
     public function index(Request $request)
     {
         $negocioId = (int) $request->attributes->get('busines_id');
 
-        $flota = Domiciliary::with('user')
-            ->whereHas('businesses', fn ($q) => $q->where('business.busines_id', $negocioId)->where('business_domiciliary.state', 1))
-            ->get();
+        /* LAS CUATRO CONSULTAS VIVEN EN `Queries/EfectivoDeLaTienda`, que es
+           lo que §12 pide. Aqui queda el armado de la respuesta, que es
+           presentacion y no lectura. */
+        $lee = new EfectivoDeLaTienda;
+
+        $flota = $lee->flota($negocioId);
         $ids = $flota->pluck('domiciliary_id')->map(fn ($id) => (int) $id)->all();
 
-        $ultimas = CashDeposit::where('busines_id', $negocioId)
-            ->where('canal', CashDeposit::MOSTRADOR)
-            ->where('state', CashDeposit::CONFIRMADA)
-            ->selectRaw('domiciliary_id, MAX(confirmed_at) as ultima')
-            ->groupBy('domiciliary_id')
-            ->pluck('ultima', 'domiciliary_id');
+        $ultimas = $lee->ultimaEntregaPorDomiciliario($negocioId);
+
+        /*
+         * LOS DOS NÚMEROS DE TODA LA FLOTA, ANTES DEL RECORRIDO.
+         *
+         * Aquí se llamaba a `saldo()` y a `pendienteConLaTienda()` DENTRO del
+         * `map`, y el segundo hace dos consultas más y vuelve a llamar al
+         * primero: cuatro por domiciliario. Medido contra la base de
+         * desarrollo, esta ruta hacía **50 consultas** para una tienda con
+         * diez, y 42 eran tres líneas repitiéndose. Una tienda con cuarenta
+         * domiciliarios haría ciento ochenta.
+         *
+         * Las versiones en plural traen lo mismo en tres consultas para todos,
+         * y el reparto cronológico es el mismo código: no hay dos cuentas que
+         * puedan dar números distintos.
+         */
+        $saldos = $this->custodia->saldosDe($ids);
+        $pendientes = $this->custodia->pendientesConLaTienda($negocioId, $ids);
 
         $domiciliarios = $flota->map(fn ($d) => [
             'domiciliary_id' => (int) $d->domiciliary_id,
-            'name'           => $d->user?->name,
-            'phone'          => $d->user?->phone,
+            'name' => $d->user?->name,
+            'phone' => $d->user?->phone,
             // Lo que lleva encima de todas las tiendas, y lo que es de esta.
-            'saldo'          => round($this->custodia->saldo((int) $d->domiciliary_id), 2),
-            'pendiente'      => $this->custodia->pendienteConLaTienda($negocioId, (int) $d->domiciliary_id),
+            'saldo' => round($saldos[(int) $d->domiciliary_id] ?? 0.0, 2),
+            'pendiente' => $pendientes[(int) $d->domiciliary_id] ?? 0.0,
             'ultima_entrega' => $ultimas[$d->domiciliary_id] ?? null,
         ])->sortByDesc('pendiente')->values();
 
-        $entregas = CashDeposit::where('cash_deposits.busines_id', $negocioId)
-            ->where('cash_deposits.canal', CashDeposit::MOSTRADOR)
-            ->leftJoin('domiciliary as d', 'd.domiciliary_id', '=', 'cash_deposits.domiciliary_id')
-            ->leftJoin('user as u', 'u.user_id', '=', 'd.user_id')
-            ->leftJoin('user as r', 'r.user_id', '=', 'cash_deposits.confirmed_by')
-            ->latest('cash_deposits.confirmed_at')
-            ->limit(100)
-            ->get([
-                'cash_deposits.id', 'cash_deposits.domiciliary_id', 'cash_deposits.amount',
-                'cash_deposits.notes', 'cash_deposits.confirmed_at', 'cash_deposits.settlement_id',
-                'u.name as domiciliario', 'r.name as recibio',
-            ])
+        $entregas = $lee->entregasEnMostrador($negocioId)
             ->map(fn ($e) => [
-                'id'             => (int) $e->id,
+                'id' => (int) $e->id,
                 'domiciliary_id' => (int) $e->domiciliary_id,
-                'domiciliario'   => $e->domiciliario,
-                'monto'          => (float) $e->amount,
-                'nota'           => $e->notes,
-                'fecha'          => optional($e->confirmed_at)->toIso8601String(),
-                'recibio'        => $e->recibio,
+                'domiciliario' => $e->domiciliario,
+                'monto' => (float) $e->amount,
+                'nota' => $e->notes,
+                'fecha' => optional($e->confirmed_at)->toIso8601String(),
+                'recibio' => $e->recibio,
                 // Si ya se descontó de un corte de la plataforma.
-                'en_corte'       => $e->settlement_id !== null,
+                'en_corte' => $e->settlement_id !== null,
             ]);
 
-        $consignaciones = $ids === [] ? collect() : CashDeposit::whereIn('cash_deposits.domiciliary_id', $ids)
-            ->where('cash_deposits.canal', CashDeposit::CONSIGNACION)
-            ->leftJoin('domiciliary as d', 'd.domiciliary_id', '=', 'cash_deposits.domiciliary_id')
-            ->leftJoin('user as u', 'u.user_id', '=', 'd.user_id')
-            ->latest('cash_deposits.created_at')
-            ->limit(50)
-            ->get(['cash_deposits.*', 'u.name as domiciliario'])
+        $consignaciones = $lee->consignaciones($ids)
             ->map(fn ($c) => [
-                'id'           => (int) $c->id,
+                'id' => (int) $c->id,
                 'domiciliario' => $c->domiciliario,
-                'monto'        => (float) $c->amount,
-                'referencia'   => $c->reference,
-                'estado'       => $c->state,
-                'fecha'        => optional($c->deposited_at ?? $c->created_at)->toIso8601String(),
+                'monto' => (float) $c->amount,
+                'referencia' => $c->reference,
+                'estado' => $c->state,
+                'fecha' => optional($c->deposited_at ?? $c->created_at)->toIso8601String(),
             ]);
 
         $hoy = $entregas->filter(fn ($e) => $e['fecha'] && now()->isSameDay($e['fecha']));
 
         return response()->json([
-            'domiciliarios'  => $domiciliarios,
-            'entregas'       => $entregas->values(),
+            'domiciliarios' => $domiciliarios,
+            'entregas' => $entregas->values(),
             'consignaciones' => $consignaciones->values(),
-            'resumen'        => [
-                'pendiente'    => round((float) $domiciliarios->sum('pendiente'), 2),
+            'resumen' => [
+                'pendiente' => round((float) $domiciliarios->sum('pendiente'), 2),
                 'recibido_hoy' => round((float) $hoy->sum('monto'), 2),
                 'entregas_hoy' => $hoy->count(),
             ],
@@ -122,10 +119,10 @@ class EfectivoDeLaTiendaController extends Controller
 
         $datos = $request->validate([
             'amount' => 'required|numeric|min:1|max:999999999',
-            'notes'  => 'nullable|string|max:255',
+            'notes' => 'nullable|string|max:255',
         ], [
             'amount.required' => 'Escribe cuánto te entregó.',
-            'amount.min'      => 'El monto tiene que ser mayor que cero.',
+            'amount.min' => 'El monto tiene que ser mayor que cero.',
         ]);
 
         try {
@@ -139,15 +136,15 @@ class EfectivoDeLaTiendaController extends Controller
         } catch (RuntimeException $e) {
             return response()->json([
                 'message' => $e->getMessage(),
-                'errors'  => ['amount' => [$e->getMessage()]],
+                'errors' => ['amount' => [$e->getMessage()]],
             ], 422);
         }
 
         return response()->json([
-            'message'   => 'Listo: quedó registrado lo que te entregó.',
-            'entrega'   => ['id' => $entrega->id, 'monto' => (float) $entrega->amount],
+            'message' => 'Listo: quedó registrado lo que te entregó.',
+            'entrega' => ['id' => $entrega->id, 'monto' => (float) $entrega->amount],
             'pendiente' => $this->custodia->pendienteConLaTienda($negocioId, (int) $d->domiciliary_id),
-            'saldo'     => $this->custodia->saldo((int) $d->domiciliary_id),
+            'saldo' => $this->custodia->saldo((int) $d->domiciliary_id),
         ], 201);
     }
 }

@@ -1,8 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Negocio;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Negocio\BuscarClienteRequest;
 use App\Models\Business\BusinessUserAffiliation;
 use App\Models\User;
 use App\Services\CreditoDeTienda;
@@ -28,9 +31,7 @@ use Illuminate\Http\Request;
  */
 class ClientesDelNegocioController extends Controller
 {
-    public function __construct(private readonly CreditoDeTienda $creditos)
-    {
-    }
+    public function __construct(private readonly CreditoDeTienda $creditos) {}
 
     /**
      * Buscar un comprador por su teléfono, para afiliarlo.
@@ -40,11 +41,9 @@ class ClientesDelNegocioController extends Controller
      * lo justo para reconocerla y nada más. Su dirección, su rol o cuándo
      * aceptó la política no hacen falta para decidir si es la que se busca.
      */
-    public function buscar(Request $request)
+    public function buscar(BuscarClienteRequest $request)
     {
-        $datos = $request->validate([
-            'telefono' => 'required|string|min:7|max:40',
-        ]);
+        $datos = $request->validated();
 
         $negocioId = (int) $request->attributes->get('busines_id');
 
@@ -54,7 +53,7 @@ class ClientesDelNegocioController extends Controller
             ->whereHas('buyer')
             ->first(['user_id', 'name', 'email', 'phone']);
 
-        if (!$usuario) {
+        if (! $usuario) {
             return response()->json([
                 'message' => 'No encontramos ningún comprador con ese número.',
                 'cliente' => null,
@@ -63,10 +62,10 @@ class ClientesDelNegocioController extends Controller
 
         return response()->json([
             'cliente' => [
-                'user_id'  => (int) $usuario->user_id,
-                'name'     => $usuario->name,
-                'email'    => $usuario->email,
-                'phone'    => $usuario->phone,
+                'user_id' => (int) $usuario->user_id,
+                'name' => $usuario->name,
+                'email' => $usuario->email,
+                'phone' => $usuario->phone,
                 'afiliado' => BusinessUserAffiliation::where('busines_id', $negocioId)
                     ->where('user_id', $usuario->user_id)
                     ->exists(),
@@ -81,13 +80,13 @@ class ClientesDelNegocioController extends Controller
 
         $existe = User::where('user_id', $userId)->where('rol', 1)->whereHas('buyer')->exists();
 
-        if (!$existe) {
+        if (! $existe) {
             return response()->json(['message' => 'Esa cuenta no es la de un comprador.'], 404);
         }
 
         BusinessUserAffiliation::firstOrCreate([
             'busines_id' => $negocioId,
-            'user_id'    => $userId,
+            'user_id' => $userId,
         ]);
 
         return response()->json(['message' => 'Ya es cliente de tu tienda.'], 201);
@@ -118,7 +117,7 @@ class ClientesDelNegocioController extends Controller
             'message' => ((float) ($cupo['usado'] ?? 0)) > 0
                 ? 'Lo quitamos de tus clientes. Su deuda sigue viva y la ves en Fiado.'
                 : 'Lo quitamos de tus clientes.',
-            'debia'   => (float) ($cupo['usado'] ?? 0),
+            'debia' => (float) ($cupo['usado'] ?? 0),
         ]);
     }
 }

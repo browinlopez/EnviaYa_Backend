@@ -1,8 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models\Product;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Cómo llama una tienda a un producto del catálogo.
@@ -19,7 +22,9 @@ use Illuminate\Database\Eloquent\Model;
 class ProductAlias extends Model
 {
     protected $table = 'product_aliases';
+
     protected $primaryKey = 'alias_id';
+
     public $timestamps = true;
 
     protected $fillable = ['products_id', 'alias', 'busines_id', 'origen'];
@@ -36,7 +41,8 @@ class ProductAlias extends Model
      */
     public const TODAS = 0;
 
-    public function product()
+    /** @return BelongsTo<Product, $this> */
+    public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class, 'products_id', 'products_id');
     }

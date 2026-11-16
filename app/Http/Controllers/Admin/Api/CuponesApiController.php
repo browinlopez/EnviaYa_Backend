@@ -1,23 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Admin\Api;
 
-use App\Services\Push\Notificador;
 use App\Http\Controllers\Controller;
-use App\Models\DeviceToken;
-use App\Models\Marketing\AdCampaign;
-use App\Models\Marketing\Advertiser;
-use App\Models\Marketing\Banner;
+use App\Http\Requests\Admin\CuponRequest;
 use App\Models\Marketing\Coupon;
-use App\Models\Marketing\FeaturedBusiness;
-use App\Models\Marketing\PushCampaign;
-use App\Services\MediaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class CuponesApiController extends Controller
 {
-
     public function coupons(Request $request)
     {
         $q = Coupon::query()
@@ -26,7 +20,7 @@ class CuponesApiController extends Controller
             ->orderByDesc('coupons.id');
 
         if ($buscar = trim((string) $request->query('search', ''))) {
-            $q->where('coupons.code', 'like', '%' . strtoupper($buscar) . '%');
+            $q->where('coupons.code', 'like', '%'.strtoupper($buscar).'%');
         }
 
         return response()->json(
@@ -38,9 +32,9 @@ class CuponesApiController extends Controller
         );
     }
 
-    public function storeCoupon(Request $request)
+    public function storeCoupon(CuponRequest $request)
     {
-        $c = Coupon::create($this->validarCupon($request));
+        $c = Coupon::create($request->validated());
 
         return response()->json(['message' => 'Cupón creado.', 'id' => $c->id, 'code' => $c->code], 201);
     }
@@ -49,7 +43,15 @@ class CuponesApiController extends Controller
     {
         $c = Coupon::findOr($id, fn () => abort(404, 'El cupón no existe.'));
 
-        $c->update($this->validarCupon($request, true, $c->id));
+        /*
+         * EN LINEA Y NO EN UN FormRequest, a proposito: la busqueda de arriba
+         * contesta 404 cuando el registro no existe, y eso tiene que ir ANTES
+         * que un error de validacion. Las reglas no se repiten: se piden a
+         * `CuponRequest` en modo parcial.
+         */
+        $c->update($request->validate(
+            CuponRequest::reglas(parcial: true, ignorar: $c->id)
+        ));
 
         return response()->json(['message' => 'Cupón actualizado.']);
     }
@@ -87,30 +89,6 @@ class CuponesApiController extends Controller
                     'u.user_id', 'u.name', 'u.email',
                 ])
         );
-    }
-
-    private function validarCupon(Request $request, bool $parcial = false, ?int $ignorar = null): array
-    {
-        $regla = $parcial ? 'sometimes' : 'required';
-
-        $unico = 'unique:coupons,code' . ($ignorar ? ",{$ignorar}" : '');
-
-        return $request->validate([
-            'code'              => "{$regla}|string|max:40|{$unico}",
-            'description'       => 'sometimes|nullable|string|max:255',
-            'type'              => 'sometimes|in:percent,fixed,free_shipping',
-            'value'             => "{$regla}|numeric|min:0",
-            'max_discount'      => 'sometimes|nullable|numeric|min:0',
-            'min_order'         => 'sometimes|numeric|min:0',
-            'max_uses'          => 'sometimes|nullable|integer|min:1',
-            'max_uses_per_user' => 'sometimes|nullable|integer|min:1',
-            'business_id'       => 'sometimes|nullable|integer|exists:business,busines_id',
-            'category_id'       => 'sometimes|nullable|integer|exists:category,category_id',
-            'advertiser_id'     => 'sometimes|nullable|integer|exists:advertisers,id',
-            'starts_at'         => "{$regla}|date",
-            'ends_at'           => "{$regla}|date|after_or_equal:starts_at",
-            'state'             => 'sometimes|boolean',
-        ]);
     }
 
     /* ==================================================================

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Middleware;
 
 use App\Models\Conjunto\ComplexStaff;
@@ -31,7 +33,7 @@ class EnsureComplexStaff
     {
         $usuario = $request->user();
 
-        if (!$usuario) {
+        if (! $usuario) {
             return response()->json(['message' => 'No autenticado.'], 401);
         }
 
@@ -48,7 +50,7 @@ class EnsureComplexStaff
          * defensa va acá: una fila que se quedó atrás por cualquier motivo, hoy
          * o dentro de dos años, no puede volver a valer como llave.
          */
-        if (!in_array((int) $usuario->rol, ComplexStaff::ROLES_DE_USUARIO, true)) {
+        if (! in_array((int) $usuario->rol, ComplexStaff::ROLES_DE_USUARIO, true)) {
             return response()->json([
                 'message' => 'Esta sección es para el personal de un conjunto.',
             ], 403);
@@ -56,13 +58,13 @@ class EnsureComplexStaff
 
         $ficha = ComplexStaff::de((int) $usuario->user_id);
 
-        if (!$ficha) {
+        if (! $ficha) {
             return response()->json([
                 'message' => 'Esta sección es para el personal de un conjunto.',
             ], 403);
         }
 
-        if ($rol === ComplexStaff::DUENO && !$ficha->esDueno()) {
+        if ($rol === ComplexStaff::DUENO && ! $ficha->esDueno()) {
             return response()->json([
                 'message' => 'Solo el administrador del conjunto puede hacer esto.',
             ], 403);

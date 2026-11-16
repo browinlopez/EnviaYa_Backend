@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use App\Models\Conjunto\ComplexStaff;
@@ -61,7 +63,7 @@ class VinculosDelRol
     {
         $perfil = self::PERFIL[$rol] ?? null;
 
-        if (!$perfil) {
+        if (! $perfil) {
             return;
         }
 
@@ -91,10 +93,10 @@ class VinculosDelRol
             ['user_id' => $userId],
             [
                 'complex_id' => $complexId,
-                'role'       => $rol === ComplexStaff::ROL_DUENO
+                'role' => $rol === ComplexStaff::ROL_DUENO
                     ? ComplexStaff::DUENO
                     : ComplexStaff::CELADOR,
-                'state'      => true,
+                'state' => true,
                 'created_by' => $porQuien,
             ],
         );
@@ -116,20 +118,20 @@ class VinculosDelRol
             $nombres = $negocios->pluck('name')->implode(', ');
 
             return "Esta persona administra {$negocios->count()} negocio(s) ({$nombres}). "
-                . 'Cambiarle el rol la dejaría con acceso a ellos pero sin poder entrar por su puerta. '
-                . 'Desvincúlala primero en Catálogo → Propietarios.';
+                .'Cambiarle el rol la dejaría con acceso a ellos pero sin poder entrar por su puerta. '
+                .'Desvincúlala primero en Catálogo → Propietarios.';
         }
 
         $ficha = ComplexStaff::where('user_id', $userId)->where('state', true)->first();
 
-        if ($ficha && !in_array($rolNuevo, self::ROLES_DE_CONJUNTO, true) && $ficha->esDueno()) {
+        if ($ficha && ! in_array($rolNuevo, self::ROLES_DE_CONJUNTO, true) && $ficha->esDueno()) {
             $conjunto = DB::table('residential_complexes')
                 ->where('complex_id', $ficha->complex_id)
                 ->value('name') ?? "#{$ficha->complex_id}";
 
             return "Esta persona es la administradora de {$conjunto}. Cambiarle el rol dejaría "
-                . 'el conjunto sin nadie que lo gestione ni registre entradas en la portería. '
-                . 'Nómbrale un reemplazo primero, en Comunidad → Conjuntos.';
+                .'el conjunto sin nadie que lo gestione ni registre entradas en la portería. '
+                .'Nómbrale un reemplazo primero, en Comunidad → Conjuntos.';
         }
 
         return null;
@@ -162,17 +164,17 @@ class VinculosDelRol
     public function estaAMedias(int $userId, int $rol): bool
     {
         if (in_array($rol, self::ROLES_DE_CONJUNTO, true)) {
-            return !ComplexStaff::de($userId);
+            return ! ComplexStaff::de($userId);
         }
 
         if ($rol === self::ROL_PERSONAL) {
-            return !DB::table('user')->where('user_id', $userId)->value('area_id');
+            return ! DB::table('user')->where('user_id', $userId)->value('area_id');
         }
 
         $perfil = self::PERFIL[$rol] ?? null;
 
         return $perfil
-            ? !DB::table($perfil['tabla'])->where('user_id', $userId)->exists()
+            ? ! DB::table($perfil['tabla'])->where('user_id', $userId)->exists()
             : false;
     }
 }

@@ -34,8 +34,7 @@ class TransporteDePrueba implements TransportePush
     public function __construct(
         private array $resultadoPorToken = [],
         private bool $listo = true,
-    ) {
-    }
+    ) {}
 
     public function nombre(): string
     {
@@ -66,8 +65,8 @@ function comoMarketing(): User
     Rol::firstOrCreate(['rol_id' => 4], ['name' => 'admin', 'guard_name' => 'web']);
 
     $user = User::factory()->create([
-        'rol'          => 4,
-        'area_id'      => Area::where('code', 'marketing')->firstOrFail()->id,
+        'rol' => 4,
+        'area_id' => Area::where('code', 'marketing')->firstOrFail()->id,
         'access_level' => Area::NIVEL_GESTOR,
     ]);
 
@@ -79,8 +78,8 @@ function comoMarketing(): User
 function conTelefono(User $u, string $token, string $plataforma = 'android'): DeviceToken
 {
     return DeviceToken::create([
-        'user_id'  => $u->user_id,
-        'token'    => $token,
+        'user_id' => $u->user_id,
+        'token' => $token,
         'platform' => $plataforma,
     ]);
 }
@@ -88,15 +87,15 @@ function conTelefono(User $u, string $token, string $plataforma = 'android'): De
 function campanaDePrueba(array $segmento = []): PushCampaign
 {
     return PushCampaign::create([
-        'title'   => 'Dos por uno hoy',
-        'body'    => 'Solo hasta las 6 p. m.',
+        'title' => 'Dos por uno hoy',
+        'body' => 'Solo hasta las 6 p. m.',
         'segment' => $segmento,
-        'state'   => PushCampaign::BORRADOR,
+        'state' => PushCampaign::BORRADOR,
     ]);
 }
 
 /* ==================================================================== */
-/* REGISTRO DEL DISPOSITIVO                                             */
+/* REGISTRO DEL DISPOSITIVO */
 
 it('la app registra su teléfono y es idempotente', function () {
     Rol::firstOrCreate(['rol_id' => 1], ['name' => 'buyer', 'guard_name' => 'web']);
@@ -104,15 +103,15 @@ it('la app registra su teléfono y es idempotente', function () {
     Sanctum::actingAs($yo);
 
     $this->postJson('/v1/devices', [
-        'token'    => 'tok-abc',
+        'token' => 'tok-abc',
         'platform' => 'android',
     ])->assertOk();
 
     // FCM rota los tokens y la app vuelve a registrarse en cada arranque: dos
     // filas para el mismo teléfono significarían dos notificaciones por persona.
     $this->postJson('/v1/devices', [
-        'token'       => 'tok-abc',
-        'platform'    => 'android',
+        'token' => 'tok-abc',
+        'platform' => 'android',
         'app_version' => '2.4.1',
     ])->assertOk();
 
@@ -124,7 +123,7 @@ it('un teléfono que cambia de dueño deja de ser del anterior', function () {
     Rol::firstOrCreate(['rol_id' => 1], ['name' => 'buyer', 'guard_name' => 'web']);
 
     $antiguo = User::factory()->create(['rol' => 1]);
-    $nuevo   = User::factory()->create(['rol' => 1]);
+    $nuevo = User::factory()->create(['rol' => 1]);
 
     Sanctum::actingAs($antiguo);
     $this->postJson('/v1/devices', ['token' => 'tok-xyz', 'platform' => 'ios'])->assertOk();
@@ -146,7 +145,7 @@ it('registrarse revive un token que se había dado por muerto', function () {
     $yo = User::factory()->create(['rol' => 1]);
 
     conTelefono($yo, 'tok-revive')->update([
-        'failed_at'   => now()->subDay(),
+        'failed_at' => now()->subDay(),
         'fail_reason' => 'UNREGISTERED',
     ]);
 
@@ -175,7 +174,7 @@ it('cerrar sesión retira el teléfono sin marcarlo como fallido', function () {
 it('nadie puede retirar el teléfono de otro', function () {
     Rol::firstOrCreate(['rol_id' => 1], ['name' => 'buyer', 'guard_name' => 'web']);
     $dueno = User::factory()->create(['rol' => 1]);
-    $otro  = User::factory()->create(['rol' => 1]);
+    $otro = User::factory()->create(['rol' => 1]);
     conTelefono($dueno, 'tok-ajeno');
 
     Sanctum::actingAs($otro);
@@ -187,7 +186,7 @@ it('nadie puede retirar el teléfono de otro', function () {
 });
 
 /* ==================================================================== */
-/* ENVÍO                                                                */
+/* ENVÍO */
 
 it('el segmento son personas y el envío son dispositivos', function () {
     Queue::fake();
@@ -259,7 +258,7 @@ it('cuenta lo entregado y marca solo los tokens muertos', function () {
 
     $transporte = new TransporteDePrueba([
         'desinstalado' => ResultadoPush::tokenMuerto('UNREGISTERED'),
-        'sin-red'      => ResultadoPush::falloTemporal('HTTP 503'),
+        'sin-red' => ResultadoPush::falloTemporal('HTTP 503'),
     ]);
 
     $c = campanaDePrueba();
@@ -303,7 +302,7 @@ it('la notificación lleva a dónde ir al tocarla', function () {
     $u = User::factory()->create(['rol' => 1, 'state' => 1]);
     conTelefono($u, 'tok-enlace');
 
-    $transporte = new TransporteDePrueba();
+    $transporte = new TransporteDePrueba;
 
     $c = campanaDePrueba();
     $c->update(['link_type' => 'business', 'link_value' => '42']);
@@ -318,7 +317,7 @@ it('la notificación lleva a dónde ir al tocarla', function () {
 });
 
 it('el texto que sale es el de la campaña', function () {
-    $transporte = new TransporteDePrueba();
+    $transporte = new TransporteDePrueba;
     $c = campanaDePrueba();
 
     (new Notificador($transporte))->enviarLote($c, ['tok']);

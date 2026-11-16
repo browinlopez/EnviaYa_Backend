@@ -29,7 +29,6 @@ use Laravel\Sanctum\Sanctum;
  * segundo intento sea rechazado. Eso es lo que un refactor podría quitar sin
  * que nadie se entere hasta producción.
  */
-
 test('leer el pedido y escribirlo ocurren dentro de la misma transaccion', function () {
     $e = escenarioDeTope(null);
 
@@ -58,8 +57,8 @@ test('leer el pedido y escribirlo ocurren dentro de la misma transaccion', funct
 
     $this->putJson('/v1/orders/update', [
         'order_id' => $e['orderId'],
-        'state'    => 3,
-        'user_id'  => $e['repartidor']->user_id,
+        'state' => 3,
+        'user_id' => $e['repartidor']->user_id,
     ])->assertOk();
 
     expect($nivelAlLeerElPedido)->toBeGreaterThan(
@@ -89,14 +88,31 @@ test('la consulta pide la fila bajo llave', function () {
     $e = escenarioDeTope(null);
 
     $sentencias = [];
-    DB::listen(fn ($q) => $sentencias[] = strtolower($q->sql));
+    /*
+     * `function ... use (&$sentencias)` Y NO `fn`, y no es estilo: ESTA PRUEBA
+     * NO PODÍA PASAR.
+     *
+     * Una función flecha captura el ámbito de fuera POR VALOR, así que
+     * `fn ($q) => $sentencias[] = ...` llenaba una copia y la de aquí se
+     * quedaba vacía. `array_filter([])` daba `[]` y el `expect()` del final
+     * fallaba siempre, dijera lo que dijera el motor.
+     *
+     * No lo vio nadie porque esta prueba se salta en SQLite —`for update` solo
+     * lo emite MySQL— y el flujo de MySQL no se había corrido nunca en local.
+     * Un `markTestSkipped` es un sitio donde una prueba puede estar rota
+     * durante meses sin que nada lo diga: lo que se mide no es si pasa, es si
+     * se SALTA.
+     */
+    DB::listen(function ($q) use (&$sentencias) {
+        $sentencias[] = strtolower($q->sql);
+    });
 
     Sanctum::actingAs($e['tendero']);
 
     $this->putJson('/v1/orders/update', [
         'order_id' => $e['orderId'],
-        'state'    => 3,
-        'user_id'  => $e['repartidor']->user_id,
+        'state' => 3,
+        'user_id' => $e['repartidor']->user_id,
     ])->assertOk();
 
     $conCandado = array_filter(
@@ -114,8 +130,8 @@ test('el segundo que llega ya no puede tomarlo', function () {
 
     $cuerpo = [
         'order_id' => $e['orderId'],
-        'state'    => 3,
-        'user_id'  => $e['repartidor']->user_id,
+        'state' => 3,
+        'user_id' => $e['repartidor']->user_id,
     ];
 
     $this->putJson('/v1/orders/update', $cuerpo)->assertOk();

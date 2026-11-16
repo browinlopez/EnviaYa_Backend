@@ -1,8 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\AsignarAreaRequest;
+use App\Http\Requests\Admin\CrearAreaRequest;
 use App\Models\Area;
 use App\Services\Ajustes;
 use App\Support\PanelModules;
@@ -37,14 +41,15 @@ class AreasApiController extends Controller
     public function mios(Request $request)
     {
         $user = $request->user();
-        $area = $user->area_id ? Area::find($user->area_id) : null;
+        // La relacion, no `Area::find`: ver `User::area()`.
+        $area = $user->area;
         $nivel = $user->access_level ?? Area::NIVEL_GESTOR;
 
         return response()->json([
             'area' => $area ? [
-                'id'        => $area->id,
-                'code'      => $area->code,
-                'name'      => $area->name,
+                'id' => $area->id,
+                'code' => $area->code,
+                'name' => $area->name,
                 'is_system' => $area->is_system,
             ] : null,
             'access_level' => $nivel,
@@ -54,7 +59,7 @@ class AreasApiController extends Controller
              * botones, sin una segunda regla que pueda discrepar del servidor.
              */
             'permissions' => $area ? $area->permisos($nivel) : [],
-            'catalog'     => PanelModules::paraPanel(),
+            'catalog' => PanelModules::paraPanel(),
             /*
              * Las REGLAS VIGENTES de la operación, para todo el panel.
              *
@@ -71,9 +76,9 @@ class AreasApiController extends Controller
              * Solo son las de OPERACIÓN: el control de la app no lo pinta nadie.
              */
             'rules' => [
-                'domiciliary_share'      => (float) Ajustes::valor('operacion.reparto_domiciliario'),
-                'max_active_deliveries'  => (int) Ajustes::valor('operacion.entregas_simultaneas'),
-                'stalled_hours'          => (int) Ajustes::valor('operacion.horas_estancado'),
+                'domiciliary_share' => (float) Ajustes::valor('operacion.reparto_domiciliario'),
+                'max_active_deliveries' => (int) Ajustes::valor('operacion.entregas_simultaneas'),
+                'stalled_hours' => (int) Ajustes::valor('operacion.horas_estancado'),
             ],
         ]);
     }
@@ -95,34 +100,30 @@ class AreasApiController extends Controller
 
         return response()->json([
             'catalog' => PanelModules::paraPanel(),
-            'areas'   => $areas->map(fn (Area $a) => [
-                'id'          => $a->id,
-                'code'        => $a->code,
-                'name'        => $a->name,
+            'areas' => $areas->map(fn (Area $a) => [
+                'id' => $a->id,
+                'code' => $a->code,
+                'name' => $a->name,
                 'description' => $a->description,
-                'is_system'   => $a->is_system,
-                'state'       => $a->state,
+                'is_system' => $a->is_system,
+                'state' => $a->state,
                 'users_count' => (int) ($personas[$a->id] ?? 0),
                 'permissions' => $a->permisos(),
             ]),
         ]);
     }
 
-    public function store(Request $request)
+    public function store(CrearAreaRequest $request)
     {
-        $datos = $request->validate([
-            'name'        => 'required|string|max:80',
-            'description' => 'nullable|string|max:255',
-            'permissions' => 'sometimes|array',
-        ]);
+        $datos = $request->validated();
 
         $codigo = $this->codigoUnico($datos['name']);
 
         $area = Area::create([
-            'code'        => $codigo,
-            'name'        => $datos['name'],
+            'code' => $codigo,
+            'name' => $datos['name'],
             'description' => $datos['description'] ?? null,
-            'state'       => 1,
+            'state' => 1,
         ]);
 
         $area->guardarPermisos($request->input('permissions', []));
@@ -141,9 +142,9 @@ class AreasApiController extends Controller
         }
 
         $datos = $request->validate([
-            'name'        => 'sometimes|string|max:80',
+            'name' => 'sometimes|string|max:80',
             'description' => 'sometimes|nullable|string|max:255',
-            'state'       => 'sometimes|boolean',
+            'state' => 'sometimes|boolean',
             'permissions' => 'sometimes|array',
         ]);
 
@@ -217,15 +218,12 @@ class AreasApiController extends Controller
         );
     }
 
-    public function asignarArea(Request $request, $userId)
+    public function asignarArea(AsignarAreaRequest $request, $userId)
     {
-        $datos = $request->validate([
-            'area_id'      => 'sometimes|nullable|integer|exists:areas,id',
-            'access_level' => 'sometimes|in:gestor,consulta',
-        ]);
+        $datos = $request->validated();
 
         $usuario = DB::table('user')->where('user_id', $userId)->first();
-        abort_if(!$usuario, 404, 'El usuario no existe.');
+        abort_if(! $usuario, 404, 'El usuario no existe.');
 
         if ((int) $usuario->rol !== 4) {
             return response()->json([
@@ -261,7 +259,7 @@ class AreasApiController extends Controller
             $cambios['access_level'] = $datos['access_level'];
         }
 
-        if (!$cambios) {
+        if (! $cambios) {
             return response()->json(['message' => 'No hay nada que cambiar.'], 422);
         }
 
@@ -296,6 +294,6 @@ class AreasApiController extends Controller
 
         $gestor = $permisos['areas'] ?? null;
 
-        return !($gestor['manage'] ?? false);
+        return ! ($gestor['manage'] ?? false);
     }
 }

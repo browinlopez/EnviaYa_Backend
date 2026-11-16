@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
@@ -31,18 +33,18 @@ class ErroresDeLaAppController extends Controller
     {
         try {
             $datos = $request->validate([
-                'mensaje'     => ['required', 'string', 'max:500'],
-                'traza'       => ['nullable', 'string'],
-                'pantalla'    => ['nullable', 'string', 'max:120'],
-                'plataforma'  => ['nullable', 'string', 'max:10'],
+                'mensaje' => ['required', 'string', 'max:500'],
+                'traza' => ['nullable', 'string'],
+                'pantalla' => ['nullable', 'string', 'max:120'],
+                'plataforma' => ['nullable', 'string', 'max:10'],
                 'app_version' => ['nullable', 'string', 'max:20'],
             ]);
 
             DB::table('client_errors')->insert([
-                'user_id'     => $request->user()?->user_id,
-                'platform'    => $datos['plataforma'] ?? null,
+                'user_id' => $request->user()?->user_id,
+                'platform' => $datos['plataforma'] ?? null,
                 'app_version' => $datos['app_version'] ?? null,
-                'pantalla'    => $datos['pantalla'] ?? null,
+                'pantalla' => $datos['pantalla'] ?? null,
                 /*
                  * Corte EXACTO, sin los puntos suspensivos que añade
                  * `Str::limit` por defecto: la columna tiene un tope duro y un
@@ -50,14 +52,14 @@ class ErroresDeLaAppController extends Controller
                  * descubrió con la prueba de abajo, que esperaba 4000 y
                  * recibía 4003.
                  */
-                'mensaje'     => Str::limit($datos['mensaje'], 500, ''),
+                'mensaje' => Str::limit($datos['mensaje'], 500, ''),
                 /*
                  * La traza se recorta: en React Native trae referencias al
                  * paquete entero y son cientos de kilobytes. Las primeras
                  * líneas dicen dónde fue; el resto es ruido de la librería.
                  */
-                'traza'       => Str::limit((string) ($datos['traza'] ?? ''), 4000, ''),
-                'created_at'  => now(),
+                'traza' => Str::limit((string) ($datos['traza'] ?? ''), 4000, ''),
+                'created_at' => now(),
             ]);
         } catch (\Throwable $e) {
             Log::warning('No se pudo guardar un fallo de la app', [

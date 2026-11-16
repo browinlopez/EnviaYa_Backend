@@ -1,0 +1,52 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - phpstan-baseline.neon
+
+parameters:
+    paths:
+        - app
+    level: 5
+    tmpDir: build/phpstan
+
+    # Larastan no resuelve los `casts()` en forma de metodo ni los scopes a
+    # traves de `whereHas`, asi que inventa errores: dice que `isPast()` se
+    # llama sobre un string cuando `accepting_until` SI esta casteado a
+    # datetime, y que `vigente()` no existe cuando es un scope de AdCampaign.
+    # Se comprobaron a mano los nueve hallazgos de mas senal del nivel 5 y los
+    # nueve eran artefactos de inferencia.
+    #
+    # Por eso la linea base: congela los de hoy y exige que el codigo NUEVO
+    # salga limpio. El numero solo puede bajar: 503 -> 157 -> 60.
+    #
+    # DECIA que anotar los modelos con `@property` quitaria la mayoria. SE
+    # MIDIO Y ES FALSO. Se anotaron los 70 modelos leyendo el esquema
+    # (`scripts/anotar_modelos.php`): 894 lineas, y el resultado fue 157 -> 161
+    # --cero quitados y cuatro nuevos, porque el tipo de ESCRITURA de una
+    # columna es mas ancho que el de lectura: a un `decimal` se le asigna un
+    # float y se lee una cadena--. Ni uno solo de los 68 `property.notFound`
+    # era una columna.
+    #
+    # Lo que SI eran: metodos de relacion sin tipo de retorno. Larastan no
+    # distingue `public function buyer()` de un metodo cualquiera, asi que
+    # `$user->buyer` le parecia inventado. Se tiparon las 100 que faltaban y
+    # cayeron de golpe los 42 `larastan.relationExistence` y 52 de los 68
+    # `property.notFound`. De paso salio una relacion ROTA de verdad
+    # --`Domiciliary::geolocation()`, que reventaba al llamarla-- y la vigila
+    # `tests/Feature/Contrato/LasRelacionesSeConstruyenTest.php`.
+    #
+    # Los 16 `property.notFound` que quedan son alias de `selectRaw`
+    # (`$pedido->ganado`, `total_orders`, `items_count`): no son columnas ni
+    # relaciones, y anotarlos seria describir la consulta en el modelo.
+    #
+    # Y LOS 28 `nullsafe.neverNull` SON COSMETICOS, comprobado. Son
+    # `$x?->name ?? 'respaldo'`, y la sospecha razonable era la contraria: que
+    # PHPStan creyera no-nula una relacion que en tiempo de ejecucion SI puede
+    # serlo, y que quitar el `?->` reventara. No es eso. `??` tiene semantica
+    # de `isset` en su lado izquierdo, asi que `$nulo->name ?? 'x'` da `'x'`
+    # sin aviso ninguno --probado-- y el `?->` no aporta nada.
+    #
+    # Asi que quitarlos es seguro y bajaria la linea base de 60 a unos 32.
+    # NO SE HACE: son doce ficheros de codigo publicado tocados para no
+    # cambiar ni una respuesta. Queda escrito para que no haya que volver a
+    # averiguar si es un fallo de verdad; no lo es.
+    treatPhpDocTypesAsCertain: false

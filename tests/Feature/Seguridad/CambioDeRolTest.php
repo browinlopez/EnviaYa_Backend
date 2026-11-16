@@ -42,7 +42,7 @@ uses(RefreshDatabase::class);
 function losSeisRoles(): void
 {
     foreach ([1 => 'comprador', 2 => 'tendero', 3 => 'domiciliario',
-              4 => 'admin', 5 => 'dueno_conjunto', 6 => 'celador'] as $id => $nombre) {
+        4 => 'admin', 5 => 'dueno_conjunto', 6 => 'celador'] as $id => $nombre) {
         Rol::firstOrCreate(['rol_id' => $id], ['name' => $nombre, 'guard_name' => 'web']);
     }
 }
@@ -52,8 +52,8 @@ function comoDelPanelDeUsuarios(): User
     losSeisRoles();
 
     $u = User::factory()->create([
-        'rol'          => 4,
-        'area_id'      => Area::where('code', 'sistema')->firstOrFail()->id,
+        'rol' => 4,
+        'area_id' => Area::where('code', 'sistema')->firstOrFail()->id,
         'access_level' => Area::NIVEL_GESTOR,
     ]);
 
@@ -84,7 +84,7 @@ function unTenderoConTienda(string $tienda = 'Tienda La Esquina'): User
 }
 
 /* ===================================================================== */
-/*  HACIA ARRIBA: LA CUENTA QUE NACÍA A MEDIAS                           */
+/*  HACIA ARRIBA: LA CUENTA QUE NACÍA A MEDIAS */
 /* ===================================================================== */
 
 test('subir a alguien a rol de conjunto sin decir cual exige el conjunto', function () {
@@ -102,10 +102,10 @@ test('subir a alguien a rol de conjunto sin decir cual exige el conjunto', funct
 test('con el conjunto puesto, el cambio crea la ficha que lo hace servir', function () {
     comoDelPanelDeUsuarios();
     $conjunto = unConjuntoCualquiera();
-    $persona  = User::factory()->create(['rol' => 1]);
+    $persona = User::factory()->create(['rol' => 1]);
 
     $this->putJson("/v1/admin/users/{$persona->user_id}", [
-        'rol'        => ComplexStaff::ROL_DUENO,
+        'rol' => ComplexStaff::ROL_DUENO,
         'complex_id' => $conjunto->complex_id,
     ])->assertOk();
 
@@ -120,10 +120,10 @@ test('con el conjunto puesto, el cambio crea la ficha que lo hace servir', funct
 test('y entonces la cuenta entra de verdad al panel de aliados', function () {
     comoDelPanelDeUsuarios();
     $conjunto = unConjuntoCualquiera();
-    $persona  = User::factory()->create(['rol' => 1]);
+    $persona = User::factory()->create(['rol' => 1]);
 
     $this->putJson("/v1/admin/users/{$persona->user_id}", [
-        'rol'        => ComplexStaff::ROL_DUENO,
+        'rol' => ComplexStaff::ROL_DUENO,
         'complex_id' => $conjunto->complex_id,
     ])->assertOk();
 
@@ -166,7 +166,7 @@ test('crear un rol 4 desde el panel tambien exige el area', function () {
 });
 
 /* ===================================================================== */
-/*  HACIA ABAJO: EL ACCESO QUE NO SE IBA                                 */
+/*  HACIA ABAJO: EL ACCESO QUE NO SE IBA */
 /* ===================================================================== */
 
 test('a un tendero con tienda no se le cambia el rol de paso', function () {
@@ -221,7 +221,7 @@ test('a un celador si, y su ficha se DESACTIVA en vez de borrarse', function () 
 });
 
 /* ===================================================================== */
-/*  LA DEFENSA EN LA PUERTA                                              */
+/*  LA DEFENSA EN LA PUERTA */
 /* ===================================================================== */
 
 test('una ficha de conjunto que se quedo atras NO vale como llave', function () {
@@ -259,7 +259,7 @@ test('una cadena de propiedad que se quedo atras tampoco', function () {
 });
 
 /* ===================================================================== */
-/*  LAS SESIONES QUE SEGUÍAN ABIERTAS                                    */
+/*  LAS SESIONES QUE SEGUÍAN ABIERTAS */
 /* ===================================================================== */
 
 /*
@@ -276,8 +276,8 @@ function tokenDelPanel(): string
     losSeisRoles();
 
     $u = User::factory()->create([
-        'rol'          => 4,
-        'area_id'      => Area::where('code', 'sistema')->firstOrFail()->id,
+        'rol' => 4,
+        'area_id' => Area::where('code', 'sistema')->firstOrFail()->id,
         'access_level' => Area::NIVEL_GESTOR,
     ]);
 
@@ -288,7 +288,7 @@ test('desactivar una cuenta le cierra las sesiones que ya tenia', function () {
     $delPanel = tokenDelPanel();
 
     $persona = User::factory()->create(['rol' => 1, 'state' => 1]);
-    $suyo    = $persona->createToken('app')->plainTextToken;
+    $suyo = $persona->createToken('app')->plainTextToken;
 
     $this->withHeader('Authorization', "Bearer {$suyo}")
         ->getJson('/v1/profile')->assertOk();
@@ -320,7 +320,7 @@ test('cambiar de rol tambien: el token se emitio para otra puerta', function () 
     $conjunto = unConjuntoCualquiera();
 
     $persona = User::factory()->create(['rol' => 1]);
-    $suyo    = $persona->createToken('app')->plainTextToken;
+    $suyo = $persona->createToken('app')->plainTextToken;
 
     $this->withHeader('Authorization', "Bearer {$delPanel}")
         ->putJson("/v1/admin/users/{$persona->user_id}", [
@@ -334,7 +334,7 @@ test('cambiar de rol tambien: el token se emitio para otra puerta', function () 
 });
 
 /* ===================================================================== */
-/*  LO QUE NO SE PUEDE ROMPER AL ARREGLAR ESTO                           */
+/*  LO QUE NO SE PUEDE ROMPER AL ARREGLAR ESTO */
 /* ===================================================================== */
 
 test('editar el telefono de un dueno no le pide el conjunto otra vez', function () {

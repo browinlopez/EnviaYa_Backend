@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Events;
 
 use Illuminate\Broadcasting\InteractsWithSockets;
@@ -35,12 +37,11 @@ class CodigoDeAccesoUsado implements ShouldBroadcastNow
         public int $userId,
         public string $conjunto,
         public int $pedidos,
-    ) {
-    }
+    ) {}
 
     public function broadcastOn(): PrivateChannel
     {
-        return new PrivateChannel('App.Models.User.' . $this->userId);
+        return new PrivateChannel('App.Models.User.'.$this->userId);
     }
 
     public function broadcastAs(): string
@@ -60,8 +61,8 @@ class CodigoDeAccesoUsado implements ShouldBroadcastNow
     {
         return [
             'conjunto' => $this->conjunto,
-            'pedidos'  => $this->pedidos,
-            'cuando'   => now()->toIso8601String(),
+            'pedidos' => $this->pedidos,
+            'cuando' => now()->toIso8601String(),
         ];
     }
 }

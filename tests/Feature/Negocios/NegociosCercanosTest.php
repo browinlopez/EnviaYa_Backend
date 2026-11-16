@@ -3,8 +3,8 @@
 use App\Models\Rol;
 use App\Models\User;
 use App\Services\Ajustes;
-use Laravel\Sanctum\Sanctum;
 use Illuminate\Support\Facades\DB;
+use Laravel\Sanctum\Sanctum;
 
 /**
  * Las tiendas, ordenadas por lo cerca que estén.
@@ -18,7 +18,6 @@ use Illuminate\Support\Facades\DB;
  *     una pantalla vacía sin explicación, que es la peor forma de decir «no
  *     llegamos a tu zona».
  */
-
 function negocioUbicadoEn(string $nombre, ?float $lat, ?float $lon): int
 {
     return DB::table('business')->insertGetId([
@@ -46,7 +45,7 @@ beforeEach(function () {
 test('cada negocio dice a cuanto esta y cuanto costaria el domicilio', function () {
     negocioUbicadoEn('La de al lado', 10.9900, -74.8440);   // a unos cientos de metros
 
-    $r = $this->getJson('/v1/businesses/index?' . http_build_query(AQUI))->assertOk();
+    $r = $this->getJson('/v1/businesses/index?'.http_build_query(AQUI))->assertOk();
     $n = collect($r->json('businesses'))->firstWhere('name', 'La de al lado');
 
     expect($n['distance_km'])->toBeLessThan(1.5);
@@ -59,7 +58,7 @@ test('la de mas lejos cuesta mas', function () {
     negocioUbicadoEn('Cerca', 10.9900, -74.8440);
     negocioUbicadoEn('Lejos', 11.0168, -74.8029);           // a unos 5 km
 
-    $r = $this->getJson('/v1/businesses/index?' . http_build_query(AQUI))->assertOk();
+    $r = $this->getJson('/v1/businesses/index?'.http_build_query(AQUI))->assertOk();
     $n = collect($r->json('businesses'))->keyBy('name');
 
     expect($n['Lejos']['distance_km'])->toBeGreaterThan($n['Cerca']['distance_km']);
@@ -70,7 +69,7 @@ test('vienen ordenados de la mas cercana en adelante', function () {
     negocioUbicadoEn('Lejos', 11.0168, -74.8029);
     negocioUbicadoEn('Cerca', 10.9900, -74.8440);
 
-    $r = $this->getJson('/v1/businesses/index?' . http_build_query(AQUI))->assertOk();
+    $r = $this->getJson('/v1/businesses/index?'.http_build_query(AQUI))->assertOk();
     $nombres = collect($r->json('businesses'))->pluck('name');
 
     expect($nombres->first())->toBe('Cerca');
@@ -88,7 +87,7 @@ test('sin coordenadas la respuesta es la de siempre', function () {
 test('una tienda sin coordenadas no se convierte en una a ocho mil kilometros', function () {
     negocioUbicadoEn('Sin ubicar', null, null);
 
-    $r = $this->getJson('/v1/businesses/index?' . http_build_query(AQUI))->assertOk();
+    $r = $this->getJson('/v1/businesses/index?'.http_build_query(AQUI))->assertOk();
     $n = collect($r->json('businesses'))->firstWhere('name', 'Sin ubicar');
 
     /*
@@ -104,7 +103,7 @@ test('sin tiendas en cobertura se dice, y se enseñan igual', function () {
     // Todas lejísimos: ninguna reparte hasta acá.
     negocioUbicadoEn('Muy lejos', 11.2400, -74.2000);
 
-    $r = $this->getJson('/v1/businesses/index?' . http_build_query(AQUI))->assertOk();
+    $r = $this->getJson('/v1/businesses/index?'.http_build_query(AQUI))->assertOk();
 
     expect($r->json('hay_cercanos'))->toBeFalse();
 

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use App\Models\Order\OrdersSales;
@@ -75,7 +77,7 @@ class TrazoDeLaRuta
 
         $pedido->loadMissing(['business', 'address']);
 
-        $origen  = $this->punto($pedido->business?->latitude, $pedido->business?->longitude);
+        $origen = $this->punto($pedido->business?->latitude, $pedido->business?->longitude);
         $destino = $this->punto($pedido->address?->latitude, $pedido->address?->longitude);
 
         if ($origen === null || $destino === null) {
@@ -87,13 +89,13 @@ class TrazoDeLaRuta
         } catch (RuntimeException $e) {
             Log::warning('No se pudo trazar la ruta del pedido', [
                 'order_id' => $pedido->orderSales_id,
-                'error'    => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
 
             return null;
         }
 
-        if (!$polilinea) {
+        if (! $polilinea) {
             return null;
         }
 
@@ -103,7 +105,7 @@ class TrazoDeLaRuta
          * cambios a medio hacer que no son asunto de la ruta.
          */
         $pedido->forceFill([
-            'route_polyline'  => $polilinea,
+            'route_polyline' => $polilinea,
             'route_traced_at' => now(),
         ])->save();
 
@@ -113,9 +115,10 @@ class TrazoDeLaRuta
     /**
      * El trazo entre dos puntos, con su caché.
      *
-     * @param  string  $origen   «lat,lng»
+     * @param  string  $origen  «lat,lng»
      * @param  string  $destino  «lat,lng»
-     * @throws RuntimeException  si Google responde mal
+     *
+     * @throws RuntimeException si Google responde mal
      */
     public function entre(string $origen, string $destino): ?string
     {
@@ -133,22 +136,22 @@ class TrazoDeLaRuta
          * misma entrada. El prefijo lleva versión para poder invalidar todo de
          * golpe el día que haya que cambiar cómo se traza.
          */
-        $memoria = 'ruta:v2:' . md5(
-            $this->normalizar($origen) . '|' . $this->normalizar($destino),
+        $memoria = 'ruta:v2:'.md5(
+            $this->normalizar($origen).'|'.$this->normalizar($destino),
         );
 
         return Cache::remember(
             $memoria,
             now()->addMinutes(self::MINUTOS_EN_CACHE),
             function () use ($origen, $destino, $clave) {
-                $respuesta = Http::timeout(8)->get(
+                $respuesta = Http::connectTimeout(3)->timeout(8)->get(
                     'https://maps.googleapis.com/maps/api/directions/json',
                     [
-                        'origin'      => $origen,
+                        'origin' => $origen,
                         'destination' => $destino,
-                        'key'         => $clave,
+                        'key' => $clave,
                         /* En moto, que es como se reparte acá. */
-                        'mode'        => 'driving',
+                        'mode' => 'driving',
                     ],
                 );
 
@@ -168,7 +171,7 @@ class TrazoDeLaRuta
             return null;
         }
 
-        return ((float) $lat) . ',' . ((float) $lng);
+        return ((float) $lat).','.((float) $lng);
     }
 
     /** «lat,lng» con los decimales fijos, para que la clave no dependa del formato. */
@@ -177,6 +180,6 @@ class TrazoDeLaRuta
         [$lat, $lng] = array_map('floatval', explode(',', $punto));
 
         return number_format($lat, self::DECIMALES_DE_LA_CLAVE, '.', '')
-            . ',' . number_format($lng, self::DECIMALES_DE_LA_CLAVE, '.', '');
+            .','.number_format($lng, self::DECIMALES_DE_LA_CLAVE, '.', '');
     }
 }

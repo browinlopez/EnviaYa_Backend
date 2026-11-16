@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Support;
 
 /**
@@ -22,9 +24,12 @@ namespace App\Support;
 class UnidadDeVenta
 {
     public const UNIDAD = 'unidad';
-    public const KILO   = 'kg';
-    public const LIBRA  = 'libra';
-    public const GRAMO  = 'gramo';
+
+    public const KILO = 'kg';
+
+    public const LIBRA = 'libra';
+
+    public const GRAMO = 'gramo';
 
     public const TODAS = [self::UNIDAD, self::KILO, self::LIBRA, self::GRAMO];
 
@@ -56,18 +61,18 @@ class UnidadDeVenta
         if ($unidad === self::UNIDAD) {
             $n = (int) round($cantidad);
 
-            return $n . ' ' . ($n === 1 ? 'unidad' : 'unidades');
+            return $n.' '.($n === 1 ? 'unidad' : 'unidades');
         }
 
         // Los gramos no llevan decimales: medio gramo no se pesa ni se cobra.
         $decimales = $unidad === self::GRAMO ? 0 : 3;
         $texto = rtrim(rtrim(number_format($cantidad, $decimales, ',', '.'), '0'), ',');
 
-        return $texto . ' ' . match ($unidad) {
-            self::KILO  => 'kg',
+        return $texto.' '.match ($unidad) {
+            self::KILO => 'kg',
             self::LIBRA => $cantidad == 1 ? 'libra' : 'libras',
             self::GRAMO => 'g',
-            default     => '',
+            default => '',
         };
     }
 }

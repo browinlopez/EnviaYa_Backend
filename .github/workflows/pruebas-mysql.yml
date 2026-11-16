@@ -1,0 +1,98 @@
+# =========================================================================
+# LAS MISMAS PRUEBAS, SOBRE MySQL DE VERDAD
+#
+# POR QUÉ EXISTE ESTE SEGUNDO FLUJO. La suite corre sobre SQLite en memoria,
+# que es rápido y obliga a que las consultas sean portables. Pero SQLite no es
+# el motor de producción, y hay dos clases de fallo que solo se ven con MySQL
+# delante:
+#
+#   1. Funciones que SQLite no tiene. Ya mordió: `incomeBusiness` usaba
+#      `DAYOFWEEK()` y esa pantalla no se pudo probar hasta portar la
+#      expresión. Lo mismo pasó con `GROUP_CONCAT` y `TIMESTAMPDIFF`.
+#   2. Planes de ejecución. El §25 del estándar lo dice sin rodeos: SQLite no
+#      sirve para juzgar un plan, así que mientras solo hubiera SQLite las
+#      reglas de índices y de presupuestos de rendimiento (§24, §25) eran
+#      imposibles de cumplir, no difíciles.
+#
+# Va en un flujo aparte y no en una matriz del otro para que se lea en el PR
+# cuál de los dos cayó: «falla en MySQL y pasa en SQLite» es un diagnóstico,
+# no un misterio.
+#
+# Cuesta poco: la suite tarda 48 segundos desde que las pruebas dejaron de
+# llamar a un Reverb real.
+# =========================================================================
+name: Pruebas sobre MySQL
+
+on:
+  push:
+    branches: [Devs, main, master]
+  pull_request:
+
+jobs:
+  pest-mysql:
+    name: Pest sobre MySQL 8
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: secreta
+          MYSQL_DATABASE: pruebas
+        ports:
+          - 3306:3306
+        # Sin esto los pasos arrancan antes de que el motor acepte conexiones
+        # y el fallo sale como «connection refused», que no dice nada.
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Preparar PHP
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, pdo_mysql, mysqli, bcmath, gd, zip
+          coverage: none
+
+      - name: Caché de dependencias
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: vendor
+          key: composer-mysql-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-mysql-
+
+      - name: Instalar dependencias
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Preparar el entorno
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      # Las variables van acá y no en `.env` para que el flujo de SQLite no se
+      # entere: cada uno declara el motor que usa.
+      - name: Migrar sobre MySQL
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: pruebas
+          DB_USERNAME: root
+          DB_PASSWORD: secreta
+        run: php artisan migrate --force
+
+      - name: Pruebas
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: pruebas
+          DB_USERNAME: root
+          DB_PASSWORD: secreta
+          BROADCAST_CONNECTION: "null"
+        run: php artisan test

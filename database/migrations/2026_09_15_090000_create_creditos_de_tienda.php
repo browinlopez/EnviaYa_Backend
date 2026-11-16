@@ -85,8 +85,8 @@ return new class extends Migration
 
         DB::table('payment_methods')->insertOrIgnore([
             'methods_id' => 7,
-            'name'       => 'Crédito de la tienda',
-            'state'      => 1,
+            'name' => 'Crédito de la tienda',
+            'state' => 1,
         ]);
     }
 

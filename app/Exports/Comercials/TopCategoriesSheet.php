@@ -1,24 +1,27 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Exports\Comercials;
 
 use App\Models\Product\Category;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\WithTitle;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class TopCategoriesSheet implements FromCollection, WithHeadings, WithTitle, WithStyles
+class TopCategoriesSheet implements FromCollection, WithHeadings, WithStyles, WithTitle
 {
     protected $start;
+
     protected $end;
 
     public function __construct($start, $end)
     {
         $this->start = $start;
-        $this->end   = $end;
+        $this->end = $end;
     }
 
     public function collection()
@@ -47,6 +50,7 @@ class TopCategoriesSheet implements FromCollection, WithHeadings, WithTitle, Wit
     {
         $sheet->getStyle('A1:B1')->getFont()->setBold(true);
         $sheet->setAutoFilter($sheet->calculateWorksheetDimension());
+
         return [];
     }
 }

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Jobs;
 
 use App\Models\Order\OrdersSales;
@@ -32,15 +34,13 @@ class TrazarLaRutaDelPedido implements ShouldQueue
      */
     public int $tries = 2;
 
-    public function __construct(public int $orderId)
-    {
-    }
+    public function __construct(public int $orderId) {}
 
     public function handle(TrazoDeLaRuta $rutas): void
     {
         $pedido = OrdersSales::with(['business', 'address'])->find($this->orderId);
 
-        if (!$pedido) {
+        if (! $pedido) {
             return;
         }
 

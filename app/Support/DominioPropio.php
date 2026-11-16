@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Support;
 
 /**
@@ -36,7 +38,7 @@ final class DominioPropio
         $anfitrion = strtolower((string) parse_url($url, PHP_URL_HOST));
 
         $esAnterior = $anfitrion === self::ANTERIOR
-            || str_ends_with($anfitrion, '.' . self::ANTERIOR);
+            || str_ends_with($anfitrion, '.'.self::ANTERIOR);
 
         if (! $esAnterior) {
             return $url;
@@ -44,11 +46,11 @@ final class DominioPropio
 
         $subdominio = rtrim(substr($anfitrion, 0, -strlen(self::ANTERIOR)), '.');
         $subdominio = self::RENOMBRADOS[$subdominio] ?? $subdominio;
-        $nuevo = ($subdominio !== '' ? $subdominio . '.' : '') . self::VIGENTE;
+        $nuevo = ($subdominio !== '' ? $subdominio.'.' : '').self::VIGENTE;
 
         return (string) preg_replace(
-            '#^(https?://)' . preg_quote($anfitrion, '#') . '#i',
-            '${1}' . $nuevo,
+            '#^(https?://)'.preg_quote($anfitrion, '#').'#i',
+            '${1}'.$nuevo,
             $url,
         );
     }

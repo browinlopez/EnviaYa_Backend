@@ -13,10 +13,10 @@ use Laravel\Sanctum\Sanctum;
  */
 beforeEach(function () {
     config([
-        'filesystems.disks.r2.key'      => 'prueba',
-        'filesystems.disks.r2.secret'   => 'prueba',
+        'filesystems.disks.r2.key' => 'prueba',
+        'filesystems.disks.r2.secret' => 'prueba',
         'filesystems.disks.r2.endpoint' => 'https://r2.prueba',
-        'filesystems.disks.r2.url'      => 'https://archivos.prueba',
+        'filesystems.disks.r2.url' => 'https://archivos.prueba',
     ]);
     Storage::fake('r2');
 });

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use Illuminate\Http\UploadedFile;
@@ -33,39 +35,39 @@ class BusinessMediaService
     /**
      * Carpeta del negocio: "negocios/1-tienda-el-progreso".
      *
-     * @param object $negocio  Fila con busines_id y name.
+     * @param  object  $negocio  Fila con busines_id y name.
      */
     public function carpeta(object $negocio): string
     {
         $codigo = (int) $negocio->busines_id;
         $nombre = Str::slug((string) ($negocio->name ?? ''), '-') ?: 'sin-nombre';
 
-        return self::RAIZ . "/{$codigo}-{$nombre}";
+        return self::RAIZ."/{$codigo}-{$nombre}";
     }
 
     /** Prefijo que identifica al negocio aunque se haya renombrado. */
     public function prefijoDeCodigo(object $negocio): string
     {
-        return self::RAIZ . '/' . (int) $negocio->busines_id . '-';
+        return self::RAIZ.'/'.(int) $negocio->busines_id.'-';
     }
 
     public function configurado(): bool
     {
-        $c = config('filesystems.disks.' . self::DISCO);
+        $c = config('filesystems.disks.'.self::DISCO);
 
-        return !empty($c['key']) && !empty($c['secret']) && !empty($c['endpoint']);
+        return ! empty($c['key']) && ! empty($c['secret']) && ! empty($c['endpoint']);
     }
 
     /**
      * Guarda un archivo y devuelve su clave y su URL pública.
      *
-     * @param string $tipo  Subcarpeta: logo, galeria, documentos…
+     * @param  string  $tipo  Subcarpeta: logo, galeria, documentos…
      */
     public function subir(object $negocio, UploadedFile $archivo, string $tipo = 'galeria'): array
     {
-        if (!$this->configurado()) {
+        if (! $this->configurado()) {
             throw new RuntimeException(
-                'El almacenamiento R2 no está configurado. Falta R2_ACCESS_KEY_ID, ' .
+                'El almacenamiento R2 no está configurado. Falta R2_ACCESS_KEY_ID, '.
                 'R2_SECRET_ACCESS_KEY o R2_ENDPOINT en el archivo .env del servidor.'
             );
         }
@@ -78,18 +80,18 @@ class BusinessMediaService
         // reconocer en el bucket, y le antepone marca de tiempo y azar para
         // que dos subidas del mismo archivo no se pisen.
         $base = Str::slug(pathinfo($archivo->getClientOriginalName(), PATHINFO_FILENAME), '-');
-        $ext  = strtolower($archivo->getClientOriginalExtension() ?: $archivo->guessExtension() ?: 'bin');
-        $nombre = now()->format('Ymd-His') . '-' . Str::lower(Str::random(6)) . '-' . ($base ?: 'archivo') . '.' . $ext;
+        $ext = strtolower($archivo->getClientOriginalExtension() ?: $archivo->guessExtension() ?: 'bin');
+        $nombre = now()->format('Ymd-His').'-'.Str::lower(Str::random(6)).'-'.($base ?: 'archivo').'.'.$ext;
 
-        $ruta = $this->carpeta($negocio) . '/' . Str::slug($tipo, '-') . '/' . $nombre;
+        $ruta = $this->carpeta($negocio).'/'.Str::slug($tipo, '-').'/'.$nombre;
 
         Storage::disk(self::DISCO)->put($ruta, file_get_contents($archivo->getRealPath()), [
             'ContentType' => $archivo->getMimeType(),
         ]);
 
         return [
-            'key'  => $ruta,
-            'url'  => $this->url($ruta),
+            'key' => $ruta,
+            'url' => $this->url($ruta),
             'name' => $archivo->getClientOriginalName(),
             'size' => $archivo->getSize(),
             'type' => $archivo->getMimeType(),
@@ -99,7 +101,7 @@ class BusinessMediaService
     /** Archivos del negocio, incluidos los subidos antes de un renombrado. */
     public function listar(object $negocio): array
     {
-        if (!$this->configurado()) {
+        if (! $this->configurado()) {
             return [];
         }
 
@@ -109,13 +111,13 @@ class BusinessMediaService
         // el negocio cambió de nombre, sus archivos viejos siguen en la ruta
         // anterior y deben seguir apareciendo.
         $carpetas = collect($disco->directories(self::RAIZ))
-            ->filter(fn($d) => str_starts_with($d . '/', $this->prefijoDeCodigo($negocio)));
+            ->filter(fn ($d) => str_starts_with($d.'/', $this->prefijoDeCodigo($negocio)));
 
         return $carpetas
-            ->flatMap(fn($c) => $disco->allFiles($c))
-            ->map(fn($ruta) => [
-                'key'  => $ruta,
-                'url'  => $this->url($ruta),
+            ->flatMap(fn ($c) => $disco->allFiles($c))
+            ->map(fn ($ruta) => [
+                'key' => $ruta,
+                'url' => $this->url($ruta),
                 'name' => basename($ruta),
                 'size' => $disco->size($ruta),
                 'tipo' => basename(dirname($ruta)),
@@ -129,7 +131,7 @@ class BusinessMediaService
     {
         // Solo se borra dentro de la carpeta del negocio: sin esta guarda, una
         // clave manipulada podría borrar objetos de otro negocio.
-        if (!str_starts_with($key, $this->prefijoDeCodigo($negocio))) {
+        if (! str_starts_with($key, $this->prefijoDeCodigo($negocio))) {
             throw new RuntimeException('El archivo no pertenece a este negocio.');
         }
 
@@ -146,10 +148,10 @@ class BusinessMediaService
      */
     public function url(string $key): string
     {
-        $publico = config('filesystems.disks.' . self::DISCO . '.url');
+        $publico = config('filesystems.disks.'.self::DISCO.'.url');
 
         if ($publico) {
-            return rtrim($publico, '/') . '/' . ltrim($key, '/');
+            return rtrim($publico, '/').'/'.ltrim($key, '/');
         }
 
         return Storage::disk(self::DISCO)->temporaryUrl($key, now()->addDays(7));
@@ -157,6 +159,6 @@ class BusinessMediaService
 
     public function tienePublico(): bool
     {
-        return (bool) config('filesystems.disks.' . self::DISCO . '.url');
+        return (bool) config('filesystems.disks.'.self::DISCO.'.url');
     }
 }

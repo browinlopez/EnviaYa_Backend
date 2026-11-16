@@ -6,7 +6,9 @@ use App\Models\Notification;
 use App\Models\Rol;
 use App\Models\User;
 use App\Services\Avisos;
+use Illuminate\Contracts\Broadcasting\Factory;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
 
 /**
@@ -52,12 +54,41 @@ function negocioConEquipo(): array
     return compact('businessId', 'tendero', 'domiUser', 'ajeno');
 }
 
+/*
+ * ESTA PRUEBA NECESITA EL DIFUSOR DE VERDAD, y es la única.
+ *
+ * `phpunit.xml` pone `BROADCAST_CONNECTION=null` para que ninguna prueba
+ * llame por HTTP a un Reverb real —eso costaba diez minutos de suite—. Pero
+ * el difusor nulo **autoriza cualquier canal**: su `auth()` no comprueba
+ * nada, así que «un desconocido no escucha el canal de una tienda» pasaba a
+ * ser verdad por el motivo equivocado.
+ *
+ * `reverb` sí ejecuta la comprobación del canal, y la hace EN LOCAL: la red
+ * solo entra al difundir, cosa que esta prueba no hace. Así se mide lo que se
+ * quiere medir sin volver a pagar la espera.
+ */
+beforeEach(function () {
+    config(['broadcasting.default' => 'reverb']);
+
+    /*
+     * Y LOS CANALES SE VUELVEN A REGISTRAR, que es el detalle que cuesta ver.
+     *
+     * `routes/channels.php` registra cada canal SOBRE EL DIFUSOR que hubiera
+     * al arrancar —aquí, el nulo—. Cambiar la configuración y olvidar los
+     * difusores crea uno nuevo y vacío: sin un solo canal registrado, la
+     * autorización niega todo y hasta la tienda dueña recibía 403.
+     */
+    app(Factory::class)->forgetDrivers();
+
+    require base_path('routes/channels.php');
+});
+
 /** Pide autorización para un canal privado, como haría la app. */
-function autorizar($canal): \Illuminate\Testing\TestResponse
+function autorizar($canal): TestResponse
 {
     return test()->postJson('/broadcasting/auth', [
-        'socket_id'    => '1234.5678',
-        'channel_name' => 'private-' . $canal,
+        'socket_id' => '1234.5678',
+        'channel_name' => 'private-'.$canal,
     ]);
 }
 
@@ -67,7 +98,7 @@ test('la tienda escucha su propio canal', function () {
     $e = negocioConEquipo();
     Sanctum::actingAs($e['tendero']);
 
-    autorizar('business.' . $e['businessId'])->assertOk();
+    autorizar('business.'.$e['businessId'])->assertOk();
 });
 
 test('el domiciliario de esa tienda también lo escucha', function () {
@@ -76,7 +107,7 @@ test('el domiciliario de esa tienda también lo escucha', function () {
     $e = negocioConEquipo();
     Sanctum::actingAs($e['domiUser']);
 
-    autorizar('business.' . $e['businessId'])->assertOk();
+    autorizar('business.'.$e['businessId'])->assertOk();
 });
 
 test('un desconocido no escucha el canal de una tienda', function () {
@@ -84,7 +115,7 @@ test('un desconocido no escucha el canal de una tienda', function () {
     $e = negocioConEquipo();
     Sanctum::actingAs($e['ajeno']);
 
-    autorizar('business.' . $e['businessId'])->assertForbidden();
+    autorizar('business.'.$e['businessId'])->assertForbidden();
 });
 
 test('un domiciliario de OTRA tienda tampoco', function () {
@@ -103,7 +134,7 @@ test('un domiciliario de OTRA tienda tampoco', function () {
     ]);
 
     Sanctum::actingAs($otroUser);
-    autorizar('business.' . $e['businessId'])->assertForbidden();
+    autorizar('business.'.$e['businessId'])->assertForbidden();
 });
 
 /* ---------------------------- LA CAMPANA ------------------------------ */
@@ -190,9 +221,9 @@ test('el mensaje viaja al chat y al canal personal de quien lo recibe', function
         ->map(fn ($c) => (string) $c->name)
         ->all();
 
-    expect($canales)->toContain('private-chat.' . $chatId)
-        ->and($canales)->toContain('private-App.Models.User.' . $e['tendero']->user_id)
+    expect($canales)->toContain('private-chat.'.$chatId)
+        ->and($canales)->toContain('private-App.Models.User.'.$e['tendero']->user_id)
         // El autor no: ya tiene el mensaje en pantalla, y recibirlo de vuelta
         // le subiría el contador de no leídos de su propio mensaje.
-        ->and($canales)->not->toContain('private-App.Models.User.' . $e['ajeno']->user_id);
+        ->and($canales)->not->toContain('private-App.Models.User.'.$e['ajeno']->user_id);
 });

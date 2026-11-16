@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use App\Events\OrderStatusUpdated;
@@ -44,10 +46,19 @@ class CancelacionDelPedido
 {
     /** Quién lo canceló. Cambia lo que se le dice al comprador. */
     public const COMPRADOR = 'comprador';
-    public const TIENDA    = 'tienda';
 
-    /** El estado de un pedido cancelado. */
-    public const CANCELADO = 5;
+    public const TIENDA = 'tienda';
+
+    /**
+     * El estado de un pedido cancelado.
+     *
+     * APUNTA AL MODELO y no repite el 5: era la tercera copia del mismo
+     * numero. Se conserva el nombre aqui porque
+     * `CancelacionDelPedidoController` la usa como
+     * `CancelacionDelPedido::CANCELADO`, y renombrar eso seria cambiar una
+     * duplicacion por un cambio de API interna.
+     */
+    public const CANCELADO = OrdersSales::CANCELADO;
 
     public function __construct(
         private readonly ExistenciasDelPedido $existencias,
@@ -55,8 +66,7 @@ class CancelacionDelPedido
         private readonly RedencionDePromociones $promociones,
         private readonly CouponService $cupones,
         private readonly DevolucionDelPedido $devoluciones,
-    ) {
-    }
+    ) {}
 
     /** El motivo que se guarda cuando nadie dio uno. */
     public function motivoPorDefecto(string $origen): string
@@ -97,11 +107,11 @@ class CancelacionDelPedido
                 ->lockForUpdate()
                 ->first();
 
-            if (!$fresco || (int) $fresco->state === self::CANCELADO) {
+            if (! $fresco || (int) $fresco->state === OrdersSales::CANCELADO) {
                 return false;
             }
 
-            $fresco->state = self::CANCELADO;
+            $fresco->state = OrdersSales::CANCELADO;
             $fresco->save();
 
             $this->existencias->devolver($fresco);
@@ -110,19 +120,19 @@ class CancelacionDelPedido
             $this->cupones->devolver((int) $fresco->orderSales_id);
 
             DB::table('status_history')->insert([
-                'order_id'       => $fresco->orderSales_id,
-                'status_history' => self::CANCELADO,
-                'motivo'         => $motivo,
-                'state'          => 1,
-                'created_by'     => $porQuien,
-                'created_at'     => now(),
-                'updated_at'     => now(),
+                'order_id' => $fresco->orderSales_id,
+                'status_history' => OrdersSales::CANCELADO,
+                'motivo' => $motivo,
+                'state' => 1,
+                'created_by' => $porQuien,
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
 
             return true;
         });
 
-        if (!$hecho) {
+        if (! $hecho) {
             return ['ya_estaba' => true, 'motivo' => $motivo, 'devolucion' => null, 'aviso' => null];
         }
 
@@ -140,7 +150,7 @@ class CancelacionDelPedido
         } catch (\Throwable $e) {
             Log::warning('No se pudo anunciar la cancelación', [
                 'order_id' => $order->orderSales_id,
-                'error'    => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
         }
 
@@ -166,8 +176,8 @@ class CancelacionDelPedido
         ?string $aviso,
     ): void {
         $datos = [
-            'order_id'   => $order->orderSales_id,
-            'motivo'     => $motivo,
+            'order_id' => $order->orderSales_id,
+            'motivo' => $motivo,
             'devolucion' => $devolucion,
         ];
 
@@ -175,13 +185,13 @@ class CancelacionDelPedido
 
         if ($compradorId) {
             $mensaje = $origen === self::TIENDA
-                ? 'La tienda canceló tu pedido #' . $order->orderSales_id . ': ' . $motivo
-                : 'Tu pedido #' . $order->orderSales_id . ' fue cancelado.';
+                ? 'La tienda canceló tu pedido #'.$order->orderSales_id.': '.$motivo
+                : 'Tu pedido #'.$order->orderSales_id.' fue cancelado.';
 
             Avisos::para(
                 $compradorId,
                 'pedido_cancelado',
-                $mensaje . ($aviso ? ' ' . $aviso : ''),
+                $mensaje.($aviso ? ' '.$aviso : ''),
                 $datos,
             );
         }
@@ -199,7 +209,7 @@ class CancelacionDelPedido
             Avisos::para(
                 $duenoDeLaTienda,
                 'pedido_cancelado',
-                'El pedido #' . $order->orderSales_id . ' fue cancelado. No lo prepares.',
+                'El pedido #'.$order->orderSales_id.' fue cancelado. No lo prepares.',
                 $datos,
             );
         }

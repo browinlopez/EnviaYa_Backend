@@ -1,76 +1,34 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Chat;
 
-use App\Http\Controllers\Concerns\ComprobarPertenencia;
-use App\Support\ResumenDeMensaje;
 use App\Events\MessageSent;
-use App\Helper\ReverbClient;
+use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Chat\ChatsDeUnaPersonaRequest;
+use App\Http\Requests\Chat\MandarMensajeRequest;
+use App\Http\Requests\Chat\MarcarMensajeRequest;
+use App\Http\Resources\Chat\ChatDeLaListaResource;
+use App\Http\Resources\Chat\ChatResource;
+use App\Http\Resources\Chat\MensajeResource;
 use App\Models\Chat\Chat;
 use App\Models\Chat\ChatParticipant;
 use App\Models\Chat\Message;
 use App\Models\User;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use App\Services\Avisos;
+use App\Support\ResumenDeMensaje;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class ChatController extends Controller
 {
     use ComprobarPertenencia;
 
-    /**
-     * Crear un nuevo chat
-     */
-    public function createChat(Request $request)
+    public function sendMessage(MandarMensajeRequest $request)
     {
-        $request->validate([
-            'type' => 'required|in:private,group',
-            'participants' => 'required|array|min:2',
-            'participants.*.user_id' => 'required|exists:user,user_id',
-            'participants.*.role_id' => 'required|exists:rol,rol_id',
-        ]);
-
-        return DB::transaction(function () use ($request) {
-            $chat = Chat::create(['type' => $request->type]);
-
-            foreach ($request->participants as $participant) {
-                ChatParticipant::create([
-                    'chat_id' => $chat->chat_id,
-                    'user_id' => $participant['user_id'],
-                    'role_id' => $participant['role_id']
-                ]);
-            }
-
-            return response()->json([
-                'message' => 'Chat creado con éxito',
-                'chat' => $chat->load('participants.user')
-            ], 201);
-        });
-    }
-
-    public function sendMessage(Request $request)
-    {
-        /*
-         * EL TOPE DEPENDE DE QUÉ SE MANDA. Un mensaje escrito se queda en mil
-         * letras; una TARJETA (el pedido armado, que viaja como JSON con
-         * nombres, precios y fotos de cada producto) pasaba de mil con cuatro
-         * productos y el envío se rechazaba. La columna es TEXT: le caben 64 KB.
-         */
-        $esTarjeta = is_string($request->input('content'))
-            && is_array($t = json_decode($request->input('content'), true))
-            // Sólo las tarjetas que existen: con cualquier `type` bastaba
-            // envolver un texto en JSON para saltarse el tope de mil.
-            && in_array($t['type'] ?? null, ['preorder', 'preorder_status', 'cupon_regalo'], true);
-
-        $request->validate([
-            'user_id' => 'required|exists:user,user_id',
-            'recipient_id' => 'required|exists:user,user_id',
-            'content' => 'required|string|max:' . ($esTarjeta ? 30000 : 1000),
-        ]);
-
         // Escribir EN NOMBRE DE OTRO: `user_id` venia del cuerpo, asi que
         // se podian mandar mensajes haciendose pasar por cualquiera.
         if ($no = $this->negarCuentaAjena($request, $request->user_id)) {
@@ -102,12 +60,12 @@ class ChatController extends Controller
 
             // Revisar si ya existe un chat privado entre ambos
             $chat = Chat::where('type', 'private')
-                ->whereHas('participants', fn($q) => $q->where('user_id', $sender->user_id))
-                ->whereHas('participants', fn($q) => $q->where('user_id', $recipient->user_id))
+                ->whereHas('participants', fn ($q) => $q->where('user_id', $sender->user_id))
+                ->whereHas('participants', fn ($q) => $q->where('user_id', $recipient->user_id))
                 ->first();
 
             // Si no existe, crear el chat
-            if (!$chat) {
+            if (! $chat) {
                 $chat = Chat::create(['type' => 'private']); // siempre privado para chats 1 a 1
 
                 // Agregar participantes usando 'rol' de la tabla user
@@ -153,7 +111,7 @@ class ChatController extends Controller
             } catch (\Throwable $e) {
                 Log::warning('No se pudo anunciar el mensaje de chat', [
                     'message_id' => $message->message_id,
-                    'error'      => $e->getMessage(),
+                    'error' => $e->getMessage(),
                 ]);
             }
 
@@ -186,10 +144,10 @@ class ChatController extends Controller
                 'mensaje_nuevo',
                 ResumenDeMensaje::para((string) $message->content),
                 [
-                    'chat_id'          => $chat->chat_id,
+                    'chat_id' => $chat->chat_id,
                     // Para que tocar el aviso abra ESE chat: la pantalla necesita
                     // saber con quien se habla, no solo el numero del chat.
-                    'remitente_id'     => $sender->user_id,
+                    'remitente_id' => $sender->user_id,
                     'remitente_nombre' => (string) ($sender->name ?? ''),
                 ],
                 titulo: (string) ($sender->name ?: 'Mensaje nuevo'),
@@ -198,7 +156,7 @@ class ChatController extends Controller
             return response()->json([
                 'message' => 'Mensaje enviado',
                 'chat_id' => $chat->chat_id,
-                'data' => $message->load('user')
+                'data' => $message->load('user'),
             ], 201);
         });
     }
@@ -222,11 +180,11 @@ class ChatController extends Controller
              * comprador, un tendero y un domiciliario. Los identificadores
              * son correlativos, asi que recorrerlos no requiere ingenio.
              */
-            if ($chat && !$this->participaEnElChat($request, $chat)) {
+            if ($chat && ! $this->participaEnElChat($request, $chat)) {
                 return response()->json(['message' => 'Esa conversacion no es tuya.'], 403);
             }
 
-            if (!$chat) {
+            if (! $chat) {
                 return response()->json([
                     'chat_id' => $request->chat_id,
                     'messages' => [],
@@ -257,7 +215,7 @@ class ChatController extends Controller
             ->with(['messages.user', 'participants.user'])
             ->first();
 
-        if (!$chat) {
+        if (! $chat) {
             // no hay chat creado todavía, devolver vacío
             return response()->json([
                 'chat_id' => null,
@@ -269,12 +227,8 @@ class ChatController extends Controller
         return $this->formatChatResponse($chat);
     }
 
-    public function updateMessage(Request $request)
+    public function updateMessage(MarcarMensajeRequest $request)
     {
-        $request->validate([
-            'message_id' => 'required|exists:messages,message_id',
-            'content' => 'required|array',
-        ]);
 
         $message = Message::findOrFail($request->message_id);
 
@@ -288,44 +242,20 @@ class ChatController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => $message,
+            'message' => (new MensajeResource($message))->resolve(),
         ]);
     }
+
     /**
      * Arma el JSON de salida para un chat dado
      */
     protected function formatChatResponse(Chat $chat)
     {
-        return response()->json([
-            'chat_id' => $chat->chat_id,
-            'type' => $chat->type,
-            'created_at' => $chat->created_at,
-            'participants' => $chat->participants->map(function ($participant) {
-                return [
-                    'user_id' => $participant->user->user_id,
-                    'name' => $participant->user->name,
-                    'role_id' => $participant->role_id,
-                    'joined_at' => $participant->joined_at,
-                ];
-            }),
-            'messages' => $chat->messages->map(function ($message) {
-                return [
-                    'message_id' => $message->message_id,
-                    'user_id' => $message->user->user_id,
-                    'name' => $message->user->name,
-                    'role_id' => $message->role_id,
-                    'content' => $message->content,
-                    'created_at' => $message->created_at,
-                ];
-            }),
-        ]);
+        return response()->json((new ChatResource($chat))->resolve());
     }
 
-    public function getUserChats(Request $request)
+    public function getUserChats(ChatsDeUnaPersonaRequest $request)
     {
-        $request->validate([
-            'user_id' => 'required|exists:user,user_id',
-        ]);
 
         // Se precarga el último mensaje de cada chat: sin él la lista solo
         // podía mostrar el nombre del contacto, sin vista previa ni fecha.
@@ -342,31 +272,9 @@ class ChatController extends Controller
             ->sortByDesc(fn ($chat) => optional($chat->messages->first())->created_at)
             ->values();
 
-        $formattedChats = $chats->map(function ($chat) {
-            $ultimo = $chat->messages->first();
-
-            return [
-                'chat_id' => $chat->chat_id,
-                'type' => $chat->type,
-                'created_at' => $chat->created_at,
-                'last_message' => $ultimo?->content,
-                'last_message_at' => $ultimo?->created_at,
-                'last_message_user_id' => $ultimo?->user_id,
-                'participants' => $chat->participants->map(function ($participant) {
-                    return [
-                        'user_id' => $participant->user->user_id,
-                        'name' => $participant->user->name,
-                        'email' => $participant->user->email,
-                        'phone' => $participant->user->phone,
-                        'address' => $participant->user->address,
-                        'role_id' => $participant->role_id,
-                        'qualification' => $participant->user->qualification,
-                        'state' => $participant->user->state,
-                        'joined_at' => $participant->joined_at,
-                    ];
-                }),
-            ];
-        });
+        $formattedChats = $chats->map(
+            fn ($chat) => (new ChatDeLaListaResource($chat))->resolve(),
+        );
 
         return response()->json($formattedChats);
     }
@@ -381,7 +289,7 @@ class ChatController extends Controller
     {
         $user = $request->user();
 
-        if (!$user) {
+        if (! $user) {
             return false;
         }
 

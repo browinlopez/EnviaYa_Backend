@@ -5,6 +5,7 @@ use App\Models\Rol;
 use App\Models\User;
 use App\Services\Ajustes;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
 
 /**
@@ -18,7 +19,6 @@ use Laravel\Sanctum\Sanctum;
  *   · y las tres se congelan, para que mover un ajuste no reescriba lo ya
  *     liquidado.
  */
-
 function escenarioDinero(): array
 {
     Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
@@ -55,14 +55,14 @@ function escenarioDinero(): array
     return compact('user', 'businessId', 'productId', 'addressId', 'methodId');
 }
 
-function crearPedido(array $e, array $extra = []): \Illuminate\Testing\TestResponse
+function crearPedido(array $e, array $extra = []): TestResponse
 {
     return test()->postJson('/v1/orders/orders', array_merge([
-        'user_id'    => $e['user']->user_id,
+        'user_id' => $e['user']->user_id,
         'busines_id' => $e['businessId'],
         'address_id' => $e['addressId'],
         'methods_id' => $e['methodId'],
-        'products'   => [['product_id' => $e['productId'], 'amount' => 3]],
+        'products' => [['product_id' => $e['productId'], 'amount' => 3]],
     ], $extra));
 }
 
@@ -126,8 +126,8 @@ test('con envío gratis el cliente no paga domicilio pero el repartidor cobra ig
 
     crearPedido($e, ['coupon_code' => 'ENVIOGRATIS'])->assertSuccessful();
 
-    $o     = ultimoPedido();
-    $base  = (float) Ajustes::valor('operacion.tarifa_domicilio');
+    $o = ultimoPedido();
+    $base = (float) Ajustes::valor('operacion.tarifa_domicilio');
     $parte = (float) Ajustes::valor('operacion.reparto_domiciliario');
 
     expect((float) $o->domicilio)->toBe(0.0)

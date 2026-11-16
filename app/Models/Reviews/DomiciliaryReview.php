@@ -1,17 +1,20 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models\Reviews;
 
 use App\Models\Audit\Audit;
 use App\Models\Buyer\Buyer;
 use App\Models\Domiciliary;
-use App\Models\User;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class DomiciliaryReview extends Audit
 {
     protected $table = 'domiciliary_reviews';
+
     protected $primaryKey = 'reviews_id';
+
     // Ver nota en BusinessReview: la tabla ya tenía las columnas de fecha.
     public $timestamps = true;
 
@@ -20,15 +23,17 @@ class DomiciliaryReview extends Audit
         'buyer_id',
         'qualification',
         'comment',
-        'state'
+        'state',
     ];
 
-    public function domiciliary()
+    /** @return BelongsTo<Domiciliary, $this> */
+    public function domiciliary(): BelongsTo
     {
         return $this->belongsTo(Domiciliary::class, 'domiciliary_id', 'domiciliary_id');
     }
 
-    public function buyer()
+    /** @return BelongsTo<Buyer, $this> */
+    public function buyer(): BelongsTo
     {
         return $this->belongsTo(Buyer::class, 'buyer_id', 'buyer_id');
     }

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Concerns;
 
 use App\Services\NegocioDelUsuario;
@@ -39,7 +41,7 @@ trait ComprobarPertenencia
     {
         $user = $request->user();
 
-        if (!$user) {
+        if (! $user) {
             return false;
         }
 

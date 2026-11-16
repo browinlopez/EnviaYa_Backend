@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use App\Models\Order\OrdersSales;
@@ -63,11 +65,11 @@ class RedencionDePromociones
              */
             $esNueva = DB::table('orders_promotions')->insertOrIgnore([
                 'orderSales_id' => (int) $order->orderSales_id,
-                'promotion_id'  => $promocionId,
-                'state'         => self::APLICADA,
+                'promotion_id' => $promocionId,
+                'state' => self::APLICADA,
             ]);
 
-            if (!$esNueva) {
+            if (! $esNueva) {
                 continue;
             }
 
@@ -88,7 +90,7 @@ class RedencionDePromociones
                 ->whereRaw('(max_usos IS NULL OR usos < max_usos)')
                 ->increment('usos');
 
-            if (!$consumido) {
+            if (! $consumido) {
                 $nombre = trim((string) ($aplicada['texto'] ?? ''));
 
                 throw new RuntimeException($nombre !== ''

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use App\Support\PanelModules;
@@ -22,7 +24,8 @@ class Area extends Model
      * el practicante que necesita la información para trabajar pero no
      * responde por los cambios.
      */
-    public const NIVEL_GESTOR   = 'gestor';
+    public const NIVEL_GESTOR = 'gestor';
+
     public const NIVEL_CONSULTA = 'consulta';
 
     public const NIVELES = [self::NIVEL_GESTOR, self::NIVEL_CONSULTA];
@@ -31,9 +34,10 @@ class Area extends Model
 
     protected $casts = [
         'is_system' => 'boolean',
-        'state'     => 'integer',
+        'state' => 'integer',
     ];
 
+    /** @return HasMany<User, $this> */
     public function users(): HasMany
     {
         return $this->hasMany(User::class, 'area_id');
@@ -62,7 +66,7 @@ class Area extends Model
                 ->get()
                 ->mapWithKeys(fn ($f) => [
                     $f->module => [
-                        'view'   => (bool) $f->can_view,
+                        'view' => (bool) $f->can_view,
                         'manage' => (bool) $f->can_manage,
                     ],
                 ])
@@ -94,7 +98,7 @@ class Area extends Model
     /**
      * Reescribe la matriz del área.
      *
-     * @param array<string, array{view?: bool, manage?: bool}> $matriz
+     * @param  array<string, array{view?: bool, manage?: bool}>  $matriz
      */
     public function guardarPermisos(array $matriz): void
     {
@@ -104,7 +108,7 @@ class Area extends Model
             $filas = [];
 
             foreach ($matriz as $modulo => $flags) {
-                if (!PanelModules::existe($modulo)) {
+                if (! PanelModules::existe($modulo)) {
                     continue;
                 }
 
@@ -113,14 +117,14 @@ class Area extends Model
                 // permiso que el middleware nunca podría satisfacer.
                 $ver = $gestionar || (bool) ($flags['view'] ?? false);
 
-                if (!$ver) {
+                if (! $ver) {
                     continue; // la ausencia de fila ES la negación
                 }
 
                 $filas[] = [
-                    'area_id'    => $this->id,
-                    'module'     => $modulo,
-                    'can_view'   => true,
+                    'area_id' => $this->id,
+                    'module' => $modulo,
+                    'can_view' => true,
                     'can_manage' => $gestionar,
                     'created_at' => now(),
                     'updated_at' => now(),

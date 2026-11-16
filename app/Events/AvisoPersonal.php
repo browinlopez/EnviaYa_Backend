@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Events;
 
 use App\Models\Notification;
@@ -50,13 +52,11 @@ class AvisoPersonal implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public function __construct(public Notification $aviso)
-    {
-    }
+    public function __construct(public Notification $aviso) {}
 
     public function broadcastOn(): PrivateChannel
     {
-        return new PrivateChannel('App.Models.User.' . $this->aviso->user_id);
+        return new PrivateChannel('App.Models.User.'.$this->aviso->user_id);
     }
 
     public function broadcastAs(): string
@@ -68,11 +68,11 @@ class AvisoPersonal implements ShouldBroadcastNow
     {
         return [
             'notification_id' => $this->aviso->notification_id,
-            'tipo'            => $this->aviso->tipo,
-            'message'         => $this->aviso->message,
-            'datos'           => $this->aviso->datos,
-            'read'            => (bool) $this->aviso->read,
-            'date'            => (string) $this->aviso->date,
+            'tipo' => $this->aviso->tipo,
+            'message' => $this->aviso->message,
+            'datos' => $this->aviso->datos,
+            'read' => (bool) $this->aviso->read,
+            'date' => (string) $this->aviso->date,
         ];
     }
 }

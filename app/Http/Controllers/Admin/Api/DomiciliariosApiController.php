@@ -1,35 +1,28 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Admin\Api;
 
-use App\Support\Consultas\AyudasDeAdmin;
-use App\Services\Ajustes;
 use App\Http\Controllers\Controller;
-use App\Models\Area;
-use App\Models\Conjunto\ComplexStaff;
-use App\Models\Operacion\DomiciliaryDocument;
-use App\Models\Reviews\BusinessReview;
-use App\Models\Reviews\DomiciliaryReview;
+use App\Http\Requests\Admin\CrearDomiciliarioInternoRequest;
+use App\Http\Requests\Admin\FirmarAcuerdoDelDomiciliarioRequest;
+use App\Http\Resources\Domiciliario\ContratoFirmadoResource;
+use App\Models\Order\OrdersSales;
 use App\Models\User;
-use App\Services\BusinessMediaService;
+use App\Queries\PedidosDelPanel;
 use App\Services\ContratoService;
 use App\Services\MediaService;
-use App\Services\VinculosDelRol;
-use App\Support\ListadoPaginado;
-use Carbon\Carbon;
+use App\Support\SqlPortable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 
 class DomiciliariosApiController extends Controller
 {
-    use AyudasDeAdmin;
-
     public function domiciliaries(Request $request)
     {
-        return response()->json($this->resumenDomiciliarios(
+        return response()->json((new PedidosDelPanel)->resumenDomiciliarios(
             (int) $request->query('business_id') ?: null,
         ));
     }
@@ -41,17 +34,9 @@ class DomiciliariosApiController extends Controller
      * `domiciliary`. Se admite crear la cuenta desde cero o vincular una que
      * ya exista, porque a veces la persona ya está registrada como comprador.
      */
-    public function storeDomiciliary(Request $request)
+    public function storeDomiciliary(CrearDomiciliarioInternoRequest $request)
     {
-        $datos = $request->validate([
-            'user_id'  => 'nullable|integer|exists:user,user_id',
-            'name'     => 'required_without:user_id|string|max:255',
-            'email'    => 'required_without:user_id|email|max:255|unique:user,email',
-            'password' => 'required_without:user_id|string|min:6',
-            'phone'    => 'nullable|string|max:20',
-            'document' => 'nullable|string|max:50',
-            'available' => 'sometimes|boolean',
-        ]);
+        $datos = $request->validated();
 
         $id = DB::transaction(function () use ($datos) {
             $userId = $datos['user_id'] ?? null;
@@ -65,27 +50,27 @@ class DomiciliariosApiController extends Controller
                 DB::table('user')->where('user_id', $userId)->update(['rol' => 3]);
             } else {
                 $userId = DB::table('user')->insertGetId([
-                    'name'              => $datos['name'],
-                    'email'             => $datos['email'],
-                    'password'          => Hash::make($datos['password']),
-                    'phone'             => $datos['phone'] ?? null,
-                    'rol'               => 3,
-                    'state'             => 1,
-                    'qualification'     => 0,
+                    'name' => $datos['name'],
+                    'email' => $datos['email'],
+                    'password' => Hash::make($datos['password']),
+                    'phone' => $datos['phone'] ?? null,
+                    'rol' => 3,
+                    'state' => 1,
+                    'qualification' => 0,
                     'email_verified_at' => now(),
                     // La fecha la pone la aplicación y no la base: `CURRENT_TIMESTAMP`
                     // es el reloj del servidor, que en el VPS no es el de Bogotá.
-                    'created_at'        => now(),
-                    'updated_at'        => now(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]);
             }
 
             return DB::table('domiciliary')->insertGetId([
-                'user_id'       => $userId,
-                'document'      => $datos['document'] ?? null,
-                'available'     => $datos['available'] ?? 0,
+                'user_id' => $userId,
+                'document' => $datos['document'] ?? null,
+                'available' => $datos['available'] ?? 0,
                 'qualification' => 0,
-                'state'         => 1,
+                'state' => 1,
             ]);
         });
 
@@ -102,18 +87,20 @@ class DomiciliariosApiController extends Controller
      */
     public function showDomiciliary($id)
     {
-        $d = $this->resumenDomiciliarios()->firstWhere('domiciliary_id', (int) $id);
-        abort_if(!$d, 404, 'El domiciliario no existe.');
+        $panel = new PedidosDelPanel;
 
-        $pedidos = fn() => $this->ordenesBase()->where('o.domiciliary_id', $id);
+        $d = $panel->resumenDomiciliarios()->firstWhere('domiciliary_id', (int) $id);
+        abort_if(! $d, 404, 'El domiciliario no existe.');
+
+        $pedidos = fn () => $panel->ordenesBase()->where('o.domiciliary_id', $id);
 
         $d->active_orders = $pedidos()
-            ->whereIn('o.state', self::ACTIVOS)
+            ->whereIn('o.state', OrdersSales::ACTIVOS)
             ->orderBy('o.sale_date')
             ->get();
 
         $d->recent_deliveries = $pedidos()
-            ->where('o.state', self::ENTREGADO)
+            ->where('o.state', OrdersSales::ENTREGADO)
             ->orderByDesc('o.delivery_date')
             ->limit(10)
             ->get();
@@ -138,10 +125,16 @@ class DomiciliariosApiController extends Controller
         // marcas: estimar los que faltan inventaría un dato.
         $d->avg_minutes = DB::table('orderssales')
             ->where('domiciliary_id', $id)
-            ->where('state', self::ENTREGADO)
+            ->where('state', OrdersSales::ENTREGADO)
             ->whereNotNull('dispatched_at')
             ->whereNotNull('delivery_date')
-            ->avg(DB::raw('TIMESTAMPDIFF(MINUTE, dispatched_at, delivery_date)'));
+            /*
+             * Por el ayudante y no con `TIMESTAMPDIFF` crudo: esa funcion es
+             * de MySQL y la suite corre sobre SQLite, asi que esta pantalla
+             * funcionaba en produccion y reventaba en la unica parte donde se
+             * podia comprobar. Nadie lo noto porque no tenia prueba.
+             */
+            ->avg(DB::raw(SqlPortable::minutosEntre('dispatched_at', 'delivery_date')));
 
         $d->contract = $this->contratoDe($d);
 
@@ -152,11 +145,10 @@ class DomiciliariosApiController extends Controller
        ACUERDO DE VINCULACIÓN
        ================================================================== */
 
-
     /** Datos del contrato archivado, o null si todavía no ha firmado. */
     private function contratoDe(object $d): ?array
     {
-        if (!$d->contract_media_id) {
+        if (! $d->contract_media_id) {
             return null;
         }
 
@@ -164,18 +156,16 @@ class DomiciliariosApiController extends Controller
 
         // El archivo pudo borrarse desde la sección de documentos: entonces la
         // ficha debe decir que no hay contrato, no enlazar a un objeto muerto.
-        if (!$archivo) {
+        if (! $archivo) {
             return null;
         }
 
-        return [
-            'media_id'  => (int) $archivo->id,
-            'name'      => $archivo->original_name,
-            'size'      => (int) $archivo->size_bytes,
-            'url'       => app(MediaService::class)->url($archivo->object_key),
-            'signed_at' => $d->contract_signed_at,
-            'city'      => $d->contract_city,
-        ];
+        return (new ContratoFirmadoResource(
+            $archivo,
+            url: app(MediaService::class)->url($archivo->object_key),
+            firmadoEl: $d->contract_signed_at,
+            ciudad: $d->contract_city,
+        ))->resolve();
     }
 
     /**
@@ -185,22 +175,16 @@ class DomiciliariosApiController extends Controller
      * nuevo con su fecha, y el anterior se conserva en la carpeta de la
      * persona porque un acuerdo firmado no se sobrescribe.
      */
-    public function signContract(Request $request, $id, ContratoService $contratos)
+    public function signContract(FirmarAcuerdoDelDomiciliarioRequest $request, $id, ContratoService $contratos)
     {
-        $datos = $request->validate([
-            'signature' => 'required|string',
-            'city'      => 'required|string|max:120',
-            // Se puede corregir la cédula en el mismo paso: el acuerdo la
-            // lleva impresa y firmarlo sin ella no tiene sentido.
-            'document'  => 'sometimes|nullable|string|max:50',
-        ]);
+        $datos = $request->validated();
 
         $d = DB::table('domiciliary as d')
             ->leftJoin('user as u', 'u.user_id', '=', 'd.user_id')
             ->where('d.domiciliary_id', $id)
             ->first(['d.domiciliary_id', 'd.user_id', 'd.document', 'u.name']);
 
-        abort_if(!$d, 404, 'El domiciliario no existe.');
+        abort_if(! $d, 404, 'El domiciliario no existe.');
 
         // El documento corregido se usa para el acuerdo, pero NO se guarda
         // todavía: si la firma resulta inválida, la ficha no puede quedarse
@@ -208,7 +192,7 @@ class DomiciliariosApiController extends Controller
         $documentoNuevo = $datos['document'] ?? null;
         $d->document = $documentoNuevo ?: $d->document;
 
-        if (!$d->document) {
+        if (! $d->document) {
             return response()->json([
                 'message' => 'Registra el documento de identidad antes de firmar: el acuerdo lo lleva impreso.',
             ], 422);
@@ -229,8 +213,8 @@ class DomiciliariosApiController extends Controller
                  * acuerdo estaria describiendo un mecanismo que la mitad de
                  * los documentos no tiene.
                  */
-                'en el panel de administración por ' . ($request->user()->name ?: 'el equipo')
-                    . ', desde la dirección ' . ($request->ip() ?: 'desconocida'),
+                'en el panel de administración por '.($request->user()->name ?: 'el equipo')
+                    .', desde la dirección '.($request->ip() ?: 'desconocida'),
             );
         } catch (\Throwable $e) {
             return response()->json(['message' => $e->getMessage()], 422);
@@ -242,7 +226,7 @@ class DomiciliariosApiController extends Controller
         }
 
         return response()->json([
-            'message'  => 'Acuerdo de vinculación firmado y archivado.',
+            'message' => 'Acuerdo de vinculación firmado y archivado.',
             'contract' => $resultado,
         ], 201);
     }
@@ -250,15 +234,15 @@ class DomiciliariosApiController extends Controller
     public function updateDomiciliary(Request $request, $id)
     {
         $domiciliario = DB::table('domiciliary')->where('domiciliary_id', $id)->first();
-        abort_if(!$domiciliario, 404, 'El domiciliario no existe.');
+        abort_if(! $domiciliario, 404, 'El domiciliario no existe.');
 
         $datos = $request->validate([
             'available' => 'sometimes|boolean',
-            'document'  => 'sometimes|nullable|string|max:50',
-            'state'     => 'sometimes|boolean',
+            'document' => 'sometimes|nullable|string|max:50',
+            'state' => 'sometimes|boolean',
             // Bloqueo de la CUENTA: impide entrar a la app. No es lo mismo
             // que `available`, que solo dice si hoy acepta pedidos.
-            'blocked'   => 'sometimes|boolean',
+            'blocked' => 'sometimes|boolean',
         ]);
 
         if (array_key_exists('blocked', $datos)) {
@@ -267,7 +251,7 @@ class DomiciliariosApiController extends Controller
 
             $huerfanos = DB::table('orderssales')
                 ->where('domiciliary_id', $id)
-                ->whereIn('state', self::ACTIVOS)
+                ->whereIn('state', OrdersSales::ACTIVOS)
                 ->count();
 
             DB::transaction(function () use ($bloquear, $domiciliario, $id) {
@@ -280,7 +264,7 @@ class DomiciliariosApiController extends Controller
                     // sigue operando: el bloqueo solo aplicaría al próximo
                     // inicio de sesión, que puede no llegar nunca.
                     DB::table('personal_access_tokens')
-                        ->where('tokenable_type', \App\Models\User::class)
+                        ->where('tokenable_type', User::class)
                         ->where('tokenable_id', $domiciliario->user_id)
                         ->delete();
 
@@ -299,6 +283,7 @@ class DomiciliariosApiController extends Controller
                 $cuerpo = $respuesta->getData(true);
                 $cuerpo['warning'] = "Quedaron {$huerfanos} pedido(s) en curso sin repartidor. Hay que reasignarlos.";
                 $cuerpo['orphaned_orders'] = $huerfanos;
+
                 return response()->json($cuerpo);
             }
 
@@ -308,10 +293,10 @@ class DomiciliariosApiController extends Controller
         // Ponerlo como no disponible mientras carga pedidos dejaría entregas
         // huérfanas: el domiciliario ya no aparece para asignar, pero sigue
         // teniendo pedidos encima.
-        if (array_key_exists('available', $datos) && !$datos['available']) {
+        if (array_key_exists('available', $datos) && ! $datos['available']) {
             $activos = DB::table('orderssales')
                 ->where('domiciliary_id', $id)
-                ->whereIn('state', self::ACTIVOS)
+                ->whereIn('state', OrdersSales::ACTIVOS)
                 ->count();
 
             if ($activos > 0) {

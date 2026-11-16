@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
@@ -78,7 +80,7 @@ class ProfileController extends Controller
                 || DB::table('buyer_complex')->where('buyer_id', $buyerId)->exists()
             );
 
-            if ($buyerId && !$tieneHistorial) {
+            if ($buyerId && ! $tieneHistorial) {
                 DB::table('buyer')->where('buyer_id', $buyerId)->delete();
             }
 

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Events;
 
 use App\Models\Order\OrdersSales;
@@ -45,13 +47,11 @@ class OrderCreated implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public function __construct(public OrdersSales $order)
-    {
-    }
+    public function __construct(public OrdersSales $order) {}
 
     public function broadcastOn(): PrivateChannel
     {
-        return new PrivateChannel('business.' . $this->order->busines_id);
+        return new PrivateChannel('business.'.$this->order->busines_id);
     }
 
     public function broadcastAs(): string
@@ -64,17 +64,17 @@ class OrderCreated implements ShouldBroadcastNow
         $comprador = $this->order->buyer?->user;
 
         return [
-            'order_id'    => $this->order->orderSales_id,
+            'order_id' => $this->order->orderSales_id,
             'business_id' => $this->order->busines_id,
-            'state'       => (int) $this->order->state,
-            'total'       => (float) $this->order->total,
+            'state' => (int) $this->order->state,
+            'total' => (float) $this->order->total,
             // Si `sale_date` viniera vacío se cae a `created_at`: la tarjeta del
             // tendero pone la hora del pedido y con una cadena vacía enseñaría
             // "Invalid Date", que es exactamente lo que ya pasó en el chat.
-            'sale_date'   => (string) ($this->order->sale_date ?: $this->order->created_at),
+            'sale_date' => (string) ($this->order->sale_date ?: $this->order->created_at),
             // El nombre del cliente es lo primero que mira el tendero para
             // saber si es un pedido que esperaba.
-            'buyer_name'  => $comprador?->name,
+            'buyer_name' => $comprador?->name,
         ];
     }
 }

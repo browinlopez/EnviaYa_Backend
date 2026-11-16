@@ -29,15 +29,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('orderssales', function (Blueprint $table) {
-            if (!Schema::hasColumn('orderssales', 'platform_fee')) {
+            if (! Schema::hasColumn('orderssales', 'platform_fee')) {
                 $table->decimal('platform_fee', 10, 2)->default(0)->after('domiciliary_fee');
             }
 
-            if (!Schema::hasColumn('orderssales', 'delivery_subsidy')) {
+            if (! Schema::hasColumn('orderssales', 'delivery_subsidy')) {
                 $table->decimal('delivery_subsidy', 10, 2)->default(0)->after('platform_fee');
             }
 
-            if (!Schema::hasColumn('orderssales', 'cash_due')) {
+            if (! Schema::hasColumn('orderssales', 'cash_due')) {
                 $table->decimal('cash_due', 10, 2)->default(0)->after('delivery_subsidy');
             }
         });

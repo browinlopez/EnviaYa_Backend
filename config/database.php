@@ -118,7 +118,19 @@ return [
             | que el servidor tenga cargadas las tablas de zonas horarias, y
             | Colombia no cambia de hora en verano.
             */
-            'timezone' => env('DB_TIMEZONE'),
+            /*
+             * `?: null` Y NO `env('DB_TIMEZONE')` A SECAS.
+             *
+             * `.env.example` trae `DB_TIMEZONE=` vacia, y vacia NO es lo
+             * mismo que ausente: ausente da `null` y Laravel omite la zona;
+             * vacia da `''` y se la pasa a MySQL, que contesta
+             * `Unknown or incorrect time zone: ''` y tumba la PRIMERA
+             * consulta. En el CI eso es el paso de migrar, o sea todo.
+             *
+             * Y al desplegar seria lo mismo: las migraciones corren contra
+             * la base de produccion.
+             */
+            'timezone' => env('DB_TIMEZONE') ?: null,
 
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
@@ -241,5 +253,24 @@ return [
         ],
 
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Presupuesto de tiempo en base de datos, por peticion
+    |--------------------------------------------------------------------------
+    |
+    | Milisegundos de SUMA de consultas a partir de los cuales la peticion
+    | queda anotada en el canal `rendimiento`. No es un limite: no corta
+    | nada, solo avisa.
+    |
+    | 400 ms de base de datos en una peticion es mucho para esta API: la mas
+    | pesada que hay es un informe, y el resto son lecturas de pantalla. El
+    | numero se afina con lo que aparezca en el log, no antes.
+    |
+    | Con 0 se apaga, sin tocar codigo.
+    |
+    */
+
+    'presupuesto_ms' => (float) env('DB_PRESUPUESTO_MS', 400),
 
 ];

@@ -1,14 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Product;
 
 use App\Http\Controllers\Concerns\ComprobarPertenencia;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Product\ListarProductosRequest;
+use App\Http\Resources\Producto\ProductoDelCatalogoPropioResource;
 use App\Models\Business;
-use App\Models\Order\OrdersSalesDetail;
-use App\Models\Product\Category;
 use App\Models\Product\Product;
 use App\Models\Product\ProductBusiness;
+use App\Services\NegocioDelUsuario;
 use App\Support\ProductTypeSchema;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,11 +22,8 @@ class ProductController extends Controller
     use ComprobarPertenencia;
 
     // Listar todos los productos de un negocio
-    public function index(Request $request)
+    public function index(ListarProductosRequest $request)
     {
-        $request->validate([
-            'business_id' => 'required|integer|exists:business,busines_id'
-        ]);
 
         /*
          * Un identificador en el cuerpo es una sugerencia, no una
@@ -45,31 +45,15 @@ class ProductController extends Controller
                 ? ProductTypeSchema::extraFor((int) $business->type, $product)
                 : null;
 
-            return [
-                'product_id'    => $product->products_id,
-                'name'          => $product->name,
-                'description'   => $product->description,
-                'category'      => $product->category ? [
-                    'category_id' => $product->category->category_id,
-                    'name'        => $product->category->name,
-                ] : null,
-                'image'         => $product->image,
-                'state'         => $product->state,
-                /* La presentacion y de que tarjeta cuelga. Ver
-                   `AgrupadorDeVariantes`. Campos nuevos: una app vieja los
-                   ignora y sigue igual. */
-                'variante'      => $product->variante,
-                'group'         => $product->group ? [
-                    'group_id' => (int) $product->group->group_id,
-                    'name'     => $product->group->name,
-                    'image'    => $product->group->image,
-                ] : null,
-                'price'         => $product->pivot->price,
-                'amount'        => $product->pivot->amount,
-                'qualification' => $product->pivot->qualification,
-                'business_type' => $business->type,
-                'extra'         => $extraData, // datos extra según tipo
-            ];
+            /*
+             * `extra` y el tipo se le PASAN al Resource: el controlador
+             * precarga de una vez las relaciones de todos los tipos de
+             * negocio, y resolverlas dentro serian varias consultas por
+             * producto.
+             */
+            return (new ProductoDelCatalogoPropioResource(
+                $product, $business->type, $extraData,
+            ))->resolve();
         });
 
         return response()->json($products);
@@ -79,11 +63,11 @@ class ProductController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name'        => 'required|string|max:255',
+            'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'category_id' => 'required|integer|exists:category,category_id',
-            'price'       => 'required|numeric|min:0',
-            'amount'      => 'required|integer|min:0',
+            'price' => 'required|numeric|min:0',
+            'amount' => 'required|integer|min:0',
             'business_id' => 'required|integer|exists:business,busines_id',
         ]);
 
@@ -101,7 +85,7 @@ class ProductController extends Controller
          * las deja sin poder cargar; pero con la pertenencia comprobada. Se
          * retira cuando la mayoria haya actualizado.
          */
-        if (!app(\App\Services\NegocioDelUsuario::class)
+        if (! app(NegocioDelUsuario::class)
             ->administra($request->user()?->user_id, (int) $request->business_id)) {
             return response()->json(['message' => 'Ese negocio no es tuyo.'], 403);
         }
@@ -109,7 +93,7 @@ class ProductController extends Controller
         $business = Business::findOrFail($request->business_id);
         $type = (int) $business->type;
 
-        if (!ProductTypeSchema::has($type)) {
+        if (! ProductTypeSchema::has($type)) {
             return response()->json([
                 'message' => 'El negocio no tiene un tipo de producto configurado',
             ], 422);
@@ -126,19 +110,19 @@ class ProductController extends Controller
         try {
             // Crear producto base
             $product = Product::create([
-                'name'        => $request->name,
+                'name' => $request->name,
                 'description' => $request->description,
                 'category_id' => $request->category_id,
-                'state'       => true
+                'state' => true,
             ]);
 
             // Relación con el negocio
             ProductBusiness::create([
-                'busines_id'   => $business->busines_id,
-                'products_id'  => $product->products_id,
-                'price'        => $request->price,
-                'amount'       => $request->amount,
-                'qualification' => 0
+                'busines_id' => $business->busines_id,
+                'products_id' => $product->products_id,
+                'price' => $request->price,
+                'amount' => $request->amount,
+                'qualification' => 0,
             ]);
 
             // Datos adicionales en la tabla del tipo correspondiente
@@ -152,13 +136,14 @@ class ProductController extends Controller
 
             return response()->json([
                 'message' => 'Producto creado correctamente',
-                'product' => $product->load(ProductTypeSchema::allRelations())
+                'product' => $product->load(ProductTypeSchema::allRelations()),
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'message' => 'Error al crear producto',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -198,153 +183,10 @@ class ProductController extends Controller
             ->where('business_category_id', $type)
             ->exists();
 
-        if (!$pertenece) {
+        if (! $pertenece) {
             throw ValidationException::withMessages([
                 'category_id' => 'La categoría no pertenece al tipo de este negocio.',
             ]);
-        }
-    }
-
-    // Mostrar producto individual
-    public function show(Request $request)
-    {
-        $request->validate([
-            'products_id' => 'required|integer|exists:products,products_id'
-        ]);
-
-        $product = Product::with(array_merge(
-            ['businesses', 'category'],
-            ProductTypeSchema::allRelations(),
-        ))->findOrFail($request->products_id);
-
-        $businessType = $product->businesses->first()->type ?? null;
-
-        return response()->json([
-            'product_id'   => $product->products_id,
-            'name'         => $product->name,
-            'description'  => $product->description,
-            'category'     => $product->category ? [
-                'category_id' => $product->category->category_id,
-                'name'        => $product->category->name,
-            ] : null,
-            'image'        => $product->image,
-            'state'        => $product->state,
-            'businesses'   => $product->businesses->map(function ($business) {
-                return [
-                    'business_id'   => $business->busines_id,
-                    'name'          => $business->name,
-                    'phone'         => $business->phone,
-                    'address'       => $business->address,
-                    'qualification' => $business->qualification,
-                    'razon_social'  => $business->razonSocial_DCD,
-                    'NIT'           => $business->NIT,
-                    'logo'          => $business->logo,
-                    'city'          => $business->city,
-                    'state'         => $business->state,
-                    'type'          => $business->type,
-                ];
-            }),
-            'extra' => ProductTypeSchema::has((int) $businessType)
-                ? ProductTypeSchema::extraFor((int) $businessType, $product)
-                : null,
-        ]);
-    }
-
-    // Actualizar producto
-    public function update(Request $request)
-    {
-        $request->validate([
-            'products_id'   => 'required|integer|exists:products,products_id',
-            'business_id'   => 'nullable|integer|exists:business,busines_id',
-            'name'          => 'nullable|string|max:255',
-            'description'   => 'nullable|string',
-            'category_id'   => 'nullable|integer|exists:category,category_id',
-            'state'         => 'nullable|boolean',
-            'price'         => 'nullable|numeric|min:0',
-            'amount'        => 'nullable|integer|min:0',
-            'qualification' => 'nullable|numeric|min:0|max:5'
-        ]);
-
-        $product = Product::with(ProductTypeSchema::allRelations())
-            ->findOrFail($request->products_id);
-
-        // El negocio puede venir en el request; si no, se resuelve por el
-        // dueño autenticado. (Antes se leía user->business_id, columna que
-        // no existe, y el precio/stock nunca se actualizaba.)
-        $businessId = $request->business_id
-            ?? $request->user()?->owner?->businesses()->first()?->busines_id;
-
-        $pb = $businessId
-            ? ProductBusiness::with('business')
-                ->where('products_id', $product->products_id)
-                ->where('busines_id', $businessId)
-                ->first()
-            : null;
-
-        $businessType = $pb ? (int) $pb->business->type : null;
-
-        $extra = [];
-        if ($businessType !== null && ProductTypeSchema::has($businessType)) {
-            $this->rejectForeignFields($request, $businessType);
-
-            if ($request->filled('category_id')) {
-                $this->assertCategoryMatchesType((int) $request->category_id, $businessType);
-            }
-
-            // Reglas del tipo en modo parcial: valida formato de lo que
-            // venga sin exigir los campos required.
-            $extra = $request->validate(ProductTypeSchema::updateRules($businessType));
-        }
-
-        DB::beginTransaction();
-
-        try {
-            $product->update($request->only([
-                'name',
-                'description',
-                'category_id',
-                'state'
-            ]));
-
-            if ($pb) {
-                $pb->update($request->only([
-                    'price',
-                    'amount',
-                    'qualification'
-                ]));
-            }
-
-            // Actualizar datos adicionales del tipo correspondiente
-            if ($businessType !== null && ProductTypeSchema::has($businessType) && $extra !== []) {
-                $relation = ProductTypeSchema::relation($businessType);
-
-                if ($product->{$relation}) {
-                    $product->{$relation}->update($extra);
-                } else {
-                    // Producto viejo sin fila de subtipo: se crea al editar.
-                    $model = ProductTypeSchema::model($businessType);
-                    $model::create(array_merge(
-                        ['products_id' => $product->products_id],
-                        $extra,
-                    ));
-                }
-            }
-
-            DB::commit();
-
-            return response()->json([
-                'message' => 'Producto actualizado correctamente',
-                'product' => $product->load(array_merge(
-                    ['businesses', 'category'],
-                    ProductTypeSchema::allRelations(),
-                ))
-            ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'message' => 'Error al actualizar el producto',
-                'error'   => $e->getMessage()
-            ], 500);
         }
     }
 }

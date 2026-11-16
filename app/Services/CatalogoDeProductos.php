@@ -1,9 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use App\Models\Product\Product;
-use App\Models\Product\ProductAlias;
 use App\Models\Product\ProductBusiness;
 use Illuminate\Support\Facades\DB;
 
@@ -35,9 +36,7 @@ use Illuminate\Support\Facades\DB;
  */
 class CatalogoDeProductos
 {
-    public function __construct(private FuenteExternaDeProductos $fuente)
-    {
-    }
+    public function __construct(private FuenteExternaDeProductos $fuente) {}
 
     /**
      * Buscar en el catálogo maestro.
@@ -108,7 +107,7 @@ class CatalogoDeProductos
 
         $borrador = $this->fuente->buscar($barcode);
 
-        if (!$borrador) {
+        if (! $borrador) {
             return null;
         }
 
@@ -116,15 +115,15 @@ class CatalogoDeProductos
         // enseña el borrador y ofrece proponerlo.
         return [
             'products_id' => null,
-            'barcode'     => $barcode,
-            'name'        => $borrador['name'],
-            'brand'       => $borrador['brand'],
-            'image'       => $borrador['image'],
+            'barcode' => $barcode,
+            'name' => $borrador['name'],
+            'brand' => $borrador['brand'],
+            'image' => $borrador['image'],
             'description' => null,
-            'category'    => null,
+            'category' => null,
             'ya_lo_tienes' => false,
             'es_borrador' => true,
-            'fuente'      => $borrador['fuente'],
+            'fuente' => $borrador['fuente'],
         ];
     }
 
@@ -157,14 +156,14 @@ class CatalogoDeProductos
         }
 
         $producto = Product::create([
-            'name'        => trim($datos['name']),
-            'barcode'     => $barcode,
-            'brand'       => isset($datos['brand']) ? trim($datos['brand']) : null,
+            'name' => trim($datos['name']),
+            'barcode' => $barcode,
+            'brand' => isset($datos['brand']) ? trim($datos['brand']) : null,
             'description' => $datos['description'] ?? null,
             'category_id' => $datos['category_id'] ?? null,
-            'image'       => $datos['image'] ?? null,
-            'state'       => 1,
-            'origen'      => $origen,
+            'image' => $datos['image'] ?? null,
+            'state' => 1,
+            'origen' => $origen,
         ]);
 
         return $producto;
@@ -213,7 +212,7 @@ class CatalogoDeProductos
             ['busines_id' => $businessId, 'products_id' => $productId]
         );
 
-        if (!$fila->exists && !isset($cambios['amount'])) {
+        if (! $fila->exists && ! isset($cambios['amount'])) {
             $cambios['amount'] = 0;
         }
 
@@ -251,15 +250,15 @@ class CatalogoDeProductos
 
         $nuevos = array_values(array_diff($delOtro, $suyos));
 
-        if (!$nuevos) {
+        if (! $nuevos) {
             return ['copiados' => 0, 'ya_tenia' => count(array_intersect($delOtro, $suyos))];
         }
 
         $filas = array_map(fn ($id) => [
-            'busines_id'    => $destino,
-            'products_id'   => $id,
-            'price'         => 0,
-            'amount'        => 0,
+            'busines_id' => $destino,
+            'products_id' => $id,
+            'price' => 0,
+            'amount' => 0,
             'qualification' => 0,
         ], $nuevos);
 
@@ -292,8 +291,8 @@ class CatalogoDeProductos
             ->get()
             ->map(fn ($r) => [
                 'busines_id' => (int) $r->busines_id,
-                'name'       => $r->name,
-                'productos'  => (int) $r->productos,
+                'name' => $r->name,
+                'productos' => (int) $r->productos,
             ])
             ->all();
     }
@@ -302,28 +301,28 @@ class CatalogoDeProductos
     {
         return [
             'products_id' => (int) $p->products_id,
-            'barcode'     => $p->barcode,
-            'name'        => $p->name,
-            'brand'       => $p->brand,
+            'barcode' => $p->barcode,
+            'name' => $p->name,
+            'brand' => $p->brand,
             'description' => $p->description,
-            'image'       => $p->image,
+            'image' => $p->image,
             /*
              * LA PRESENTACION, QUE ES LO QUE EL TENDERO NECESITA VER AL
              * ELEGIR. Buscar «salsa de tomate san jorge» devuelve siete filas
              * con nombres casi iguales; sin la etiqueta hay que leerlas letra
              * por letra para dar con la de 400 gramos.
              */
-            'variante'    => $p->variante,
-            'group'       => $p->group ? [
+            'variante' => $p->variante,
+            'group' => $p->group ? [
                 'group_id' => (int) $p->group->group_id,
-                'name'     => $p->group->name,
+                'name' => $p->group->name,
             ] : null,
-            'category'    => $p->category ? [
+            'category' => $p->category ? [
                 'category_id' => (int) $p->category->category_id,
-                'name'        => $p->category->name,
+                'name' => $p->category->name,
             ] : null,
             'ya_lo_tienes' => $loTiene,
-            'es_borrador'  => false,
+            'es_borrador' => false,
         ];
     }
 }

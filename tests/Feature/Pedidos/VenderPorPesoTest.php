@@ -2,7 +2,11 @@
 
 use App\Models\Order\OrdersSales;
 use App\Models\Order\OrdersSalesDetail;
+use App\Models\Rol;
+use App\Models\User;
+use App\Support\UnidadDeVenta;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
 
 /**
@@ -31,16 +35,16 @@ use Laravel\Sanctum\Sanctum;
 function productoAlPeso(array $e, string $unidad = 'kg', float $precio = 12000): int
 {
     $productId = DB::table('products')->insertGetId([
-        'name'  => 'Queso campesino',
+        'name' => 'Queso campesino',
         'state' => 1,
     ], 'products_id');
 
     DB::table('products_business')->insert([
-        'busines_id'   => $e['businessId'],
-        'products_id'  => $productId,
-        'price'        => $precio,
-        'amount'       => 0,
-        'sale_unit'    => $unidad,
+        'busines_id' => $e['businessId'],
+        'products_id' => $productId,
+        'price' => $precio,
+        'amount' => 0,
+        'sale_unit' => $unidad,
         'stock_weight' => 10,
     ]);
 
@@ -51,9 +55,9 @@ function productoAlPeso(array $e, string $unidad = 'kg', float $precio = 12000):
 function porPlata(int $productId, float $plata): array
 {
     return [
-        'product_id'      => $productId,
-        'amount'          => 1,
-        'pedido_por'      => 'valor',
+        'product_id' => $productId,
+        'amount' => 1,
+        'pedido_por' => 'valor',
         'requested_value' => $plata,
     ];
 }
@@ -62,27 +66,27 @@ function porPlata(int $productId, float $plata): array
 function porCantidad(int $productId, float $cantidad): array
 {
     return [
-        'product_id'    => $productId,
-        'amount'        => 1,
-        'pedido_por'    => 'cantidad',
+        'product_id' => $productId,
+        'amount' => 1,
+        'pedido_por' => 'cantidad',
         'requested_qty' => $cantidad,
     ];
 }
 
-function pesar(array $e, int $orderId, array $lineas): \Illuminate\Testing\TestResponse
+function pesar(array $e, int $orderId, array $lineas): TestResponse
 {
     return test()->putJson('/v1/negocio/pedidos/pesaje', [
         'order_id' => $orderId,
-        'lineas'   => $lineas,
+        'lineas' => $lineas,
     ]);
 }
 
 /** El tendero dueño de la tienda del escenario, ya dentro. */
 function tenderoDe(array $e): void
 {
-    \App\Models\Rol::firstOrCreate(['rol_id' => 2], ['name' => 'tendero', 'guard_name' => 'web']);
+    Rol::firstOrCreate(['rol_id' => 2], ['name' => 'tendero', 'guard_name' => 'web']);
 
-    $user = \App\Models\User::factory()->create(['rol' => 2]);
+    $user = User::factory()->create(['rol' => 2]);
 
     $ownerId = DB::table('owner')->insertGetId(['user_id' => $user->user_id, 'state' => 1], 'owner_id');
     DB::table('owner_busines')->insert([
@@ -184,8 +188,8 @@ test('no sale de la tienda sin pesar', function () {
 
     $r = $this->putJson('/v1/orders/update', [
         'order_id' => $orden->orderSales_id,
-        'state'    => 3,
-        'user_id'  => $e['user']->user_id,
+        'state' => 3,
+        'user_id' => $e['user']->user_id,
     ]);
 
     $r->assertStatus(422);
@@ -391,13 +395,13 @@ test('la cotización y el pedido calculan el peso igual', function () {
     $cotizacion = $this->postJson('/v1/orders/cotizar', [
         'busines_id' => $e['businessId'],
         'address_id' => $e['addressId'],
-        'products'   => [porPlata($queso, 3000)],
+        'products' => [porPlata($queso, 3000)],
     ])->assertOk();
 
     expect((float) $cotizacion->json('subtotal'))->toBe(3000.0);
 
     $this->postJson('/v1/orders/orders', cuerpoPedido($e, [
-        'products'       => [porPlata($queso, 3000)],
+        'products' => [porPlata($queso, 3000)],
         'expected_total' => $cotizacion->json('total'),
     ]))->assertSuccessful();
 });
@@ -468,4 +472,73 @@ test('no se da por pesado un pedido al que le faltan productos', function () {
 
     // Y el pedido sigue sin poder salir.
     expect((int) $orden->fresh()->weighing_state)->toBe(OrdersSales::POR_PESAR);
+});
+
+/* ----------------------------- lo que el segundo barrido encontro -------- */
+
+/**
+ * LA LIBRA ES UNA UNIDAD DE VERDAD, y no la vigilaba nadie.
+ *
+ * Del barrido de sabotaje del 14 de noviembre de 2026: poniendo
+ * `UnidadDeVenta::LIBRA = 'kg'` pasaban las 1365 pruebas, con catorce de este
+ * fichero cubriendo el peso.
+ *
+ * POR QUE NO LO VEIA NINGUNA: todas prueban con `kg`, que es el valor por
+ * defecto del ayudante `productoAlPeso()`. La libra solo aparecia en el
+ * metodo que pluraliza la etiqueta, y eso no lo mira ninguna prueba.
+ *
+ * EL DANO, comprobado leyendo el codigo y no de memoria --dos veces esta
+ * semana lo dije mal de cabeza--: con `LIBRA = 'kg'`, `AL_PESO` se queda en
+ * `['kg', 'kg', 'gramo']` y la cadena `'libra'` deja de estar dentro. Entonces
+ * `esPeso('libra')` da FALSO, y una oferta que la tienda ya tiene configurada
+ * por libras **deja de venderse al peso**: `EconomiaDelPedido` la cobra como
+ * una unidad --el precio de una libra, una vez, pase lo que pase-- y el pedido
+ * no nace por pesar. Ademas `TODAS` deja de admitir `'libra'`, asi que el
+ * tendero tampoco puede volver a configurarla.
+ */
+test('una oferta por LIBRAS se vende al peso, no como unidad', function () {
+    $e = escenarioPedido();
+    $queso = productoAlPeso($e, 'libra', 12000);
+
+    // Dos libras de queso a 12.000 la libra.
+    $this->postJson('/v1/orders/orders', cuerpoPedido($e, [
+        'products' => [porCantidad($queso, 2)],
+    ]))->assertSuccessful();
+
+    $orden = OrdersSales::latest('orderSales_id')->first();
+
+    /*
+     * 24.000 y no 12.000. Si la libra dejara de contar como peso, esta linea
+     * se cobraria como UNA unidad --12.000-- y el cliente pagaria la mitad de
+     * lo que se lleva.
+     */
+    expect((float) $orden->subtotal)->toBe(24000.0);
+
+    // Y el pedido tiene que nacer POR PESAR: una oferta al peso hay que pesarla.
+    expect((int) $orden->weighing_state)->toBe(OrdersSales::POR_PESAR);
+});
+
+test('las cuatro unidades de venta valen lo que la base ya tiene escrito', function () {
+    /*
+     * CON LITERALES. Los valores estan en la columna `products_business.sale_unit`
+     * de ofertas ya configuradas y viajan en las respuestas del catalogo:
+     * cambiarlos deja esas filas sin clasificar.
+     *
+     * Y `AL_PESO` tiene que llevar las tres, porque de esa lista cuelga si un
+     * producto se pesa, si el pedido se puede despachar y como se le cobra.
+     */
+    expect(UnidadDeVenta::UNIDAD)->toBe('unidad');
+    expect(UnidadDeVenta::KILO)->toBe('kg');
+    expect(UnidadDeVenta::LIBRA)->toBe('libra');
+    expect(UnidadDeVenta::GRAMO)->toBe('gramo');
+
+    expect(UnidadDeVenta::AL_PESO)->toBe(['kg', 'libra', 'gramo']);
+    expect(UnidadDeVenta::TODAS)->toBe(['unidad', 'kg', 'libra', 'gramo']);
+
+    // Las cuatro distintas: es lo unico que el resto del codigo necesita.
+    expect(count(array_unique(UnidadDeVenta::TODAS)))->toBe(4);
+
+    // Y la que se vende por unidades NO se pesa.
+    expect(UnidadDeVenta::esPeso('unidad'))->toBeFalse();
+    expect(UnidadDeVenta::esPeso('libra'))->toBeTrue();
 });

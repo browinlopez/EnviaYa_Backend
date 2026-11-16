@@ -1,0 +1,769 @@
+{
+ "_": [
+  "LAS CONSTANTES QUE DECIDEN DINERO O PERMISOS, Y COMO SABOTEARLAS.",
+  "",
+  "Las lee scripts/barrido_sabotaje.py: cambia cada una por su version mala,",
+  "corre la suite ENTERA y dice cuales NO caza ninguna prueba.",
+  "",
+  "Cada entrada es:",
+  "  etiqueta  como sale en el informe. Si empieza por CONTROL, su respuesta",
+  "            se conoce de antemano y el barrido se para si no la da.",
+  "  fichero   ruta relativa a la raiz del repositorio",
+  "  viejo     el texto tal cual esta hoy; tiene que aparecer UNA vez",
+  "  nuevo     el texto saboteado: un error SEMANTICO con sintaxis valida.",
+  "            Nada que reviente al cargar, porque eso tumba la suite entera",
+  "            y no distingue nada.",
+  "  dano      que pasaria de verdad si el error fuera real",
+  "",
+  "PARA ANADIR UNA: si una constante nueva decide dinero, permisos o un",
+  "estado, entra aca. Lo que no entra son etiquetas, plazos, nombres de",
+  "disco ni textos: no deciden nada y gastan 80 segundos de suite cada una.",
+  "",
+  "LAS CUATRO ULTIMAS VENIAN DEL GRUPO `muertas` DE LOS PENDIENTES, y entran",
+  "aca el 15 de noviembre de 2026 porque ese grupo estaba mal planteado: su",
+  "cabecera decia que sabotearlas «no puede fallar ninguna prueba» mientras",
+  "sus propios datos traian las pruebas que las nombran. Mezclaba «no la usa",
+  "`app/`» --una pregunta de diseno-- con «ninguna prueba caza un cambio»,",
+  "que es lo unico que produce hallazgos falsos.",
+  "",
+  "COMO SE MIDIERON, dicho para que nadie lo confunda con una pasada del",
+  "barrido: sabotaje DIRIGIDO, cada constante contra el fichero de pruebas",
+  "que la nombra, con pasada de control sobre codigo sano antes y exigiendo",
+  "el resumen de Pest en la salida --sin resumen es ERROR, no veredicto--.",
+  "Las tres primeras: 3 de 3 cazadas. La cuarta no tenia prueba, se le",
+  "escribio en `CreditoDeTiendaTest` y se probo rompiendola.",
+  "",
+  "Correr el fichero que la nombra BASTA para decir «defendida»: si ahi la",
+  "cazan, la respuesta ya es si. La suite entera solo aporta cuando la",
+  "respuesta es NO, porque entonces falta saber si la caza algo inesperado.",
+  "",
+  "LAS 18 ULTIMAS ERAN TODO LO QUE QUEDABA EN `barrido-pendientes.json`, y",
+  "entran el 16 de noviembre de 2026 con veredicto medido. Las 16 primeras",
+  "estaban defendidas; las dos ultimas --`Promotion::BORRADOR` y",
+  "`Promotion::TIPOS`-- NO lo estaban, y tienen prueba nueva en",
+  "`PromocionesDeLaTiendaTest`, probada rompiendola.",
+  "",
+  "COMO SE MIDIERON, para que nadie lo confunda con una pasada del barrido:",
+  "sabotaje DIRIGIDO contra los ficheros de prueba que las vigilan, con",
+  "pasada de control sobre codigo sano antes y exigiendo el resumen de Pest",
+  "en la salida. Las dos de `Promotion` fueron con la SUITE COMPLETA, porque",
+  "el dirigido no basta para decir que algo NO esta defendido.",
+  "",
+  "LA REGLA QUE SALIO DE ESTO, y costo un veredicto equivocado: una prueba",
+  "que cae solo vale como defensa SI ESTA VERDE AISLADA. Al sabotear las dos",
+  "de `Promotion` la suite daba «2 failed» y parecia defensa; las dos que",
+  "caian eran de porcentaje a tiempo, en un fichero que no nombra",
+  "`Promotion`, y fallaban igual sobre codigo sano --las tumbaba la ventana",
+  "de fechas en un lunes de madrugada--. Arreglado eso, las dos mutaciones",
+  "pasan las 1404 enteras."
+ ],
+ "mutaciones": [
+  {
+   "etiqueta": "CONTROL (debe FALLAR): CashMovement::RECAUDO",
+   "fichero": "app/Models/Operacion/CashMovement.php",
+   "viejo": "public const RECAUDO = 'recaudo';",
+   "nuevo": "public const RECAUDO = 'ajuste';",
+   "dano": "un ajuste cuenta como recaudo -- era un agujero y se cerro hoy"
+  },
+  {
+   "etiqueta": "CONTROL (debe FALLAR): OrdersSales::ENTREGADO",
+   "fichero": "app/Models/Order/OrdersSales.php",
+   "viejo": "public const ENTREGADO = 4;",
+   "nuevo": "public const ENTREGADO = 3;",
+   "dano": "entregado y en camino se confunden -- defendido, comprobado el 14 de noviembre"
+  },
+  {
+   "etiqueta": "CONTROL (debe FALLAR): Payment::COBRADOS",
+   "fichero": "app/Models/Payment/Payment.php",
+   "viejo": "public const COBRADOS = ['approved', 'paid'];",
+   "nuevo": "public const COBRADOS = ['approved', 'rejected'];",
+   "dano": "un pago rechazado cuenta como cobrado -- se arreglo hoy, asi que YA debe estar defendido"
+  },
+  {
+   "etiqueta": "AccesoAlConjunto::VIGENCIA_SEGUNDOS",
+   "fichero": "app/Services/AccesoAlConjunto.php",
+   "viejo": "public const VIGENCIA_SEGUNDOS = 300;",
+   "nuevo": "public const VIGENCIA_SEGUNDOS = 2592000;",
+   "dano": "el codigo de porteria vale un mes en vez de cinco minutos"
+  },
+  {
+   "etiqueta": "AccesoBiometricoController::HABILIDAD",
+   "fichero": "app/Http/Controllers/Auth/AccesoBiometricoController.php",
+   "viejo": "public const HABILIDAD = 'biometrico';",
+   "nuevo": "public const HABILIDAD = 'sesion';",
+   "dano": "la habilidad guardada en personal_access_tokens.abilities cambia. HOY no decide nada --nadie llama a tokenCan()-- y se vigila por el dia que alguien la compruebe"
+  },
+  {
+   "etiqueta": "AccesoBiometricoController::NOMBRE_TOKEN",
+   "fichero": "app/Http/Controllers/Auth/AccesoBiometricoController.php",
+   "viejo": "public const NOMBRE_TOKEN = 'biometrico';",
+   "nuevo": "public const NOMBRE_TOKEN = 'sesion';",
+   "dano": "desactivar la huella deja de borrar los tokens ya emitidos: contesta exito y el telefono perdido sigue entrando"
+  },
+  {
+   "etiqueta": "AdCampaign::ACTIVA",
+   "fichero": "app/Models/Marketing/AdCampaign.php",
+   "viejo": "public const ACTIVA = 1;",
+   "nuevo": "public const ACTIVA = 0;",
+   "dano": "pasa a valer lo mismo que AdCampaign::BORRADOR: los dos se confunden -- defendida, comprobado el 15 de noviembre"
+  },
+  {
+   "etiqueta": "AdCampaign::BORRADOR",
+   "fichero": "app/Models/Marketing/AdCampaign.php",
+   "viejo": "public const BORRADOR = 0;",
+   "nuevo": "public const BORRADOR = 1;",
+   "dano": "pasa a valer lo mismo que AdCampaign::ACTIVA: los dos se confunden -- defendida, comprobado el 15 de noviembre"
+  },
+  {
+   "etiqueta": "AdCampaign::FINALIZADA",
+   "fichero": "app/Models/Marketing/AdCampaign.php",
+   "viejo": "public const FINALIZADA = 3;",
+   "nuevo": "public const FINALIZADA = 0;",
+   "dano": "pasa a valer lo mismo que AdCampaign::BORRADOR: los dos se confunden -- defendida, comprobado el 15 de noviembre"
+  },
+  {
+   "etiqueta": "AdCampaign::PAUSADA",
+   "fichero": "app/Models/Marketing/AdCampaign.php",
+   "viejo": "public const PAUSADA = 2;",
+   "nuevo": "public const PAUSADA = 1;",
+   "dano": "pausada y activa se confunden: una campana pausada sigue sirviendo pauta y gastando presupuesto"
+  },
+  {
+   "etiqueta": "Area::NIVELES",
+   "fichero": "app/Models/Area.php",
+   "viejo": "public const NIVELES = [self::NIVEL_GESTOR, self::NIVEL_CONSULTA];",
+   "nuevo": "public const NIVELES = [self::NIVEL_GESTOR];",
+   "dano": "el nivel de consulta deja de ser un nivel valido"
+  },
+  {
+   "etiqueta": "Area::NIVEL_CONSULTA",
+   "fichero": "app/Models/Area.php",
+   "viejo": "public const NIVEL_CONSULTA = 'consulta';",
+   "nuevo": "public const NIVEL_CONSULTA = 'gestor';",
+   "dano": "quien solo puede mirar pasa a poder escribir"
+  },
+  {
+   "etiqueta": "Area::NIVEL_GESTOR",
+   "fichero": "app/Models/Area.php",
+   "viejo": "public const NIVEL_GESTOR = 'gestor';",
+   "nuevo": "public const NIVEL_GESTOR = 'consulta';",
+   "dano": "gestor y consulta se vuelven indistinguibles: quien solo mira, escribe"
+  },
+  {
+   "etiqueta": "CancelacionDelPedido::CANCELADO",
+   "fichero": "app/Services/CancelacionDelPedido.php",
+   "viejo": "public const CANCELADO = OrdersSales::CANCELADO;",
+   "nuevo": "public const CANCELADO = OrdersSales::ENTREGADO;",
+   "dano": "cancelar un pedido lo deja ENTREGADO. No tiene hermana escalar con la que colisionar, asi que se apunta al estado de al lado -- defendida, comprobado el 15 de noviembre"
+  },
+  {
+   "etiqueta": "CancelacionDelPedido::COMPRADOR",
+   "fichero": "app/Services/CancelacionDelPedido.php",
+   "viejo": "public const COMPRADOR = 'comprador';",
+   "nuevo": "public const COMPRADOR = 'tienda';",
+   "dano": "pasa a valer lo mismo que CancelacionDelPedido::TIENDA: los dos se confunden -- defendida, comprobado el 15 de noviembre"
+  },
+  {
+   "etiqueta": "CancelacionDelPedido::TIENDA",
+   "fichero": "app/Services/CancelacionDelPedido.php",
+   "viejo": "public const TIENDA = 'tienda';",
+   "nuevo": "public const TIENDA = 'comprador';",
+   "dano": "pasa a valer lo mismo que CancelacionDelPedido::COMPRADOR: los dos se confunden -- defendida, comprobado el 15 de noviembre"
+  },
+  {
+   "etiqueta": "CashDeposit::CONFIRMADA",
+   "fichero": "app/Models/Operacion/CashDeposit.php",
+   "viejo": "public const CONFIRMADA = 'confirmada';",
+   "nuevo": "public const CONFIRMADA = 'pendiente';",
+   "dano": "una entrega PENDIENTE cuenta como confirmada: plata que nadie entrego, dada por recibida"
+  },
+  {
+   "etiqueta": "CashDeposit::CONSIGNACION",
+   "fichero": "app/Models/Operacion/CashDeposit.php",
+   "viejo": "public const CONSIGNACION = 'consignacion';",
+   "nuevo": "public const CONSIGNACION = 'pendiente';",
+   "dano": "el canal choca con un estado: EfectivoDeLaTienda busca 'pendiente' en la columna del canal y el panel del tendero deja de ver los depositos de plataforma"
+  },
+  {
+   "etiqueta": "CashDeposit::ESTADOS",
+   "fichero": "app/Models/Operacion/CashDeposit.php",
+   "viejo": "public const ESTADOS = [self::PENDIENTE, self::CONFIRMADA, self::RECHAZADA];",
+   "nuevo": "public const ESTADOS = [self::PENDIENTE, self::CONFIRMADA];",
+   "dano": "la lista pierde self::RECHAZADA: deja de ser un valor valido -- defendida, comprobado el 15 de noviembre"
+  },
+  {
+   "etiqueta": "CashDeposit::MOSTRADOR",
+   "fichero": "app/Models/Operacion/CashDeposit.php",
+   "viejo": "public const MOSTRADOR = 'mostrador';",
+   "nuevo": "public const MOSTRADOR = 'consignacion';",
+   "dano": "el canal se confunde: lo entregado en el mostrador se contabiliza como consignacion al banco"
+  },
+  {
+   "etiqueta": "CashDeposit::PENDIENTE",
+   "fichero": "app/Models/Operacion/CashDeposit.php",
+   "viejo": "public const PENDIENTE = 'pendiente';",
+   "nuevo": "public const PENDIENTE = 'confirmada';",
+   "dano": "pasa a valer lo mismo que CashDeposit::CONFIRMADA: los dos se confunden -- defendida, comprobado el 15 de noviembre"
+  },
+  {
+   "etiqueta": "CashDeposit::RECHAZADA",
+   "fichero": "app/Models/Operacion/CashDeposit.php",
+   "viejo": "public const RECHAZADA = 'rechazada';",
+   "nuevo": "public const RECHAZADA = 'confirmada';",
+   "dano": "rechazar un deposito lo confirma: se le borra al domiciliario una deuda que sigue viva"
+  },
+  {
+   "etiqueta": "CashMovement::CONSIGNACION",
+   "fichero": "app/Models/Operacion/CashMovement.php",
+   "viejo": "public const CONSIGNACION = 'consignacion';",
+   "nuevo": "public const CONSIGNACION = 'recaudo';",
+   "dano": "consignar al banco SUMA al saldo del domiciliario en vez de restarlo"
+  },
+  {
+   "etiqueta": "CashMovement::RECAUDO",
+   "fichero": "app/Models/Operacion/CashMovement.php",
+   "viejo": "public const RECAUDO = 'recaudo';",
+   "nuevo": "public const RECAUDO = 'ajuste';",
+   "dano": "lo cobrado al cliente entra al libro como un ajuste a mano"
+  },
+  {
+   "etiqueta": "ComplexStaff::CELADOR",
+   "fichero": "app/Models/Conjunto/ComplexStaff.php",
+   "viejo": "public const CELADOR = 'celador';",
+   "nuevo": "public const CELADOR = 'dueno';",
+   "dano": "el cargo del celador se guarda y se lee como dueno"
+  },
+  {
+   "etiqueta": "ComplexStaff::DUENO",
+   "fichero": "app/Models/Conjunto/ComplexStaff.php",
+   "viejo": "public const DUENO = 'dueno';",
+   "nuevo": "public const DUENO = 'celador';",
+   "dano": "el cargo de dueno se guarda y se lee como celador"
+  },
+  {
+   "etiqueta": "ComplexStaff::ROLES_DE_USUARIO",
+   "fichero": "app/Models/Conjunto/ComplexStaff.php",
+   "viejo": "public const ROLES_DE_USUARIO = [self::ROL_DUENO, self::ROL_CELADOR];",
+   "nuevo": "public const ROLES_DE_USUARIO = [self::ROL_DUENO];",
+   "dano": "el celador deja de contar como personal del conjunto"
+  },
+  {
+   "etiqueta": "ComplexStaff::ROL_CELADOR",
+   "fichero": "app/Models/Conjunto/ComplexStaff.php",
+   "viejo": "public const ROL_CELADOR = 6;",
+   "nuevo": "public const ROL_CELADOR = 5;",
+   "dano": "el celador pasa por dueno del conjunto"
+  },
+  {
+   "etiqueta": "ComplexStaff::ROL_DUENO",
+   "fichero": "app/Models/Conjunto/ComplexStaff.php",
+   "viejo": "public const ROL_DUENO = 5;",
+   "nuevo": "public const ROL_DUENO = 6;",
+   "dano": "el dueno del conjunto y el celador se confunden"
+  },
+  {
+   "etiqueta": "Coupon::TIPOS",
+   "fichero": "app/Models/Marketing/Coupon.php",
+   "viejo": "public const TIPOS = [self::TIPO_PORCENTAJE, self::TIPO_FIJO, self::TIPO_ENVIO_GRATIS];",
+   "nuevo": "public const TIPOS = [self::TIPO_PORCENTAJE, self::TIPO_FIJO];",
+   "dano": "el envio gratis sale del vocabulario: ese cupon no se puede crear"
+  },
+  {
+   "etiqueta": "Coupon::TIPO_ENVIO_GRATIS",
+   "fichero": "app/Models/Marketing/Coupon.php",
+   "viejo": "public const TIPO_ENVIO_GRATIS = 'free_shipping';",
+   "nuevo": "public const TIPO_ENVIO_GRATIS = 'fixed';",
+   "dano": "el envio gratis deja de reconocerse y se trata como descuento fijo"
+  },
+  {
+   "etiqueta": "Coupon::TIPO_FIJO",
+   "fichero": "app/Models/Marketing/Coupon.php",
+   "viejo": "public const TIPO_FIJO = 'fixed';",
+   "nuevo": "public const TIPO_FIJO = 'percent';",
+   "dano": "la lista blanca deja de aceptar 'fixed': no se pueden crear cupones de monto fijo (422). Las filas viejas siguen bien, porque descuentoPara compara con el valor guardado"
+  },
+  {
+   "etiqueta": "Coupon::TIPO_PORCENTAJE",
+   "fichero": "app/Models/Marketing/Coupon.php",
+   "viejo": "public const TIPO_PORCENTAJE = 'percent';",
+   "nuevo": "public const TIPO_PORCENTAJE = 'fixed';",
+   "dano": "un cupon del 10% se aplica como 10 pesos fijos, o al reves"
+  },
+  {
+   "etiqueta": "CouponService::APLICADO",
+   "fichero": "app/Services/CouponService.php",
+   "viejo": "public const APLICADO = 1;",
+   "nuevo": "public const APLICADO = 0;",
+   "dano": "aplicado y devuelto son lo mismo: un cupon de un solo uso se puede usar siempre"
+  },
+  {
+   "etiqueta": "CouponService::DEVUELTO",
+   "fichero": "app/Services/CouponService.php",
+   "viejo": "public const DEVUELTO = 0;",
+   "nuevo": "public const DEVUELTO = 1;",
+   "dano": "pasa a valer lo mismo que CouponService::APLICADO: los dos se confunden -- defendida, comprobado el 15 de noviembre"
+  },
+  {
+   "etiqueta": "CreditoDeTienda::METODO",
+   "fichero": "app/Services/CreditoDeTienda.php",
+   "viejo": "public const METODO = 7;",
+   "nuevo": "public const METODO = 1;",
+   "dano": "el credito de la tienda pasa por el medio EFECTIVO: el domiciliario queda debiendo plata que nadie le dio"
+  },
+  {
+   "etiqueta": "DocumentosDelDomiciliarioController::TIPOS",
+   "fichero": "app/Http/Controllers/Negocio/DocumentosDelDomiciliarioController.php",
+   "viejo": "public const TIPOS = ['cedula', 'licencia', 'soat', 'tecnomecanica', 'arl', 'eps'];",
+   "nuevo": "public const TIPOS = ['cedula', 'licencia', 'soat', 'tecnomecanica', 'arl'];",
+   "dano": "un papel sale de la lista y no se puede subir: el domiciliario no entrega su EPS y en el panel queda como si no la tuviera"
+  },
+  {
+   "etiqueta": "DomiciliaryDocument::OBLIGATORIOS",
+   "fichero": "app/Models/Operacion/DomiciliaryDocument.php",
+   "viejo": "public const OBLIGATORIOS = ['licencia', 'soat', 'tecnomecanica', 'arl', 'eps'];",
+   "nuevo": "public const OBLIGATORIOS = ['licencia'];",
+   "dano": "cuatro de los cinco papeles dejan de ser obligatorios: sale a repartir sin SOAT ni ARL"
+  },
+  {
+   "etiqueta": "FacturaService::ANULADA",
+   "fichero": "app/Services/FacturaService.php",
+   "viejo": "public const ANULADA = 0;",
+   "nuevo": "public const ANULADA = 1;",
+   "dano": "una factura anulada cuenta como emitida"
+  },
+  {
+   "etiqueta": "FacturaService::EMITIDA",
+   "fichero": "app/Services/FacturaService.php",
+   "viejo": "public const EMITIDA = 1;",
+   "nuevo": "public const EMITIDA = 0;",
+   "dano": "pasa a valer lo mismo que FacturaService::ANULADA: los dos se confunden -- defendida, comprobado el 15 de noviembre"
+  },
+  {
+   "etiqueta": "LandingRequest::ATENDIDA",
+   "fichero": "app/Models/Operacion/LandingRequest.php",
+   "viejo": "public const ATENDIDA = 2;",
+   "nuevo": "public const ATENDIDA = 3;",
+   "dano": "una solicitud atendida se cuenta como descartada: el comercio que escribio no recibe respuesta"
+  },
+  {
+   "etiqueta": "LandingRequest::DESCARTADA",
+   "fichero": "app/Models/Operacion/LandingRequest.php",
+   "viejo": "public const DESCARTADA = 3;",
+   "nuevo": "public const DESCARTADA = 0;",
+   "dano": "pasa a valer lo mismo que LandingRequest::NUEVA: los dos se confunden -- defendida, comprobado el 15 de noviembre"
+  },
+  {
+   "etiqueta": "LandingRequest::EN_GESTION",
+   "fichero": "app/Models/Operacion/LandingRequest.php",
+   "viejo": "public const EN_GESTION = 1;",
+   "nuevo": "public const EN_GESTION = 0;",
+   "dano": "pasa a valer lo mismo que LandingRequest::NUEVA: los dos se confunden -- defendida, comprobado el 15 de noviembre"
+  },
+  {
+   "etiqueta": "LandingRequest::NUEVA",
+   "fichero": "app/Models/Operacion/LandingRequest.php",
+   "viejo": "public const NUEVA = 0;",
+   "nuevo": "public const NUEVA = 1;",
+   "dano": "pasa a valer lo mismo que LandingRequest::EN_GESTION: los dos se confunden -- defendida, comprobado el 15 de noviembre"
+  },
+  {
+   "etiqueta": "OrdersSales::ACTIVOS",
+   "fichero": "app/Models/Order/OrdersSales.php",
+   "viejo": "public const ACTIVOS = [self::NUEVO, self::PREPARANDO, self::EN_CAMINO];",
+   "nuevo": "public const ACTIVOS = [self::NUEVO, self::PREPARANDO];",
+   "dano": "la lista pierde self::EN_CAMINO: deja de ser un valor valido -- defendida, comprobado el 15 de noviembre"
+  },
+  {
+   "etiqueta": "OrdersSales::A_CREDITO",
+   "fichero": "app/Models/Order/OrdersSales.php",
+   "viejo": "public const A_CREDITO = 'store_credit';",
+   "nuevo": "public const A_CREDITO = 'pending_online';",
+   "dano": "el pedido a credito de la tienda se confunde con uno esperando pasarela: no entra a liquidacion"
+  },
+  {
+   "etiqueta": "OrdersSales::CANCELADO",
+   "fichero": "app/Models/Order/OrdersSales.php",
+   "viejo": "public const CANCELADO = 5;",
+   "nuevo": "public const CANCELADO = 1;",
+   "dano": "pasa a valer lo mismo que OrdersSales::NUEVO: los dos se confunden -- defendida, comprobado el 15 de noviembre"
+  },
+  {
+   "etiqueta": "OrdersSales::EN_CAMINO",
+   "fichero": "app/Models/Order/OrdersSales.php",
+   "viejo": "public const EN_CAMINO = 3;",
+   "nuevo": "public const EN_CAMINO = 1;",
+   "dano": "pasa a valer lo mismo que OrdersSales::NUEVO: los dos se confunden -- defendida, comprobado el 15 de noviembre"
+  },
+  {
+   "etiqueta": "OrdersSales::ESPERANDO_PAGO",
+   "fichero": "app/Models/Order/OrdersSales.php",
+   "viejo": "public const ESPERANDO_PAGO = 'pending_online';",
+   "nuevo": "public const ESPERANDO_PAGO = 'approved';",
+   "dano": "un pago APROBADO se lee como pendiente: el pedido no es un pedido"
+  },
+  {
+   "etiqueta": "OrdersSales::NUEVO",
+   "fichero": "app/Models/Order/OrdersSales.php",
+   "viejo": "public const NUEVO = 1;",
+   "nuevo": "public const NUEVO = 2;",
+   "dano": "pasa a valer lo mismo que OrdersSales::PREPARANDO: los dos se confunden -- defendida, comprobado el 15 de noviembre"
+  },
+  {
+   "etiqueta": "OrdersSales::PAGO_RECHAZADO",
+   "fichero": "app/Models/Order/OrdersSales.php",
+   "viejo": "public const PAGO_RECHAZADO = 'rejected';",
+   "nuevo": "public const PAGO_RECHAZADO = 'pending_online';",
+   "dano": "pasa a valer lo mismo que OrdersSales::ESPERANDO_PAGO: los dos se confunden -- defendida, comprobado el 15 de noviembre"
+  },
+  {
+   "etiqueta": "OrdersSales::PESADO",
+   "fichero": "app/Models/Order/OrdersSales.php",
+   "viejo": "public const PESADO = 2;",
+   "nuevo": "public const PESADO = 1;",
+   "dano": "pasa a valer lo mismo que OrdersSales::NUEVO: los dos se confunden -- defendida, comprobado el 15 de noviembre"
+  },
+  {
+   "etiqueta": "OrdersSales::POR_PESAR",
+   "fichero": "app/Models/Order/OrdersSales.php",
+   "viejo": "public const POR_PESAR = 1;",
+   "nuevo": "public const POR_PESAR = 2;",
+   "dano": "pasa a valer lo mismo que OrdersSales::PREPARANDO: los dos se confunden -- defendida, comprobado el 15 de noviembre"
+  },
+  {
+   "etiqueta": "OrdersSales::PREPARANDO",
+   "fichero": "app/Models/Order/OrdersSales.php",
+   "viejo": "public const PREPARANDO = 2;",
+   "nuevo": "public const PREPARANDO = 1;",
+   "dano": "pasa a valer lo mismo que OrdersSales::NUEVO: los dos se confunden -- defendida, comprobado el 15 de noviembre"
+  },
+  {
+   "etiqueta": "OrdersSales::SIN_PAGO",
+   "fichero": "app/Models/Order/OrdersSales.php",
+   "viejo": "public const SIN_PAGO = [self::ESPERANDO_PAGO, self::PAGO_RECHAZADO];",
+   "nuevo": "public const SIN_PAGO = [self::ESPERANDO_PAGO, self::PAGO_RECHAZADO, self::A_CREDITO];",
+   "dano": "los pedidos a credito dejan de ser pedidos: desaparecen de las cuentas de la tienda"
+  },
+  {
+   "etiqueta": "PagoEnLinea::CONTRA_ENTREGA",
+   "fichero": "app/Services/PagoEnLinea.php",
+   "viejo": "public const CONTRA_ENTREGA = [1];",
+   "nuevo": "public const CONTRA_ENTREGA = [1, 7];",
+   "dano": "el credito de la tienda se cobra contra entrega: se le pide plata al cliente que compro a fiado"
+  },
+  {
+   "etiqueta": "PagoEnLinea::CON_PASARELA",
+   "fichero": "app/Services/PagoEnLinea.php",
+   "viejo": "public const CON_PASARELA = [2, 4, 5];",
+   "nuevo": "public const CON_PASARELA = [1, 2, 4, 5];",
+   "dano": "el efectivo se manda a la pasarela: se le cobra dos veces o no se cobra"
+  },
+  {
+   "etiqueta": "PagoEnLinea::CREDITO_DE_TIENDA",
+   "fichero": "app/Services/PagoEnLinea.php",
+   "viejo": "public const CREDITO_DE_TIENDA = [CreditoDeTienda::METODO];",
+   "nuevo": "public const CREDITO_DE_TIENDA = [];",
+   "dano": "la lista se queda vacia: el credito de la tienda deja de reconocerse como tal. Es un array de un solo elemento, asi que vaciarlo es la unica mutacion posible -- defendida, comprobado el 15 de noviembre"
+  },
+  {
+   "etiqueta": "PagoEnLinea::PSE",
+   "fichero": "app/Services/PagoEnLinea.php",
+   "viejo": "public const PSE = 4;",
+   "nuevo": "public const PSE = 5;",
+   "dano": "PSE y otro medio se confunden: se arma la intencion de pago con el canal equivocado"
+  },
+  {
+   "etiqueta": "PapelesDelDomiciliario::REQUERIDOS",
+   "fichero": "app/Services/PapelesDelDomiciliario.php",
+   "viejo": "public const REQUERIDOS = ['cedula', 'licencia', 'soat'];",
+   "nuevo": "public const REQUERIDOS = ['cedula'];",
+   "dano": "sale a repartir sin licencia ni SOAT"
+  },
+  {
+   "etiqueta": "Pqrs::RESUELTO",
+   "fichero": "app/Models/Operacion/Pqrs.php",
+   "viejo": "public const RESUELTO = 2;",
+   "nuevo": "public const RESUELTO = 3;",
+   "dano": "resuelto y cerrado se confunden: un PQRS se cierra sin respuesta, y el plazo es legal"
+  },
+  {
+   "etiqueta": "Promotion::PORCENTAJE",
+   "fichero": "app/Models/Promotion.php",
+   "viejo": "public const PORCENTAJE = 'porcentaje';",
+   "nuevo": "public const PORCENTAJE = 'nxm';",
+   "dano": "un descuento del 10% se aplica como un 3x2"
+  },
+  {
+   "etiqueta": "Promotion::RETIRADA",
+   "fichero": "app/Models/Promotion.php",
+   "viejo": "public const RETIRADA = 2;",
+   "nuevo": "public const RETIRADA = 1;",
+   "dano": "una promocion retirada se trata como enviada y sigue aplicando"
+  },
+  {
+   "etiqueta": "Promotion::SIN_DESCUENTO",
+   "fichero": "app/Models/Promotion.php",
+   "viejo": "public const SIN_DESCUENTO = 'ninguno';",
+   "nuevo": "public const SIN_DESCUENTO = 'porcentaje';",
+   "dano": "una promocion que solo avisa empieza a descontar"
+  },
+  {
+   "etiqueta": "PushCampaign::ESTADOS_A_MANO",
+   "fichero": "app/Models/Marketing/PushCampaign.php",
+   "viejo": "public const ESTADOS_A_MANO = [self::BORRADOR, self::PROGRAMADA, self::CANCELADA];",
+   "nuevo": "public const ESTADOS_A_MANO = [self::BORRADOR, self::PROGRAMADA, self::ENVIADA, self::CANCELADA];",
+   "dano": "se puede marcar ENVIADA a mano: una campana se da por enviada sin que nadie la reciba"
+  },
+  {
+   "etiqueta": "RedencionDePromociones::APLICADA",
+   "fichero": "app/Services/RedencionDePromociones.php",
+   "viejo": "public const APLICADA = 1;",
+   "nuevo": "public const APLICADA = 0;",
+   "dano": "el tope de usos de una promocion deja de contar"
+  },
+  {
+   "etiqueta": "SafetyIncident::CERRADO",
+   "fichero": "app/Models/Operacion/SafetyIncident.php",
+   "viejo": "public const CERRADO = 2;",
+   "nuevo": "public const CERRADO = 1;",
+   "dano": "un incidente cerrado cuenta como en investigacion, o al reves: se cierra sin acciones"
+  },
+  {
+   "etiqueta": "Settlement::ANULADA",
+   "fichero": "app/Models/Operacion/Settlement.php",
+   "viejo": "public const ANULADA = 3;",
+   "nuevo": "public const ANULADA = 2;",
+   "dano": "un corte anulado cuenta como pagado, o al reves: la deuda arrastrada se libera sola"
+  },
+  {
+   "etiqueta": "Settlement::APROBADA",
+   "fichero": "app/Models/Operacion/Settlement.php",
+   "viejo": "public const APROBADA = 1;",
+   "nuevo": "public const APROBADA = 2;",
+   "dano": "un corte aprobado se lee como ya pagado: la tienda no cobra lo que le toca"
+  },
+  {
+   "etiqueta": "Settlement::BORRADOR",
+   "fichero": "app/Models/Operacion/Settlement.php",
+   "viejo": "public const BORRADOR = 0;",
+   "nuevo": "public const BORRADOR = 1;",
+   "dano": "un borrador se trata como aprobado"
+  },
+  {
+   "etiqueta": "Settlement::PAGADA",
+   "fichero": "app/Models/Operacion/Settlement.php",
+   "viejo": "public const PAGADA = 2;",
+   "nuevo": "public const PAGADA = 1;",
+   "dano": "un corte APROBADO se lee como ya pagado: la tienda no cobra"
+  },
+  {
+   "etiqueta": "StoreCreditMovement::ABONO",
+   "fichero": "app/Models/Operacion/StoreCreditMovement.php",
+   "viejo": "public const ABONO = 'abono';",
+   "nuevo": "public const ABONO = 'ajuste';",
+   "dano": "el abono del cliente se confunde con un ajuste a mano de la tienda"
+  },
+  {
+   "etiqueta": "StoreCreditMovement::CONSUMO",
+   "fichero": "app/Models/Operacion/StoreCreditMovement.php",
+   "viejo": "public const CONSUMO = 'consumo';",
+   "nuevo": "public const CONSUMO = 'abono';",
+   "dano": "lo gastado a credito se apunta como un abono del cliente"
+  },
+  {
+   "etiqueta": "StoreCreditMovement::REVERSO",
+   "fichero": "app/Models/Operacion/StoreCreditMovement.php",
+   "viejo": "public const REVERSO = 'reverso';",
+   "nuevo": "public const REVERSO = 'consumo';",
+   "dano": "cancelar un pedido a credito NO devuelve el cupo: `reversar` cree que ya se devolvio"
+  },
+  {
+   "etiqueta": "UnidadDeVenta::AL_PESO",
+   "fichero": "app/Support/UnidadDeVenta.php",
+   "viejo": "public const AL_PESO = [self::KILO, self::LIBRA, self::GRAMO];",
+   "nuevo": "public const AL_PESO = [self::UNIDAD, self::KILO, self::LIBRA, self::GRAMO];",
+   "dano": "los productos por unidad piden pesaje: ningun pedido se puede despachar"
+  },
+  {
+   "etiqueta": "UnidadDeVenta::LIBRA",
+   "fichero": "app/Support/UnidadDeVenta.php",
+   "viejo": "public const LIBRA = 'libra';",
+   "nuevo": "public const LIBRA = 'kg';",
+   "dano": "la libra y el kilo son lo mismo: se cobra el doble o la mitad"
+  },
+  {
+   "etiqueta": "UnidadDeVenta::UNIDAD",
+   "fichero": "app/Support/UnidadDeVenta.php",
+   "viejo": "public const UNIDAD = 'unidad';",
+   "nuevo": "public const UNIDAD = 'kg';",
+   "dano": "lo que se vende por unidades pasa a venderse por kilos"
+  },
+  {
+   "etiqueta": "VinculosDelRol::ROLES_DE_CONJUNTO",
+   "fichero": "app/Services/VinculosDelRol.php",
+   "viejo": "public const ROLES_DE_CONJUNTO = [ComplexStaff::ROL_DUENO, ComplexStaff::ROL_CELADOR];",
+   "nuevo": "public const ROLES_DE_CONJUNTO = [ComplexStaff::ROL_DUENO];",
+   "dano": "al celador no se le crea su vinculo con el conjunto: entra sin pertenecer a ninguno"
+  },
+  {
+   "etiqueta": "VinculosDelRol::ROL_PERSONAL",
+   "fichero": "app/Services/VinculosDelRol.php",
+   "viejo": "public const ROL_PERSONAL = 4;",
+   "nuevo": "public const ROL_PERSONAL = 3;",
+   "dano": "el personal interno y el domiciliario se confunden de rol"
+  },
+  {
+   "etiqueta": "CashMovement::AJUSTE",
+   "fichero": "app/Models/Operacion/CashMovement.php",
+   "viejo": "public const AJUSTE = 'ajuste';",
+   "nuevo": "public const AJUSTE = 'recaudo';",
+   "dano": "el tipo de ajuste colisiona con el de recaudo, y es el tipo lo unico que los distingue en la misma tabla"
+  },
+  {
+   "etiqueta": "OrdersSales::ESTADOS",
+   "fichero": "app/Models/Order/OrdersSales.php",
+   "viejo": "        self::CANCELADO,\n    ];",
+   "nuevo": "    ];",
+   "dano": "la lista de estados del pedido pierde CANCELADO"
+  },
+  {
+   "etiqueta": "OrdersSales::SIN_PESAJE",
+   "fichero": "app/Models/Order/OrdersSales.php",
+   "viejo": "public const SIN_PESAJE = 0;",
+   "nuevo": "public const SIN_PESAJE = 7;",
+   "dano": "deja de valer 0, que es el valor por omision que la migracion pone en `weighing_state`"
+  },
+  {
+   "etiqueta": "StoreCreditMovement::AJUSTE",
+   "fichero": "app/Models/Operacion/StoreCreditMovement.php",
+   "viejo": "public const AJUSTE = 'ajuste';",
+   "nuevo": "public const AJUSTE = 'reverso';",
+   "dano": "colisiona con REVERSO, que es el tipo por el que `reversar()` decide si el cupo ya se devolvio"
+  },
+  {
+   "etiqueta": "Promotion::ENVIADA",
+   "fichero": "app/Models/Promotion.php",
+   "viejo": "public const ENVIADA = 1;",
+   "nuevo": "public const ENVIADA = 2;",
+   "dano": "colisiona con RETIRADA: una promocion publicada y una retirada dejan de distinguirse, y los dos sitios que filtran la vitrina y el descuento buscan ENVIADA"
+  },
+  {
+   "etiqueta": "Promotion::NXM",
+   "fichero": "app/Models/Promotion.php",
+   "viejo": "public const NXM = 'nxm';",
+   "nuevo": "public const NXM = 'porcentaje';",
+   "dano": "colisiona con PORCENTAJE, y los dos estan en la lista blanca TIPOS"
+  },
+  {
+   "etiqueta": "PushCampaign::BORRADOR",
+   "fichero": "app/Models/Marketing/PushCampaign.php",
+   "viejo": "public const BORRADOR = 0;",
+   "nuevo": "public const BORRADOR = 1;",
+   "dano": "colisiona con PROGRAMADA, y las dos estan en ESTADOS_A_MANO"
+  },
+  {
+   "etiqueta": "PushCampaign::ENVIADA",
+   "fichero": "app/Models/Marketing/PushCampaign.php",
+   "viejo": "public const ENVIADA = 2;",
+   "nuevo": "public const ENVIADA = 3;",
+   "dano": "colisiona con CANCELADA"
+  },
+  {
+   "etiqueta": "RedencionDePromociones::DEVUELTA",
+   "fichero": "app/Services/RedencionDePromociones.php",
+   "viejo": "public const DEVUELTA = 0;",
+   "nuevo": "public const DEVUELTA = 1;",
+   "dano": "colisiona con APLICADA: una redencion devuelta se lee como aplicada"
+  },
+  {
+   "etiqueta": "UnidadDeVenta::GRAMO",
+   "fichero": "app/Support/UnidadDeVenta.php",
+   "viejo": "public const GRAMO = 'gramo';",
+   "nuevo": "public const GRAMO = 'kg';",
+   "dano": "colisiona con KILO: un producto en gramos se trata como kilos"
+  },
+  {
+   "etiqueta": "UnidadDeVenta::KILO",
+   "fichero": "app/Support/UnidadDeVenta.php",
+   "viejo": "public const KILO = 'kg';",
+   "nuevo": "public const KILO = 'libra';",
+   "dano": "colisiona con LIBRA"
+  },
+  {
+   "etiqueta": "UnidadDeVenta::TODAS",
+   "fichero": "app/Support/UnidadDeVenta.php",
+   "viejo": "public const TODAS = [self::UNIDAD, self::KILO, self::LIBRA, self::GRAMO];",
+   "nuevo": "public const TODAS = [self::UNIDAD, self::KILO, self::LIBRA];",
+   "dano": "la lista blanca pierde GRAMO: no se puede crear un producto en gramos"
+  },
+  {
+   "etiqueta": "Pqrs::ABIERTO",
+   "fichero": "app/Models/Operacion/Pqrs.php",
+   "viejo": "public const ABIERTO = 0;",
+   "nuevo": "public const ABIERTO = 1;",
+   "dano": "colisiona con EN_GESTION: un PQRS recien abierto se cuenta como en gestion"
+  },
+  {
+   "etiqueta": "Pqrs::EN_GESTION",
+   "fichero": "app/Models/Operacion/Pqrs.php",
+   "viejo": "public const EN_GESTION = 1;",
+   "nuevo": "public const EN_GESTION = 3;",
+   "dano": "colisiona con CERRADO"
+  },
+  {
+   "etiqueta": "Pqrs::CERRADO",
+   "fichero": "app/Models/Operacion/Pqrs.php",
+   "viejo": "public const CERRADO = 3;",
+   "nuevo": "public const CERRADO = 0;",
+   "dano": "colisiona con ABIERTO: un PQRS cerrado vuelve a aparecer abierto"
+  },
+  {
+   "etiqueta": "SafetyIncident::ABIERTO",
+   "fichero": "app/Models/Operacion/SafetyIncident.php",
+   "viejo": "public const ABIERTO = 0;",
+   "nuevo": "public const ABIERTO = 1;",
+   "dano": "colisiona con EN_INVESTIGACION"
+  },
+  {
+   "etiqueta": "SafetyIncident::EN_INVESTIGACION",
+   "fichero": "app/Models/Operacion/SafetyIncident.php",
+   "viejo": "public const EN_INVESTIGACION = 1;",
+   "nuevo": "public const EN_INVESTIGACION = 0;",
+   "dano": "colisiona con ABIERTO"
+  },
+  {
+   "etiqueta": "PushCampaign::PROGRAMADA",
+   "fichero": "app/Models/Marketing/PushCampaign.php",
+   "viejo": "public const PROGRAMADA = 1;",
+   "nuevo": "public const PROGRAMADA = 3;",
+   "dano": "colisiona con CANCELADA, y las dos estan en ESTADOS_A_MANO"
+  },
+  {
+   "etiqueta": "PushCampaign::CANCELADA",
+   "fichero": "app/Models/Marketing/PushCampaign.php",
+   "viejo": "public const CANCELADA = 3;",
+   "nuevo": "public const CANCELADA = 2;",
+   "dano": "colisiona con ENVIADA: cancelar una campana la deja como enviada"
+  },
+  {
+   "etiqueta": "Promotion::BORRADOR",
+   "fichero": "app/Models/Promotion.php",
+   "viejo": "public const BORRADOR = 0;",
+   "nuevo": "public const BORRADOR = 1;",
+   "dano": "colisiona con ENVIADA: una promocion que se quedo a medio publicar --porque el paso de avisos revento-- se anunciaria y descontaria"
+  },
+  {
+   "etiqueta": "Promotion::TIPOS",
+   "fichero": "app/Models/Promotion.php",
+   "viejo": "public const TIPOS = [self::SIN_DESCUENTO, self::PORCENTAJE, self::NXM];",
+   "nuevo": "public const TIPOS = [self::SIN_DESCUENTO, self::PORCENTAJE];",
+   "dano": "la lista blanca pierde `nxm`: no se puede crear una promocion de N x M"
+  },
+  {
+   "etiqueta": "VisitantesController::CLASES",
+   "fichero": "app/Http/Controllers/Conjunto/VisitantesController.php",
+   "viejo": "['visitante', 'servicio', 'domicilio_externo']",
+   "nuevo": "['visitante', 'domicilio_externo']",
+   "dano": "la lista blanca pierde `servicio`: la porteria no puede registrar a un tecnico"
+  }
+ ]
+}

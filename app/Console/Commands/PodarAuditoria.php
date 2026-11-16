@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
@@ -46,9 +48,9 @@ class PodarAuditoria extends Command
         $total = DB::table('audits')->where('created_at', '<', $corte)->count();
 
         $this->newLine();
-        $this->line('  <fg=gray>Se conservan los últimos</>  ' . $meses . ' meses (desde ' . $corte->format('Y-m-d') . ')');
-        $this->line('  <fg=gray>Auditorías en total</>       ' . number_format(DB::table('audits')->count(), 0, ',', '.'));
-        $this->line('  <fg=gray>Anteriores al corte</>       ' . number_format($total, 0, ',', '.'));
+        $this->line('  <fg=gray>Se conservan los últimos</>  '.$meses.' meses (desde '.$corte->format('Y-m-d').')');
+        $this->line('  <fg=gray>Auditorías en total</>       '.number_format(DB::table('audits')->count(), 0, ',', '.'));
+        $this->line('  <fg=gray>Anteriores al corte</>       '.number_format($total, 0, ',', '.'));
         $this->newLine();
 
         if ($total === 0) {
@@ -78,7 +80,7 @@ class PodarAuditoria extends Command
             $borradas += $n;
         } while ($n > 0);
 
-        $this->info('  Retiradas ' . number_format($borradas, 0, ',', '.') . ' auditorías.');
+        $this->info('  Retiradas '.number_format($borradas, 0, ',', '.').' auditorías.');
 
         return self::SUCCESS;
     }

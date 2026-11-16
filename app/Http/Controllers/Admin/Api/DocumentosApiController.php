@@ -1,22 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\DocumentoRequest;
+use App\Http\Resources\Sst\DocumentoDelDomiciliarioResource;
 use App\Models\Operacion\DomiciliaryDocument;
-use App\Models\Operacion\LandingRequest;
-use App\Models\Operacion\Pqrs;
-use App\Models\Operacion\PqrsNote;
-use App\Models\Operacion\SafetyIncident;
-use App\Models\Operacion\Settlement;
-use App\Services\LiquidacionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use RuntimeException;
 
 class DocumentosApiController extends Controller
 {
-
     /**
      * Documentos con su situación calculada, y el resumen del tablero.
      *
@@ -47,12 +43,7 @@ class DocumentosApiController extends Controller
         ]);
 
         return response()->json([
-            'data' => $filas->map(fn (DomiciliaryDocument $d) => array_merge($d->toArray(), [
-                'domiciliary_name'  => $d->domiciliary_name,
-                'domiciliary_phone' => $d->domiciliary_phone,
-                'situation'         => $d->situacion(),
-                'days_left'         => $d->diasRestantes(),
-            ])),
+            'data' => DocumentoDelDomiciliarioResource::collection($filas)->resolve(),
             'summary' => $this->resumenDocumentos(),
         ]);
     }
@@ -84,20 +75,20 @@ class DocumentosApiController extends Controller
         }
 
         return [
-            'vencidos'          => (int) ($porSituacion['vencido'] ?? 0),
-            'por_vencer'        => (int) ($porSituacion['por_vencer'] ?? 0),
-            'vigentes'          => (int) ($porSituacion['vigente'] ?? 0),
-            'sin_vencimiento'   => (int) ($porSituacion['sin_vencimiento'] ?? 0),
+            'vencidos' => (int) ($porSituacion['vencido'] ?? 0),
+            'por_vencer' => (int) ($porSituacion['por_vencer'] ?? 0),
+            'vigentes' => (int) ($porSituacion['vigente'] ?? 0),
+            'sin_vencimiento' => (int) ($porSituacion['sin_vencimiento'] ?? 0),
             'domiciliarios_incompletos' => $sinCompletar,
-            'domiciliarios_activos'     => $activos->count(),
-            'aviso_dias'        => DomiciliaryDocument::AVISO_DIAS,
-            'obligatorios'      => DomiciliaryDocument::OBLIGATORIOS,
+            'domiciliarios_activos' => $activos->count(),
+            'aviso_dias' => DomiciliaryDocument::AVISO_DIAS,
+            'obligatorios' => DomiciliaryDocument::OBLIGATORIOS,
         ];
     }
 
-    public function storeDocumento(Request $request)
+    public function storeDocumento(DocumentoRequest $request)
     {
-        $d = DomiciliaryDocument::create($this->validarDocumento($request));
+        $d = DomiciliaryDocument::create($request->validated());
 
         return response()->json(['message' => 'Documento registrado.', 'id' => $d->id], 201);
     }
@@ -106,7 +97,13 @@ class DocumentosApiController extends Controller
     {
         $d = DomiciliaryDocument::findOr($id, fn () => abort(404, 'El documento no existe.'));
 
-        $d->update($this->validarDocumento($request, true));
+        /*
+         * EN LINEA Y NO EN UN FormRequest, a proposito: la busqueda de arriba
+         * contesta 404 cuando el registro no existe, y eso tiene que ir ANTES
+         * que un error de validacion. Las reglas no se repiten: se piden a
+         * `DocumentoRequest` en modo parcial.
+         */
+        $d->update($request->validate(DocumentoRequest::reglas(parcial: true)));
 
         return response()->json(['message' => 'Documento actualizado.']);
     }
@@ -118,24 +115,6 @@ class DocumentosApiController extends Controller
         $d->delete();
 
         return response()->json(['message' => 'Documento eliminado.']);
-    }
-
-    private function validarDocumento(Request $request, bool $parcial = false): array
-    {
-        $regla = $parcial ? 'sometimes' : 'required';
-
-        return $request->validate([
-            'domiciliary_id' => "{$regla}|integer|exists:domiciliary,domiciliary_id",
-            'type'           => "{$regla}|in:licencia,soat,tecnomecanica,arl,eps,examen_medico,cedula,otro",
-            'number'         => 'sometimes|nullable|string|max:60',
-            'issued_at'      => 'sometimes|nullable|date',
-            // Puede ir nula: la cédula no caduca. Un documento sin fecha
-            // simplemente no entra en las alertas.
-            'expires_at'     => 'sometimes|nullable|date',
-            'media_id'       => 'sometimes|nullable|integer|exists:media_files,id',
-            'notes'          => 'sometimes|nullable|string|max:255',
-            'state'          => 'sometimes|boolean',
-        ]);
     }
 
     /* ==================================================================

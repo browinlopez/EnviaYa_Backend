@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\EnviarAvisoPush;
+use App\Models\Rol;
 use App\Models\User;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Sanctum\Sanctum;
@@ -13,25 +14,24 @@ use Laravel\Sanctum\Sanctum;
  * mensaje esperaba a que la abriera. En un pedido en curso eso es un cliente
  * esperando una respuesta que nadie va a ver.
  */
-
 beforeEach(function () {
     Queue::fake();
 
     foreach ([1 => 'comprador', 2 => 'tendero'] as $id => $nombre) {
-        \App\Models\Rol::firstOrCreate(['rol_id' => $id], ['name' => $nombre, 'guard_name' => 'web']);
+        Rol::firstOrCreate(['rol_id' => $id], ['name' => $nombre, 'guard_name' => 'web']);
     }
 });
 
 it('al escribir un mensaje le suena el telefono al otro', function () {
     $quienEscribe = User::factory()->create(['rol' => 1, 'name' => 'Ana']);
-    $quienRecibe  = User::factory()->create(['rol' => 2, 'name' => 'Tienda el progreso']);
+    $quienRecibe = User::factory()->create(['rol' => 2, 'name' => 'Tienda el progreso']);
 
     Sanctum::actingAs($quienEscribe);
 
     $this->postJson('/v1/chats/send-message', [
-        'user_id'      => $quienEscribe->user_id,
+        'user_id' => $quienEscribe->user_id,
         'recipient_id' => $quienRecibe->user_id,
-        'content'      => '¿Tiene leche deslactosada?',
+        'content' => '¿Tiene leche deslactosada?',
     ])->assertCreated();
 
     Queue::assertPushed(
@@ -43,14 +43,14 @@ it('al escribir un mensaje le suena el telefono al otro', function () {
 
 it('a quien escribe NO le llega su propio mensaje', function () {
     $quienEscribe = User::factory()->create(['rol' => 1, 'name' => 'Ana']);
-    $quienRecibe  = User::factory()->create(['rol' => 2, 'name' => 'Tienda']);
+    $quienRecibe = User::factory()->create(['rol' => 2, 'name' => 'Tienda']);
 
     Sanctum::actingAs($quienEscribe);
 
     $this->postJson('/v1/chats/send-message', [
-        'user_id'      => $quienEscribe->user_id,
+        'user_id' => $quienEscribe->user_id,
         'recipient_id' => $quienRecibe->user_id,
-        'content'      => 'Hola',
+        'content' => 'Hola',
     ])->assertCreated();
 
     Queue::assertNotPushed(
@@ -61,14 +61,14 @@ it('a quien escribe NO le llega su propio mensaje', function () {
 
 it('el titulo es el NOMBRE de quien escribe, no un rotulo generico', function () {
     $quienEscribe = User::factory()->create(['rol' => 2, 'name' => 'Tienda el progreso']);
-    $quienRecibe  = User::factory()->create(['rol' => 1, 'name' => 'Ana']);
+    $quienRecibe = User::factory()->create(['rol' => 1, 'name' => 'Ana']);
 
     Sanctum::actingAs($quienEscribe);
 
     $this->postJson('/v1/chats/send-message', [
-        'user_id'      => $quienEscribe->user_id,
+        'user_id' => $quienEscribe->user_id,
         'recipient_id' => $quienRecibe->user_id,
-        'content'      => 'Ya salió tu pedido',
+        'content' => 'Ya salió tu pedido',
     ])->assertCreated();
 
     /*
@@ -84,14 +84,14 @@ it('el titulo es el NOMBRE de quien escribe, no un rotulo generico', function ()
 
 it('el aviso lleva con quien se habla, no solo el numero del chat', function () {
     $quienEscribe = User::factory()->create(['rol' => 1, 'name' => 'Ana']);
-    $quienRecibe  = User::factory()->create(['rol' => 2, 'name' => 'Tienda']);
+    $quienRecibe = User::factory()->create(['rol' => 2, 'name' => 'Tienda']);
 
     Sanctum::actingAs($quienEscribe);
 
     $this->postJson('/v1/chats/send-message', [
-        'user_id'      => $quienEscribe->user_id,
+        'user_id' => $quienEscribe->user_id,
         'recipient_id' => $quienRecibe->user_id,
-        'content'      => 'Hola',
+        'content' => 'Hola',
     ])->assertCreated();
 
     /*
@@ -100,7 +100,7 @@ it('el aviso lleva con quien se habla, no solo el numero del chat', function () 
      * tocar la notificación llevara a una pantalla vacía.
      */
     Queue::assertPushed(EnviarAvisoPush::class, function ($job) use ($quienEscribe) {
-        return !empty($job->datos['chat_id'])
+        return ! empty($job->datos['chat_id'])
             && (int) $job->datos['remitente_id'] === (int) $quienEscribe->user_id
             && $job->datos['remitente_nombre'] === 'Ana';
     });
@@ -108,14 +108,14 @@ it('el aviso lleva con quien se habla, no solo el numero del chat', function () 
 
 it('un mensaje largo se recorta antes de salir', function () {
     $quienEscribe = User::factory()->create(['rol' => 1, 'name' => 'Ana']);
-    $quienRecibe  = User::factory()->create(['rol' => 2, 'name' => 'Tienda']);
+    $quienRecibe = User::factory()->create(['rol' => 2, 'name' => 'Tienda']);
 
     Sanctum::actingAs($quienEscribe);
 
     $this->postJson('/v1/chats/send-message', [
-        'user_id'      => $quienEscribe->user_id,
+        'user_id' => $quienEscribe->user_id,
         'recipient_id' => $quienRecibe->user_id,
-        'content'      => str_repeat('a', 500),
+        'content' => str_repeat('a', 500),
     ])->assertCreated();
 
     // Se corta igual en la pantalla bloqueada: mandarlo entero sólo gasta la

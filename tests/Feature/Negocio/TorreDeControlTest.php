@@ -3,6 +3,7 @@
 use App\Events\DomiciliaryLocationUpdated;
 use App\Models\Order\OrderGeolocation;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Laravel\Sanctum\Sanctum;
 
 /**
@@ -22,9 +23,9 @@ use Laravel\Sanctum\Sanctum;
 function despachado(array $e, int $haceMinutos = 25): void
 {
     DB::table('orderssales')->where('orderSales_id', $e['orderId'])->update([
-        'state'          => 3,
+        'state' => 3,
         'domiciliary_id' => $e['domiId'],
-        'dispatched_at'  => now()->subMinutes($haceMinutos),
+        'dispatched_at' => now()->subMinutes($haceMinutos),
     ]);
 }
 
@@ -60,9 +61,9 @@ test('la posición viaja SIEMPRE con su edad al lado', function () {
 
     OrderGeolocation::create([
         'domiciliary_id' => $e['domiId'],
-        'orderSales_id'  => $e['orderId'],
-        'latitude'       => 10.9878,
-        'longitude'      => -74.7889,
+        'orderSales_id' => $e['orderId'],
+        'latitude' => 10.9878,
+        'longitude' => -74.7889,
     ]);
 
     DB::table('order_geolocation')->update(['created_at' => now()->subMinutes(14)]);
@@ -82,9 +83,9 @@ test('una posición de ayer no se enseña: ya no dice dónde está nadie', funct
 
     OrderGeolocation::create([
         'domiciliary_id' => $e['domiId'],
-        'orderSales_id'  => $e['orderId'],
-        'latitude'       => 10.9878,
-        'longitude'      => -74.7889,
+        'orderSales_id' => $e['orderId'],
+        'latitude' => 10.9878,
+        'longitude' => -74.7889,
     ]);
 
     DB::table('order_geolocation')->update(['created_at' => now()->subHours(13)]);
@@ -101,9 +102,9 @@ test('de dos posiciones, se enseña la última', function () {
     foreach ([[10.0, -74.0, 40], [11.0, -75.0, 3]] as [$lat, $lon, $hace]) {
         $geo = OrderGeolocation::create([
             'domiciliary_id' => $e['domiId'],
-            'orderSales_id'  => $e['orderId'],
-            'latitude'       => $lat,
-            'longitude'      => $lon,
+            'orderSales_id' => $e['orderId'],
+            'latitude' => $lat,
+            'longitude' => $lon,
         ]);
 
         DB::table('order_geolocation')
@@ -121,8 +122,8 @@ test('lo que lleva de OTRA tienda no es asunto de este tendero', function () {
     despachado($e);
 
     // El mismo domiciliario reparte para la tienda de enfrente.
-    $tipo  = DB::table('category_business')->insertGetId(['name' => 'Otra'], 'id');
-    $otra  = DB::table('business')->insertGetId([
+    $tipo = DB::table('category_business')->insertGetId(['name' => 'Otra'], 'id');
+    $otra = DB::table('business')->insertGetId([
         'name' => 'La de Enfrente', 'qualification' => 0, 'state' => 1, 'type' => $tipo,
     ], 'busines_id');
 
@@ -163,18 +164,18 @@ test('la posición sale por el canal de la torre y NO por el de la tienda', func
 
     $geo = OrderGeolocation::create([
         'domiciliary_id' => $e['domiId'],
-        'orderSales_id'  => $e['orderId'],
-        'latitude'       => 10.9878,
-        'longitude'      => -74.7889,
+        'orderSales_id' => $e['orderId'],
+        'latitude' => 10.9878,
+        'longitude' => -74.7889,
     ]);
 
     $canales = collect((new DomiciliaryLocationUpdated($geo))->broadcastOn())
         ->map(fn ($c) => $c->name)
         ->all();
 
-    expect($canales)->toContain('private-order.' . $e['orderId'])
-        ->and($canales)->toContain('private-negocio.' . $e['businessId'] . '.torre')
-        ->and($canales)->not->toContain('private-business.' . $e['businessId']);
+    expect($canales)->toContain('private-order.'.$e['orderId'])
+        ->and($canales)->toContain('private-negocio.'.$e['businessId'].'.torre')
+        ->and($canales)->not->toContain('private-business.'.$e['businessId']);
 });
 
 test('el aviso de posición dice de qué domiciliario es', function () {
@@ -185,9 +186,9 @@ test('el aviso de posición dice de qué domiciliario es', function () {
 
     $geo = OrderGeolocation::create([
         'domiciliary_id' => $e['domiId'],
-        'orderSales_id'  => $e['orderId'],
-        'latitude'       => 10.9878,
-        'longitude'      => -74.7889,
+        'orderSales_id' => $e['orderId'],
+        'latitude' => 10.9878,
+        'longitude' => -74.7889,
     ]);
 
     expect((new DomiciliaryLocationUpdated($geo))->broadcastWith()['domiciliary_id'])
@@ -216,11 +217,11 @@ test('la torre NO se trae doce horas de posiciones para quedarse con una', funct
     for ($i = 0; $i < 180; $i++) {
         $filas[] = [
             'domiciliary_id' => $e['domiId'],
-            'orderSales_id'  => $e['orderId'],
-            'latitude'       => 10.98 + $i / 100000,
-            'longitude'      => -74.78,
-            'created_at'     => now()->subSeconds(20 * $i),
-            'updated_at'     => now(),
+            'orderSales_id' => $e['orderId'],
+            'latitude' => 10.98 + $i / 100000,
+            'longitude' => -74.78,
+            'created_at' => now()->subSeconds(20 * $i),
+            'updated_at' => now(),
         ];
     }
 
@@ -254,7 +255,7 @@ test('la última posición de una moto se encuentra por índice y no recorriendo
      * sin ordenar nada. Es lo que hace que la consulta de arriba siga
      * costando lo mismo con la tabla en millones de filas.
      */
-    $porMotoYFecha = collect(\Illuminate\Support\Facades\Schema::getIndexes('order_geolocation'))
+    $porMotoYFecha = collect(Schema::getIndexes('order_geolocation'))
         ->contains(fn ($i) => array_map('strval', $i['columns']) === ['domiciliary_id', 'created_at']);
 
     expect($porMotoYFecha)->toBeTrue();

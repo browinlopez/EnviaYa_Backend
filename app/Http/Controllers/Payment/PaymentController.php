@@ -1,7 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Payment;
 
+use App\Exceptions\FalloDeLaPasarela;
 use App\Http\Controllers\Controller;
 use App\Models\Order\OrdersSales;
 use App\Models\Payment\Payment;
@@ -10,6 +13,7 @@ use App\Services\BoldService;
 use App\Services\ConfirmacionDePago;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class PaymentController extends Controller
@@ -77,15 +81,15 @@ class PaymentController extends Controller
      */
     public function createIntent(OrdersSales $order, BoldService $bold): PaymentIntent
     {
-        $reference = 'ORD-' . $order->orderSales_id . '-' . Str::upper(Str::random(8));
+        $reference = 'ORD-'.$order->orderSales_id.'-'.Str::upper(Str::random(8));
 
         $body = [
-            "reference_id" => $reference,
-            "amount" => [
-                "currency" => "COP",
-                "total_amount" => (int) $order->total
+            'reference_id' => $reference,
+            'amount' => [
+                'currency' => 'COP',
+                'total_amount' => (int) $order->total,
             ],
-            "description" => "Pago orden #{$order->orderSales_id}",
+            'description' => "Pago orden #{$order->orderSales_id}",
 
             /*
              * POR DÓNDE VUELVE LA PERSONA.
@@ -101,13 +105,13 @@ class PaymentController extends Controller
              * filtran lo que no lo sea. Esa página rebota al teléfono y, si no
              * puede, al menos le dice a la persona que su pago siguió su curso.
              */
-            "callback_url" => rtrim((string) config('services.sitio.url'), '/')
-                . '/pago/volver?ref=' . $reference,
+            'callback_url' => rtrim((string) config('services.sitio.url'), '/')
+                .'/pago/volver?ref='.$reference,
 
-            "customer" => [
-                "name" => $order->buyer->user->name ?? "Cliente",
-                "phone" => $order->buyer->user->phone ?? "3000000000",
-                "email" => $order->buyer->user->email ?? "test@test.com",
+            'customer' => [
+                'name' => $order->buyer->user->name ?? 'Cliente',
+                'phone' => $order->buyer->user->phone ?? '3000000000',
+                'email' => $order->buyer->user->email ?? 'test@test.com',
 
                 /*
                  * `->name`, no la relación entera.
@@ -146,30 +150,31 @@ class PaymentController extends Controller
                  * PagoEnLinea.php —esos sí vuelven rellenos—; acá habían
                  * quedado los otros.
                  */
-                "billing_address" => [
-                    "street1" => $order->address->address,
-                    "street2" => "",
-                    "city" => $order->address->municipality?->name,
-                    "zip_code" => "130001",
-                    "province" => $order->address->department?->name,
-                    "country" => "CO",
-                    "phone" => $order->buyer->user->phone ?? "3000000000"
-                ]
-            ]
+                'billing_address' => [
+                    'street1' => $order->address->address,
+                    'street2' => '',
+                    'city' => $order->address->municipality?->name,
+                    'zip_code' => '130001',
+                    'province' => $order->address->department?->name,
+                    'country' => 'CO',
+                    'phone' => $order->buyer->user->phone ?? '3000000000',
+                ],
+            ],
         ];
 
         $response = $bold->createIntent($body);
 
         return PaymentIntent::create([
-            'orderSales_id'     => $order->orderSales_id,
-            'provider'          => 'bold',
+            'orderSales_id' => $order->orderSales_id,
+            'provider' => 'bold',
             'bold_reference_id' => $reference,
-            'amount'            => $order->total,
-            'currency'          => 'COP',
-            'status'            => $response['payload']['status'] ?? null,
-            'response'          => $response,
+            'amount' => $order->total,
+            'currency' => 'COP',
+            'status' => $response['payload']['status'] ?? null,
+            'response' => $response,
         ]);
     }
+
     /**
      * Crear pago (TARJETA / QR)
      */
@@ -184,30 +189,30 @@ class PaymentController extends Controller
     ): Payment {
 
         $body = [
-            "reference_id" => $intent->bold_reference_id,
-            "payer" => $payer,
-            "payment_method" => $paymentMethod,
-            "amount" => [
-                "currency" => "COP",
-                "total_amount" => (int) $order->total
+            'reference_id' => $intent->bold_reference_id,
+            'payer' => $payer,
+            'payment_method' => $paymentMethod,
+            'amount' => [
+                'currency' => 'COP',
+                'total_amount' => (int) $order->total,
             ],
             /* "products" => $products, */
-            "metadata" => [
-                "key" => "order_id",
-                "value" => (string) $order->orderSales_id
+            'metadata' => [
+                'key' => 'order_id',
+                'value' => (string) $order->orderSales_id,
             ],
-            "device_fingerprint" => [
-                "device_type" => "MOBILE",
-                "os" => "Android",
-                "model" => "ReactNative",
-                "browser" => "MobileApp",
-                "java_enabled" => false,
-                "language" => "es",
-                "color_depth" => 24,
-                "screen_height" => 800,
-                "screen_width" => 400,
-                "time_zone_offset" => -300,
-            ]
+            'device_fingerprint' => [
+                'device_type' => 'MOBILE',
+                'os' => 'Android',
+                'model' => 'ReactNative',
+                'browser' => 'MobileApp',
+                'java_enabled' => false,
+                'language' => 'es',
+                'color_depth' => 24,
+                'screen_height' => 800,
+                'screen_width' => 400,
+                'time_zone_offset' => -300,
+            ],
         ];
 
         $boldResponse = $bold->makePayment($body);
@@ -256,7 +261,7 @@ class PaymentController extends Controller
      * Bold del intent más reciente de esa orden. Devuelve además `status` en
      * la raíz porque la app lo lee ahí.
      */
-    public function checkStatusByReference(\Illuminate\Http\Request $request, BoldService $bold)
+    public function checkStatusByReference(Request $request, BoldService $bold)
     {
         $reference = (string) $request->query('referenceId', '');
 
@@ -269,7 +274,7 @@ class PaymentController extends Controller
                 ->orderByDesc('id')
                 ->first();
 
-            if (!$intent) {
+            if (! $intent) {
                 return response()->json(['message' => 'No hay intento de pago para esa orden'], 404);
             }
 
@@ -287,11 +292,55 @@ class PaymentController extends Controller
      */
     public function checkStatus(string $reference, BoldService $bold)
     {
-        $data = $bold->checkPayment($reference);
+        /*
+         * UNA REFERENCIA QUE NO EXISTE NO ES UN FALLO DEL SERVIDOR.
+         *
+         * Esto no estaba envuelto, asi que la excepcion de `BoldService` subia
+         * hasta arriba y salia un 500 con el cuerpo CRUDO de la pasarela
+         * dentro de `message`:
+         *
+         *   {"payload":{"status_code":"PA_004","message":"Reference Error"},
+         *    "errors":["Reference X not found"]}
+         *
+         * Dos cosas mal en una. Un 500 le dice al telefono «vuelve a
+         * intentarlo» —y esta pantalla sondea cada pocos segundos, asi que
+         * reintentaba una referencia que no va a aparecer nunca—. Y el cuerpo
+         * de la pasarela, con su codigo interno y su texto en ingles, acababa
+         * en la pantalla de alguien que compro arroz.
+         *
+         * Bold contesta un 404 limpio cuando la referencia no existe
+         * —comprobado contra la pasarela, no supuesto— asi que se traduce a un
+         * 404 nuestro con un texto propio. El resto sigue siendo 500, porque
+         * un fallo de la pasarela SI es algo que hay que reintentar, pero con
+         * un mensaje escrito para quien lo lee y el detalle en el registro.
+         */
+        try {
+            $data = $bold->checkPayment($reference);
+        } catch (FalloDeLaPasarela $e) {
+            Log::warning('Bold no pudo informar del pago', [
+                'referencia' => $reference,
+                'estado_de_la_pasarela' => $e->estado(),
+                'codigo' => $e->codigo(),
+                // El cuerpo va AQUI y no en la respuesta.
+                'respuesta' => $e->getMessage(),
+            ]);
+
+            if ($e->noExiste()) {
+                return response()->json([
+                    'message' => 'No encontramos ese pago.',
+                ], 404);
+            }
+
+            return response()->json([
+                'message' => 'No pudimos consultar el pago en este momento. '
+                    .'Intenta de nuevo en un momento.',
+            ], 500);
+        }
+
         $status = strtoupper($data['status'] ?? '');
 
         $intent = PaymentIntent::where('bold_reference_id', $reference)->firstOrFail();
-        $order  = OrdersSales::findOrFail($intent->orderSales_id);
+        $order = OrdersSales::findOrFail($intent->orderSales_id);
 
         // Buscamos el pago existente
         $payment = Payment::where('orderSales_id', $order->orderSales_id)
@@ -334,9 +383,15 @@ class PaymentController extends Controller
                     'payment_date' => now(),
                 ];
 
-                if ($redirectUrl) $cambios['redirect_url'] = $redirectUrl;
-                if ($qrPayload) $cambios['qr_payload'] = $qrPayload;
-                if ($qrExpiresAt) $cambios['qr_expires_at'] = $qrExpiresAt;
+                if ($redirectUrl) {
+                    $cambios['redirect_url'] = $redirectUrl;
+                }
+                if ($qrPayload) {
+                    $cambios['qr_payload'] = $qrPayload;
+                }
+                if ($qrExpiresAt) {
+                    $cambios['qr_expires_at'] = $qrExpiresAt;
+                }
 
                 $payment->update($cambios);
 
@@ -381,7 +436,7 @@ class PaymentController extends Controller
         return response()->json([
             'payment_status' => $status,
             'order_payment_state' => $order->payment_state,
-            'data' => $data
+            'data' => $data,
         ]);
     }
 }

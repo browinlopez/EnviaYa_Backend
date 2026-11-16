@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
 use Illuminate\Support\Facades\Cache;
@@ -96,19 +98,19 @@ class CoberturaController extends Controller
                 'm.name as municipio',
             ])
             ->map(fn ($fila) => [
-                'tipo'            => 'negocio',
-                'id'              => (int) $fila->busines_id,
-                'nombre'          => $fila->name,
-                'direccion'       => $fila->address,
-                'latitude'        => (float) $fila->latitude,
-                'longitude'       => (float) $fila->longitude,
+                'tipo' => 'negocio',
+                'id' => (int) $fila->busines_id,
+                'nombre' => $fila->name,
+                'direccion' => $fila->address,
+                'latitude' => (float) $fila->latitude,
+                'longitude' => (float) $fila->longitude,
                 'municipality_id' => $fila->municipality_id !== null
                     ? (int) $fila->municipality_id
                     : null,
-                'municipio'       => $fila->municipio,
+                'municipio' => $fila->municipio,
                 // `category_business.id`: 1 Tienda, 2 Farmacia,
                 // 3 Restaurante, 4 Tienda de repuesto.
-                'categoria'       => $fila->type !== null ? (int) $fila->type : null,
+                'categoria' => $fila->type !== null ? (int) $fila->type : null,
             ])
             ->all();
     }
@@ -134,16 +136,16 @@ class CoberturaController extends Controller
                 'm.name as municipio',
             ])
             ->map(fn ($fila) => [
-                'tipo'            => 'conjunto',
-                'id'              => (int) $fila->complex_id,
-                'nombre'          => $fila->name,
-                'direccion'       => $fila->address,
-                'latitude'        => (float) $fila->latitude,
-                'longitude'       => (float) $fila->longitude,
+                'tipo' => 'conjunto',
+                'id' => (int) $fila->complex_id,
+                'nombre' => $fila->name,
+                'direccion' => $fila->address,
+                'latitude' => (float) $fila->latitude,
+                'longitude' => (float) $fila->longitude,
                 'municipality_id' => $fila->municipality_id !== null
                     ? (int) $fila->municipality_id
                     : null,
-                'municipio'       => $fila->municipio,
+                'municipio' => $fila->municipio,
             ])
             ->all();
     }
