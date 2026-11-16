@@ -11950,7 +11950,7 @@
                                                     "nullable": true
                                                 },
                                                 "qualification": {
-                                                    "type": "integer"
+                                                    "type": "string"
                                                 },
                                                 "state": {
                                                     "type": "integer"
@@ -11976,16 +11976,16 @@
                                                         "type": "integer"
                                                     },
                                                     "total": {
-                                                        "type": "integer"
+                                                        "type": "string"
                                                     },
                                                     "subtotal": {
-                                                        "type": "integer"
+                                                        "type": "string"
                                                     },
                                                     "domicilio": {
-                                                        "type": "integer"
+                                                        "type": "string"
                                                     },
                                                     "domiciliary_fee": {
-                                                        "type": "integer"
+                                                        "type": "string"
                                                     },
                                                     "cash_tendered": {
                                                         "type": "string",
@@ -12051,7 +12051,7 @@
                                                                 "type": "integer"
                                                             },
                                                             "qualification": {
-                                                                "type": "integer"
+                                                                "type": "string"
                                                             },
                                                             "state": {
                                                                 "type": "boolean"
@@ -12079,7 +12079,7 @@
                                                                         "type": "integer"
                                                                     },
                                                                     "qualification": {
-                                                                        "type": "integer"
+                                                                        "type": "string"
                                                                     },
                                                                     "state": {
                                                                         "type": "boolean"
@@ -12184,7 +12184,7 @@
                                                                 "type": "integer"
                                                             },
                                                             "qualification": {
-                                                                "type": "integer"
+                                                                "type": "string"
                                                             },
                                                             "state": {
                                                                 "type": "integer"
@@ -12454,7 +12454,7 @@
                                                     "type": "integer"
                                                 },
                                                 "total": {
-                                                    "type": "integer"
+                                                    "type": "string"
                                                 },
                                                 "cash_tendered": {
                                                     "type": "string",
@@ -12813,7 +12813,7 @@
                                                     "type": "integer"
                                                 },
                                                 "total": {
-                                                    "type": "integer"
+                                                    "type": "string"
                                                 },
                                                 "cash_tendered": {
                                                     "type": "string",
@@ -12878,7 +12878,7 @@
                                                             "type": "string"
                                                         },
                                                         "qualification": {
-                                                            "type": "integer"
+                                                            "type": "string"
                                                         }
                                                     }
                                                 },

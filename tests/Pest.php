@@ -7,6 +7,7 @@ use App\Models\Product\CatalogUpload;
 use App\Models\Product\Product;
 use App\Models\Rol;
 use App\Models\User;
+use App\Support\ProductTypeSchema;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -457,4 +458,35 @@ function repartidorConPedidoEn(?int $complexId, string $cedula = '1090123456'): 
     }
 
     return Domiciliary::find($domiId);
+}
+
+/**
+ * Las cuatro categorías de negocio reales, con sus ids de verdad.
+ *
+ * `business.type` es clave foránea a `category_business`, y esos ids NO son
+ * arbitrarios: `ProductTypeSchema` los fija como constantes --1=Tienda,
+ * 2=Farmacia, 3=Restaurante, 4=Repuestos-- y `/v1/product/schema` decide con
+ * ellos qué campos extra exige cada tipo de negocio.
+ *
+ * POR QUE SE INSERTAN CON EL ID PUESTO A MANO. Un
+ * `CategoryBusiness::forceCreate(['name' => 'Tienda'])` seguido de
+ * `'type' => 1` pasa en SQLite y cae en MySQL con un error 1452. La razón es
+ * que `RefreshDatabase` revierte la transacción de cada prueba, pero **InnoDB
+ * no revierte el contador `AUTO_INCREMENT`**: en cuanto cualquier prueba
+ * anterior de la suite crea una categoría, la que crea el fichero nace con el
+ * id 37 --o el 112-- y la fila 1 no existe. SQLite sí revierte su contador, y
+ * por eso el mismo código llevaba meses en verde midiendo un motor que no es
+ * el de producción.
+ *
+ * `insertOrIgnore` para que llamarlo dos veces en el mismo escenario no
+ * reviente por clave repetida.
+ */
+function tiposDeNegocioReales(): void
+{
+    DB::table('category_business')->insertOrIgnore([
+        ['id' => ProductTypeSchema::TYPE_GROCERY, 'name' => 'Tienda'],
+        ['id' => ProductTypeSchema::TYPE_PHARMACY, 'name' => 'Farmacia'],
+        ['id' => ProductTypeSchema::TYPE_RESTAURANT, 'name' => 'Restaurante'],
+        ['id' => ProductTypeSchema::TYPE_CAR_PARTS, 'name' => 'Tienda de repuesto'],
+    ]);
 }

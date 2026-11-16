@@ -1,9 +1,9 @@
 <?php
 
 use App\Models\Business;
-use App\Models\Business\CategoryBusiness;
 use App\Models\Owner\Owner;
 use App\Models\User;
+use App\Support\ProductTypeSchema;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -21,8 +21,9 @@ use Illuminate\Support\Facades\DB;
  * no pueda volver a salir sin que alguien lo note.
  */
 beforeEach(function () {
-    // `business.type` es clave foránea a `category_business`.
-    CategoryBusiness::forceCreate(['name' => 'Tienda']);
+    // `business.type` es clave foránea a `category_business`, con sus ids de
+    // verdad. Ver `tiposDeNegocioReales()` en Pest.php.
+    tiposDeNegocioReales();
 });
 
 test('el catálogo público no expone los datos personales del propietario', function () {
@@ -40,7 +41,7 @@ test('el catálogo público no expone los datos personales del propietario', fun
     $negocio = Business::forceCreate([
         'name' => 'Tienda Doña Marta',
         'state' => 1,
-        'type' => 1,
+        'type' => ProductTypeSchema::TYPE_GROCERY,
         'qualification' => 0,
     ]);
 
@@ -78,7 +79,7 @@ test('el catálogo público sigue devolviendo lo que la app necesita', function 
     $negocio = Business::forceCreate([
         'name' => 'Tienda Doña Marta',
         'state' => 1,
-        'type' => 1,
+        'type' => ProductTypeSchema::TYPE_GROCERY,
         'qualification' => 0,
     ]);
 

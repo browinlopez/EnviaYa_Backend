@@ -98,6 +98,11 @@ class User extends Authenticatable implements Auditable, MustVerifyEmail
 
     protected $casts = [
         'state' => 'boolean',
+        /*
+         * `decimal(3,2)`: MySQL la devuelve como cadena y SQLite como número.
+         * Sin molde, el tipo de este campo en la respuesta dependía del motor.
+         */
+        'qualification' => 'decimal:2',
         'email_verified_at' => 'datetime',
         'email_verification_expires_at' => 'datetime',
         /*

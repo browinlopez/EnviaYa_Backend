@@ -1,7 +1,6 @@
 <?php
 
 use App\Models\Business;
-use App\Models\Business\CategoryBusiness;
 use App\Models\Product\Category;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -30,10 +29,14 @@ function asignarCategoriaANegocio(int $categoryId, int $businessCategoryId): voi
  */
 function productTestSetup(int $businessType): array
 {
-    // business.type es FK a category_business; crear los tipos 1..N
-    for ($i = 1; $i <= $businessType; $i++) {
-        CategoryBusiness::forceCreate(['name' => "Tipo $i"]);
-    }
+    /*
+     * `business.type` es clave foránea a `category_business`, y acá el id ES
+     * el dato: `$businessType` se compara contra `ProductTypeSchema::TYPE_*`
+     * para decidir qué campos extra exige el producto. Por eso las categorías
+     * se crean con su id puesto a mano y no con el que reparta el motor; ver
+     * `tiposDeNegocioReales()` en Pest.php.
+     */
+    tiposDeNegocioReales();
 
     $business = Business::forceCreate([
         'name' => 'Negocio Test',

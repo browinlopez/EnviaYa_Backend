@@ -62,7 +62,26 @@ class ProductoDeLaFichaResource extends JsonResource
             'category' => $product->category?->name,
             'image' => $product->image,
             'state' => (bool) $product->state,
-            'price' => $estaAfiliado ? ($product->pivot->price ?? 0) : 0,
+            /*
+             * CADENA CON DOS DECIMALES, QUE ES LO QUE YA MANDA PRODUCCION.
+             *
+             * `price` sale del PIVOTE, y un pivote NO hereda los moldes del
+             * modelo: `ProductBusiness::$casts` declara `'price' =>
+             * 'decimal:2'`, pero `$product->pivot->price` llega crudo de PDO,
+             * y eso es CADENA en MySQL y NUMERO en SQLite. La suite afirmaba
+             * 9500 y la app instalada recibia "9500.00".
+             *
+             * Se fija en cadena, y no en numero, para que la respuesta de
+             * produccion no se mueva. Lo unico que cambia es el caso del
+             * candado --`0` pasa a `"0.00"`--, y su unico consumidor es
+             * `BusinessDetailScreen.js:382`, que hace `elegida.price > 0`:
+             * `"0.00" > 0` sigue siendo falso. Fijarlo en numero seria mas
+             * coherente con el `(float)` de `min_qty` de aqui abajo, pero
+             * cambiaria el caso comun en los telefonos ya instalados.
+             */
+            'price' => number_format(
+                (float) ($estaAfiliado ? ($product->pivot->price ?? 0) : 0), 2, '.', '',
+            ),
             // Como se vende: por unidad o al peso. Ver arriba.
             'sale_unit' => $product->pivot->sale_unit ?? 'unidad',
             'min_qty' => $product->pivot->min_qty !== null ? (float) $product->pivot->min_qty : null,
