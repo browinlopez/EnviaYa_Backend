@@ -285,7 +285,16 @@ return [
              * `app(Notifiable::class)->routeNotificationForMail()` devolvía
              * `your@example.com`.
              */
-            'to' => env('BACKUP_MAIL_TO', 'gerencia@vecipaya.com'),
+            /*
+             * `?:` Y NO EL SEGUNDO ARGUMENTO DE `env()`, y es la
+             * diferencia entre arrancar y no arrancar. El defecto de
+             * `env()` solo entra cuando la clave NO ESTA; con
+             * `BACKUP_MAIL_TO=` vacia —como viene en `.env.example`—
+             * llega una cadena vacía, Spatie la valida como correo y
+             * lanza `InvalidConfig` antes de que arranque nada. Tumbó
+             * el CI entero el 16 de noviembre de 2026.
+             */
+            'to' => env('BACKUP_MAIL_TO') ?: 'gerencia@vecipaya.com',
 
             /*
              * El REMITENTE tambien venia del esqueleto, y lo encontro la

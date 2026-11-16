@@ -151,11 +151,19 @@ return [
             'driver' => 's3',
             // Generoso a proposito: ver la cabecera de este archivo.
             'http' => $topesDeRespaldos,
-            'key' => env('R2_BACKUP_ACCESS_KEY_ID', env('R2_ACCESS_KEY_ID')),
-            'secret' => env('R2_BACKUP_SECRET_ACCESS_KEY', env('R2_SECRET_ACCESS_KEY')),
+            /*
+             * `?:` EN LAS CUATRO, por lo mismo que en `config/backup.php`:
+             * con la clave presente y vacía —así vienen en
+             * `.env.example`— el segundo argumento de `env()` no entra, y
+             * el disco de respaldos se quedaría sin credenciales, sin
+             * bucket y sin endpoint EN SILENCIO, en vez de caer a los de
+             * R2. Un respaldo que no se hace no avisa de que no se hace.
+             */
+            'key' => env('R2_BACKUP_ACCESS_KEY_ID') ?: env('R2_ACCESS_KEY_ID'),
+            'secret' => env('R2_BACKUP_SECRET_ACCESS_KEY') ?: env('R2_SECRET_ACCESS_KEY'),
             'region' => 'auto',
-            'bucket' => env('R2_BACKUP_BUCKET', 'vecipaya-respaldos'),
-            'endpoint' => env('R2_BACKUP_ENDPOINT', env('R2_ENDPOINT')),
+            'bucket' => env('R2_BACKUP_BUCKET') ?: 'vecipaya-respaldos',
+            'endpoint' => env('R2_BACKUP_ENDPOINT') ?: env('R2_ENDPOINT'),
             'use_path_style_endpoint' => true,
             'throw' => true,
             'report' => false,
