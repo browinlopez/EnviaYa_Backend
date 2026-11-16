@@ -47,6 +47,7 @@ from __future__ import annotations
 
 import argparse
 import io
+import json
 import os
 import re
 import subprocess
@@ -183,6 +184,56 @@ def constantes_publicas():
     for t in _texto_de_app():
         n += len(re.findall(r"public const \w+", t))
     return n
+
+
+def _lista_de_barrido(nombre):
+    """Lee un JSON de `scripts/` y devuelve None si no se puede leer.
+
+    None --o sea NO MEDIBLE-- y no 0: un fichero que falta no son cero
+    constantes barridas, es una medicion que no se pudo hacer, y
+    confundirlas pondria el registro en verde justo cuando se rompio el
+    instrumento."""
+    ruta = os.path.join(RAIZ, "scripts", nombre)
+    if not os.path.exists(ruta):
+        return None
+    try:
+        return json.load(io.open(ruta, encoding="utf-8"))
+    except (ValueError, OSError):
+        return None
+
+
+def constantes_barridas():
+    """Cuantas constantes distintas tiene `barrido-mutaciones.json`.
+
+    NOMBRES DISTINTOS, no entradas, y la diferencia no es teorica:
+    `CashMovement::RECAUDO` esta dos veces --una como mutacion y otra como
+    CONTROL-- asi que contar entradas daba 83 donde hay 82 constantes. El
+    registro llevaba ese uno de mas sin que nadie lo viera, que es
+    exactamente para lo que sirve medir en vez de recordar."""
+    d = _lista_de_barrido("barrido-mutaciones.json")
+    if d is None or "mutaciones" not in d:
+        return NO_MEDIBLE
+
+    nombres = set()
+    for e in d["mutaciones"]:
+        etq = e.get("etiqueta", "")
+        nombres.add(re.sub(r"^CONTROL \(debe FALLAR\): ", "", etq))
+
+    return len(nombres)
+
+
+def constantes_pendientes():
+    """Cuantas quedan en `barrido-pendientes.json`, sumando los tres grupos.
+
+    Los grupos se leen del propio fichero y no de una lista escrita aca: si
+    manana hay un cuarto grupo, esta cuenta lo incluye sola. Las claves que
+    empiezan por `_` son notas."""
+    d = _lista_de_barrido("barrido-pendientes.json")
+    if d is None:
+        return NO_MEDIBLE
+
+    return sum(len(v) for k, v in d.items()
+               if not k.startswith("_") and isinstance(v, list))
 
 
 def archivos_sobre_el_objetivo():
@@ -343,6 +394,12 @@ AFIRMACIONES = [
     ("ANTES-DE-EMPUJAR.md", "constantes publicas de app/",
      r"De las \*\*(\d+)\*\* constantes p.blicas de `app/`",
      constantes_publicas),
+    ("ANTES-DE-EMPUJAR.md", "constantes barridas",
+     r"constantes p.blicas de `app/`, \*\*(\d+)\*\* est.n barridas",
+     constantes_barridas),
+    ("ANTES-DE-EMPUJAR.md", "constantes por barrer",
+     r"est.n barridas y \*\*(\d+) de las\s+restantes deciden\*\*",
+     constantes_pendientes),
 
     ("ESTADO.md", "clases que cargan",
      r"\*\*(\d+)\*\* clases cargan", clases_que_cargan),
@@ -465,7 +522,13 @@ CONTROL = {
         u"la app **7 commits** sobre `origin/Browin_IOS`, el panel **7** sobre `origin/master`"
         u" y la landing **7** sobre `origin/main`. Los cuatro: 7 de 4 con su HEAD exactamente en `origin/refactor-total`.\n"
         u"Remide las **7 cifras** que `ESTADO.md` afirma.\n"
-        u"De las **7** constantes publicas de `app/`, 7 estan barridas.\n"
+        # LA FRASE COMPLETA, con la forma que tiene en el documento.
+        # Antes ponia "7 estan barridas" SIN los asteriscos y sin la
+        # segunda mitad, asi que los patrones de "constantes barridas" y
+        # "constantes por barrer" encajaban cero veces y el control los
+        # canto como ciegos en cuanto se anadieron. Para eso esta.
+        u"De las **7** constantes publicas de `app/`, **7** estan "
+        u"barridas y **7 de las\nrestantes deciden** dinero.\n"
     ),
 }
 

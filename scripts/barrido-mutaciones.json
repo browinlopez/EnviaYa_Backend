@@ -17,7 +17,25 @@
   "",
   "PARA ANADIR UNA: si una constante nueva decide dinero, permisos o un",
   "estado, entra aca. Lo que no entra son etiquetas, plazos, nombres de",
-  "disco ni textos: no deciden nada y gastan 80 segundos de suite cada una."
+  "disco ni textos: no deciden nada y gastan 80 segundos de suite cada una.",
+  "",
+  "LAS CUATRO ULTIMAS VENIAN DEL GRUPO `muertas` DE LOS PENDIENTES, y entran",
+  "aca el 15 de noviembre de 2026 porque ese grupo estaba mal planteado: su",
+  "cabecera decia que sabotearlas «no puede fallar ninguna prueba» mientras",
+  "sus propios datos traian las pruebas que las nombran. Mezclaba «no la usa",
+  "`app/`» --una pregunta de diseno-- con «ninguna prueba caza un cambio»,",
+  "que es lo unico que produce hallazgos falsos.",
+  "",
+  "COMO SE MIDIERON, dicho para que nadie lo confunda con una pasada del",
+  "barrido: sabotaje DIRIGIDO, cada constante contra el fichero de pruebas",
+  "que la nombra, con pasada de control sobre codigo sano antes y exigiendo",
+  "el resumen de Pest en la salida --sin resumen es ERROR, no veredicto--.",
+  "Las tres primeras: 3 de 3 cazadas. La cuarta no tenia prueba, se le",
+  "escribio en `CreditoDeTiendaTest` y se probo rompiendola.",
+  "",
+  "Correr el fichero que la nombra BASTA para decir «defendida»: si ahi la",
+  "cazan, la respuesta ya es si. La suite entera solo aporta cuando la",
+  "respuesta es NO, porque entonces falta saber si la caza algo inesperado."
  ],
  "mutaciones": [
   {
@@ -572,6 +590,34 @@
    "viejo": "public const ROL_PERSONAL = 4;",
    "nuevo": "public const ROL_PERSONAL = 3;",
    "dano": "el personal interno y el domiciliario se confunden de rol"
+  },
+  {
+   "etiqueta": "CashMovement::AJUSTE",
+   "fichero": "app/Models/Operacion/CashMovement.php",
+   "viejo": "public const AJUSTE = 'ajuste';",
+   "nuevo": "public const AJUSTE = 'recaudo';",
+   "dano": "el tipo de ajuste colisiona con el de recaudo, y es el tipo lo unico que los distingue en la misma tabla"
+  },
+  {
+   "etiqueta": "OrdersSales::ESTADOS",
+   "fichero": "app/Models/Order/OrdersSales.php",
+   "viejo": "        self::CANCELADO,\n    ];",
+   "nuevo": "    ];",
+   "dano": "la lista de estados del pedido pierde CANCELADO"
+  },
+  {
+   "etiqueta": "OrdersSales::SIN_PESAJE",
+   "fichero": "app/Models/Order/OrdersSales.php",
+   "viejo": "public const SIN_PESAJE = 0;",
+   "nuevo": "public const SIN_PESAJE = 7;",
+   "dano": "deja de valer 0, que es el valor por omision que la migracion pone en `weighing_state`"
+  },
+  {
+   "etiqueta": "StoreCreditMovement::AJUSTE",
+   "fichero": "app/Models/Operacion/StoreCreditMovement.php",
+   "viejo": "public const AJUSTE = 'ajuste';",
+   "nuevo": "public const AJUSTE = 'reverso';",
+   "dano": "colisiona con REVERSO, que es el tipo por el que `reversar()` decide si el cupo ya se devolvio"
   }
  ]
 }

@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Operacion\Settlement;
+use App\Models\Operacion\StoreCreditMovement;
 use App\Models\Order\OrdersSales;
 use App\Models\Rol;
 use App\Models\User;
@@ -563,4 +564,51 @@ it('los cuatro estados de un corte son contrato y son distintos', function () {
     expect(Settlement::ANULADA)->not->toBe(Settlement::PAGADA);
     expect(Settlement::ANULADA)->not->toBe(Settlement::APROBADA);
     expect(Settlement::ANULADA)->not->toBe(Settlement::BORRADOR);
+});
+
+it('los cuatro tipos de movimiento de credito son distintos', function () {
+    /*
+     * LA CUARTA DE LAS «MUERTAS», Y LA UNICA QUE LO ERA DE VERDAD.
+     *
+     * `StoreCreditMovement::AJUSTE` no la escribe nadie en `app/` Y NINGUNA
+     * PRUEBA LA NOMBRABA, asi que era la unica constante publica del proyecto
+     * que el barrido de sabotaje no podia juzgar: cambiarla no rompia nada, y
+     * el barrido habria dicho «sin defensa» cuando lo que pasaba es que nadie
+     * la miraba. Un hallazgo falso, y un instrumento que los da se deja de
+     * leer. Sus tres compañeras de grupo SI tenian prueba con literales
+     * --`CashMovement::AJUSTE`, `OrdersSales::ESTADOS` y `::SIN_PESAJE`--.
+     *
+     * CON LITERALES, porque estos valores viven en `store_credit_movements.type`
+     * de filas que ya existen: renombrar uno deja los movimientos viejos sin
+     * clasificar.
+     */
+    expect(StoreCreditMovement::CONSUMO)->toBe('consumo');
+    expect(StoreCreditMovement::REVERSO)->toBe('reverso');
+    expect(StoreCreditMovement::ABONO)->toBe('abono');
+    expect(StoreCreditMovement::AJUSTE)->toBe('ajuste');
+
+    $tipos = [
+        StoreCreditMovement::CONSUMO,
+        StoreCreditMovement::REVERSO,
+        StoreCreditMovement::ABONO,
+        StoreCreditMovement::AJUSTE,
+    ];
+
+    expect(count(array_unique($tipos)))->toBe(4);
+
+    /*
+     * LA QUE DE VERDAD IMPORTA, y conviene decir exactamente cuanto importa.
+     *
+     * `reversar()` decide la idempotencia POR TIPO: busca la fila `CONSUMO`
+     * del pedido y, si ya hay una `REVERSO`, no devuelve nada. Si `AJUSTE`
+     * valiera lo mismo que `REVERSO`, una fila de ajuste haria creer que el
+     * cupo ya se devolvio y cancelar ese pedido no lo liberaria nunca.
+     *
+     * HOY ESA CONSECUENCIA ES LATENTE, NO VIVA: nada escribe `AJUSTE`, asi
+     * que no hay fila que pueda confundirse. Lo que esto fija es que el dia
+     * que haya endpoint para cuadrar un descuadre no estrene el defecto.
+     */
+    expect(StoreCreditMovement::AJUSTE)->not->toBe(StoreCreditMovement::REVERSO);
+    expect(StoreCreditMovement::AJUSTE)->not->toBe(StoreCreditMovement::CONSUMO);
+    expect(StoreCreditMovement::AJUSTE)->not->toBe(StoreCreditMovement::ABONO);
 });

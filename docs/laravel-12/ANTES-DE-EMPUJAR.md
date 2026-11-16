@@ -41,9 +41,9 @@ servidor todavía no sirve.
 > Esa es la decisión que queda, y los números de abajo se miden contra
 > `origin/Devs`, que es la rama que despliega.
 
-Nada está desplegado. Medido el **15 de noviembre de 2026**: son **180 commits**
+Nada está desplegado. Medido el **15 de noviembre de 2026**: son **181 commits**
 en `validacion/integracion` sobre `Devs`, y `Devs` a su vez va **22 commits por
-delante de `origin/Devs`**: **202** en total. La cuenta **incluye el commit que la escribe**: si no, cada
+delante de `origin/Devs`**: **203** en total. La cuenta **incluye el commit que la escribe**: si no, cada
 marcador la deja corta en uno y el verificador avisa para siempre de un
 desajuste que es de construccion. Hasta que `Devs` suba, las ramas
 de trabajo que cuelgan de ahí no tienen dónde apoyarse.
@@ -98,7 +98,7 @@ vez encontró tres agujeros con 1361 pruebas en verde; el por qué está en la
 sexta lección de `ESTADO.md`.
 
 **Lo que le falta por barrer está medido, en `scripts/barrido-pendientes.json`.**
-De las **137** constantes públicas de `app/`, **79** están barridas y **22 de las
+De las **137** constantes públicas de `app/`, **82** están barridas y **18 de las
 restantes deciden** --eran 131 y 43 por la mañana: subieron porque las seis
 listas de estados que las validaciones escribían a mano pasaron a ser
 constantes, más dos nuevas, menos una que sobraba-- dinero, un permiso o un estado. Eso corrige algo que este
@@ -112,9 +112,66 @@ parecía barrido no lo es**:
 
 | grupo | cuántas | qué pide |
 |---|---|---|
-| muertas | **4** | Nadie en `app/` las nombra. Sabotearlas no puede fallar ninguna prueba, así que el barrido diría «sin defensa» cuando están muertas: **hallazgos falsos**. Piden decidir si se borran o si falta el código que debería usarlas |
+| muertas | **0** | **Vaciado el 15 de noviembre, y no borrando constantes: midiéndolas.** Esta fila afirmaba que sabotearlas «no puede fallar ninguna prueba», y era falso para tres de las cuatro —sus propias filas traían las pruebas que las nombran—. Ver abajo |
 | sin prueba | **10** | Las usa `app/` y ninguna prueba **las nombra**. Eso NO es «nadie las defiende»: ver el aviso de abajo |
 | con prueba | **8** | Las que el barrido no alcanzó a medir antes de que lo mataran |
+
+### Las cuatro «muertas»: el grupo estaba mal planteado
+
+Cerrado el **15 de noviembre de 2026**. La fila de arriba decía que sabotear
+esas cuatro «no puede fallar ninguna prueba», y **sus propios datos la
+contradecían**: tres de las cuatro traían el campo `tests` con fichero y
+número de veces. El grupo confundía dos cosas que piden trabajo distinto:
+
+| |
+|---|
+| **no la usa `app/`** — es una pregunta de diseño: se borra, o falta el código que debería usarla |
+| **ninguna prueba caza un cambio** — es lo único que produce **hallazgos falsos**, y un instrumento que los da se deja de leer |
+
+Solo una era lo segundo. **Medido, no deducido:**
+
+| constante | veredicto |
+|---|---|
+| `CashMovement::AJUSTE` | **FALLA** — su prueba la afirma con literal: `toBe('ajuste')` |
+| `OrdersSales::ESTADOS` | **FALLA** — `toBe([1, 2, 3, 4, 5])` |
+| `OrdersSales::SIN_PESAJE` | **FALLA** — el valor de la columna contra la constante, y el `0` es un literal de la migración |
+| `StoreCreditMovement::AJUSTE` | era la **única** con `tests: []`, y la única de verdad inmedible |
+
+Las tres primeras se sabotearon **una por una contra el fichero de pruebas que
+las nombra**, no con la suite entera: correr su fichero basta para decir
+«defendida» —si ahí la cazan, la respuesta ya es sí—, y la suite completa solo
+aporta cuando la respuesta es **no**, porque entonces falta saber si la caza
+algo inesperado. Son segundos en vez de 80 por mutación, y la memoria no se
+mueve.
+
+A la cuarta se le escribió la prueba que le faltaba, en
+`tests/Feature/Credito/CreditoDeTiendaTest.php`, al lado de la de los cuatro
+estados de un corte, que ya tenía esa forma. **Probada rompiéndola.** Lo que
+fija es lo que el comentario de la constante ya decía: `reversar()` decide la
+idempotencia **por tipo**, así que si `AJUSTE` valiera lo mismo que `REVERSO`,
+una fila de ajuste haría creer que el cupo ya se devolvió. **Hoy esa
+consecuencia es latente, no viva** —nada escribe `AJUSTE`—, y se dice así en
+la prueba: lo que se evita es que el día que haya endpoint para cuadrar un
+descuadre estrene el defecto.
+
+> El guion del sabotaje dirigido necesitó la guarda dos veces. La primera
+> versión leía «código de salida distinto de 0» como «la prueba cayó» —y la
+> ruta de `pest` estaba escrita mal, con `\v` y `\b` interpretados como
+> escapes, así que **pest no corrió**: el mandato falló y las tres salieron
+> «defendidas». Tres veredictos de una corrida que no ocurrió, que es el fallo
+> contra el que avisa el propio barrido. Ahora se **exige** el resumen de Pest
+> en la salida: sin resumen es ERROR, no veredicto. Y hay pasada de control
+> sobre código sano antes de tocar nada, porque un fichero que ya estaba rojo
+> haría que el «falla» de después no dijera nada.
+
+**Y las dos cifras del barrido pasaron a estar instrumentadas.** El registro
+afirmaba cuántas constantes están barridas y cuántas quedan, y
+`cifras_del_registro.py` no las medía —mientras el comentario de otra medida
+dice, de esa misma frase, que es «la que decide si una tercera pasada del
+barrido tiene sentido»—. Al medirlas salió un sobreconteo:
+`CashMovement::RECAUDO` está **dos veces** en `barrido-mutaciones.json`, como
+mutación y como CONTROL, así que las 83 entradas son **82 constantes
+distintas** y las «79» de antes eran 78. Uno de más que nadie habría visto.
 
 ### La tercera pasada: 28 de 46, y seis sin defensa
 
@@ -168,10 +225,10 @@ Y la sexta, que tampoco es una puerta y tarda dos segundos:
 
 ```
 python scripts/cifras_del_registro.py --control                 # que no este ciego
-python scripts/cifras_del_registro.py --salida-de-pest pest.txt # las 30 cifras
+python scripts/cifras_del_registro.py --salida-de-pest pest.txt # las 32 cifras
 ```
 
-Remide las **30 cifras** que `ESTADO.md`, `EXCEPCIONES.md` y este documento
+Remide las **32 cifras** que `ESTADO.md`, `EXCEPCIONES.md` y este documento
 afirman, y dice cuáles ya no describen el repositorio. Existe porque esto ha
 pasado **tres veces**, y dos están confesadas aquí dentro: «este párrafo ya
 decía 50 cuando eran 137» y «esta fila decía "no existe", que era verdad

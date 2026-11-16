@@ -91,61 +91,31 @@
   "  que un ajuste NO se cuente como recaudo. El dia que haya endpoint para",
   "  ajustar un descuadre, lo usara.",
   "",
-  "Y estas ya no existen en el codigo: ComplexStaff::ROLES"
+  "Y estas ya no existen en el codigo: ComplexStaff::ROLES",
+  "",
+  "EL GRUPO `muertas` SE VACIO EL 15 DE NOVIEMBRE DE 2026, y no borrando",
+  "constantes: midiendolas. La cabecera de arriba afirma de ese grupo que",
+  "«sabotearlas no puede fallar ninguna prueba», y era FALSO para tres de",
+  "las cuatro --sus propias filas traian `tests` con fichero y veces--.",
+  "",
+  "El grupo confundia dos cosas:",
+  "",
+  "  no la usa `app/`              es una pregunta de diseno",
+  "  ninguna prueba caza un cambio es lo que da hallazgos FALSOS",
+  "",
+  "Las cuatro siguen sin que `app/` las nombre. Lo que ya no pasa es que el",
+  "barrido no pueda juzgarlas:",
+  "",
+  "  CashMovement::AJUSTE      FALLA  su prueba la afirma con literal",
+  "  OrdersSales::ESTADOS      FALLA  `toBe([1, 2, 3, 4, 5])`",
+  "  OrdersSales::SIN_PESAJE   FALLA  el valor de la columna contra ella",
+  "  StoreCreditMovement::AJUSTE      era la unica con `tests: []`, y la",
+  "                                   unica que de verdad era inmedible;",
+  "                                   prueba nueva en CreditoDeTiendaTest",
+  "",
+  "Las cuatro pasan a `barrido-mutaciones.json`."
  ],
- "muertas": [
-  {
-   "clase": "CashMovement",
-   "const": "AJUSTE",
-   "fichero": "app/Models/Operacion/CashMovement.php",
-   "valor": "'ajuste'",
-   "self": 0,
-   "app": [],
-   "tests": [
-    [
-     "tests/Feature/Pedidos/CustodiaDeEfectivoTest.php",
-     3
-    ]
-   ]
-  },
-  {
-   "clase": "OrdersSales",
-   "const": "ESTADOS",
-   "fichero": "app/Models/Order/OrdersSales.php",
-   "valor": "[ self::NUEVO, self::PREPARANDO, self::EN_CAMINO, self::ENTREGADO, self::CANCELADO, ]",
-   "self": 0,
-   "app": [],
-   "tests": [
-    [
-     "tests/Feature/Contrato/LosCincoEstadosDelPedidoTest.php",
-     3
-    ]
-   ]
-  },
-  {
-   "clase": "OrdersSales",
-   "const": "SIN_PESAJE",
-   "fichero": "app/Models/Order/OrdersSales.php",
-   "valor": "0",
-   "self": 0,
-   "app": [],
-   "tests": [
-    [
-     "tests/Feature/Pedidos/VenderPorPesoTest.php",
-     1
-    ]
-   ]
-  },
-  {
-   "clase": "StoreCreditMovement",
-   "const": "AJUSTE",
-   "fichero": "app/Models/Operacion/StoreCreditMovement.php",
-   "valor": "'ajuste'",
-   "self": 0,
-   "app": [],
-   "tests": []
-  }
- ],
+ "muertas": [],
  "sin_prueba": [
   {
    "clase": "Pqrs",
