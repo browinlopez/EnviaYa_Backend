@@ -39,6 +39,7 @@
 
 use App\Models\Rol;
 use App\Models\User;
+use App\Services\BoldService;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 
@@ -217,6 +218,186 @@ it('cancelar un pedido devuelve la forma congelada', function () {
     $viva = formaDe($r->json());
 
     expect($viva)->toBe(formaCongelada('PUT /v1/orders/{id}/cancel', $viva, 200));
+});
+
+/*
+|--------------------------------------------------------------------------
+| LAS CINCO QUE LA APP LLAMA Y NINGUNA PRUEBA TOCABA
+|--------------------------------------------------------------------------
+|
+| Salieron de medir el reparto: de las 101 rutas que llama la app, 71 tenian
+| su forma afirmada por alguna prueba, 25 se llamaban sin afirmar nada y
+| CINCO no las tocaba ningun fichero de prueba. Ninguna de las cinco cambio
+| con el despliegue del 16 de noviembre de 2026 --se comparo metodo a metodo
+| contra `92ecb00`--, asi que hoy no rompen nada; lo que no tenian era red
+| para el dia de manana.
+|
+| `GET /v1/payment/status` es la mas delicada de las cinco: es la que la app
+| SONDEA cada pocos segundos despues de pagar.
+*/
+
+it('el estado del pago devuelve la forma congelada', function () {
+    $pedido = (int) DB::table('orderssales')->insertGetId([
+        'subtotal' => 12000, 'domicilio' => 3000, 'total' => 15000,
+        'currency' => 'COP', 'sale_date' => now(), 'state' => 1,
+        'payment_state' => 'pending_online',
+    ], 'orderSales_id');
+
+    DB::table('payment_intents')->insert([
+        'orderSales_id' => $pedido,
+        'provider' => 'bold',
+        'bold_reference_id' => 'REF-DE-PRUEBA',
+        'amount' => 15000,
+        'currency' => 'COP',
+        'status' => 'running',
+        'created_at' => now(), 'updated_at' => now(),
+    ]);
+
+    /*
+     * BOLD SE FINGE, Y HAY QUE DECIR QUE CONGELA ESO Y QUE NO.
+     *
+     * `data` es el cuerpo de Bold tal cual, asi que su forma la manda Bold y
+     * no este repositorio: lo que queda congelado ahi es el cuerpo del doble,
+     * no una promesa de la pasarela. Lo que SI es contrato nuestro es el nivel
+     * de arriba --`payment_status`, `order_payment_state`, `status`, y que
+     * `data` viaje--, que es lo que lee la app.
+     *
+     * Se responde `PROCESSING` a proposito: es un estado NO final, asi que el
+     * endpoint no toca el pedido ni dispara `ConfirmacionDePago`. Aca se mide
+     * la forma; el flujo de aprobacion tiene sus propias pruebas.
+     */
+    $bold = Mockery::mock(BoldService::class);
+    $bold->shouldReceive('checkPayment')->andReturn([
+        'status' => 'PROCESSING',
+        'transaction_id' => 'TX-QUE-NO-EXISTE-AUN',
+    ]);
+    app()->instance(BoldService::class, $bold);
+
+    Sanctum::actingAs(User::factory()->create());
+
+    $r = test()->getJson('/v1/payment/status?referenceId='.$pedido);
+    expect($r->status())->toBe(200, 'El sondeo no dio 200: '.$r->getContent());
+
+    $viva = formaDe($r->json());
+
+    /*
+     * Control de ceguera. Sin esto, el dia que el endpoint devolviera `{}` se
+     * regeneraria un congelado vacio y la comparacion de abajo seguiria en
+     * verde vigilando nada.
+     */
+    expect($viva)->toHaveKeys(['payment_status', 'order_payment_state', 'status']);
+
+    expect($viva)->toBe(formaCongelada('GET /v1/payment/status', $viva, 200));
+});
+
+it('los bancos de PSE devuelven la forma congelada', function () {
+    /*
+     * El doble manda tambien el banco de mentira que Bold mete en su lista
+     * --codigo 0, que es el texto de su propio selector-- para que la forma se
+     * tome DESPUES del filtro, que es lo que de verdad recibe la app.
+     */
+    $bold = Mockery::mock(BoldService::class);
+    $bold->shouldReceive('bancosPse')->andReturn([
+        'banks' => [
+            ['bank_code' => 0, 'bank_name' => 'A continuacion seleccione su banco'],
+            ['bank_code' => 1022, 'bank_name' => 'Banco Union'],
+        ],
+    ]);
+    app()->instance(BoldService::class, $bold);
+
+    // La ruta NO es publica, aunque la lista de bancos no tenga nada privado:
+    // va dentro del grupo con `auth:sanctum`. Sin sesion responde 401.
+    Sanctum::actingAs(User::factory()->create());
+
+    $r = test()->getJson('/v1/pse/bancos');
+    expect($r->status())->toBe(200, $r->getContent());
+
+    // Control: con la lista vacia la forma seria `data` a secas, sin
+    // `bank_code` ni `bank_name`; una red sobre nada.
+    expect($r->json('data'))->toHaveCount(1);
+
+    $viva = formaDe($r->json());
+    expect($viva)->toBe(formaCongelada('GET /v1/pse/bancos', $viva, 200));
+});
+
+it('las tiendas para copiar devuelven la forma congelada', function () {
+    $e = tenderoConCatalogo();
+    enLaTienda($e['vecino'], productoDeCatalogo('Arroz Diana')->products_id);
+
+    Sanctum::actingAs($e['user']);
+
+    $r = test()->getJson('/v1/negocio/productos/tiendas-para-copiar');
+    expect($r->status())->toBe(200, $r->getContent());
+
+    /*
+     * Control de ceguera, y aca hace falta de verdad: este endpoint devuelve
+     * la lista vacia siempre que no haya otra tienda del mismo tipo CON
+     * surtido, y una lista vacia congela una forma sin ninguno de sus tres
+     * campos. Es el mismo error que ya documenta `pedidoCompletoParaLaForma()`
+     * con el repartidor que no existia.
+     */
+    expect($r->json('data'))->toHaveCount(1);
+
+    $viva = formaDe($r->json());
+    expect($viva)->toBe(formaCongelada('GET /v1/negocio/productos/tiendas-para-copiar', $viva, 200));
+});
+
+it('marcar todos los avisos devuelve la forma congelada', function () {
+    $u = User::factory()->create();
+
+    DB::table('notifications')->insert([
+        'user_id' => $u->user_id,
+        'message' => 'Tu pedido va en camino',
+        'read' => 0,
+        'date' => now(),
+        'state' => 1,
+    ]);
+
+    Sanctum::actingAs($u);
+
+    $r = test()->putJson('/v1/users/notifications/read-all');
+    expect($r->status())->toBe(200, $r->getContent());
+
+    // Control: con cero avisos sin leer, `count` valdria 0 y la prueba pasaria
+    // sin que el endpoint hubiera marcado nada.
+    expect($r->json('count'))->toBe(1);
+
+    $viva = formaDe($r->json());
+    expect($viva)->toBe(formaCongelada('PUT /v1/users/notifications/read-all', $viva, 200));
+});
+
+it('crear una resena devuelve la forma congelada', function () {
+    Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);
+
+    $u = User::factory()->create(['rol' => 1]);
+
+    $comprador = (int) DB::table('buyer')->insertGetId([
+        'user_id' => $u->user_id, 'qualification' => 0, 'state' => 1,
+    ], 'buyer_id');
+    expect($comprador)->toBeGreaterThan(0);
+
+    $negocio = (int) DB::table('business')->insertGetId([
+        'name' => 'La de la resena', 'qualification' => 0, 'state' => 1,
+    ], 'busines_id');
+
+    Sanctum::actingAs($u);
+
+    $r = test()->postJson('/v1/reviews/store', [
+        'user_id' => $u->user_id,
+        'type' => 'business',
+        'id' => $negocio,
+        'qualification' => 5,
+        'comment' => 'Llego rapido y bien empacado',
+    ]);
+    expect($r->status())->toBe(201, 'La resena no se creo: '.$r->getContent());
+
+    $viva = formaDe($r->json());
+
+    // Control: el contrato de la app es `review` con su cuerpo dentro, no un
+    // `message` a secas.
+    expect($viva)->toHaveKey('review.qualification');
+
+    expect($viva)->toBe(formaCongelada('POST /v1/reviews/store', $viva, 201));
 });
 
 it('la forma congelada cubre los campos que mas duelen', function () {

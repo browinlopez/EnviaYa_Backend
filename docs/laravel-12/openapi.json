@@ -11376,7 +11376,33 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                        "description": "Forma congelada en tests/Feature/Contrato/forma-de-las-respuestas.json",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "busines_id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "name": {
+                                                        "type": "string"
+                                                    },
+                                                    "productos": {
+                                                        "type": "integer"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Sin token, o token invalido."
@@ -13106,7 +13132,36 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                        "description": "Forma congelada en tests/Feature/Contrato/forma-de-las-respuestas.json",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "payment_status": {
+                                            "type": "string"
+                                        },
+                                        "order_payment_state": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "status": {
+                                                    "type": "string"
+                                                },
+                                                "transaction_id": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        },
+                                        "status": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Sin token, o token invalido."
@@ -13346,7 +13401,30 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                        "description": "Forma congelada en tests/Feature/Contrato/forma-de-las-respuestas.json",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "bank_code": {
+                                                        "type": "integer"
+                                                    },
+                                                    "bank_name": {
+                                                        "type": "string"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Sin token, o token invalido."
@@ -13577,8 +13655,226 @@
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    "201": {
+                        "description": "Forma congelada en tests/Feature/Contrato/forma-de-las-respuestas.json",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "review": {
+                                            "type": "object",
+                                            "properties": {
+                                                "busines_id": {
+                                                    "type": "integer"
+                                                },
+                                                "buyer_id": {
+                                                    "type": "integer"
+                                                },
+                                                "qualification": {
+                                                    "type": "string"
+                                                },
+                                                "comment": {
+                                                    "type": "string"
+                                                },
+                                                "state": {
+                                                    "type": "integer"
+                                                },
+                                                "updated_at": {
+                                                    "type": "string"
+                                                },
+                                                "created_at": {
+                                                    "type": "string"
+                                                },
+                                                "reviews_id": {
+                                                    "type": "integer"
+                                                },
+                                                "business": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "busines_id": {
+                                                            "type": "integer"
+                                                        },
+                                                        "name": {
+                                                            "type": "string"
+                                                        },
+                                                        "phone": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "address": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "qualification": {
+                                                            "type": "string"
+                                                        },
+                                                        "razonSocial_DCD": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "NIT": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "logo": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "description": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "latitude": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "longitude": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "municipality_id": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "type": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "state": {
+                                                            "type": "integer"
+                                                        },
+                                                        "max_courier_cash": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "created_at": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "updated_at": {
+                                                            "type": "string"
+                                                        },
+                                                        "credit_debt_cap": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "accepting_orders": {
+                                                            "type": "boolean"
+                                                        },
+                                                        "accepting_changed_at": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "accepting_until": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        }
+                                                    }
+                                                },
+                                                "buyer": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "buyer_id": {
+                                                            "type": "integer"
+                                                        },
+                                                        "user_id": {
+                                                            "type": "integer"
+                                                        },
+                                                        "qualification": {
+                                                            "type": "string"
+                                                        },
+                                                        "belongs_to_complex": {
+                                                            "type": "integer"
+                                                        },
+                                                        "state": {
+                                                            "type": "integer"
+                                                        },
+                                                        "user": {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "user_id": {
+                                                                    "type": "integer"
+                                                                },
+                                                                "name": {
+                                                                    "type": "string"
+                                                                },
+                                                                "email": {
+                                                                    "type": "string"
+                                                                },
+                                                                "phone": {
+                                                                    "type": "string"
+                                                                },
+                                                                "address": {
+                                                                    "type": "string",
+                                                                    "nullable": true
+                                                                },
+                                                                "rol": {
+                                                                    "type": "integer"
+                                                                },
+                                                                "qualification": {
+                                                                    "type": "string"
+                                                                },
+                                                                "state": {
+                                                                    "type": "boolean"
+                                                                },
+                                                                "email_verified_at": {
+                                                                    "type": "string"
+                                                                },
+                                                                "email_verification_token": {
+                                                                    "type": "string",
+                                                                    "nullable": true
+                                                                },
+                                                                "email_verification_expires_at": {
+                                                                    "type": "string",
+                                                                    "nullable": true
+                                                                },
+                                                                "area_id": {
+                                                                    "type": "string",
+                                                                    "nullable": true
+                                                                },
+                                                                "access_level": {
+                                                                    "type": "string"
+                                                                },
+                                                                "two_factor_confirmed_at": {
+                                                                    "type": "string",
+                                                                    "nullable": true
+                                                                },
+                                                                "email_verified_by": {
+                                                                    "type": "string",
+                                                                    "nullable": true
+                                                                },
+                                                                "created_at": {
+                                                                    "type": "string"
+                                                                },
+                                                                "updated_at": {
+                                                                    "type": "string"
+                                                                },
+                                                                "policy_accepted_at": {
+                                                                    "type": "string",
+                                                                    "nullable": true
+                                                                },
+                                                                "policy_version": {
+                                                                    "type": "string",
+                                                                    "nullable": true
+                                                                },
+                                                                "policy_ip": {
+                                                                    "type": "string",
+                                                                    "nullable": true
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Sin token, o token invalido."
@@ -14049,7 +14345,22 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                        "description": "Forma congelada en tests/Feature/Contrato/forma-de-las-respuestas.json",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "count": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Sin token, o token invalido."

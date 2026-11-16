@@ -1,4 +1,29 @@
 {
+    "GET /v1/negocio/productos/tiendas-para-copiar": {
+        "estado": 200,
+        "forma": {
+            "data[].busines_id": "int",
+            "data[].name": "string",
+            "data[].productos": "int"
+        }
+    },
+    "GET /v1/payment/status": {
+        "estado": 200,
+        "forma": {
+            "payment_status": "string",
+            "order_payment_state": "string",
+            "data.status": "string",
+            "data.transaction_id": "string",
+            "status": "string"
+        }
+    },
+    "GET /v1/pse/bancos": {
+        "estado": 200,
+        "forma": {
+            "data[].bank_code": "int",
+            "data[].bank_name": "string"
+        }
+    },
     "POST /v1/orders/business": {
         "estado": 200,
         "forma": {
@@ -148,6 +173,66 @@
             "action": "null"
         }
     },
+    "POST /v1/reviews/store": {
+        "estado": 201,
+        "forma": {
+            "message": "string",
+            "review.busines_id": "int",
+            "review.buyer_id": "int",
+            "review.qualification": "string",
+            "review.comment": "string",
+            "review.state": "int",
+            "review.updated_at": "string",
+            "review.created_at": "string",
+            "review.reviews_id": "int",
+            "review.business.busines_id": "int",
+            "review.business.name": "string",
+            "review.business.phone": "null",
+            "review.business.address": "null",
+            "review.business.qualification": "string",
+            "review.business.razonSocial_DCD": "null",
+            "review.business.NIT": "null",
+            "review.business.logo": "null",
+            "review.business.description": "null",
+            "review.business.latitude": "null",
+            "review.business.longitude": "null",
+            "review.business.municipality_id": "null",
+            "review.business.type": "null",
+            "review.business.state": "int",
+            "review.business.max_courier_cash": "null",
+            "review.business.created_at": "null",
+            "review.business.updated_at": "string",
+            "review.business.credit_debt_cap": "null",
+            "review.business.accepting_orders": "bool",
+            "review.business.accepting_changed_at": "null",
+            "review.business.accepting_until": "null",
+            "review.buyer.buyer_id": "int",
+            "review.buyer.user_id": "int",
+            "review.buyer.qualification": "string",
+            "review.buyer.belongs_to_complex": "int",
+            "review.buyer.state": "int",
+            "review.buyer.user.user_id": "int",
+            "review.buyer.user.name": "string",
+            "review.buyer.user.email": "string",
+            "review.buyer.user.phone": "string",
+            "review.buyer.user.address": "null",
+            "review.buyer.user.rol": "int",
+            "review.buyer.user.qualification": "string",
+            "review.buyer.user.state": "bool",
+            "review.buyer.user.email_verified_at": "string",
+            "review.buyer.user.email_verification_token": "null",
+            "review.buyer.user.email_verification_expires_at": "null",
+            "review.buyer.user.area_id": "null",
+            "review.buyer.user.access_level": "string",
+            "review.buyer.user.two_factor_confirmed_at": "null",
+            "review.buyer.user.email_verified_by": "null",
+            "review.buyer.user.created_at": "string",
+            "review.buyer.user.updated_at": "string",
+            "review.buyer.user.policy_accepted_at": "null",
+            "review.buyer.user.policy_version": "null",
+            "review.buyer.user.policy_ip": "null"
+        }
+    },
     "PUT /v1/orders/{id}/cancel": {
         "estado": 200,
         "forma": {
@@ -208,6 +293,13 @@
             "order.payments": "null",
             "devolucion": "null",
             "motivo": "string"
+        }
+    },
+    "PUT /v1/users/notifications/read-all": {
+        "estado": 200,
+        "forma": {
+            "message": "string",
+            "count": "int"
         }
     }
 }

@@ -11,6 +11,7 @@ use App\Services\ContratoService;
 use App\Services\MediaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 /**
  * EL ACUERDO DE VINCULACIÓN, FIRMADO POR SU PROPIO DUEÑO
@@ -140,7 +141,27 @@ class ContratoDelDomiciliarioController extends Controller
                 'en la aplicación por el propio trabajador, desde la dirección '
                     .($request->ip() ?: 'desconocida'),
             );
-        } catch (\Throwable $e) {
+        } catch (RuntimeException $e) {
+            /*
+             * SOLO LO QUE EL SERVICIO LANZA A PROPOSITO.
+             *
+             * Esto atrapaba `\Throwable`, y eso convertia CUALQUIER fallo --el
+             * disco lleno, R2 sin responder, la base caida-- en un 422 «tu dato
+             * esta mal»: el telefono le decia al domiciliario que corrigiera
+             * algo que estaba bien, con el texto crudo de la excepcion metido
+             * en la pantalla, y la averia no llegaba a Sentry porque la
+             * excepcion nunca subia al manejador.
+             *
+             * `ContratoService::generar()` solo lanza `RuntimeException`, y
+             * siempre con un mensaje escrito para quien lo va a leer --«la
+             * firma no se pudo leer: vuelve a trazarla»--. Lo demas sube, sale
+             * 500, y alguien se entera.
+             *
+             * No es la regla de `AGENTS.md` sobre `catch (\Throwable)` --esa
+             * habla de silenciar o de devolver 200--: es que un 422 afirma que
+             * el cliente se equivoco, y de 52 `catch (\Throwable)` que hay en
+             * `app/`, catorce mandan `getMessage()` al cliente. Este es uno.
+             */
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
