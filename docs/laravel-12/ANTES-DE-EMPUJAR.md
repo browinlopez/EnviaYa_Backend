@@ -41,9 +41,9 @@ servidor todavía no sirve.
 > Esa es la decisión que queda, y los números de abajo se miden contra
 > `origin/Devs`, que es la rama que despliega.
 
-Nada está desplegado. Medido el **15 de noviembre de 2026**: son **184 commits**
+Nada está desplegado. Medido el **15 de noviembre de 2026**: son **185 commits**
 en `validacion/integracion` sobre `Devs`, y `Devs` a su vez va **22 commits por
-delante de `origin/Devs`**: **206** en total. La cuenta **incluye el commit que la escribe**: si no, cada
+delante de `origin/Devs`**: **207** en total. La cuenta **incluye el commit que la escribe**: si no, cada
 marcador la deja corta en uno y el verificador avisa para siempre de un
 desajuste que es de construccion. Hasta que `Devs` suba, las ramas
 de trabajo que cuelgan de ahí no tienen dónde apoyarse.
@@ -410,7 +410,7 @@ La app declara **1.0.12**, Play sirve **1.0.11** e iOS sigue en **1.0.9**.
 Lo que queda es desplegar, y eso se mide sobre la rama que despliega, que es
 distinta en cada repositorio: la app **5 commits** sobre `origin/Browin_IOS`
 --su rama de verdad; contra `origin/main` saldrían 157, que es un número que
-asusta y no significa nada--, el panel **10** sobre `origin/master`, y la
+asusta y no significa nada--, el panel **11** sobre `origin/master`, y la
 landing **1** sobre `origin/main`. La app no tiene webhook: sale por OTA, aparte.
 
 > **Aquí decía que el `master` del panel tenía 2 commits por traer, o un merge
@@ -576,6 +576,96 @@ Tres cosas de ese cuerpo:
 
 Y por eso esto va **después** de empujar: hasta que el CI corra una vez, los
 nombres de los checks no existen y la regla se escribiría a ciegas.
+
+---
+
+## 6.5 · El CI de dos repositorios está en rojo, y uno es el que despliega
+
+Medido el **16 de noviembre de 2026** con `gh run list`, no supuesto. Hasta
+ahora este registro hablaba de las puertas **corriéndolas aquí**; esto es lo
+que pasa cuando las corre GitHub.
+
+| repositorio | últimas corridas |
+|---|---|
+| `EnviaYa_Backend` | **fallo** en las tres últimas, sobre `Devs` |
+| `EnviaYa_Admin` | **fallo** en las cinco últimas, desde al menos el 17 de septiembre |
+| `EnviaYa_Aliados` | correcto |
+| `EnviaYa_App` | correcto |
+| `EnviaYa_Landing` | no tiene CI —§5 |
+
+### El backend: 11 pruebas, y 4 tienen causa exacta
+
+La corrida de `Devs` del 6 de noviembre da **11 failed, 4 skipped, 1047
+passed**. Son de hace nueve commits y de antes de esta tanda, pero `Devs` es
+**la rama que despliega**, así que ese es el estado de lo que hoy está en
+producción.
+
+**Cuatro de las once se reprodujeron acá, y la causa es un artefacto que no
+está en el repositorio.** `PasswordConfirmationTest`,
+`PasswordResetTest` ×2 y `ProfileTest` piden vistas Blade; los dos *layouts*
+de Breeze usan `@vite(...)`, que lanza si falta
+`public/build/manifest.json`. Ese fichero **está en `.gitignore`**, el CI
+**no tiene ningún paso que construya assets** —comprobado leyendo el
+workflow— y acá existe con fecha de **septiembre de 2025**.
+
+Comprobado apartándolo y volviendo a correr esos cinco ficheros: **4 failed,
+33 passed**, con el error literal
+`ViteManifestNotFoundException ... (View: resources/views/layouts/guest.blade.php)`.
+
+> Esas cuatro pruebas pasan acá por una carpeta de hace catorce meses que
+> nadie versiona. Es la misma forma que el fallo del lunes de madrugada:
+> verde por un motivo que no está en el repositorio.
+
+**Y ata con una decisión que ya estaba abierta:** las cuatro son del andamiaje
+de Breeze (§7). Si Breeze se retira, estas cuatro se van con él. Si se queda,
+el CI necesita construir los assets.
+
+Las otras siete —`ContratoDesdeLaAppTest` ×5 y `CanalesEnVivoTest` ×2—
+**pasan acá sin el manifiesto**, así que su causa es otra y no se puede
+reproducir en esta máquina. Puede que esta tanda ya las arregle; **no se
+sabrá hasta que `refactor-total` entre en el filtro de ramas del CI**, que es
+otra de las decisiones abiertas.
+
+### El admin: rojo desde septiembre, y por eso nadie vio lo demás
+
+Cinco corridas, cinco fallos. El trabajo muere en **«Pruebas de unidad»** con:
+
+```
+Cannot find module '@rolldown/binding-wasm32-wasi'
+```
+
+**La causa está en el fichero de bloqueo, y se puede leer:** de las cuatro
+entradas con `rolldown` que trae `package-lock.json`, el único binario nativo
+es `@rolldown/binding-win32-x64-msvc`. **No hay ninguno de Linux.** El bloqueo
+se generó en Windows y npm anotó solo la plataforma en la que estaba, así que
+`npm ci` en el runner deja `rolldown` sin binding y `vitest` muere cargando su
+configuración.
+
+**Y lo que eso tapa importa más que el fallo.** El trabajo se cae antes del
+paso «Formato», que por tanto **nunca se ha ejecutado**. Corriendo acá lo que
+corre el CI, después de un `npm ci` limpio:
+
+| paso | resultado |
+|---|---|
+| `npm run lint` | correcto |
+| `npm run test:unit` | correcto |
+| `npm run build` | correcto |
+| `npx prettier --check` | **151 ficheros sin formatear** |
+
+Y ahí hay un segundo problema: **`prettier` no está declarado** en
+`package.json` —solo `eslint-config-prettier`—, así que ese `npx` se baja la
+versión que haya ese día. Una puerta de formato sin versión fijada puede
+cambiar de resultado sin que nadie toque el repositorio.
+
+**También lleva dos ficheros de bloqueo a la vez**: `package-lock.json` del 16
+de septiembre y `pnpm-lock.yaml` del 17 de agosto. El CI usa `npm ci`; la
+instalación que había acá era de pnpm y le faltaban **las 20 dependencias
+directas** aunque `node_modules` tuviera 331 entradas.
+
+**No toqué nada del admin.** Está en `master`, no es trabajo de esta tanda, y
+el arreglo del bloqueo necesita una vuelta de CI para confirmarse. Lo que hay
+acá es la causa, medida, para que arreglarlo sea un rato y no una
+investigación.
 
 ---
 
