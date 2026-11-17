@@ -48,7 +48,10 @@ function sembrarPagos(int $n): void
             'orderSales_id' => $orden,
             'amount' => 1000 * $i,
             'total' => 1000 * $i,
-            'payment_status' => 'approved',
+            // `payment_status` es un entero (1 = cobrado); la cadena va en
+            // `status`, que es la columna que añadió Bold. Escribir 'approved'
+            // en las dos pasa en SQLite y MySQL lo rechaza con un 1366.
+            'payment_status' => 1,
             'status' => 'approved',
             'created_at' => now(),
             'updated_at' => now(),
@@ -108,7 +111,7 @@ test('la búsqueda filtra ANTES de contar', function () {
         ], 'orderSales_id');
 
         DB::table('payments')->insert([
-            'orderSales_id' => $orden, 'amount' => 1000, 'total' => 1000, 'payment_status' => 'approved', 'status' => 'approved',
+            'orderSales_id' => $orden, 'amount' => 1000, 'total' => 1000, 'payment_status' => 1, 'status' => 'approved',
             'created_at' => now(), 'updated_at' => now(),
         ]);
     }

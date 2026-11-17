@@ -1,11 +1,11 @@
 <?php
 
 use App\Models\Business;
-use App\Models\Business\CategoryBusiness;
 use App\Models\Buyer\ResidentialComplex;
 use App\Models\Maps\Country;
 use App\Models\Maps\Department;
 use App\Models\Maps\Municipality;
+use App\Support\ProductTypeSchema;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
@@ -29,11 +29,10 @@ beforeEach(function () {
         'country_id' => $pais->id,
     ]);
 
-    // `business.type` apunta a `category_business`. Son los cuatro tipos
-    // reales del producto, en el orden en que los siembra el proyecto.
-    foreach (['Tienda', 'Farmacia', 'Restaurante', 'Tienda de repuesto'] as $tipo) {
-        CategoryBusiness::forceCreate(['name' => $tipo]);
-    }
+    // `business.type` apunta a `category_business`, con los cuatro tipos
+    // reales y SUS IDS DE VERDAD. Ver `tiposDeNegocioReales()` en Pest.php:
+    // darlos por hecho es lo que tenía este fichero en rojo sobre MySQL.
+    tiposDeNegocioReales();
 
     $this->municipio = Municipality::forceCreate([
         'name' => 'Barranquilla',
@@ -50,7 +49,7 @@ function negocioEn(array $atributos = []): Business
         'latitude' => 10.9985,
         'longitude' => -74.8032,
         'state' => 1,
-        'type' => 1,
+        'type' => ProductTypeSchema::TYPE_GROCERY,
         'qualification' => 0,
     ], $atributos));
 }
@@ -67,7 +66,7 @@ test('devuelve los comercios publicados con su punto', function () {
         'municipality_id' => $this->municipio->id,
         'latitude' => 11.0071,
         'longitude' => -74.8121,
-        'type' => 2,
+        'type' => ProductTypeSchema::TYPE_PHARMACY,
     ]);
 
     $this->getJson('/v1/cobertura-free')
@@ -76,7 +75,7 @@ test('devuelve los comercios publicados con su punto', function () {
         ->assertJsonPath('data.0.nombre', 'Droguería Vida Sana')
         ->assertJsonPath('data.0.latitude', 11.0071)
         ->assertJsonPath('data.0.longitude', -74.8121)
-        ->assertJsonPath('data.0.categoria', 2)
+        ->assertJsonPath('data.0.categoria', ProductTypeSchema::TYPE_PHARMACY)
         ->assertJsonPath('data.0.municipio', 'Barranquilla');
 });
 

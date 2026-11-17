@@ -79,7 +79,9 @@ test('sin afiliación la ficha no revela los precios', function () {
     ])
         ->assertOk()
         ->assertJsonPath('is_affiliated', false)
-        ->assertJsonPath('products.0.price', 0);
+        // Cadena con dos decimales: es lo que manda producción. Ver el
+        // comentario de `price` en `ProductoDeLaFichaResource`.
+        ->assertJsonPath('products.0.price', '0.00');
 });
 
 test('con afiliación la ficha sí muestra el precio', function () {
@@ -97,7 +99,7 @@ test('con afiliación la ficha sí muestra el precio', function () {
     ])
         ->assertOk()
         ->assertJsonPath('is_affiliated', true)
-        ->assertJsonPath('products.0.price', 9500);
+        ->assertJsonPath('products.0.price', '9500.00');
 });
 
 test('la ficha trae el nombre de la categoría, que es como agrupa la pantalla', function () {

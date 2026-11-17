@@ -201,7 +201,8 @@ test('la comision tampoco se cuela dentro de los pagos', function () {
         'amount' => 7000,
         'total' => 7000,
         'domiciliary_fee' => 500,
-        'payment_status' => 'approved',
+        // Entero en `payment_status` (1 = cobrado), cadena en `status`.
+        'payment_status' => 1,
         'status' => 'approved',
         'provider' => 'cash',
         'state' => 1,

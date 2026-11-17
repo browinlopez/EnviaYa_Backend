@@ -43,6 +43,8 @@ class ProductBusiness extends Audit
 
     protected $casts = [
         'price' => 'decimal:2',
+        // `decimal(3,2)`, igual que `price`: cadena en los dos motores.
+        'qualification' => 'decimal:2',
         'stock_weight' => 'decimal:3',
         'min_qty' => 'decimal:3',
         'step_qty' => 'decimal:3',

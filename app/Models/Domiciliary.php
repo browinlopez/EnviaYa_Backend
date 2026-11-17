@@ -22,6 +22,17 @@ class Domiciliary extends Audit
 
     protected $fillable = ['user_id', 'available', 'document',  'qualification', 'state', 'registrado_por_negocio'];
 
+    /*
+     * `qualification` es `decimal(3,2)` y PDO de MySQL devuelve DECIMAL como
+     * CADENA, mientras SQLite lo devuelve numérico. Sin molde, el tipo de este
+     * campo en la respuesta dependía del motor: la suite veía 0 y la app
+     * instalada recibía "0.00". El molde lo fija en cadena en los dos, que es
+     * lo que ya manda producción, así que la respuesta no cambia.
+     */
+    protected $casts = [
+        'qualification' => 'decimal:2',
+    ];
+
     /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {

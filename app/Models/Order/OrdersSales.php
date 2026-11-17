@@ -107,6 +107,26 @@ class OrdersSales extends Audit
         'delivery_subsidy' => 'decimal:2',
         'cash_due' => 'decimal:2',
         'cash_tendered' => 'decimal:2',
+        /*
+         * EL DINERO DEL PEDIDO, MOLDEADO IGUAL QUE SUS CUATRO HERMANAS.
+         *
+         * Las cuatro de arriba ya eran `decimal:2` y estas no, y esa
+         * incoherencia era un contrato que cambiaba según el motor. Las cinco
+         * columnas son `decimal(10,2)`; PDO de MySQL devuelve DECIMAL como
+         * CADENA y SQLite lo devuelve numérico, así que sin molde
+         * `total` llegaba como "15000.00" en producción y como 15000 en la
+         * suite. La forma congelada de las respuestas se tomó sobre SQLite y
+         * llevaba meses describiendo una API que no existe.
+         *
+         * El molde `decimal` de Laravel devuelve cadena en los dos motores, y
+         * con el mismo formato que ya manda MySQL --`number_format($v, 2)`--,
+         * así que LA RESPUESTA DE PRODUCCIÓN NO CAMBIA: lo que cambia es que
+         * la suite por fin mide lo que recibe la app.
+         */
+        'total' => 'decimal:2',
+        'subtotal' => 'decimal:2',
+        'domicilio' => 'decimal:2',
+        'domiciliary_fee' => 'decimal:2',
         'weighing_state' => 'integer',
         'weighed_at' => 'datetime',
     ];
