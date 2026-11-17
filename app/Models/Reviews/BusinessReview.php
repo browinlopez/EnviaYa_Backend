@@ -28,6 +28,20 @@ class BusinessReview extends Audit
         'state',
     ];
 
+    /*
+     * `qualification` es `decimal(3,2)`, y PDO de MySQL devuelve DECIMAL como
+     * CADENA mientras SQLite lo devuelve numerico. Sin molde, el tipo de este
+     * campo en la respuesta dependia del motor: la suite veia 5 y la app
+     * instalada recibia "5.00".
+     *
+     * Lo encontro la prueba de forma de `POST /v1/reviews/store`, que es la
+     * que la app llama desde el modal de «califica tu pedido»: al congelarla
+     * salieron cuatro `qualification` como `int`.
+     */
+    protected $casts = [
+        'qualification' => 'decimal:2',
+    ];
+
     /** @return BelongsTo<Business, $this> */
     public function business(): BelongsTo
     {

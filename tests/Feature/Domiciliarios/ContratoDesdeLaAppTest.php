@@ -2,6 +2,7 @@
 
 use App\Models\Rol;
 use App\Models\User;
+use App\Services\ContratoService;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -190,6 +191,34 @@ test('una firma que no es una imagen se rechaza', function () {
         'acepta' => true,
     ])->assertStatus(422);
 });
+
+test('un fallo inesperado del servicio ya NO se disfraza de 422', function () {
+    /*
+     * POR QUE ESTA PRUEBA EXISTE. El `catch` de este endpoint atrapaba
+     * `\Throwable`, asi que una averia del almacenamiento o de la base salia
+     * como 422 con el texto de la excepcion dentro. Un 422 le dice al telefono
+     * «lo que mandaste esta mal» y hace que el domiciliario reintente
+     * corrigiendo una firma que estaba perfecta, mientras la averia de verdad
+     * no aparece en ningun sitio.
+     *
+     * `LogicException` no es `RuntimeException`, asi que representa justo eso:
+     * algo que el servicio NO lanza a proposito. Lo que se afirma es que no
+     * sale 422; que termine en 500 es cosa del manejador de Laravel.
+     */
+    domiciliarioQueEntra();
+
+    $falso = Mockery::mock(ContratoService::class);
+    $falso->shouldReceive('generar')->andThrow(new LogicException('el disco dijo no'));
+    app()->instance(ContratoService::class, $falso);
+
+    $r = $this->withoutExceptionHandling()->postJson('/v1/domiciliaries/contrato', [
+        'signature' => firmaDePrueba(),
+        'city' => 'Barranquilla',
+        'acepta' => true,
+    ]);
+
+    expect($r->status())->not->toBe(422);
+})->throws(LogicException::class);
 
 test('quien no es domiciliario no tiene acuerdo que firmar', function () {
     Rol::firstOrCreate(['rol_id' => 1], ['name' => 'comprador', 'guard_name' => 'web']);

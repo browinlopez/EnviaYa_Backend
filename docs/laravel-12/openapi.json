@@ -11376,7 +11376,33 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                        "description": "Forma congelada en tests/Feature/Contrato/forma-de-las-respuestas.json",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "busines_id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "name": {
+                                                        "type": "string"
+                                                    },
+                                                    "productos": {
+                                                        "type": "integer"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Sin token, o token invalido."
@@ -11917,19 +11943,17 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
-                                        "message": {
-                                            "type": "string"
-                                        },
                                         "business": {
                                             "type": "object",
                                             "properties": {
+                                                "address": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
                                                 "business_id": {
                                                     "type": "integer"
                                                 },
-                                                "name": {
-                                                    "type": "string"
-                                                },
-                                                "address": {
+                                                "city": {
                                                     "type": "string",
                                                     "nullable": true
                                                 },
@@ -11937,15 +11961,18 @@
                                                     "type": "string",
                                                     "nullable": true
                                                 },
+                                                "logo": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
                                                 "longitude": {
                                                     "type": "string",
                                                     "nullable": true
                                                 },
-                                                "phone": {
-                                                    "type": "string",
-                                                    "nullable": true
+                                                "name": {
+                                                    "type": "string"
                                                 },
-                                                "city": {
+                                                "phone": {
                                                     "type": "string",
                                                     "nullable": true
                                                 },
@@ -11954,95 +11981,57 @@
                                                 },
                                                 "state": {
                                                     "type": "integer"
-                                                },
-                                                "logo": {
-                                                    "type": "string",
-                                                    "nullable": true
                                                 }
                                             }
+                                        },
+                                        "message": {
+                                            "type": "string"
                                         },
                                         "orders": {
                                             "type": "array",
                                             "items": {
                                                 "type": "object",
                                                 "properties": {
-                                                    "order_id": {
-                                                        "type": "integer"
-                                                    },
-                                                    "buyer_id": {
-                                                        "type": "integer"
-                                                    },
                                                     "busines_id": {
                                                         "type": "integer"
                                                     },
-                                                    "total": {
-                                                        "type": "string"
-                                                    },
-                                                    "subtotal": {
-                                                        "type": "string"
-                                                    },
-                                                    "domicilio": {
-                                                        "type": "string"
-                                                    },
-                                                    "domiciliary_fee": {
-                                                        "type": "string"
-                                                    },
-                                                    "cash_tendered": {
-                                                        "type": "string",
-                                                        "nullable": true
-                                                    },
-                                                    "change_due": {
-                                                        "type": "string",
-                                                        "nullable": true
-                                                    },
-                                                    "methods_id": {
-                                                        "type": "integer"
-                                                    },
-                                                    "payment_state": {
-                                                        "type": "string"
-                                                    },
-                                                    "sale_date": {
-                                                        "type": "string"
-                                                    },
-                                                    "is_scheduled": {
-                                                        "type": "boolean"
-                                                    },
-                                                    "delivery_date": {
-                                                        "type": "string",
-                                                        "nullable": true
-                                                    },
-                                                    "delivery_type": {
-                                                        "type": "string"
-                                                    },
-                                                    "pickup": {
-                                                        "type": "boolean"
-                                                    },
-                                                    "pickup_time": {
-                                                        "type": "string",
-                                                        "nullable": true
-                                                    },
-                                                    "dispatched_at": {
-                                                        "type": "string",
-                                                        "nullable": true
-                                                    },
-                                                    "promised_minutes": {
-                                                        "type": "string",
-                                                        "nullable": true
-                                                    },
-                                                    "delivery_minutes": {
-                                                        "type": "string",
-                                                        "nullable": true
-                                                    },
-                                                    "on_time": {
-                                                        "type": "string",
-                                                        "nullable": true
-                                                    },
-                                                    "delay_minutes": {
-                                                        "type": "string",
-                                                        "nullable": true
-                                                    },
-                                                    "state": {
-                                                        "type": "integer"
+                                                    "business": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "address": {
+                                                                "type": "string",
+                                                                "nullable": true
+                                                            },
+                                                            "business_id": {
+                                                                "type": "integer"
+                                                            },
+                                                            "city": {
+                                                                "type": "string",
+                                                                "nullable": true
+                                                            },
+                                                            "latitude": {
+                                                                "type": "string",
+                                                                "nullable": true
+                                                            },
+                                                            "logo": {
+                                                                "type": "string",
+                                                                "nullable": true
+                                                            },
+                                                            "longitude": {
+                                                                "type": "string",
+                                                                "nullable": true
+                                                            },
+                                                            "name": {
+                                                                "type": "string"
+                                                            },
+                                                            "phone": {
+                                                                "type": "string",
+                                                                "nullable": true
+                                                            },
+                                                            "state": {
+                                                                "type": "integer"
+                                                            }
+                                                        }
                                                     },
                                                     "buyer": {
                                                         "type": "object",
@@ -12059,95 +12048,60 @@
                                                             "user": {
                                                                 "type": "object",
                                                                 "properties": {
-                                                                    "user_id": {
-                                                                        "type": "integer"
-                                                                    },
-                                                                    "name": {
-                                                                        "type": "string"
+                                                                    "address": {
+                                                                        "type": "string",
+                                                                        "nullable": true
                                                                     },
                                                                     "email": {
+                                                                        "type": "string"
+                                                                    },
+                                                                    "name": {
                                                                         "type": "string"
                                                                     },
                                                                     "phone": {
                                                                         "type": "string"
                                                                     },
-                                                                    "address": {
-                                                                        "type": "string",
-                                                                        "nullable": true
+                                                                    "qualification": {
+                                                                        "type": "string"
                                                                     },
                                                                     "rol": {
                                                                         "type": "integer"
                                                                     },
-                                                                    "qualification": {
-                                                                        "type": "string"
-                                                                    },
                                                                     "state": {
                                                                         "type": "boolean"
+                                                                    },
+                                                                    "user_id": {
+                                                                        "type": "integer"
                                                                     }
                                                                 }
                                                             }
                                                         }
                                                     },
-                                                    "business": {
-                                                        "type": "object",
-                                                        "properties": {
-                                                            "business_id": {
-                                                                "type": "integer"
-                                                            },
-                                                            "name": {
-                                                                "type": "string"
-                                                            },
-                                                            "address": {
-                                                                "type": "string",
-                                                                "nullable": true
-                                                            },
-                                                            "latitude": {
-                                                                "type": "string",
-                                                                "nullable": true
-                                                            },
-                                                            "longitude": {
-                                                                "type": "string",
-                                                                "nullable": true
-                                                            },
-                                                            "phone": {
-                                                                "type": "string",
-                                                                "nullable": true
-                                                            },
-                                                            "city": {
-                                                                "type": "string",
-                                                                "nullable": true
-                                                            },
-                                                            "state": {
-                                                                "type": "integer"
-                                                            },
-                                                            "logo": {
-                                                                "type": "string",
-                                                                "nullable": true
-                                                            }
-                                                        }
+                                                    "buyer_id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "cash_tendered": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    },
+                                                    "change_due": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    },
+                                                    "delay_minutes": {
+                                                        "type": "string",
+                                                        "nullable": true
                                                     },
                                                     "delivery_address": {
                                                         "type": "object",
                                                         "properties": {
-                                                            "address_id": {
-                                                                "type": "integer"
-                                                            },
                                                             "address": {
                                                                 "type": "string"
                                                             },
-                                                            "street": {
-                                                                "type": "string",
-                                                                "nullable": true
+                                                            "address_id": {
+                                                                "type": "integer"
                                                             },
                                                             "alias": {
-                                                                "type": "string",
-                                                                "nullable": true
-                                                            },
-                                                            "municipality": {
-                                                                "type": "string",
-                                                                "nullable": true
-                                                            },
-                                                            "department": {
                                                                 "type": "string",
                                                                 "nullable": true
                                                             },
@@ -12155,6 +12109,10 @@
                                                                 "type": "string",
                                                                 "nullable": true
                                                             },
+                                                            "department": {
+                                                                "type": "string",
+                                                                "nullable": true
+                                                            },
                                                             "latitude": {
                                                                 "type": "string",
                                                                 "nullable": true
@@ -12162,26 +12120,103 @@
                                                             "longitude": {
                                                                 "type": "string",
                                                                 "nullable": true
+                                                            },
+                                                            "municipality": {
+                                                                "type": "string",
+                                                                "nullable": true
+                                                            },
+                                                            "street": {
+                                                                "type": "string",
+                                                                "nullable": true
                                                             }
                                                         }
+                                                    },
+                                                    "delivery_date": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    },
+                                                    "delivery_minutes": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    },
+                                                    "delivery_type": {
+                                                        "type": "string"
+                                                    },
+                                                    "details": {
+                                                        "type": "array",
+                                                        "items": {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "amount": {
+                                                                    "type": "integer"
+                                                                },
+                                                                "category": {
+                                                                    "type": "string",
+                                                                    "nullable": true
+                                                                },
+                                                                "description": {
+                                                                    "type": "string",
+                                                                    "nullable": true
+                                                                },
+                                                                "image": {
+                                                                    "type": "string",
+                                                                    "nullable": true
+                                                                },
+                                                                "line_total": {
+                                                                    "type": "string",
+                                                                    "nullable": true
+                                                                },
+                                                                "name": {
+                                                                    "type": "string"
+                                                                },
+                                                                "orderDet_id": {
+                                                                    "type": "integer"
+                                                                },
+                                                                "pedido_por": {
+                                                                    "type": "string",
+                                                                    "nullable": true
+                                                                },
+                                                                "product_id": {
+                                                                    "type": "integer"
+                                                                },
+                                                                "qty_final": {
+                                                                    "type": "string",
+                                                                    "nullable": true
+                                                                },
+                                                                "qty_requested": {
+                                                                    "type": "string",
+                                                                    "nullable": true
+                                                                },
+                                                                "sale_unit": {
+                                                                    "type": "string"
+                                                                },
+                                                                "unit_price": {
+                                                                    "type": "string"
+                                                                }
+                                                            }
+                                                        }
+                                                    },
+                                                    "dispatched_at": {
+                                                        "type": "string",
+                                                        "nullable": true
                                                     },
                                                     "domiciliary": {
                                                         "type": "object",
                                                         "properties": {
-                                                            "name": {
-                                                                "type": "string"
-                                                            },
-                                                            "email": {
-                                                                "type": "string"
-                                                            },
-                                                            "phone": {
-                                                                "type": "string"
+                                                            "available": {
+                                                                "type": "integer"
                                                             },
                                                             "domiciliary_id": {
                                                                 "type": "integer"
                                                             },
-                                                            "available": {
-                                                                "type": "integer"
+                                                            "email": {
+                                                                "type": "string"
+                                                            },
+                                                            "name": {
+                                                                "type": "string"
+                                                            },
+                                                            "phone": {
+                                                                "type": "string"
                                                             },
                                                             "qualification": {
                                                                 "type": "string"
@@ -12194,66 +12229,57 @@
                                                             }
                                                         }
                                                     },
-                                                    "details": {
-                                                        "type": "array",
-                                                        "items": {
-                                                            "type": "object",
-                                                            "properties": {
-                                                                "orderDet_id": {
-                                                                    "type": "integer"
-                                                                },
-                                                                "product_id": {
-                                                                    "type": "integer"
-                                                                },
-                                                                "name": {
-                                                                    "type": "string"
-                                                                },
-                                                                "description": {
-                                                                    "type": "string",
-                                                                    "nullable": true
-                                                                },
-                                                                "category": {
-                                                                    "type": "string",
-                                                                    "nullable": true
-                                                                },
-                                                                "image": {
-                                                                    "type": "string",
-                                                                    "nullable": true
-                                                                },
-                                                                "amount": {
-                                                                    "type": "integer"
-                                                                },
-                                                                "unit_price": {
-                                                                    "type": "string"
-                                                                },
-                                                                "sale_unit": {
-                                                                    "type": "string"
-                                                                },
-                                                                "pedido_por": {
-                                                                    "type": "string",
-                                                                    "nullable": true
-                                                                },
-                                                                "qty_requested": {
-                                                                    "type": "string",
-                                                                    "nullable": true
-                                                                },
-                                                                "qty_final": {
-                                                                    "type": "string",
-                                                                    "nullable": true
-                                                                },
-                                                                "line_total": {
-                                                                    "type": "string",
-                                                                    "nullable": true
-                                                                }
-                                                            }
-                                                        }
+                                                    "domiciliary_fee": {
+                                                        "type": "string"
                                                     },
-                                                    "promotions": {
-                                                        "type": "object"
+                                                    "domicilio": {
+                                                        "type": "string"
+                                                    },
+                                                    "is_scheduled": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "methods_id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "on_time": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    },
+                                                    "order_id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "payment_state": {
+                                                        "type": "string"
                                                     },
                                                     "payments": {
                                                         "type": "string",
                                                         "nullable": true
+                                                    },
+                                                    "pickup": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "pickup_time": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    },
+                                                    "promised_minutes": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    },
+                                                    "promotions": {
+                                                        "type": "object"
+                                                    },
+                                                    "sale_date": {
+                                                        "type": "string"
+                                                    },
+                                                    "state": {
+                                                        "type": "integer"
+                                                    },
+                                                    "subtotal": {
+                                                        "type": "string"
+                                                    },
+                                                    "total": {
+                                                        "type": "string"
                                                     }
                                                 }
                                             }
@@ -12438,23 +12464,63 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "action": {
+                                            "type": "string",
+                                            "nullable": true
+                                        },
+                                        "bold_reference_id": {
+                                            "type": "string",
+                                            "nullable": true
+                                        },
                                         "message": {
                                             "type": "string"
                                         },
                                         "order": {
                                             "type": "object",
                                             "properties": {
-                                                "order_id": {
-                                                    "type": "integer"
-                                                },
-                                                "buyer_id": {
-                                                    "type": "integer"
-                                                },
                                                 "busines_id": {
                                                     "type": "integer"
                                                 },
-                                                "total": {
-                                                    "type": "string"
+                                                "business": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "address": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "business_id": {
+                                                            "type": "integer"
+                                                        },
+                                                        "city": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "latitude": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "logo": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "longitude": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "name": {
+                                                            "type": "string"
+                                                        },
+                                                        "phone": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "state": {
+                                                            "type": "integer"
+                                                        }
+                                                    }
+                                                },
+                                                "buyer_id": {
+                                                    "type": "integer"
                                                 },
                                                 "cash_tendered": {
                                                     "type": "string",
@@ -12464,106 +12530,20 @@
                                                     "type": "string",
                                                     "nullable": true
                                                 },
-                                                "weighing_state": {
-                                                    "type": "integer"
-                                                },
-                                                "sale_date": {
-                                                    "type": "string"
-                                                },
-                                                "delivery_date": {
-                                                    "type": "string",
-                                                    "nullable": true
-                                                },
-                                                "state": {
-                                                    "type": "integer"
-                                                },
-                                                "is_scheduled": {
-                                                    "type": "boolean"
-                                                },
-                                                "has_review": {
-                                                    "type": "string",
-                                                    "nullable": true
-                                                },
-                                                "dispatched_at": {
-                                                    "type": "string",
-                                                    "nullable": true
-                                                },
-                                                "promised_minutes": {
-                                                    "type": "string",
-                                                    "nullable": true
-                                                },
-                                                "delivery_minutes": {
-                                                    "type": "string",
-                                                    "nullable": true
-                                                },
-                                                "on_time": {
-                                                    "type": "string",
-                                                    "nullable": true
-                                                },
                                                 "delay_minutes": {
                                                     "type": "string",
                                                     "nullable": true
                                                 },
-                                                "domiciliary": {
-                                                    "type": "string",
-                                                    "nullable": true
-                                                },
-                                                "business": {
-                                                    "type": "object",
-                                                    "properties": {
-                                                        "business_id": {
-                                                            "type": "integer"
-                                                        },
-                                                        "name": {
-                                                            "type": "string"
-                                                        },
-                                                        "address": {
-                                                            "type": "string",
-                                                            "nullable": true
-                                                        },
-                                                        "latitude": {
-                                                            "type": "string",
-                                                            "nullable": true
-                                                        },
-                                                        "longitude": {
-                                                            "type": "string",
-                                                            "nullable": true
-                                                        },
-                                                        "phone": {
-                                                            "type": "string",
-                                                            "nullable": true
-                                                        },
-                                                        "city": {
-                                                            "type": "string",
-                                                            "nullable": true
-                                                        },
-                                                        "state": {
-                                                            "type": "integer"
-                                                        },
-                                                        "logo": {
-                                                            "type": "string",
-                                                            "nullable": true
-                                                        }
-                                                    }
-                                                },
                                                 "delivery_address": {
                                                     "type": "object",
                                                     "properties": {
-                                                        "address_id": {
-                                                            "type": "integer"
-                                                        },
                                                         "address": {
                                                             "type": "string"
                                                         },
+                                                        "address_id": {
+                                                            "type": "integer"
+                                                        },
                                                         "alias": {
-                                                            "type": "string",
-                                                            "nullable": true
-                                                        },
-                                                        "municipality": {
-                                                            "type": "string",
-                                                            "nullable": true
-                                                        },
-                                                        "department": {
                                                             "type": "string",
                                                             "nullable": true
                                                         },
@@ -12571,6 +12551,10 @@
                                                             "type": "string",
                                                             "nullable": true
                                                         },
+                                                        "department": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
                                                         "latitude": {
                                                             "type": "string",
                                                             "nullable": true
@@ -12578,28 +12562,34 @@
                                                         "longitude": {
                                                             "type": "string",
                                                             "nullable": true
+                                                        },
+                                                        "municipality": {
+                                                            "type": "string",
+                                                            "nullable": true
                                                         }
                                                     }
+                                                },
+                                                "delivery_date": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "delivery_minutes": {
+                                                    "type": "string",
+                                                    "nullable": true
                                                 },
                                                 "details": {
                                                     "type": "array",
                                                     "items": {
                                                         "type": "object",
                                                         "properties": {
-                                                            "orderDet_id": {
+                                                            "amount": {
                                                                 "type": "integer"
                                                             },
-                                                            "product_id": {
-                                                                "type": "integer"
-                                                            },
-                                                            "name": {
-                                                                "type": "string"
-                                                            },
-                                                            "description": {
+                                                            "category": {
                                                                 "type": "string",
                                                                 "nullable": true
                                                             },
-                                                            "category": {
+                                                            "description": {
                                                                 "type": "string",
                                                                 "nullable": true
                                                             },
@@ -12607,16 +12597,24 @@
                                                                 "type": "string",
                                                                 "nullable": true
                                                             },
-                                                            "amount": {
+                                                            "line_total": {
+                                                                "type": "string",
+                                                                "nullable": true
+                                                            },
+                                                            "name": {
+                                                                "type": "string"
+                                                            },
+                                                            "orderDet_id": {
                                                                 "type": "integer"
                                                             },
-                                                            "unit_price": {
-                                                                "type": "string"
-                                                            },
-                                                            "sale_unit": {
-                                                                "type": "string"
-                                                            },
                                                             "pedido_por": {
+                                                                "type": "string",
+                                                                "nullable": true
+                                                            },
+                                                            "product_id": {
+                                                                "type": "integer"
+                                                            },
+                                                            "qty_final": {
                                                                 "type": "string",
                                                                 "nullable": true
                                                             },
@@ -12624,33 +12622,61 @@
                                                                 "type": "string",
                                                                 "nullable": true
                                                             },
-                                                            "qty_final": {
-                                                                "type": "string",
-                                                                "nullable": true
+                                                            "sale_unit": {
+                                                                "type": "string"
                                                             },
-                                                            "line_total": {
-                                                                "type": "string",
-                                                                "nullable": true
+                                                            "unit_price": {
+                                                                "type": "string"
                                                             }
                                                         }
                                                     }
                                                 },
-                                                "promotions": {
-                                                    "type": "object"
+                                                "dispatched_at": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "domiciliary": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "has_review": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "is_scheduled": {
+                                                    "type": "boolean"
+                                                },
+                                                "on_time": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "order_id": {
+                                                    "type": "integer"
                                                 },
                                                 "payments": {
                                                     "type": "string",
                                                     "nullable": true
+                                                },
+                                                "promised_minutes": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "promotions": {
+                                                    "type": "object"
+                                                },
+                                                "sale_date": {
+                                                    "type": "string"
+                                                },
+                                                "state": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "string"
+                                                },
+                                                "weighing_state": {
+                                                    "type": "integer"
                                                 }
                                             }
-                                        },
-                                        "bold_reference_id": {
-                                            "type": "string",
-                                            "nullable": true
-                                        },
-                                        "action": {
-                                            "type": "string",
-                                            "nullable": true
                                         }
                                     }
                                 }
@@ -12797,23 +12823,62 @@
                                 "schema": {
                                     "type": "object",
                                     "properties": {
+                                        "devolucion": {
+                                            "type": "string",
+                                            "nullable": true
+                                        },
                                         "message": {
+                                            "type": "string"
+                                        },
+                                        "motivo": {
                                             "type": "string"
                                         },
                                         "order": {
                                             "type": "object",
                                             "properties": {
-                                                "order_id": {
-                                                    "type": "integer"
-                                                },
-                                                "buyer_id": {
-                                                    "type": "integer"
-                                                },
                                                 "busines_id": {
                                                     "type": "integer"
                                                 },
-                                                "total": {
-                                                    "type": "string"
+                                                "business": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "address": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "business_id": {
+                                                            "type": "integer"
+                                                        },
+                                                        "city": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "latitude": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "logo": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "longitude": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "name": {
+                                                            "type": "string"
+                                                        },
+                                                        "phone": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "state": {
+                                                            "type": "integer"
+                                                        }
+                                                    }
+                                                },
+                                                "buyer_id": {
+                                                    "type": "integer"
                                                 },
                                                 "cash_tendered": {
                                                     "type": "string",
@@ -12823,30 +12888,46 @@
                                                     "type": "string",
                                                     "nullable": true
                                                 },
-                                                "weighing_state": {
-                                                    "type": "integer"
+                                                "delay_minutes": {
+                                                    "type": "string",
+                                                    "nullable": true
                                                 },
-                                                "sale_date": {
-                                                    "type": "string"
+                                                "delivery_address": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "address": {
+                                                            "type": "string"
+                                                        },
+                                                        "address_id": {
+                                                            "type": "integer"
+                                                        },
+                                                        "alias": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "country": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "department": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "latitude": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "longitude": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "municipality": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        }
+                                                    }
                                                 },
                                                 "delivery_date": {
-                                                    "type": "string",
-                                                    "nullable": true
-                                                },
-                                                "state": {
-                                                    "type": "integer"
-                                                },
-                                                "is_scheduled": {
-                                                    "type": "boolean"
-                                                },
-                                                "has_review": {
-                                                    "type": "integer"
-                                                },
-                                                "dispatched_at": {
-                                                    "type": "string",
-                                                    "nullable": true
-                                                },
-                                                "promised_minutes": {
                                                     "type": "string",
                                                     "nullable": true
                                                 },
@@ -12854,11 +12935,61 @@
                                                     "type": "string",
                                                     "nullable": true
                                                 },
-                                                "on_time": {
-                                                    "type": "string",
-                                                    "nullable": true
+                                                "details": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "amount": {
+                                                                "type": "integer"
+                                                            },
+                                                            "category": {
+                                                                "type": "string",
+                                                                "nullable": true
+                                                            },
+                                                            "description": {
+                                                                "type": "string",
+                                                                "nullable": true
+                                                            },
+                                                            "image": {
+                                                                "type": "string",
+                                                                "nullable": true
+                                                            },
+                                                            "line_total": {
+                                                                "type": "string",
+                                                                "nullable": true
+                                                            },
+                                                            "name": {
+                                                                "type": "string"
+                                                            },
+                                                            "orderDet_id": {
+                                                                "type": "integer"
+                                                            },
+                                                            "pedido_por": {
+                                                                "type": "string",
+                                                                "nullable": true
+                                                            },
+                                                            "product_id": {
+                                                                "type": "integer"
+                                                            },
+                                                            "qty_final": {
+                                                                "type": "string",
+                                                                "nullable": true
+                                                            },
+                                                            "qty_requested": {
+                                                                "type": "string",
+                                                                "nullable": true
+                                                            },
+                                                            "sale_unit": {
+                                                                "type": "string"
+                                                            },
+                                                            "unit_price": {
+                                                                "type": "string"
+                                                            }
+                                                        }
+                                                    }
                                                 },
-                                                "delay_minutes": {
+                                                "dispatched_at": {
                                                     "type": "string",
                                                     "nullable": true
                                                 },
@@ -12866,9 +12997,6 @@
                                                     "type": "object",
                                                     "properties": {
                                                         "domiciliary_id": {
-                                                            "type": "integer"
-                                                        },
-                                                        "user_id": {
                                                             "type": "integer"
                                                         },
                                                         "name": {
@@ -12879,151 +13007,49 @@
                                                         },
                                                         "qualification": {
                                                             "type": "string"
-                                                        }
-                                                    }
-                                                },
-                                                "business": {
-                                                    "type": "object",
-                                                    "properties": {
-                                                        "business_id": {
+                                                        },
+                                                        "user_id": {
                                                             "type": "integer"
-                                                        },
-                                                        "name": {
-                                                            "type": "string"
-                                                        },
-                                                        "address": {
-                                                            "type": "string",
-                                                            "nullable": true
-                                                        },
-                                                        "latitude": {
-                                                            "type": "string",
-                                                            "nullable": true
-                                                        },
-                                                        "longitude": {
-                                                            "type": "string",
-                                                            "nullable": true
-                                                        },
-                                                        "phone": {
-                                                            "type": "string",
-                                                            "nullable": true
-                                                        },
-                                                        "city": {
-                                                            "type": "string",
-                                                            "nullable": true
-                                                        },
-                                                        "state": {
-                                                            "type": "integer"
-                                                        },
-                                                        "logo": {
-                                                            "type": "string",
-                                                            "nullable": true
                                                         }
                                                     }
                                                 },
-                                                "delivery_address": {
-                                                    "type": "object",
-                                                    "properties": {
-                                                        "address_id": {
-                                                            "type": "integer"
-                                                        },
-                                                        "address": {
-                                                            "type": "string"
-                                                        },
-                                                        "alias": {
-                                                            "type": "string",
-                                                            "nullable": true
-                                                        },
-                                                        "municipality": {
-                                                            "type": "string",
-                                                            "nullable": true
-                                                        },
-                                                        "department": {
-                                                            "type": "string",
-                                                            "nullable": true
-                                                        },
-                                                        "country": {
-                                                            "type": "string",
-                                                            "nullable": true
-                                                        },
-                                                        "latitude": {
-                                                            "type": "string",
-                                                            "nullable": true
-                                                        },
-                                                        "longitude": {
-                                                            "type": "string",
-                                                            "nullable": true
-                                                        }
-                                                    }
+                                                "has_review": {
+                                                    "type": "integer"
                                                 },
-                                                "details": {
-                                                    "type": "array",
-                                                    "items": {
-                                                        "type": "object",
-                                                        "properties": {
-                                                            "orderDet_id": {
-                                                                "type": "integer"
-                                                            },
-                                                            "product_id": {
-                                                                "type": "integer"
-                                                            },
-                                                            "name": {
-                                                                "type": "string"
-                                                            },
-                                                            "description": {
-                                                                "type": "string",
-                                                                "nullable": true
-                                                            },
-                                                            "category": {
-                                                                "type": "string",
-                                                                "nullable": true
-                                                            },
-                                                            "image": {
-                                                                "type": "string",
-                                                                "nullable": true
-                                                            },
-                                                            "amount": {
-                                                                "type": "integer"
-                                                            },
-                                                            "unit_price": {
-                                                                "type": "string"
-                                                            },
-                                                            "sale_unit": {
-                                                                "type": "string"
-                                                            },
-                                                            "pedido_por": {
-                                                                "type": "string",
-                                                                "nullable": true
-                                                            },
-                                                            "qty_requested": {
-                                                                "type": "string",
-                                                                "nullable": true
-                                                            },
-                                                            "qty_final": {
-                                                                "type": "string",
-                                                                "nullable": true
-                                                            },
-                                                            "line_total": {
-                                                                "type": "string",
-                                                                "nullable": true
-                                                            }
-                                                        }
-                                                    }
+                                                "is_scheduled": {
+                                                    "type": "boolean"
                                                 },
-                                                "promotions": {
-                                                    "type": "object"
+                                                "on_time": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "order_id": {
+                                                    "type": "integer"
                                                 },
                                                 "payments": {
                                                     "type": "string",
                                                     "nullable": true
+                                                },
+                                                "promised_minutes": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "promotions": {
+                                                    "type": "object"
+                                                },
+                                                "sale_date": {
+                                                    "type": "string"
+                                                },
+                                                "state": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "string"
+                                                },
+                                                "weighing_state": {
+                                                    "type": "integer"
                                                 }
                                             }
-                                        },
-                                        "devolucion": {
-                                            "type": "string",
-                                            "nullable": true
-                                        },
-                                        "motivo": {
-                                            "type": "string"
                                         }
                                     }
                                 }
@@ -13106,7 +13132,36 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                        "description": "Forma congelada en tests/Feature/Contrato/forma-de-las-respuestas.json",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "status": {
+                                                    "type": "string"
+                                                },
+                                                "transaction_id": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        },
+                                        "order_payment_state": {
+                                            "type": "string"
+                                        },
+                                        "payment_status": {
+                                            "type": "string"
+                                        },
+                                        "status": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Sin token, o token invalido."
@@ -13346,7 +13401,30 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                        "description": "Forma congelada en tests/Feature/Contrato/forma-de-las-respuestas.json",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "bank_code": {
+                                                        "type": "integer"
+                                                    },
+                                                    "bank_name": {
+                                                        "type": "string"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Sin token, o token invalido."
@@ -13577,8 +13655,226 @@
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    "201": {
+                        "description": "Forma congelada en tests/Feature/Contrato/forma-de-las-respuestas.json",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "review": {
+                                            "type": "object",
+                                            "properties": {
+                                                "busines_id": {
+                                                    "type": "integer"
+                                                },
+                                                "business": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "NIT": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "accepting_changed_at": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "accepting_orders": {
+                                                            "type": "boolean"
+                                                        },
+                                                        "accepting_until": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "address": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "busines_id": {
+                                                            "type": "integer"
+                                                        },
+                                                        "created_at": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "credit_debt_cap": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "description": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "latitude": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "logo": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "longitude": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "max_courier_cash": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "municipality_id": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "name": {
+                                                            "type": "string"
+                                                        },
+                                                        "phone": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "qualification": {
+                                                            "type": "string"
+                                                        },
+                                                        "razonSocial_DCD": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "state": {
+                                                            "type": "integer"
+                                                        },
+                                                        "type": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "updated_at": {
+                                                            "type": "string"
+                                                        }
+                                                    }
+                                                },
+                                                "buyer": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "belongs_to_complex": {
+                                                            "type": "integer"
+                                                        },
+                                                        "buyer_id": {
+                                                            "type": "integer"
+                                                        },
+                                                        "qualification": {
+                                                            "type": "string"
+                                                        },
+                                                        "state": {
+                                                            "type": "integer"
+                                                        },
+                                                        "user": {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "access_level": {
+                                                                    "type": "string"
+                                                                },
+                                                                "address": {
+                                                                    "type": "string",
+                                                                    "nullable": true
+                                                                },
+                                                                "area_id": {
+                                                                    "type": "string",
+                                                                    "nullable": true
+                                                                },
+                                                                "created_at": {
+                                                                    "type": "string"
+                                                                },
+                                                                "email": {
+                                                                    "type": "string"
+                                                                },
+                                                                "email_verification_expires_at": {
+                                                                    "type": "string",
+                                                                    "nullable": true
+                                                                },
+                                                                "email_verification_token": {
+                                                                    "type": "string",
+                                                                    "nullable": true
+                                                                },
+                                                                "email_verified_at": {
+                                                                    "type": "string"
+                                                                },
+                                                                "email_verified_by": {
+                                                                    "type": "string",
+                                                                    "nullable": true
+                                                                },
+                                                                "name": {
+                                                                    "type": "string"
+                                                                },
+                                                                "phone": {
+                                                                    "type": "string"
+                                                                },
+                                                                "policy_accepted_at": {
+                                                                    "type": "string",
+                                                                    "nullable": true
+                                                                },
+                                                                "policy_ip": {
+                                                                    "type": "string",
+                                                                    "nullable": true
+                                                                },
+                                                                "policy_version": {
+                                                                    "type": "string",
+                                                                    "nullable": true
+                                                                },
+                                                                "qualification": {
+                                                                    "type": "string"
+                                                                },
+                                                                "rol": {
+                                                                    "type": "integer"
+                                                                },
+                                                                "state": {
+                                                                    "type": "boolean"
+                                                                },
+                                                                "two_factor_confirmed_at": {
+                                                                    "type": "string",
+                                                                    "nullable": true
+                                                                },
+                                                                "updated_at": {
+                                                                    "type": "string"
+                                                                },
+                                                                "user_id": {
+                                                                    "type": "integer"
+                                                                }
+                                                            }
+                                                        },
+                                                        "user_id": {
+                                                            "type": "integer"
+                                                        }
+                                                    }
+                                                },
+                                                "buyer_id": {
+                                                    "type": "integer"
+                                                },
+                                                "comment": {
+                                                    "type": "string"
+                                                },
+                                                "created_at": {
+                                                    "type": "string"
+                                                },
+                                                "qualification": {
+                                                    "type": "string"
+                                                },
+                                                "reviews_id": {
+                                                    "type": "integer"
+                                                },
+                                                "state": {
+                                                    "type": "integer"
+                                                },
+                                                "updated_at": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Sin token, o token invalido."
@@ -14049,7 +14345,22 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                        "description": "Forma congelada en tests/Feature/Contrato/forma-de-las-respuestas.json",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "count": {
+                                            "type": "integer"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Sin token, o token invalido."
