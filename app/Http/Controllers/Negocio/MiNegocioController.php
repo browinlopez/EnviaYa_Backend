@@ -15,6 +15,7 @@ use App\Support\FiltroDeFechas;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 /**
  * Lo que el panel del tendero necesita saber al entrar.
@@ -252,7 +253,9 @@ class MiNegocioController extends Controller
 
         try {
             $subido = $medios->subir($negocio, $request->file('logo'), 'logo');
-        } catch (\Throwable $e) {
+        } catch (RuntimeException $e) {
+            // `BusinessMediaService` solo lanza `RuntimeException`, con texto
+            // para el tendero. Una averia de R2 no es un logo mal puesto.
             return response()->json(['message' => 'No se pudo guardar el logo. '.$e->getMessage()], 422);
         }
 

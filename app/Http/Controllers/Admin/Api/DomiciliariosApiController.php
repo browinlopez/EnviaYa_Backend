@@ -17,6 +17,7 @@ use App\Support\SqlPortable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use RuntimeException;
 
 class DomiciliariosApiController extends Controller
 {
@@ -216,7 +217,10 @@ class DomiciliariosApiController extends Controller
                 'en el panel de administración por '.($request->user()->name ?: 'el equipo')
                     .', desde la dirección '.($request->ip() ?: 'desconocida'),
             );
-        } catch (\Throwable $e) {
+        } catch (RuntimeException $e) {
+            // Gemela de la del acuerdo firmado desde la app.
+            // `ContratoService::generar()` solo lanza `RuntimeException`, y
+            // siempre con un mensaje para quien lo lee. Lo demas sube.
             return response()->json(['message' => $e->getMessage()], 422);
         }
 

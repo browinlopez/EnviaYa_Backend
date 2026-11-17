@@ -9,6 +9,7 @@ use App\Services\Ajustes;
 use App\Services\MediaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 class MediosApiController extends Controller
 {
@@ -119,7 +120,10 @@ class MediosApiController extends Controller
                 $tipo,
                 $request->user()->user_id ?? null,
             );
-        } catch (\Throwable $e) {
+        } catch (RuntimeException $e) {
+            // Solo lo que el servicio lanza a proposito, con mensaje
+            // escrito para quien lo lee. Una averia del almacenamiento
+            // no es un 422: sube, sale 500 y queda en Sentry.
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
@@ -143,7 +147,10 @@ class MediosApiController extends Controller
             // El servicio comprueba la pertenencia contra la base y, si era la
             // imagen principal, promueve otra y sincroniza la columna.
             $medios->eliminar($entidad, $id, (int) $datos['id']);
-        } catch (\Throwable $e) {
+        } catch (RuntimeException $e) {
+            // Solo lo que el servicio lanza a proposito, con mensaje
+            // escrito para quien lo lee. Una averia del almacenamiento
+            // no es un 422: sube, sale 500 y queda en Sentry.
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
@@ -159,7 +166,10 @@ class MediosApiController extends Controller
 
         try {
             $medios->marcarPrincipal($entidad, $id, (int) $datos['id']);
-        } catch (\Throwable $e) {
+        } catch (RuntimeException $e) {
+            // Solo lo que el servicio lanza a proposito, con mensaje
+            // escrito para quien lo lee. Una averia del almacenamiento
+            // no es un 422: sube, sale 500 y queda en Sentry.
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
