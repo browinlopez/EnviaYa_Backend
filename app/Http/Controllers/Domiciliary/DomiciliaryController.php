@@ -100,7 +100,21 @@ class DomiciliaryController extends Controller
                 'address' => $request->address,
                 'rol' => 3,
                 'qualification' => $request->qualification ?? 0,
-                'state' => $request->state,
+                /*
+                 * EL DEFECTO, QUE FALTABA. `CrearDomiciliarioRequest` declara
+                 * `state` OPCIONAL --`'state' => 'boolean'`--, asi que el
+                 * panel puede no mandarlo; y entonces esto escribia `null`.
+                 *
+                 * En SQLite pasa, porque la migracion original creo la columna
+                 * `nullable()`. En MySQL NO: `estados_sin_null_y_pivotes_unicos`
+                 * hace `MODIFY state TINYINT NOT NULL DEFAULT 1` y lo hace SOLO
+                 * si el motor es mysql. O sea que dar de alta un repartidor sin
+                 * mandar `state` era un 500 en produccion y verde en la suite.
+                 * El `1` es el mismo defecto que declara esa migracion.
+                 *
+                 * La linea de arriba ya ponia su defecto; esta se quedo sin el.
+                 */
+                'state' => $request->state ?? 1,
             ]);
 
             // Crear domiciliario asociado
@@ -132,12 +146,22 @@ class DomiciliaryController extends Controller
                 'domiciliary' => $domiciliary->load('businesses'),
             ]);
         } catch (\Throwable $e) {
-
+            /*
+             * ESTE `catch` SE QUEDA ATRAPANDO TODO, PORQUE ESTA PARA REVERTIR.
+             *
+             * Lo que no se queda es la respuesta que daba: un 500 con
+             * `'error' => 'Error al crear el domiciliario: '.$e->getMessage()`.
+             * Eso ponia el texto crudo de la excepcion --nombres de columna,
+             * trozos de SQL, rutas del servidor-- en la pantalla de quien
+             * estaba dando de alta a un repartidor, y ademas la averia NO
+             * llegaba a Sentry, porque la excepcion moria aqui.
+             *
+             * Se revierte y se vuelve a lanzar: el manejador de Laravel la
+             * reporta y devuelve el 500 sin contar de mas.
+             */
             DB::rollBack();
 
-            return response()->json([
-                'error' => 'Error al crear el domiciliario: '.$e->getMessage(),
-            ], 500);
+            throw $e;
         }
     }
 

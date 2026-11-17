@@ -65,7 +65,16 @@ function pedidoConPago(?string $estadoDelPago): int
         DB::table('payments')->insert([
             'orderSales_id' => $pedido,
             'amount' => 15000, 'total' => 15000,
-            'payment_status' => $estadoDelPago,
+            /*
+             * DOS COLUMNAS DISTINTAS, y confundirlas es lo que tenía esto en
+             * rojo sobre MySQL. `payments.payment_status` es un `integer`
+             * desde 2025 --1 = cobrado, 0 = no--, y `app/` solo escribe
+             * enteros ahí (`$isApproved ? 1 : 0` en el webhook de Bold). La
+             * cadena del proveedor vive en `status`, de 30 caracteres, que es
+             * la que lee `Payment::COBRADOS`. SQLite se traga 'approved' en
+             * una columna entera; MySQL la rechaza con un 1366.
+             */
+            'payment_status' => $estadoDelPago === 'approved' ? 1 : 0,
             'status' => $estadoDelPago,
             'created_at' => now(), 'updated_at' => now(),
         ]);

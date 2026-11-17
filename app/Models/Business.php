@@ -104,6 +104,14 @@ class Business extends Audit
             'accepting_orders' => 'boolean',
             'accepting_changed_at' => 'datetime',
             'accepting_until' => 'datetime',
+
+            /*
+             * `qualification` es `decimal(3,2)`: MySQL la devuelve como cadena
+             * y SQLite como número, así que sin molde el tipo del campo en la
+             * respuesta dependía del motor. Queda en cadena en los dos, que es
+             * lo que ya recibe la app en producción.
+             */
+            'qualification' => 'decimal:2',
         ];
     }
 
