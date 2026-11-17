@@ -183,20 +183,55 @@ class ComprobarLaConfiguracion extends Command
         }
     }
 
-    /** Que la copia de la base no esté legible por quien tenga las llaves. */
+    /**
+     * Que la copia de la base no esté legible por quien tenga las llaves.
+     *
+     * AUSENTE Y VACÍA NO SON LO MISMO, y la diferencia la encontré poniéndola
+     * vacía yo en un `.env` y comprobándolo:
+     *
+     *   ausente          -> `null` -> `shouldEncrypt()` da FALSE -> no cifra
+     *   presente y vacía -> `''`   -> `shouldEncrypt()` da TRUE
+     *
+     * `EncryptBackupArchive::shouldEncrypt()` solo se rinde con `null`, así
+     * que con la cadena vacía Spatie llama a `ZipArchive::setPassword('')` y
+     * marca cada entrada como cifrada. El respaldo no sale sin cifrar: SALE
+     * ROTO. Y eso es peor, porque una copia que no se puede abrir pasa por
+     * copia hasta el día que hay que restaurarla.
+     *
+     * Por eso se distinguen los dos casos en vez de decir «vacía» a los dos.
+     * En un panel de despliegue, crear la clave y dejarla en blanco es lo que
+     * pasa de verdad.
+     */
     private function losRespaldos(): void
     {
         $this->titulo('Respaldos');
 
-        $clave = (string) (config('backup.backup.password') ?? '');
+        $clave = config('backup.backup.password');
+        $rota = $clave !== null && trim((string) $clave) === '';
+        $sinCifrar = $clave === null;
 
         $this->fila(
             'BACKUP_ARCHIVE_PASSWORD',
-            $clave !== '',
-            $clave !== '' ? 'puesta' : 'VACÍA — la copia va sin cifrar',
+            ! $rota && ! $sinCifrar,
+            match (true) {
+                $rota => 'PUESTA Y VACÍA — Spatie cifra con contraseña vacía y el respaldo sale roto',
+                $sinCifrar => 'sin poner — la copia va sin cifrar',
+                default => 'puesta',
+            },
         );
 
-        if ($clave === '') {
+        if ($rota) {
+            $this->detalle(
+                'Quitar la variable es mejor que dejarla en blanco: ausente da null y '
+                .'`EncryptBackupArchive::shouldEncrypt()` no cifra; en blanco da cadena '
+                .'vacía, que para esa comprobación es un valor válido. Entonces se llama '
+                .'a ZipArchive::setPassword("") y el archivo queda marcado como cifrado '
+                .'sin contraseña con la que abrirlo. Una copia que no se puede restaurar '
+                .'pasa por copia hasta el día que hace falta.',
+            );
+        }
+
+        if ($sinCifrar) {
             $this->detalle(
                 'El volcado de la base entera se sube sin cifrar, y las llaves de R2 '
                 .'viven en el mismo fichero de entorno que estas líneas. Por separado '

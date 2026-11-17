@@ -6,6 +6,7 @@ use App\Services\FacturaService;
 use App\Support\DatosDelEmisor;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Spatie\Backup\Listeners\EncryptBackupArchive;
 
 /**
  * CONFIGURACIÓN QUE ESTÁ MAL Y NO DA NINGÚN ERROR
@@ -173,6 +174,51 @@ it('el remitente del esqueleto se nombra y el de verdad no', function () {
 /* ====================================================================== */
 /* El comando */
 /* ====================================================================== */
+
+it('la clave de respaldo en blanco no es lo mismo que no tenerla', function () {
+    /*
+     * POR QUE ESTA PRUEBA, y la encontre metiendo la pata: puse
+     * `BACKUP_ARCHIVE_PASSWORD=` vacia en un `.env` de produccion creyendo que
+     * daba lo mismo que no ponerla. No da lo mismo.
+     *
+     *   ausente          -> `null` -> `shouldEncrypt()` FALSE -> no cifra
+     *   presente y vacia -> `''`   -> `shouldEncrypt()` TRUE
+     *
+     * `EncryptBackupArchive::shouldEncrypt()` solo se rinde con `null`, asi que
+     * con la cadena vacia Spatie llama a `ZipArchive::setPassword('')` y marca
+     * cada entrada como cifrada. El respaldo no sale sin cifrar: SALE ROTO, y
+     * una copia que no se puede abrir pasa por copia hasta el dia que hay que
+     * restaurarla.
+     *
+     * Se afirma contra Spatie y no contra mi texto: lo que importa es que su
+     * decision cambie, no cómo la cuente el comando.
+     */
+    config()->set('backup.backup.password', null);
+
+    expect(EncryptBackupArchive::shouldEncrypt())->toBeFalse();
+
+    config()->set('backup.backup.password', '');
+
+    expect(EncryptBackupArchive::shouldEncrypt())->toBeTrue();
+});
+
+it('el comando distingue la clave de respaldo ausente de la vacia', function () {
+    configuracionSana();
+    config()->set('backup.backup.password', '');
+
+    $this->artisan('configuracion:comprobar')
+        ->expectsOutputToContain('PUESTA Y VAC')
+        ->assertExitCode(1);
+});
+
+it('la clave de respaldo ausente se nombra, pero por lo que de verdad pasa', function () {
+    configuracionSana();
+    config()->set('backup.backup.password', null);
+
+    $this->artisan('configuracion:comprobar')
+        ->expectsOutputToContain('sin poner')
+        ->assertExitCode(1);
+});
 
 it('configuracion:comprobar falla y nombra cada cosa que esta mal', function () {
     /*
