@@ -6,8 +6,6 @@ use App\Services\FacturaService;
 use App\Support\DatosDelEmisor;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
-use Symfony\Component\Mime\Email;
 
 /**
  * CONFIGURACIÓN QUE ESTÁ MAL Y NO DA NINGÚN ERROR
@@ -163,97 +161,14 @@ it('el comprobante avisa del NIT y NO del representante, que no sale en el papel
 /* El correo */
 /* ====================================================================== */
 
-/**
- * El bloque `reply_to` tal como lo arma `config/mail.php` DE VERDAD.
- *
- * Se evalúa el fichero con `require` en vez de escribir a mano el arreglo que
- * se espera. No es un detalle: la primera versión de estas pruebas copiaba la
- * lógica del fichero dentro de la prueba, así que quitar el `array_filter` de
- * `config/mail.php` NO las hacía fallar. Una prueba que reproduce lo que
- * debería comprobar no comprueba nada; lo descubrió la pasada de mutaciones.
- */
-function replyToSegunLaConfiguracionReal(?string $direccion): array
-{
-    if ($direccion === null) {
-        unset($_ENV['MAIL_REPLY_TO_ADDRESS'], $_SERVER['MAIL_REPLY_TO_ADDRESS']);
-        putenv('MAIL_REPLY_TO_ADDRESS');
-    } else {
-        $_ENV['MAIL_REPLY_TO_ADDRESS'] = $direccion;
-        $_SERVER['MAIL_REPLY_TO_ADDRESS'] = $direccion;
-        putenv('MAIL_REPLY_TO_ADDRESS='.$direccion);
-    }
+it('el remitente del esqueleto se nombra y el de verdad no', function () {
+    configuracionSana();
+    config()->set('mail.from.address', 'hello@example.com');
 
-    return (require config_path('mail.php'))['reply_to'];
-}
-
-it('sin MAIL_REPLY_TO_ADDRESS el correo sale exactamente como antes', function () {
-    /*
-     * LA PASADA DE CONTROL del `reply_to`: quien no configure nada tiene que
-     * quedar igual que antes de este cambio. Si esto se rompiera, TODO el
-     * correo de la plataforma saldría con un «responder a» que nadie puso.
-     */
-    config()->set('mail.reply_to', replyToSegunLaConfiguracionReal(null));
-
-    expect(correoDePrueba()->getReplyTo())->toBe([]);
+    $this->artisan('configuracion:comprobar')
+        ->expectsOutputToContain('esqueleto de Laravel')
+        ->assertExitCode(1);
 });
-
-it('MAIL_REPLY_TO_ADDRESS en blanco se trata como si no estuviera', function () {
-    /*
-     * LA VARIABLE PUESTA Y VACÍA, que es cómo queda en un panel de despliegue
-     * una variable que alguien creó y no rellenó. Tiene que dar lo mismo que
-     * no tenerla.
-     *
-     * Y escribir esta prueba corrigió el fichero: había puesto un
-     * `array_filter` en `config/mail.php` creyendo que esto hacía falta, y al
-     * mutarlo no falló nada. Laravel ya pregunta
-     * `! empty($this->replyTo['address'])` antes de poner la cabecera
-     * —`Mailer::createMessage`, línea 564—, así que el filtro era ceremonia.
-     * Se quitó. Lo que queda es esta prueba, que fija el comportamiento del
-     * que ahora dependemos a la vista en vez de suponerlo.
-     */
-    config()->set('mail.reply_to', replyToSegunLaConfiguracionReal(''));
-
-    expect(correoDePrueba()->getReplyTo())->toBe([]);
-});
-
-it('con MAIL_REPLY_TO_ADDRESS las respuestas van a la direccion de la marca', function () {
-    config()->set('mail.reply_to', replyToSegunLaConfiguracionReal('gerencia@vecipaya.com'));
-
-    $respuesta = correoDePrueba()->getReplyTo();
-
-    expect($respuesta)->toHaveCount(1)
-        ->and($respuesta[0]->getAddress())->toBe('gerencia@vecipaya.com')
-        // El nombre cae al de `MAIL_FROM_NAME`, que es lo que ve quien recibe.
-        ->and($respuesta[0]->getName())->not->toBe('');
-});
-
-/**
- * Manda un correo de verdad por el transporte de memoria y devuelve el mensaje
- * tal como saldría.
- *
- * Se olvida el gestor de correo antes de enviar porque guarda el `Mailer` ya
- * construido con la configuración que leyó la primera vez: sin esto, cambiar
- * `mail.reply_to` en la prueba no tendría ningún efecto y las dos pruebas
- * pasarían diciendo lo mismo.
- */
-function correoDePrueba(): Email
-{
-    config()->set('mail.default', 'array');
-
-    app()->forgetInstance('mail.manager');
-    app()->forgetInstance('mailer');
-    Mail::clearResolvedInstances();
-
-    Mail::raw('cuerpo de prueba', function ($m) {
-        $m->to('alguien@ejemplo.test')->subject('prueba');
-    });
-
-    $mensajes = Mail::mailer('array')->getSymfonyTransport()->messages();
-
-    expect($mensajes)->not->toBeEmpty();
-
-    return $mensajes->last()->getOriginalMessage();
-}
 
 /* ====================================================================== */
 /* El comando */
@@ -267,8 +182,7 @@ it('configuracion:comprobar falla y nombra cada cosa que esta mal', function () 
     config()->set('services.contrato.nit', '');
     config()->set('filesystems.disks.r2.url', 'https://pub-algo.r2.dev');
     config()->set('backup.backup.password', null);
-    config()->set('mail.from.address', 'gerencia@vecipaya.com');
-    config()->set('mail.mailers.smtp.username', 'cuenta@gmail.com');
+    config()->set('mail.from.address', 'hello@example.com');
 
     $this->artisan('configuracion:comprobar')
         ->expectsOutputToContain('CONTRATO_NIT')
@@ -303,7 +217,6 @@ function configuracionSana(): void
     config()->set('filesystems.disks.r2.url', 'https://medios.vecipaya.com');
     config()->set('backup.backup.password', 'una-clave-de-verdad');
     config()->set('mail.from.address', 'gerencia@vecipaya.com');
-    config()->set('mail.mailers.smtp.username', 'gerencia@vecipaya.com');
     config()->set('services.bold.entorno', 'produccion');
 }
 
@@ -427,12 +340,4 @@ it('ningun modelo construye URLs mirando el disco local del contenedor', functio
 afterEach(function () {
     // El comando no toca la base, pero la factura de prueba sí.
     DB::table('invoices')->delete();
-
-    /*
-     * Las pruebas del correo escriben en el entorno del proceso, y eso NO lo
-     * deshace `RefreshDatabase`: una variable que se queda puesta cambiaría lo
-     * que leen las pruebas que vengan detrás, en este fichero o en otro.
-     */
-    unset($_ENV['MAIL_REPLY_TO_ADDRESS'], $_SERVER['MAIL_REPLY_TO_ADDRESS']);
-    putenv('MAIL_REPLY_TO_ADDRESS');
 });

@@ -129,53 +129,26 @@ return [
     ],
 
     /*
-    |--------------------------------------------------------------------------
-    | A DÓNDE CONTESTA QUIEN RECIBE
-    |--------------------------------------------------------------------------
-    |
-    | ESTO EXISTE PARA PODER ALINEAR EL REMITENTE SIN PERDER LA DIRECCIÓN DE
-    | LA MARCA, y eso hace falta porque la plataforma envía por el SMTP de
-    | Gmail con una cuenta `@gmail.com`, mientras el remitente dice
-    | `@vecipaya.com`.
-    |
-    | Quien recibe el correo comprueba el remitente contra quien lo entregó:
-    | el SPF que valida es el de Gmail, y la firma DKIM la pone `gmail.com`.
-    | Un `From:` de otro dominio no queda amparado por ninguna de las dos, y
-    | ese desajuste es la causa corriente de que los correos de verificación
-    | de cuenta caigan en la carpeta de basura —justo la pieza de la que
-    | depende que alguien termine de registrarse—.
-    |
-    | Con esto hay dos salidas, y las dos funcionan sin pagar nada:
-    |
-    |   a) Alinear: `MAIL_FROM_ADDRESS` = la cuenta que envía, y
-    |      `MAIL_REPLY_TO_ADDRESS=gerencia@vecipaya.com`. El correo entrega
-    |      bien, y quien contesta le escribe a la dirección de la marca. Lo
-    |      que se cede es cosmético: en la bandeja se lee el nombre
-    |      —«VeciPa'Ya»— y debajo la dirección que envía.
-    |
-    |   b) Mantener el remitente del dominio propio, y entonces hay que
-    |      verificar el alias en la cuenta de Gmail Y añadir
-    |      `include:_spf.google.com` al SPF de `vecipaya.com`. Es más
-    |      presentable y depende del DNS, no de este fichero.
-    |
-    | SIN LA VARIABLE NO SE AÑADE LA CABECERA, así que quien no configure nada
-    | queda exactamente como estaba. No hace falta filtrar el arreglo para
-    | conseguirlo: Laravel pregunta `! empty($this->replyTo['address'])` antes
-    | de ponerla —`Illuminate\Mail\Mailer::createMessage`, línea 564—, y eso
-    | descarta igual el `null` de la variable ausente y la cadena vacía de la
-    | variable que alguien creó y no rellenó.
-    |
-    | Acá había un `array_filter` para eso. Se quitó después de MEDIR que no
-    | cambiaba nada: la mutación que lo borraba no hacía fallar ninguna prueba,
-    | porque no había nada que romper. Las dos pruebas de
-    | `LoQueNoAvisaCuandoEstaMalTest` fijan las dos ausencias.
-    |
-    | `php artisan configuracion:comprobar` dice si el remitente y la cuenta
-    | que envía son del mismo dominio.
-    */
-    'reply_to' => [
-        'address' => env('MAIL_REPLY_TO_ADDRESS'),
-        'name' => env('MAIL_REPLY_TO_NAME', env('MAIL_FROM_NAME', "VeciPa'Ya")),
-    ],
+     * AQUÍ HABÍA UN BLOQUE `reply_to`, Y SE QUITÓ PORQUE SOBRABA.
+     *
+     * Lo añadí para poder alinear el remitente con la cuenta de Gmail que
+     * entrega el correo —el SPF de `vecipaya.com` autoriza a Hostinger, no a
+     * Google— sin perder la dirección de la marca para quien contestara.
+     *
+     * El razonamiento era correcto y la conclusión falsa: NO COMPROBÉ que los
+     * correos estuvieran cayendo en basura, lo deduje del DNS. Y no caían: el
+     * remitente `gerencia@vecipaya.com` por el SMTP de Gmail venía
+     * funcionando. Se sostiene porque `_dmarc.vecipaya.com` está en `p=none`
+     * —nadie rechaza por desalineación— y porque Gmail firma con su propio
+     * DKIM.
+     *
+     * Así que era configuración nueva para un problema que no existe, y eso
+     * es lo que prohíbe AGENTS.md §5. Lo que QUEDA de todo esto es lo único
+     * que era verdad: si alguna vez hay que cambiar el remitente, la salida
+     * limpia no es un `reply_to`, es enviar por `smtp.hostinger.com` con el
+     * buzón `gerencia@vecipaya.com` —que ya existe, los MX del dominio
+     * apuntan a Hostinger—, y entonces el remitente de marca queda alineado
+     * sin tocar DNS.
+     */
 
 ];

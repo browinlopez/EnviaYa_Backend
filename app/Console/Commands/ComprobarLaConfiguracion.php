@@ -108,45 +108,48 @@ class ComprobarLaConfiguracion extends Command
         }
     }
 
-    /** Que los correos de verificación no caigan en la basura. */
+    /**
+     * Que el remitente no sea el del esqueleto de Laravel.
+     *
+     * ACÁ HABÍA UNA COMPROBACIÓN DE QUE EL REMITENTE Y LA CUENTA SMTP FUERAN
+     * DEL MISMO DOMINIO, y se quitó porque daba un FALLO sobre algo que
+     * funciona: `gerencia@vecipaya.com` entregado por una cuenta de Gmail
+     * viene funcionando en producción. Con `DMARC p=none` nadie rechaza por
+     * desalineación, y Gmail firma con su propio DKIM.
+     *
+     * Marcar eso como problema es justo lo que este comando no debe hacer: un
+     * aviso que sale cuando no pasa nada se vuelve ruido, y el ruido es lo que
+     * hace que nadie lea los avisos que sí importan. Desde el servidor no se
+     * puede ver lo que decide el caso —si el alias está verificado en Gmail—,
+     * así que no se opina.
+     *
+     * Lo que SÍ se puede ver y sí es un fallo en todos los casos: que el
+     * remitente sea `hello@example.com`, el valor del esqueleto de Laravel. Si
+     * `MAIL_FROM_ADDRESS` falta, TODO el correo de la plataforma sale con un
+     * remitente de un dominio ajeno y un SMTP serio lo rechaza entero. No es
+     * «no llega un correo»: son todos.
+     */
     private function elCorreo(): void
     {
         $this->titulo('Correo');
 
         $remitente = (string) config('mail.from.address');
-        $cuenta = (string) config('mail.mailers.smtp.username');
-        $respuesta = (string) (config('mail.reply_to.address') ?? '');
-
-        $dominioDe = static fn (string $correo): string => str_contains($correo, '@')
-            ? strtolower(substr($correo, strpos($correo, '@') + 1))
-            : '';
-
-        $alineado = $cuenta === ''
-            || $dominioDe($remitente) === $dominioDe($cuenta);
+        $delEsqueleto = $remitente === '' || str_ends_with($remitente, '@example.com');
 
         $this->fila(
             'MAIL_FROM_ADDRESS',
-            $alineado,
-            $alineado
-                ? $remitente.' — mismo dominio que la cuenta que envía'
-                : $remitente.' enviado por '.$cuenta.' — dominios distintos',
+            ! $delEsqueleto,
+            $delEsqueleto
+                ? ($remitente ?: '(vacío)').' — es el valor del esqueleto de Laravel'
+                : $remitente,
         );
 
-        if (! $alineado) {
-            $this->fila(
-                'MAIL_REPLY_TO_ADDRESS',
-                $respuesta !== '',
-                $respuesta !== '' ? $respuesta : 'sin poner',
-            );
-
+        if ($delEsqueleto) {
             $this->detalle(
-                'Quien recibe comprueba el remitente contra quien entregó el correo: el '
-                .'SPF que vale es el de '.$dominioDe($cuenta).' y la firma DKIM también. '
-                .'Un remitente de otro dominio no queda amparado por ninguna de las dos, '
-                .'y eso manda los correos de verificación a la carpeta de basura. Se '
-                .'arregla alineando el remitente con la cuenta y poniendo '
-                .'MAIL_REPLY_TO_ADDRESS, o verificando el alias en Gmail y añadiendo '
-                .'include:_spf.google.com al SPF del dominio. Lo explica config/mail.php.',
+                'Con este remitente TODO el correo de la plataforma sale de un dominio '
+                .'que no es nuestro, y un SMTP serio rechaza o marca como basura un '
+                .'remitente que no coincide con el dominio autenticado. El fallo no es '
+                .'«no llega un correo»: son todos, incluida la verificación de cuenta.',
             );
         }
     }
