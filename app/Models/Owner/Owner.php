@@ -11,7 +11,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\HasApiTokens;
 use OwenIt\Auditing\Auditable;
 use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
@@ -66,12 +65,14 @@ class Owner extends Authenticatable implements AuditableContract
         return $this->belongsTo(DocumentType::class);
     }
 
-    public function getProfilePhotoUrlAttribute(): string
-    {
-        if ($this->profile_photo && Storage::disk('public')->exists('owner/'.$this->profile_photo)) {
-            return Storage::url('owner/'.$this->profile_photo);
-        }
-
-        return asset('img/default-user.png');
-    }
+    /*
+     * AQUÍ HABÍA UN `getProfilePhotoUrlAttribute()` Y NADIE LO LLAMABA.
+     *
+     * El gemelo del que había en `Product`: miraba el disco `public` del
+     * contenedor para una foto que vive en R2, así que su condición era
+     * siempre falsa, y la rama que sí hacía algo usaba `Storage::url()` sobre
+     * el disco por defecto —`local`—, que no es el que estaba comprobando.
+     *
+     * No está en `$appends` ni se usa en ningún sitio del repositorio.
+     */
 }

@@ -12,7 +12,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Support\Facades\Storage;
 
 class Product extends Audit
 {
@@ -199,12 +198,23 @@ class Product extends Audit
         return $this->hasOne(CarPartsProducts::class, 'products_id', 'products_id');
     }
 
-    public function getImageUrlAttribute(): string
-    {
-        if ($this->image && Storage::disk('public')->exists($this->image)) {
-            return Storage::url($this->image);
-        }
-
-        return asset('img/default-product.png');
-    }
+    /*
+     * AQUÍ HABÍA UN `getImageUrlAttribute()` Y NADIE LO LLAMABA.
+     *
+     * Construía una URL mirando el disco `public` —`storage/app/public`—, que
+     * es el almacenamiento LOCAL del contenedor. Las fotos de la plataforma
+     * viven en R2 desde hace tiempo (`MediaService::DISCO = 'r2'`), así que
+     * ese `exists()` era siempre falso en producción: un acceso al disco por
+     * cada lectura para devolver siempre la imagen por defecto.
+     *
+     * Y escondía algo peor: `Storage::url()` usa el disco POR DEFECTO, que con
+     * `FILESYSTEM_DISK=local` no es `public`. O sea que la única rama que
+     * hacía algo apuntaba al disco equivocado. No se notó nunca porque la
+     * condición no se cumplía jamás.
+     *
+     * No está en `$appends` y no se usa en ningún recurso, controlador ni
+     * prueba —comprobado en todo el repositorio—, así que borrarlo no cambia
+     * ninguna respuesta. Se queda la nota porque un accessor que vuelve a
+     * aparecer apuntando al disco local es el mismo error otra vez.
+     */
 }

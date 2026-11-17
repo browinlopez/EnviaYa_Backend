@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Support\DatosDelEmisor;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\View;
 use RuntimeException;
 
@@ -162,6 +164,29 @@ class ContratoService
         ?string $origen = null,
         bool $soloHtml = false,
     ): string {
+        /*
+         * UN ACUERDO AL QUE LE FALTA QUIÉN LO FIRMA SE DICE, NO SE CALLA.
+         *
+         * La plantilla envuelve el NIT y el representante en `@if`, así que si
+         * faltan no se rompe nada: la cláusula no se imprime y donde iba la
+         * cédula queda una raya. El PDF sale con pinta de estar completo, y es
+         * el único documento de esta plataforma que tendría que poder
+         * sostenerse delante de alguien.
+         *
+         * No aborta —ver `DatosDelEmisor`—: deja rastro. Es un `warning` y no
+         * un `info` a propósito, porque producción corre con
+         * `LOG_LEVEL=warning` y un `info` no se escribiría en ningún sitio.
+         */
+        $faltan = DatosDelEmisor::faltantes();
+
+        if ($faltan !== []) {
+            Log::warning('Acuerdo de domiciliario emitido con datos del emisor incompletos', [
+                'faltan' => array_map([DatosDelEmisor::class, 'descripcion'], $faltan),
+                'documento' => $d->document ?? null,
+                'se_arregla_en' => 'variables de entorno del despliegue',
+            ]);
+        }
+
         $html = View::make('contratos.domiciliario', [
             'empresa' => [
                 'nombre' => config('services.contrato.empresa'),

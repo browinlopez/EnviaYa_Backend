@@ -128,4 +128,27 @@ return [
         'name' => env('MAIL_FROM_NAME', "VeciPa'Ya"),
     ],
 
+    /*
+     * AQUÍ HABÍA UN BLOQUE `reply_to`, Y SE QUITÓ PORQUE SOBRABA.
+     *
+     * Lo añadí para poder alinear el remitente con la cuenta de Gmail que
+     * entrega el correo —el SPF de `vecipaya.com` autoriza a Hostinger, no a
+     * Google— sin perder la dirección de la marca para quien contestara.
+     *
+     * El razonamiento era correcto y la conclusión falsa: NO COMPROBÉ que los
+     * correos estuvieran cayendo en basura, lo deduje del DNS. Y no caían: el
+     * remitente `gerencia@vecipaya.com` por el SMTP de Gmail venía
+     * funcionando. Se sostiene porque `_dmarc.vecipaya.com` está en `p=none`
+     * —nadie rechaza por desalineación— y porque Gmail firma con su propio
+     * DKIM.
+     *
+     * Así que era configuración nueva para un problema que no existe, y eso
+     * es lo que prohíbe AGENTS.md §5. Lo que QUEDA de todo esto es lo único
+     * que era verdad: si alguna vez hay que cambiar el remitente, la salida
+     * limpia no es un `reply_to`, es enviar por `smtp.hostinger.com` con el
+     * buzón `gerencia@vecipaya.com` —que ya existe, los MX del dominio
+     * apuntan a Hostinger—, y entonces el remitente de marca queda alineado
+     * sin tocar DNS.
+     */
+
 ];
