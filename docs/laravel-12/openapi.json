@@ -9676,6 +9676,81 @@
                 "x-form-request": "App\\Http\\Requests\\Negocio\\ProponerProductoRequest"
             }
         },
+        "/v1/negocio/chats/{chat}/reportes": {
+            "post": {
+                "operationId": "post_v1_negocio_chats_chat_reportes",
+                "tags": [
+                    "negocio"
+                ],
+                "summary": "\\App\\Http\\Controllers\\Seguridad\\ReporteDeChatController@reportar",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "negocio",
+                    "throttle:5,10"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    },
+                    "422": {
+                        "description": "Validacion fallida."
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "chat",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "reason": {
+                                        "type": "string",
+                                        "enum": [
+                                            "extorsion",
+                                            "amenazas",
+                                            "mensajes_ofensivos",
+                                            "estafa",
+                                            "suplantacion",
+                                            "otro"
+                                        ]
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "reason"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Seguridad\\ReportarChatRequest"
+            }
+        },
         "/v1/negocio/clientes/buscar": {
             "get": {
                 "operationId": "get_v1_negocio_clientes_buscar",

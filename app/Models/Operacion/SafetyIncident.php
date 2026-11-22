@@ -26,6 +26,25 @@ class SafetyIncident extends Model
     public const ESTADOS = [self::ABIERTO, self::EN_INVESTIGACION, self::CERRADO];
 
     /**
+     * EL VOCABULARIO COMPLETO de la columna `type`.
+     *
+     * Estaba escrito a mano dentro de `IncidenteRequest` y se quedó sin
+     * `extorsion` el día que el SOS lo añadió a la base: llegaba un SOS por
+     * extorsión y desde el panel no se podía ni crear ni corregir uno con ese
+     * motivo. Una lista escrita en dos sitios acaba siendo dos listas.
+     */
+    public const TIPOS = [
+        'accidente_transito',
+        'caida',
+        'robo',
+        'agresion',
+        'extorsion',
+        'falla_vehiculo',
+        'condicion_insegura',
+        'otro',
+    ];
+
+    /**
      * Los motivos que el botón de SOS sabe mandar.
      *
      * Es un subconjunto del enum a propósito: el enum completo incluye cosas

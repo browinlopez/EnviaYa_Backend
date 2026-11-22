@@ -61,7 +61,7 @@ class IncidenteRequest extends FormRequest
             'domiciliary_id' => 'sometimes|nullable|integer|exists:domiciliary,domiciliary_id',
             'order_id' => 'sometimes|nullable|integer|exists:orderssales,orderSales_id',
             'occurred_at' => "{$regla}|date",
-            'type' => "{$regla}|in:accidente_transito,caida,robo,agresion,falla_vehiculo,condicion_insegura,otro",
+            'type' => "{$regla}|in:".implode(',', SafetyIncident::TIPOS),
             'severity' => 'sometimes|in:leve,moderado,grave',
             'had_injuries' => 'sometimes|boolean',
             'days_off' => 'sometimes|integer|min:0|max:2000',

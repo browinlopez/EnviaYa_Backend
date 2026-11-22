@@ -96,6 +96,7 @@ use App\Http\Controllers\Product\ProductController;
 use App\Http\Controllers\Review\ResenasDeDomiciliarioController;
 use App\Http\Controllers\Review\ResenasDeNegocioController;
 use App\Http\Controllers\Review\ReviewController;
+use App\Http\Controllers\Seguridad\ReporteDeChatController;
 use App\Http\Controllers\Seguridad\SosController;
 use App\Http\Controllers\Soporte\AyudaDesdeLaAppController;
 use App\Http\Controllers\User\DireccionesController;
@@ -667,6 +668,20 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::get('efectivo', [EfectivoDeLaTiendaController::class, 'index']);
         Route::post('efectivo/{id}/entregas', [EfectivoDeLaTiendaController::class, 'recibir'])
             ->whereNumber('id');
+
+        /*
+         * DENUNCIAR A UN COMPRADOR DESDE EL CHAT.
+         *
+         * Va en el grupo `negocio` porque esto lo hace el tendero y porque de
+         * ahi sale la tienda desde la que denuncia, sin tener que preguntarla.
+         *
+         * `throttle:5,10` y no el `30,1` del SOS: aquello es una emergencia en
+         * la calle y conviene que pase siempre; esto se escribe con calma, y
+         * cinco en diez minutos ya son mas de las que nadie escribe de verdad.
+         */
+        Route::middleware('throttle:5,10')
+            ->post('chats/{chat}/reportes', [ReporteDeChatController::class, 'reportar'])
+            ->whereNumber('chat');
 
         // Pedidos. `updateStatus` ya comprobaba pertenencia por su cuenta
         // —es la unica del grupo que lo hacia— y se reutiliza tal cual.

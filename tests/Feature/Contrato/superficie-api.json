@@ -2363,6 +2363,18 @@
         ]
     },
     {
+        "verbo": "POST",
+        "uri": "v1/negocio/chats/{chat}/reportes",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio",
+            "throttle:5,10"
+        ]
+    },
+    {
         "verbo": "GET",
         "uri": "v1/negocio/clientes/buscar",
         "nombre": null,
