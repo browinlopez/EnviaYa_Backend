@@ -3138,6 +3138,28 @@
         ]
     },
     {
+        "verbo": "POST",
+        "uri": "v1/sos",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "throttle:30,1"
+        ]
+    },
+    {
+        "verbo": "PATCH",
+        "uri": "v1/sos/{id}",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "throttle:30,1"
+        ]
+    },
+    {
         "verbo": "GET",
         "uri": "v1/top-businesses-free",
         "nombre": null,

@@ -96,6 +96,7 @@ use App\Http\Controllers\Product\ProductController;
 use App\Http\Controllers\Review\ResenasDeDomiciliarioController;
 use App\Http\Controllers\Review\ResenasDeNegocioController;
 use App\Http\Controllers\Review\ReviewController;
+use App\Http\Controllers\Seguridad\SosController;
 use App\Http\Controllers\Soporte\AyudaDesdeLaAppController;
 use App\Http\Controllers\User\DireccionesController;
 use App\Http\Controllers\User\NotificacionesController;
@@ -289,6 +290,19 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
      */
     Route::middleware('throttle:5,10')->post('/ayuda', [AyudaDesdeLaAppController::class, 'store']);
     Route::get('/ayuda', [AyudaDesdeLaAppController::class, 'index']);
+
+    /*
+     * SOS: el botón rojo del domiciliario y del tendero.
+     *
+     * TOPE ALTO Y NO BAJO, al revés que `/ayuda`. Ahí cinco envíos en un
+     * minuto son alguien golpeando el botón; aquí son alguien asustado, y
+     * contestarle «demasiados intentos» a quien está pidiendo auxilio es
+     * exactamente el fallo que no se puede cometer. Las repeticiones no
+     * ensucian nada: dentro de tres minutos el controlador devuelve la misma
+     * alerta en vez de crear otra.
+     */
+    Route::middleware('throttle:30,1')->post('/sos', [SosController::class, 'lanzar']);
+    Route::middleware('throttle:30,1')->patch('/sos/{id}', [SosController::class, 'afinar']);
 
     /* Los bancos de PSE. Sin esta lista el cliente no puede elegir el suyo, y
        sin banco elegido no hay cobro que abrir. */

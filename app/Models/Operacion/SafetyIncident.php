@@ -25,8 +25,20 @@ class SafetyIncident extends Model
      * escribia `in:0,1,2` a mano. */
     public const ESTADOS = [self::ABIERTO, self::EN_INVESTIGACION, self::CERRADO];
 
+    /**
+     * Los motivos que el botón de SOS sabe mandar.
+     *
+     * Es un subconjunto del enum a propósito: el enum completo incluye cosas
+     * que sólo tienen sentido escritas con calma desde el panel —«condición
+     * insegura», «falla del vehículo»— y la hoja del teléfono no las ofrece.
+     * Aceptar aquí todo el vocabulario dejaría que un cliente mandara
+     * cualquiera de ellos con gravedad «grave», que es como entra un SOS.
+     */
+    public const MOTIVOS_SOS = ['robo', 'extorsion', 'accidente_transito', 'otro'];
+
     protected $fillable = [
         'domiciliary_id',
+        'business_id',
         'order_id',
         'occurred_at',
         'type',
@@ -34,6 +46,8 @@ class SafetyIncident extends Model
         'had_injuries',
         'days_off',
         'location',
+        'latitude',
+        'longitude',
         'description',
         'actions',
         'state',
@@ -42,8 +56,11 @@ class SafetyIncident extends Model
 
     protected $casts = [
         'domiciliary_id' => 'integer',
+        'business_id' => 'integer',
         'order_id' => 'integer',
         'occurred_at' => 'datetime',
+        'latitude' => 'float',
+        'longitude' => 'float',
         'had_injuries' => 'boolean',
         'days_off' => 'integer',
         'state' => 'integer',

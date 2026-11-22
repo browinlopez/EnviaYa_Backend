@@ -13990,6 +13990,110 @@
                 "x-form-request": "App\\Http\\Requests\\Landing\\SolicitudDesdeLaWebRequest"
             }
         },
+        "/v1/sos": {
+            "post": {
+                "operationId": "post_v1_sos",
+                "tags": [
+                    "sos"
+                ],
+                "summary": "\\App\\Http\\Controllers\\Seguridad\\SosController@lanzar",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "throttle:30,1"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "422": {
+                        "description": "Validacion fallida."
+                    }
+                },
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "latitude": {
+                                        "type": "number"
+                                    },
+                                    "longitude": {
+                                        "type": "number"
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "robo",
+                                            "extorsion",
+                                            "accidente_transito",
+                                            "otro"
+                                        ]
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Seguridad\\LanzarSosRequest"
+            }
+        },
+        "/v1/sos/{id}": {
+            "patch": {
+                "operationId": "patch_v1_sos_id_",
+                "tags": [
+                    "sos"
+                ],
+                "summary": "\\App\\Http\\Controllers\\Seguridad\\SosController@afinar",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "throttle:30,1"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "422": {
+                        "description": "Validacion fallida."
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+            }
+        },
         "/v1/top-businesses-free": {
             "get": {
                 "operationId": "get_v1_top_businesses_free",
