@@ -73,13 +73,39 @@ class AffiliationController extends Controller
     }
 
     // Buscar comprador por número de teléfono y rol
+    /** Lo que mide un móvil en Colombia; lo que venga delante es indicativo. */
+    private const LARGO_DEL_MOVIL = 10;
+
     public function searchBuyerByPhone(BuscarCompradorPorTelefonoRequest $request)
     {
 
-        $phone = $request->phone;
+        /*
+         * SE COMPARAN DÍGITOS, NO TEXTO.
+         *
+         * Esto era `where('phone', $phone)`: una comparación exacta de cadenas.
+         * Y los teléfonos están guardados CON ESPACIOS --«308 291 2460»--
+         * mientras que la pantalla que usa esta búsqueda pide el número
+         * seguido; su propio marcador de posición dice «3001234567». O sea
+         * que la app pedía el número de una forma y el servidor sólo aceptaba
+         * la otra: el tendero escribía bien el número de su cliente y le
+         * salía «no encontramos a nadie».
+         *
+         * No vale normalizar sólo lo que llega: lo guardado también viene
+         * sucio y en varias formas. Se limpian los dos lados.
+         *
+         * Se comparan los DIEZ ÚLTIMOS dígitos, que es lo que mide un móvil
+         * colombiano: así «+57 308 291 2460», «57 3082912460» y «3082912460»
+         * encuentran a la misma persona. Lo de delante es el indicativo.
+         */
+        $digitos = preg_replace('/\D+/', '', (string) $request->phone);
+        $ultimos = substr($digitos, -self::LARGO_DEL_MOVIL);
+
+        /* `SUBSTR(x, -10)` se comporta igual en MySQL y en SQLite, que es
+           sobre lo que corre la suite; `RIGHT()` sólo existe en MySQL. */
+        $limpio = "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, ' ', ''), '-', ''), '(', ''), ')', ''), '+', '')";
 
         $user = User::with(['buyer'])
-            ->where('phone', $phone)
+            ->whereRaw("SUBSTR({$limpio}, -".self::LARGO_DEL_MOVIL.') = ?', [$ultimos])
             ->where('rol', 1) // Filtrar por rol igual a 1
             ->whereHas('buyer') // Solo los que tienen relación con comprador
             ->first();
