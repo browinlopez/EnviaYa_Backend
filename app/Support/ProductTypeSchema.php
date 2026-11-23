@@ -46,11 +46,37 @@ class ProductTypeSchema
             'type_name' => 'pharmacy',
             'relation' => 'pharmacy',
             'model' => PharmacyProduct::class,
+            /*
+             * LO QUE UNA DROGUERÍA DE BARRIO SÍ LLENA.
+             *
+             * `active_ingredient` y `dosage` eran OBLIGATORIOS, y esa es la
+             * razón de que `pharmacy_products` esté vacía: para dar de alta
+             * un pañal o un frasco de alcohol había que inventarse un
+             * principio activo. Pasan a opcionales; se siguen pidiendo, pero
+             * no bloquean.
+             *
+             * `content` es «10 tabletas», «500 ml»: cuánto trae el envase.
+             * NO es `dosage`, que es la concentración —un acetaminofén es de
+             * 500 mg y la caja trae 10—. Meterlos en el mismo campo hace que
+             * la ficha diga «Dosis: 10 tabletas», que es falso.
+             *
+             * `presentation` se queda en TEXTO LIBRE y no en lista cerrada:
+             * una droguería vende en caja, frasco, blíster, sobre, ampolla,
+             * tubo, óvulo y jeringa, y una lista que se queda corta obliga a
+             * mentir en la celda.
+             *
+             * `expiration_date` ya NO está: se mudó a `products_business`
+             * porque el atún de una tienda vence en marzo y el de la otra en
+             * septiembre. Tenerlo en los dos sitios es cómo se consigue que
+             * digan cosas distintas.
+             */
             'fields' => [
-                'active_ingredient' => ['rules' => ['required', 'string', 'max:255'], 'label' => 'Principio activo', 'input' => 'text'],
-                'dosage' => ['rules' => ['required', 'string', 'max:100'], 'label' => 'Dosis / Concentración', 'input' => 'text'],
+                'active_ingredient' => ['rules' => ['nullable', 'string', 'max:255'], 'label' => 'Principio activo', 'input' => 'text'],
+                'dosage' => ['rules' => ['nullable', 'string', 'max:100'], 'label' => 'Dosis o concentración', 'input' => 'text'],
                 'presentation' => ['rules' => ['nullable', 'string', 'max:255'], 'label' => 'Presentación', 'input' => 'text'],
-                'expiration_date' => ['rules' => ['nullable', 'date'], 'label' => 'Fecha de vencimiento', 'input' => 'date'],
+                'content' => ['rules' => ['nullable', 'string', 'max:80'], 'label' => 'Contenido', 'input' => 'text'],
+                'registro_invima' => ['rules' => ['nullable', 'string', 'max:40'], 'label' => 'Registro INVIMA', 'input' => 'text'],
+                'requiere_formula' => ['rules' => ['nullable', 'boolean'], 'label' => 'Requiere fórmula médica', 'input' => 'boolean'],
             ],
         ],
 

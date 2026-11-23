@@ -75,19 +75,83 @@ function productTestSetup(int $businessType): array
     return [$business, $category];
 }
 
-test('farmacia exige principio activo y dosis', function () {
+/*
+ * ANTES ESTA PRUEBA EXIGIA PRINCIPIO ACTIVO Y DOSIS, y esa regla es la razon
+ * de que `pharmacy_products` llevara anios vacia: para dar de alta un panal,
+ * un frasco de alcohol o unas gasas habia que inventarse un principio activo.
+ *
+ * Una drogueria de barrio vende medicamentos Y todo lo demas. Exigir el dato
+ * del medicamento a lo que no lo es no mejora el catalogo: lo vacia.
+ */
+test('farmacia NO exige principio activo ni dosis: una droguería vende más que medicinas', function () {
     [$business, $category] = productTestSetup(2);
 
     $response = $this->postJson('/v1/product/create', [
-        'name' => 'Acetaminofén',
+        'name' => 'Pañales etapa 3 x 40',
         'category_id' => $category->category_id,
-        'price' => 5000,
+        'price' => 48900,
         'amount' => 10,
         'business_id' => $business->busines_id,
     ]);
 
-    $response->assertStatus(422)
-        ->assertJsonValidationErrors(['active_ingredient', 'dosage']);
+    $response->assertSuccessful();
+});
+
+test('farmacia guarda lo suyo: contenido, registro INVIMA y si pide fórmula', function () {
+    [$business, $category] = productTestSetup(2);
+
+    $this->postJson('/v1/product/create', [
+        'name' => 'Acetaminofén 500 mg',
+        'category_id' => $category->category_id,
+        'price' => 5000,
+        'amount' => 10,
+        'business_id' => $business->busines_id,
+        'dosage' => '500 mg',
+        'presentation' => 'Caja',
+        'content' => '10 tabletas',
+        'registro_invima' => 'INVIMA 2019M-0012345',
+        'requiere_formula' => false,
+    ])->assertSuccessful();
+
+    $fila = DB::table('pharmacy_products')->latest('pharmacy_product_id')->first();
+
+    expect($fila->content)->toBe('10 tabletas')
+        ->and($fila->registro_invima)->toBe('INVIMA 2019M-0012345')
+        // El contenido NO se mezcla con la concentracion: son dos cosas.
+        ->and($fila->dosage)->toBe('500 mg');
+});
+
+test('lo que requiere fórmula queda marcado', function () {
+    [$business, $category] = productTestSetup(2);
+
+    $this->postJson('/v1/product/create', [
+        'name' => 'Amoxicilina 500 mg',
+        'category_id' => $category->category_id,
+        'price' => 12000,
+        'amount' => 5,
+        'business_id' => $business->busines_id,
+        'requiere_formula' => true,
+    ])->assertSuccessful();
+
+    expect(DB::table('pharmacy_products')->latest('pharmacy_product_id')->value('requiere_formula'))
+        ->toEqual(1);
+});
+
+test('sin decir nada, NO requiere fórmula', function () {
+    /* El booleano lleva defecto y no admite nulo: «no sabemos» y «no
+       requiere» se pintarian igual, asi que son lo mismo. */
+    [$business, $category] = productTestSetup(2);
+
+    $this->postJson('/v1/product/create', [
+        'name' => 'Gasa estéril',
+        'category_id' => $category->category_id,
+        'price' => 3200,
+        'amount' => 20,
+        'business_id' => $business->busines_id,
+    ])->assertSuccessful();
+
+    expect(DB::table('pharmacy_products')->latest('pharmacy_product_id')->value('requiere_formula'))
+        ->toEqual(0);
 });
 
 test('rechaza campos de otro tipo de negocio', function () {
