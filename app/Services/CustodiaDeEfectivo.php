@@ -114,6 +114,9 @@ class CustodiaDeEfectivo
             'receipt_path' => $datos['receipt_path'] ?? null,
             'state' => CashDeposit::PENDIENTE,
             'notes' => $datos['notes'] ?? null,
+            /* Sólo la pone `recibirEnMostrador`; las consignaciones del
+               domiciliario llevan su propia referencia bancaria. */
+            'idempotency_key' => $datos['idempotency_key'] ?? null,
         ]);
     }
 
@@ -313,12 +316,46 @@ class CustodiaDeEfectivo
         float $monto,
         int $usuarioId,
         ?string $nota = null,
+        ?string $clave = null,
     ): CashDeposit {
         if ($monto <= 0) {
             throw new RuntimeException('El monto tiene que ser mayor que cero.');
         }
 
-        return DB::transaction(function () use ($negocioId, $domiciliaryId, $monto, $usuarioId, $nota) {
+        /*
+         * EL MISMO BILLETE NO SE CUENTA DOS VECES.
+         *
+         * Esto no era idempotente, y con una red de barrio eso es un agujero
+         * de plata: la petición sale, el servidor la ejecuta --baja el saldo,
+         * crea el depósito-- y la respuesta no llega. La app dice «No se pudo
+         * guardar, inténtalo de nuevo», que es lo único honesto que puede
+         * decir cuando no sabe, y el tendero vuelve a tocar «Recibir».
+         * Quedan dos entregas de $5.000 por un solo billete de $5.000, y la
+         * diferencia se la lleva el domiciliario.
+         *
+         * Medido contra el servidor local: con el cliente abortando a los
+         * 0,3 s el saldo bajó de 49.600 a 44.600 con la app creyendo que
+         * había fallado; al reintentar quedó en 39.600.
+         *
+         * LA CLAVE LA PONE QUIEN PULSA. El servidor no puede distinguir «me
+         * entregó otros $5.000» de «es el mismo de antes» --dos entregas
+         * iguales seguidas pasan de verdad--. Quien sí lo sabe es la app, que
+         * genera una clave al abrir el formulario y la repite en cada
+         * reintento DE ESE intento.
+         *
+         * Se devuelve el depósito que ya existía, no un error: para quien
+         * reintenta, que le digan «ya estaba» y que le digan «listo» son la
+         * misma cosa, y un error le haría dudar de si se registró.
+         */
+        if ($clave !== null) {
+            $yaEstaba = CashDeposit::where('idempotency_key', $clave)->first();
+
+            if ($yaEstaba) {
+                return $yaEstaba;
+            }
+        }
+
+        return DB::transaction(function () use ($negocioId, $domiciliaryId, $monto, $usuarioId, $nota, $clave) {
             // Bloqueo por domiciliario: dos entregas a la vez no pueden pasar
             // juntas el tope, cada una viendo el saldo sin la otra.
             DB::table('domiciliary')->where('domiciliary_id', $domiciliaryId)->lockForUpdate()->first();
@@ -342,6 +379,7 @@ class CustodiaDeEfectivo
                 'amount' => round($monto, 2),
                 'reference' => 'Entregado en el mostrador',
                 'notes' => $nota,
+                'idempotency_key' => $clave,
             ]);
             $deposito->update(['canal' => CashDeposit::MOSTRADOR, 'busines_id' => $negocioId]);
 
