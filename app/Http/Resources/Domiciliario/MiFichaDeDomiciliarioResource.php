@@ -6,6 +6,7 @@ namespace App\Http\Resources\Domiciliario;
 
 use App\Http\Resources\Usuario\UsuarioResource;
 use App\Models\Domiciliary;
+use App\Services\PapelesDelDomiciliario;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Arr;
@@ -98,6 +99,26 @@ class MiFichaDeDomiciliarioResource extends JsonResource
                 ->values()
                 ->all();
         }
+
+        /*
+         * LO QUE LE FALTA PARA PODER REPARTIR.
+         *
+         * La TIENDA ya lo sabe --`DomiciliarioDeLaFlotaResource` manda
+         * `papeles_faltantes` y `puede_tomar` en la torre-- y el
+         * domiciliario no: su propia ficha no lo traia. Asi que se enteraba
+         * cuando intentaba aceptar un pedido y `orders/update` lo rechazaba
+         * con un 422, despues de la espera y con el pedido en la mano.
+         *
+         * El mismo servicio que decide el rechazo decide lo que se pinta:
+         * `PapelesDelDomiciliario`. Dos sitios con dos ideas de que papeles
+         * hacen falta es como se consigue que la pantalla diga una cosa y el
+         * servidor haga otra.
+         *
+         * Lista VACIA cuando no le aplica --no lo dio de alta una tienda--,
+         * que no es lo mismo que «no le falta ninguno» pero se pinta igual:
+         * en los dos casos puede repartir.
+         */
+        $datos['papeles_faltantes'] = app(PapelesDelDomiciliario::class)->faltantes($d);
 
         return $datos;
     }
