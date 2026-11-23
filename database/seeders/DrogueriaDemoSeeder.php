@@ -67,13 +67,26 @@ class DrogueriaDemoSeeder extends Seeder
         $this->fiado($negocio);
         $this->efectivo($negocio);
         $this->promociones($negocio);
-        $this->conversacion();
+
+        $norte = $this->segundaSede($negocio);
+
+        $this->conversacion($negocio, $norte);
 
         $this->command?->info("Listo. «{$nombre}» (negocio {$negocio}) ya tiene:");
         $this->command?->line('  · '.DB::table('business_user_affiliations')->where('busines_id', $negocio)->count().' clientes afiliados');
         $this->command?->line('  · '.DB::table('store_credits')->where('busines_id', $negocio)->count().' cupos de fiado');
         $this->command?->line('  · '.DB::table('cash_deposits')->where('busines_id', $negocio)->count().' entregas de efectivo');
         $this->command?->line('  · '.DB::table('promotions')->where('busines_id', $negocio)->count().' promociones');
+
+        if ($norte) {
+            $nombreNorte = DB::table('business')->where('busines_id', $norte)->value('name');
+
+            $this->command?->newLine();
+            $this->command?->info("Y «{$nombreNorte}» (negocio {$norte}), la segunda sede:");
+            $this->command?->line('  · '.DB::table('products_business')->where('busines_id', $norte)->count().' productos, con otros precios');
+            $this->command?->line('  · '.DB::table('business_user_affiliations')->where('busines_id', $norte)->count().' clientes afiliados');
+            $this->command?->line('  · '.DB::table('promotions')->where('busines_id', $norte)->count().' promoción');
+        }
     }
 
     /* ------------------------------------------------------------------ */
@@ -294,7 +307,7 @@ class DrogueriaDemoSeeder extends Seeder
      * Acá sólo se arregla el texto, que es lo que se puede arreglar sembrando.
      * Lo otro es un cambio de modelo y queda anotado en el balance.
      */
-    private function conversacion(): void
+    private function conversacion(int $centro, ?int $norte): void
     {
         $arreglos = [
             '¿Tienen leche deslactosada?' => '¿Tienen acetaminofén de 500 para niño?',
@@ -303,6 +316,216 @@ class DrogueriaDemoSeeder extends Seeder
 
         foreach ($arreglos as $viejo => $nuevo) {
             DB::table('messages')->where('content', $viejo)->update(['content' => $nuevo]);
+        }
+
+        /*
+         * LAS QUE YA HABÍA SE QUEDAN EN LA SEDE DEL CENTRO.
+         *
+         * Nacieron antes de que `chats.busines_id` existiera, así que están
+         * en nulo y la migración no las rellenó a propósito: con el dueño
+         * teniendo dos locales no hay forma de saber a cuál le escribieron.
+         * Acá sí se sabe, porque son datos de demostración y los ponemos
+         * nosotros.
+         */
+        $suyos = DB::table('chat_participants as cp')
+            ->join('user as u', 'u.user_id', '=', 'cp.user_id')
+            ->where('cp.user_id', self::DUENA)
+            ->pluck('cp.chat_id');
+
+        DB::table('chats')
+            ->whereIn('chat_id', $suyos)
+            ->whereNull('busines_id')
+            ->update(['busines_id' => $centro]);
+
+        if (! $norte) {
+            return;
+        }
+
+        /*
+         * Y UNA EN LA SEDE NORTE CON LA MISMA PERSONA.
+         *
+         * Katherine ya tiene una conversación con la dueña en la sede del
+         * centro. Ésta es la misma persona preguntándole al OTRO local, y
+         * es el dato que enseña para qué sirvió todo esto: antes los dos
+         * mensajes caían en el mismo hilo —el de la pareja de personas— y
+         * ahora son dos conversaciones, cada una en su mostrador.
+         */
+        $katherine = (int) DB::table('user')
+            ->where('email', 'katherine.ariza@demo.example.com')
+            ->value('user_id');
+
+        if (! $katherine) {
+            return;
+        }
+
+        $chat = DB::table('chats')->where('busines_id', $norte)->value('chat_id');
+
+        if (! $chat) {
+            $chat = DB::table('chats')->insertGetId([
+                'type' => 'private',
+                'busines_id' => $norte,
+                'created_at' => now()->subDays(3),
+            ], 'chat_id');
+
+            foreach ([[self::DUENA, 2], [$katherine, 1]] as [$uid, $rol]) {
+                DB::table('chat_participants')->insert([
+                    'chat_id' => $chat,
+                    'user_id' => $uid,
+                    'role_id' => $rol,
+                    'joined_at' => now()->subDays(3),
+                ]);
+            }
+        }
+
+        $dialogo = [
+            [$katherine, 1, '¿En la del norte tienen el tensiómetro?', 3],
+            [self::DUENA, 2, 'Sí, nos quedan dos. ¿Se lo aparto?', 3],
+            [$katherine, 1, 'Sí por favor, paso esta tarde.', 2],
+        ];
+
+        foreach ($dialogo as [$uid, $rol, $texto, $dias]) {
+            DB::table('messages')->updateOrInsert(
+                ['chat_id' => $chat, 'content' => $texto],
+                ['user_id' => $uid, 'role_id' => $rol, 'created_at' => now()->subDays($dias)],
+            );
+        }
+    }
+
+    /**
+     * LA SEGUNDA SEDE: el mismo dueño, otro mostrador.
+     *
+     * El negocio 4 era «Sabor Costeño Restaurante», que colgaba de la misma
+     * dueña que la droguería. Una droguera con un restaurante al lado no es
+     * imposible, pero como dato de prueba no sirve para nada: lo que hay que
+     * poder mirar es un dueño con DOS LOCALES DEL MISMO OFICIO, que es el
+     * caso real —una cadena pequeña de barrio— y el que destapa los fallos
+     * de ámbito.
+     *
+     * Se conserva lo que ya colgaba de él: 15 pedidos y 6 reseñas, con textos
+     * genéricos («Todo llegó completo y bien empacado») que valen igual para
+     * una droguería. Borrarlos y rehacerlos sería tirar datos buenos.
+     *
+     * --------------------------------------------------------------------
+     * Y SU SURTIDO ES DISTINTO, QUE ES EL PUNTO.
+     *
+     * Dos sedes con el mismo inventario y los mismos precios no enseñan
+     * nada: no se distingue «el panel está mostrando la sede correcta» de
+     * «el panel está mostrando siempre la misma». Ésta tiene la mitad del
+     * surtido, precios algo más altos —es otro barrio— y dos cosas agotadas
+     * que en el centro sí hay.
+     */
+    private function segundaSede(int $centro): ?int
+    {
+        $norte = (int) DB::table('business')
+            ->where('busines_id', '<>', $centro)
+            ->whereIn('busines_id', function ($q) {
+                $q->select('ob.busines_id')
+                    ->from('owner_busines as ob')
+                    ->join('owner as o', 'o.owner_id', '=', 'ob.owner_id')
+                    ->where('o.user_id', self::DUENA);
+            })
+            ->orderBy('busines_id')
+            ->value('busines_id');
+
+        if (! $norte) {
+            return null;
+        }
+
+        DB::table('business')->where('busines_id', $norte)->update([
+            'name' => 'Droguería Vida Sana Norte',
+            'type' => ProductTypeSchema::TYPE_PHARMACY,
+            'address' => 'Calle 85 #51B-22',
+            'description' => 'La sede del norte. Mismo surtido, abierta hasta las 11 p. m.',
+            'credit_debt_cap' => 250000,
+        ]);
+
+        $this->surtidoDelNorte($centro, $norte);
+
+        /* Cuatro clientes, y NINGUNO repetido del centro salvo Katherine:
+           así se ve de un vistazo que las dos listas son distintas. */
+        foreach ([33, 35, 36, 42] as $uid) {
+            if (DB::table('user')->where('user_id', $uid)->exists()) {
+                DB::table('business_user_affiliations')->updateOrInsert(
+                    ['busines_id' => $norte, 'user_id' => $uid],
+                    [],
+                );
+            }
+        }
+
+        DB::table('store_credits')->updateOrInsert(
+            ['busines_id' => $norte, 'user_id' => 35],
+            [
+                'credit_limit' => 50000,
+                'created_by' => self::DUENA,
+                'created_at' => now()->subDays(5),
+                'updated_at' => now(),
+            ],
+        );
+
+        DB::table('promotions')->updateOrInsert(
+            ['busines_id' => $norte, 'description' => 'Abierto hasta las 11 p. m. Domicilio en 20 minutos.'],
+            [
+                'tipo' => Promotion::SIN_DESCUENTO,
+                'percentage_discount' => null,
+                'start_date' => now()->subDays(1),
+                'end_date' => now()->addDays(13),
+                'usos' => 0,
+                'sent_at' => now()->subDays(1),
+                'recipients_count' => 4,
+                'created_by' => self::DUENA,
+                'state' => Promotion::ENVIADA,
+                'created_at' => now()->subDays(1),
+                'updated_at' => now()->subDays(1),
+            ],
+        );
+
+        return $norte;
+    }
+
+    /**
+     * La mitad del surtido del centro, con otros precios.
+     *
+     * El catálogo de productos es COMPARTIDO: la sede norte no crea
+     * productos nuevos, se cuelga de los mismos. Lo que cambia por sede es
+     * precio y existencias, que es justo lo que vive en `products_business`.
+     * Crear productos duplicados para la otra sede sería ensuciar el
+     * catálogo de toda la plataforma para pintar una pantalla.
+     */
+    private function surtidoDelNorte(int $centro, int $norte): void
+    {
+        $delCentro = DB::table('products_business')
+            ->where('busines_id', $centro)
+            ->orderBy('products_id')
+            ->get(['products_id', 'price', 'sale_unit']);
+
+        if ($delCentro->isEmpty()) {
+            return;
+        }
+
+        /* Uno de cada dos: la sede chica no trae todo el catálogo. */
+        $suyos = $delCentro->values()->filter(fn ($p, $i) => $i % 2 === 0)->values();
+
+        foreach ($suyos as $i => $p) {
+            /* Un 8 % más caro, redondeado a la centena: es otro barrio, y
+               dos sedes con el precio idéntico al peso no se distinguen. */
+            $precio = round(((float) $p->price * 1.08) / 100) * 100;
+
+            /* Las dos primeras, agotadas. Una sede sin NADA agotado no
+               enseña el contador de «Agotados», que es media pantalla. */
+            $cantidad = $i < 2 ? 0 : (6 + ($i * 3) % 25);
+
+            DB::table('products_business')->updateOrInsert(
+                ['busines_id' => $norte, 'products_id' => (int) $p->products_id],
+                [
+                    'price' => $precio,
+                    'sale_unit' => $p->sale_unit,
+                    'amount' => $cantidad,
+                    'stock_weight' => 0,
+                    'qualification' => 0,
+                    'created_at' => now()->subDays(6),
+                    'updated_at' => now(),
+                ],
+            );
         }
     }
 }

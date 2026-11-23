@@ -17,6 +17,15 @@ class Chat extends Audit
 
     protected $fillable = [
         'type', // private, group, etc.
+
+        /*
+         * DE QUE MOSTRADOR ES ESTA CONVERSACION.
+         *
+         * Nulo cuando no es de ninguno: un domiciliario hablando de una
+         * entrega, o soporte respondiendo un reclamo. Nulo ahi es una
+         * respuesta --«esto no es de un mostrador»--, no un hueco.
+         */
+        'busines_id',
     ];
 
     /** @return HasMany<ChatParticipant, $this> */

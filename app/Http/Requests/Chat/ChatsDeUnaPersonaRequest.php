@@ -25,6 +25,10 @@ class ChatsDeUnaPersonaRequest extends FormRequest
     {
         return [
             'user_id' => 'required|exists:user,user_id',
+
+            /* El local que el dueno esta mirando. Sin el, salen todas,
+               que es lo que hacia antes de que esto existiera. */
+            'busines_id' => 'sometimes|nullable|integer|exists:business,busines_id',
         ];
     }
 }

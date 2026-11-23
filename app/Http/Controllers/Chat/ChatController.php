@@ -58,15 +58,34 @@ class ChatController extends Controller
                 ->lockForUpdate()
                 ->get();
 
-            // Revisar si ya existe un chat privado entre ambos
+            /*
+             * DE QUE MOSTRADOR ES, Y POR QUE ENTRA EN LA BUSQUEDA.
+             *
+             * Antes el chat se buscaba solo por la pareja de personas. Si el
+             * mismo vecino le escribia a los DOS locales del mismo dueno, los
+             * dos hilos se fundian en UNO: la pregunta del medicamento y la
+             * del almuerzo mezcladas por fecha, sin forma de separarlas.
+             *
+             * Con el negocio en la busqueda son dos conversaciones, cada una
+             * en su local. Y un chat SIN negocio --un domiciliario, soporte--
+             * sigue siendo el suyo y no se mezcla con los de mostrador.
+             */
+            $negocioId = $this->negocioDeLaConversacion($request, $sender, $recipient);
+
             $chat = Chat::where('type', 'private')
+                ->where(fn ($q) => $negocioId === null
+                    ? $q->whereNull('busines_id')
+                    : $q->where('busines_id', $negocioId))
                 ->whereHas('participants', fn ($q) => $q->where('user_id', $sender->user_id))
                 ->whereHas('participants', fn ($q) => $q->where('user_id', $recipient->user_id))
                 ->first();
 
             // Si no existe, crear el chat
             if (! $chat) {
-                $chat = Chat::create(['type' => 'private']); // siempre privado para chats 1 a 1
+                $chat = Chat::create([
+                    'type' => 'private', // siempre privado para chats 1 a 1
+                    'busines_id' => $negocioId,
+                ]);
 
                 // Agregar participantes usando 'rol' de la tabla user
                 ChatParticipant::insert([
@@ -259,9 +278,23 @@ class ChatController extends Controller
 
         // Se precarga el último mensaje de cada chat: sin él la lista solo
         // podía mostrar el nombre del contacto, sin vista previa ni fecha.
+        /*
+         * EL LOCAL QUE SE ESTA MIRANDO, SI LO DICEN.
+         *
+         * Se incluyen tambien los chats SIN negocio, y no es por timidez:
+         * un chat sin negocio es soporte respondiendo un reclamo --que el
+         * dueno tiene que ver mire el local que mire-- o una conversacion
+         * vieja de cuando esto no se guardaba. Filtrar en seco los haria
+         * desaparecer de los dos locales, que se lee como datos perdidos.
+         */
+        $negocioId = $request->filled('busines_id') ? (int) $request->busines_id : null;
+
         $chats = Chat::whereHas('participants', function ($q) use ($request) {
             $q->where('user_id', $request->user_id);
         })
+            ->when($negocioId, fn ($q) => $q->where(
+                fn ($w) => $w->where('busines_id', $negocioId)->orWhereNull('busines_id'),
+            ))
             ->with([
                 'participants.user',
                 'messages' => fn ($q) => $q->latest('created_at')->limit(1),
@@ -277,6 +310,57 @@ class ChatController extends Controller
         );
 
         return response()->json($formattedChats);
+    }
+
+    /**
+     * De que negocio es esta conversacion, si es de alguno.
+     *
+     * TRES CAMINOS, Y EL ORDEN IMPORTA:
+     *
+     *  1. Lo que diga quien escribe. El panel sabe que local esta mirando
+     *     y lo manda. Pero NO se acepta a ciegas: el negocio tiene que ser
+     *     de uno de los dos que hablan, o cualquiera podria colgar su
+     *     conversacion del mostrador de otro.
+     *
+     *  2. Deducirlo, cuando no hay duda: uno de los dos es dueno y tiene
+     *     UN solo negocio. Esto es lo que hace que la app publicada
+     *     --que no manda nada-- siga clasificando bien sin tocarla.
+     *
+     *  3. Nulo. Dos duenos, dos negocios, o ningun dueno: no se adivina.
+     *     Mover una conversacion a un mostrador al azar es peor que
+     *     dejarla sin mostrador.
+     */
+    private function negocioDeLaConversacion(Request $request, User $emisor, User $destino): ?int
+    {
+        $suyos = fn (User $u) => DB::table('owner_busines as ob')
+            ->join('owner as o', 'o.owner_id', '=', 'ob.owner_id')
+            ->where('o.user_id', $u->user_id)
+            ->pluck('ob.busines_id')
+            ->map(fn ($x) => (int) $x)
+            ->unique()
+            ->values();
+
+        $deLosDos = $suyos($emisor)->merge($suyos($destino))->unique()->values();
+
+        if ($request->filled('busines_id')) {
+            $pedido = (int) $request->busines_id;
+
+            if ($deLosDos->contains($pedido)) {
+                return $pedido;
+            }
+
+            /*
+             * Un negocio que no es de ninguno de los dos se IGNORA, y se sigue
+             * al paso siguiente en vez de devolver nulo.
+             *
+             * La diferencia importa: si una app vieja manda un negocio
+             * caducado, devolver nulo dejaria la conversacion sin mostrador y
+             * el dueno tendria que buscarla a mano. Ignorarlo y deducir pone
+             * la conversacion donde le toca cuando el dueno tiene uno solo.
+             */
+        }
+
+        return $deLosDos->count() === 1 ? (int) $deLosDos->first() : null;
     }
 
     /**
