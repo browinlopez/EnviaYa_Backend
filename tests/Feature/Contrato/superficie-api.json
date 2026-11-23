@@ -2253,6 +2253,26 @@
     },
     {
         "verbo": "GET",
+        "uri": "v1/domiciliaries/orders/{id}/evidencia",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/domiciliaries/orders/{id}/evidencia",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
         "uri": "v1/domiciliaries/pedidos",
         "nombre": null,
         "middleware": [

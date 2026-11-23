@@ -9174,6 +9174,82 @@
                 }
             }
         },
+        "/v1/domiciliaries/orders/{id}/evidencia": {
+            "get": {
+                "operationId": "get_v1_domiciliaries_orders_id_evidencia",
+                "tags": [
+                    "domiciliaries"
+                ],
+                "summary": "App\\Http\\Controllers\\Domiciliary\\EvidenciaDeEntregaController@ver",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            },
+            "post": {
+                "operationId": "post_v1_domiciliaries_orders_id_evidencia",
+                "tags": [
+                    "domiciliaries"
+                ],
+                "summary": "App\\Http\\Controllers\\Domiciliary\\EvidenciaDeEntregaController@guardar",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "422": {
+                        "description": "Validacion fallida."
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+            }
+        },
         "/v1/domiciliaries/pedidos": {
             "get": {
                 "operationId": "get_v1_domiciliaries_pedidos",

@@ -57,6 +57,7 @@ use App\Http\Controllers\Conjunto\VisitantesController;
 use App\Http\Controllers\DeviceTokenController;
 use App\Http\Controllers\Domiciliary\ContratoDelDomiciliarioController;
 use App\Http\Controllers\Domiciliary\DomiciliaryController;
+use App\Http\Controllers\Domiciliary\EvidenciaDeEntregaController;
 use App\Http\Controllers\Domiciliary\IngresosDelDomiciliarioController;
 use App\Http\Controllers\Domiciliary\PedidosDelDomiciliarioController;
 use App\Http\Controllers\ErroresDeLaAppController;
@@ -872,6 +873,24 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
          * de otro.
          */
         Route::get('/cash-balance', [EfectivoController::class, 'miSaldo']);
+
+        /*
+         * LA FOTO DE QUE SE ENTREGO.
+         *
+         * Aparte de marcar el pedido como entregado, y a proposito: la
+         * evidencia NO es obligatoria. Si fueran la misma llamada, una foto
+         * que no sube --y en la calle no sube la mitad-- impediria cerrar
+         * una entrega que SI ocurrio, y reintentar la subida reintentaria
+         * la entrega. Puede llegar tarde, o no llegar.
+         *
+         * Sin identificador de domiciliario: sale de la sesion, igual que
+         * el acuerdo y el efectivo. Y se comprueba que el pedido sea SUYO;
+         * no basta con ser domiciliario.
+         */
+        Route::post('/orders/{id}/evidencia', [EvidenciaDeEntregaController::class, 'guardar'])
+            ->whereNumber('id');
+        Route::get('/orders/{id}/evidencia', [EvidenciaDeEntregaController::class, 'ver'])
+            ->whereNumber('id');
 
         /*
          * SU acuerdo de vinculacion: leerlo y firmarlo desde el telefono.
