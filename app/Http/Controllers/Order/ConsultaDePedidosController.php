@@ -239,9 +239,27 @@ class ConsultaDePedidosController extends Controller
             default => 'Pagado en la app',
         };
 
-        $porMedio = $incomeOrders()
+        /*
+         * Y SE DESGLOSA PARA CADA PERIODO QUE LA PANTALLA SABE ENSEÑAR.
+         *
+         * Era una sola consulta, la de la semana, y la pantalla de Ganancias
+         * la ponía debajo de los tres botones --Hoy, Semana, Mes-- cambiando
+         * el pie para que dijera cuál estaba mirando. El pie cambiaba; las
+         * cifras no.
+         *
+         * Se veía en una captura cualquiera: «Desde el primero del mes:
+         * $1.149.900» arriba y «Efectivo $0 · En la app $0 · Fiado $0»
+         * justo debajo, con el pie diciendo «Mes». Un millón largo que no
+         * salió de ningún bolsillo. En una pantalla de dinero una etiqueta
+         * que no cuadra con su cifra hace dudar de las dos, y la de arriba
+         * era la buena.
+         *
+         * Son tres `GROUP BY` sobre una tabla que ya se está recorriendo seis
+         * veces en esta misma respuesta, así que el coste es el que ya había.
+         */
+        $porMedioEntre = fn ($desde, $hasta) => $incomeOrders()
             ->select('methods_id', DB::raw('SUM(total) as total'))
-            ->whereBetween('sale_date', [$currentWeekStart, $currentWeekEnd])
+            ->whereBetween('sale_date', [$desde, $hasta])
             ->groupBy('methods_id')
             ->get()
             ->groupBy(fn ($f) => $bolsillo((int) $f->methods_id))
@@ -250,6 +268,8 @@ class ConsultaDePedidosController extends Controller
             ->map(fn ($total, $medio) => ['medio' => $medio, 'total' => $total])
             ->values()
             ->all();
+
+        $porMedio = $porMedioEntre($currentWeekStart, $currentWeekEnd);
 
         $month_start = now()->startOfMonth();
         $month_end = (clone $month_start)->endOfMonth();
@@ -398,6 +418,10 @@ class ConsultaDePedidosController extends Controller
 
             // Cómo le pagaron esta semana, de mayor a menor.
             'por_medio' => $porMedio,
+            // Y los otros dos periodos de la pantalla de Ganancias, para que
+            // el desglose diga lo mismo que la cifra que tiene encima.
+            'por_medio_hoy' => $porMedioEntre(now()->startOfDay(), now()->endOfDay()),
+            'por_medio_mes' => $porMedioEntre($month_start, $month_end),
         ]);
     }
 

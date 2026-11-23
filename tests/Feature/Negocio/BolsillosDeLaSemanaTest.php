@@ -224,3 +224,94 @@ test('el dia a dia solo viaja cuando cabe en una pantalla', function () {
     expect($corto->json('rango.dia_a_dia'))->toHaveCount(7)
         ->and($largo->json('rango.dia_a_dia'))->toBe([]);
 });
+
+/* ---------------------------------------------------------------------- */
+
+/**
+ * EL MISMO DESGLOSE PARA CADA PERIODO DE LA PANTALLA.
+ *
+ * Ganancias tiene tres botones --Hoy, Semana, Mes-- y debajo pinta de que
+ * bolsillo salio la plata. Solo viajaba el desglose de la SEMANA, y la
+ * pantalla cambiaba el pie para decir cual estaba mirando. El pie cambiaba;
+ * las cifras no.
+ *
+ * Se veia en una captura cualquiera: «Desde el primero del mes: $1.149.900»
+ * arriba y «Efectivo $0 · En la app $0 · Fiado $0» justo debajo, firmado
+ * «Mes». Un millon largo que no salio de ningun bolsillo. En una pantalla de
+ * dinero una etiqueta que no cuadra con su cifra hace dudar de las dos.
+ *
+ * Las fechas se congelan a un miercoles de mitad de mes: sin eso, un lunes
+ * «hoy», «esta semana» y a veces «este mes» son la misma ventana y la prueba
+ * pasaria en verde sin distinguir nada.
+ */
+function ventaEl(int $businessId, string $cuando, int $metodo, float $total): void
+{
+    DB::table('orderssales')->insert([
+        'buyer_id' => DB::table('buyer')->value('buyer_id'),
+        'busines_id' => $businessId,
+        'subtotal' => $total, 'domicilio' => 0, 'total' => $total,
+        'sale_date' => $cuando,
+        'state' => 4, 'payment_state' => 'paid', 'methods_id' => $metodo,
+    ]);
+}
+
+test('cada periodo trae su propio desglose, y no el de la semana tres veces', function () {
+    $this->travelTo('2026-06-17 15:00:00');
+
+    $t = tenderoConVentas([]);
+
+    // Hoy, miercoles: efectivo.
+    ventaEl($t['businessId'], '2026-06-17 09:00:00', 1, 40000);
+    // Lunes de esta semana: por la app. Entra en la semana y en el mes, no en hoy.
+    ventaEl($t['businessId'], '2026-06-15 09:00:00', 2, 25000);
+    // Principio de mes: fiado. Solo en el mes.
+    ventaEl($t['businessId'], '2026-06-02 09:00:00', CreditoDeTienda::METODO, 10000);
+
+    Sanctum::actingAs($t['tendero']);
+    $r = $this->getJson('/v1/negocio/ingresos')->assertOk();
+
+    $deHoy = collect($r->json('por_medio_hoy'))->keyBy('medio');
+    $deLaSemana = collect($r->json('por_medio'))->keyBy('medio');
+    $delMes = collect($r->json('por_medio_mes'))->keyBy('medio');
+
+    expect($deHoy)->toHaveCount(1)
+        ->and($deHoy['Efectivo']['total'])->toEqual(40000);
+
+    expect($deLaSemana)->toHaveCount(2)
+        ->and($deLaSemana['Efectivo']['total'])->toEqual(40000)
+        ->and($deLaSemana['Pagado en la app']['total'])->toEqual(25000);
+
+    expect($delMes)->toHaveCount(3)
+        ->and($delMes['Fiado']['total'])->toEqual(10000);
+});
+
+test('lo que suma el desglose del mes es lo que dice la cifra del mes', function () {
+    // Es la contradiccion que lo origino: arriba un millon, abajo tres ceros.
+    $this->travelTo('2026-06-17 15:00:00');
+
+    $t = tenderoConVentas([]);
+    ventaEl($t['businessId'], '2026-06-02 09:00:00', 1, 900000);
+    ventaEl($t['businessId'], '2026-06-16 09:00:00', 5, 249900);
+
+    Sanctum::actingAs($t['tendero']);
+    $r = $this->getJson('/v1/negocio/ingresos')->assertOk();
+
+    expect(collect($r->json('por_medio_mes'))->sum('total'))
+        ->toEqual((float) $r->json('monthly_income'))
+        ->toEqual(1149900.0);
+});
+
+test('un mes sin ventas da lista vacia en los tres, no tres ceros', function () {
+    $this->travelTo('2026-06-17 15:00:00');
+
+    $t = tenderoConVentas([]);
+    // Del mes pasado: no entra en ninguna de las tres ventanas.
+    ventaEl($t['businessId'], '2026-05-20 09:00:00', 1, 80000);
+
+    Sanctum::actingAs($t['tendero']);
+    $r = $this->getJson('/v1/negocio/ingresos')->assertOk();
+
+    expect($r->json('por_medio_hoy'))->toBe([])
+        ->and($r->json('por_medio'))->toBe([])
+        ->and($r->json('por_medio_mes'))->toBe([]);
+});
