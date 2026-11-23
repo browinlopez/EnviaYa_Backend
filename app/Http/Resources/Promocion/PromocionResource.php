@@ -54,6 +54,23 @@ class PromocionResource extends JsonResource
                     'products_id' => $p->products_id,
                     'name' => $p->name,
                     'image' => $p->image ?? null,
+                    /*
+                     * EL PRECIO DE ESTA TIENDA, cuando quien pregunta lo ha
+                     * precargado (`PromocionesController::conSusPrecios`).
+                     *
+                     * No está en `products` --ahí está el catálogo maestro--
+                     * sino en `products_business`, porque cada tienda pone el
+                     * suyo. Sin él, corregir una promoción enviada dejaba la
+                     * pantalla diciendo «Sobre qué productos: 2 productos»
+                     * arriba y «Elige un producto» justo debajo.
+                     *
+                     * Se manda `null` y no `0` si no se precargó o si el
+                     * producto ya no está en el surtido: un cero sería un
+                     * precio, y la pantalla simularía un regalo.
+                     */
+                    'price' => isset($p->precio_en_la_tienda)
+                        ? (float) $p->precio_en_la_tienda
+                        : null,
                 ])->values()
                 : [],
             'enviada_el' => $promocion->sent_at?->toIso8601String(),
