@@ -323,3 +323,48 @@ test('un producto sin precio no se le ofrece al comprador', function () {
     expect($nombres)->toContain('SE VENDE')
         ->and($nombres)->not->toContain('COPIADO SIN PRECIO');
 });
+
+/* ---------------------------------------------------------------------- */
+
+/**
+ * EL CODIGO DE BARRAS LLEGA A LA FICHA DEL TENDERO.
+ *
+ * «El codigo del producto», para quien atiende un mostrador, es el impreso
+ * en la caja: el que lee el escaner de esta misma app. La ficha enseñaba bajo
+ * «Referencia» nuestro identificador interno --«Codigo del producto: #4»-- y
+ * el de verdad estaba en la base sin que nadie pudiera verlo.
+ *
+ * Lo llamativo es que la OTRA ruta del mismo catalogo --`/negocio/productos`,
+ * con `ProductoDeLaTiendaResource`-- si lo manda desde siempre. Dos formas de
+ * la misma cosa y el campo solo en una; esto ata las dos.
+ */
+test('el codigo de barras viaja en las DOS rutas del catalogo propio', function () {
+    $t = tenderoConCatalogo();
+    $p = productoDeCatalogo('ACEITE PREMIER 500ML', '7700000000040', $t['categoria']);
+    enLaTienda($t['mio'], $p->products_id, 12500, 10);
+
+    Sanctum::actingAs($t['user']);
+
+    // La que usa «Mis productos» y la ficha del producto.
+    $vieja = $this->postJson('/v1/product/index', ['business_id' => $t['mio']])
+        ->assertOk();
+
+    // La otra, la del surtido.
+    $nueva = $this->getJson('/v1/negocio/productos')->assertOk();
+
+    expect($vieja->json('0.barcode'))->toBe('7700000000040')
+        ->and($nueva->json('data.0.barcode'))->toBe('7700000000040');
+});
+
+test('un producto sin codigo de barras viaja como null, no como cadena vacia', function () {
+    // La ficha decide con un `if` si enseña la fila: una cadena vacia la
+    // dejaria puesta y en blanco.
+    $t = tenderoConCatalogo();
+    $p = productoDeCatalogo('PAN DEL DIA', null, $t['categoria']);
+    enLaTienda($t['mio'], $p->products_id);
+
+    Sanctum::actingAs($t['user']);
+
+    expect($this->postJson('/v1/product/index', ['business_id' => $t['mio']])
+        ->assertOk()->json('0.barcode'))->toBeNull();
+});

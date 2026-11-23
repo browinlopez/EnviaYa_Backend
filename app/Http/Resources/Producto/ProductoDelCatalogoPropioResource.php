@@ -49,6 +49,23 @@ class ProductoDelCatalogoPropioResource extends JsonResource
         return [
             'product_id' => $product->products_id,
             'name' => $product->name,
+            /*
+             * EL CÓDIGO DE BARRAS, que es el «código del producto» para quien
+             * atiende un mostrador: el impreso en la caja, el que lee el
+             * escáner de la propia app.
+             *
+             * No viajaba. La ficha del producto del tendero enseñaba bajo
+             * «Referencia» nuestro identificador --«Código del producto:
+             * #4»-- y el de verdad, 7700000000040, estaba en la base sin que
+             * nadie pudiera verlo. Así no hay manera de comprobar que el
+             * producto de la estantería es el de la pantalla.
+             *
+             * Lo curioso es que la OTRA ruta del mismo catálogo
+             * --`/negocio/productos`, con `ProductoDeLaTiendaResource`-- sí
+             * lo manda desde siempre. Dos formas de la misma cosa y el campo
+             * sólo en una.
+             */
+            'barcode' => $product->barcode,
             'description' => $product->description,
             'category' => $product->category ? [
                 'category_id' => $product->category->category_id,
