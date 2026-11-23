@@ -165,12 +165,38 @@ class AltaDeDomiciliarioController extends Controller
 
         $soloDigitos = preg_replace('/\D/', '', $q);
 
+        /*
+         * HAY QUE LIMPIAR LOS DOS LADOS, NO SOLO LO QUE SE TECLEA.
+         *
+         * Antes se quitaban los símbolos de la búsqueda y se comparaba contra
+         * el teléfono TAL CUAL ESTÁ GUARDADO. Y en la base están de las dos
+         * maneras: «3002464977» y «303 632 7859». Buscando el segundo como lo
+         * teclea cualquiera --seguido-- la respuesta era «No hay nadie con ese
+         * dato. Créalo abajo», con la persona existiendo.
+         *
+         * Eso es justo lo contrario de lo que esta pantalla promete
+         * --«vincúlalo sin crearle otra cuenta»--: el tendero le abre una
+         * cuenta nueva a alguien que ya reparte, y a partir de ahí hay dos
+         * fichas de la misma persona, cada una con sus papeles y su efectivo.
+         *
+         * Se compara dígito contra dígito. Pierde el índice, y da igual: es
+         * UNA búsqueda que hace un tendero al dar de alta a alguien, no algo
+         * que pase en cada pantalla.
+         */
+        $digitosDe = "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(%s, ' ', ''), '-', ''), '(', ''), ')', ''), '+', '')";
+
         return Domiciliary::with('user')
-            ->where(function ($w) use ($q, $soloDigitos) {
+            ->where(function ($w) use ($q, $soloDigitos, $digitosDe) {
                 $w->whereHas('user', fn ($u) => $u->where('email', $q))
                     ->when($soloDigitos !== '', fn ($x) => $x
-                        ->orWhereHas('user', fn ($u) => $u->where('phone', $soloDigitos))
-                        ->orWhere('document', $soloDigitos));
+                        ->orWhereHas('user', fn ($u) => $u->whereRaw(
+                            sprintf($digitosDe, 'phone').' = ?',
+                            [$soloDigitos]
+                        ))
+                        ->orWhereRaw(
+                            sprintf($digitosDe, 'document').' = ?',
+                            [$soloDigitos]
+                        ));
             })
             ->first();
     }
