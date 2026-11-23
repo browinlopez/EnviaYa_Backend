@@ -128,3 +128,99 @@ test('sin ventas esta semana la lista viene vacía, no en cero', function () {
 
     expect($r->json('por_medio'))->toBe([]);
 });
+
+/* ---------------------------------------------------------------------- */
+
+/**
+ * EL RANGO QUE ELIGE EL TENDERO CON EL CALENDARIO.
+ *
+ * Dia, semana y mes los decide el servidor. Esto responde a una pregunta
+ * concreta --«¿cuanto hice del 3 al 9?»-- y lo que hay que sostener es que
+ * NO sea otra forma de contar: un rango que caiga justo en la semana tiene
+ * que dar lo mismo que «Semana», o habria dos cifras y nadie sabria cual
+ * creer.
+ */
+test('sin fechas, la respuesta es exactamente la de siempre', function () {
+    $t = tenderoConVentas([[1, 50000]]);
+
+    Sanctum::actingAs($t['tendero']);
+
+    expect($this->getJson('/v1/negocio/ingresos')->assertOk()->json('rango'))
+        ->toBeNull();
+});
+
+test('un rango que cubre la semana da LO MISMO que la semana', function () {
+    // Si discreparan, serian dos formas distintas de contar la misma plata.
+    $t = tenderoConVentas([[1, 50000], [2, 25000], [CreditoDeTienda::METODO, 15000]]);
+
+    Sanctum::actingAs($t['tendero']);
+
+    $normal = $this->getJson('/v1/negocio/ingresos')->assertOk();
+
+    $desde = now()->startOfWeek()->toDateString();
+    $hasta = now()->endOfWeek()->toDateString();
+    $conRango = $this->getJson("/v1/negocio/ingresos?desde={$desde}&hasta={$hasta}")
+        ->assertOk();
+
+    expect((float) $conRango->json('rango.total'))
+        ->toEqual((float) $normal->json('current_week_income'))
+        ->and($conRango->json('rango.ventas'))->toBe(3)
+        // Y el desglose se agrupa igual: tres bolsillos, no siete metodos.
+        ->and(collect($conRango->json('rango.por_medio')))->toHaveCount(3);
+});
+
+test('un rango sin ventas da cero y no revienta', function () {
+    $t = tenderoConVentas([[1, 50000]]);
+
+    Sanctum::actingAs($t['tendero']);
+
+    $hace = now()->subMonths(2)->toDateString();
+    $r = $this->getJson("/v1/negocio/ingresos?desde={$hace}&hasta={$hace}")->assertOk();
+
+    expect((float) $r->json('rango.total'))->toEqual(0.0)
+        ->and($r->json('rango.ventas'))->toBe(0)
+        ->and($r->json('rango.ticket_promedio'))->toEqual(0.0)
+        ->and($r->json('rango.por_medio'))->toBe([]);
+});
+
+test('las fechas al reves se corrigen, no devuelven vacio', function () {
+    // Es un error de dedo, no una consulta sin resultados.
+    $t = tenderoConVentas([[1, 50000]]);
+
+    Sanctum::actingAs($t['tendero']);
+
+    $desde = now()->startOfWeek()->toDateString();
+    $hasta = now()->endOfWeek()->toDateString();
+    $r = $this->getJson("/v1/negocio/ingresos?desde={$hasta}&hasta={$desde}")
+        ->assertOk();
+
+    expect((float) $r->json('rango.total'))->toEqual(50000.0)
+        ->and($r->json('rango.desde'))->toBe($desde);
+});
+
+test('media pareja de fechas no define un rango', function () {
+    // Rellenar la que falta con una fecha inventada daria una cifra que
+    // parece un dato.
+    $t = tenderoConVentas([[1, 50000]]);
+
+    Sanctum::actingAs($t['tendero']);
+
+    $this->getJson('/v1/negocio/ingresos?desde='.now()->toDateString())
+        ->assertStatus(422);
+});
+
+test('el dia a dia solo viaja cuando cabe en una pantalla', function () {
+    // Con treinta y un dias salen treinta y una barras de ocho pixeles: una
+    // mancha. Pasado el mes se manda vacio y la pantalla ensena las cifras.
+    $t = tenderoConVentas([[1, 50000]]);
+
+    Sanctum::actingAs($t['tendero']);
+
+    $corto = $this->getJson('/v1/negocio/ingresos?desde='.now()->subDays(6)->toDateString()
+        .'&hasta='.now()->toDateString())->assertOk();
+    $largo = $this->getJson('/v1/negocio/ingresos?desde='.now()->subDays(60)->toDateString()
+        .'&hasta='.now()->toDateString())->assertOk();
+
+    expect($corto->json('rango.dia_a_dia'))->toHaveCount(7)
+        ->and($largo->json('rango.dia_a_dia'))->toBe([]);
+});
