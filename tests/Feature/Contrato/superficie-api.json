@@ -2509,6 +2509,17 @@
         ]
     },
     {
+        "verbo": "DELETE",
+        "uri": "v1/negocio/domiciliarios/{id}",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
         "verbo": "GET",
         "uri": "v1/negocio/domiciliarios/{id}",
         "nombre": null,

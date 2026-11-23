@@ -6,7 +6,9 @@ namespace App\Http\Controllers\Negocio;
 
 use App\Http\Controllers\Controller;
 use App\Models\Domiciliary;
+use App\Models\Order\OrdersSales;
 use App\Models\User;
+use App\Services\CustodiaDeEfectivo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -31,6 +33,8 @@ use Illuminate\Support\Facades\Hash;
  */
 class AltaDeDomiciliarioController extends Controller
 {
+    public function __construct(private CustodiaDeEfectivo $custodia) {}
+
     /**
      * Busca a un domiciliario que ya exista, por teléfono, correo o cédula.
      * Solo coincidencias exactas: esto no es un directorio para curiosear.
@@ -195,6 +199,69 @@ class AltaDeDomiciliarioController extends Controller
                         ));
             })
             ->first();
+    }
+
+    /**
+     * QUITARLO DE LA TIENDA, QUE NO ES BORRARLO.
+     *
+     * Se podía dar de alta y editar, pero no quitar. Y la gente se va: deja
+     * de repartir, se cambia de barrio, o la tienda lo da de alta por error.
+     * Sin esto seguía saliendo en la torre, en el elegidor de «despachar» y
+     * en el efectivo, para siempre.
+     *
+     * LO QUE SE QUITA ES EL VÍNCULO, no la persona. Su cuenta, sus papeles,
+     * su acuerdo y su historial se quedan donde están --también el de ESTA
+     * tienda: lo que entregó lo entregó--. Se marca `state = 0` en vez de
+     * borrar la fila, porque de ella cuelgan las entregas y el efectivo, y
+     * porque `vincular()` sabe resucitarla si vuelve.
+     *
+     * Y NO SE QUITA A QUIEN ESTÁ EN LA CALLE. Con pedidos encima o con
+     * efectivo tuyo sin entregar, desvincularlo lo borra de la torre mientras
+     * sigue ahí fuera con tu plata: el tendero pierde la pantalla donde ver
+     * dónde está justo cuando más la necesita. Se dice qué falta y se deja
+     * para después.
+     */
+    public function desvincular(Request $request, int $id)
+    {
+        $negocioId = (int) $request->attributes->get('busines_id');
+
+        $vinculo = DB::table('business_domiciliary')
+            ->where('busines_id', $negocioId)
+            ->where('domiciliary_id', $id)
+            ->where('state', 1);
+
+        /* 404 y no 403: confirmar que ese domiciliario existe pero es de otra
+           tienda ya dice algo de la flota del vecino. */
+        if (! $vinculo->exists()) {
+            return response()->json([
+                'message' => 'Ese domiciliario no está vinculado a tu tienda.',
+            ], 404);
+        }
+
+        $aBordo = OrdersSales::where('busines_id', $negocioId)
+            ->where('domiciliary_id', $id)
+            ->whereIn('state', OrdersSales::ACTIVOS)
+            ->count();
+
+        if ($aBordo > 0) {
+            return response()->json([
+                'message' => $aBordo === 1
+                    ? 'Todavía lleva un pedido tuyo encima. Espera a que lo entregue.'
+                    : "Todavía lleva {$aBordo} pedidos tuyos encima. Espera a que los entregue.",
+            ], 422);
+        }
+
+        $efectivo = round($this->custodia->saldo($id), 2);
+
+        if ($efectivo > 0) {
+            return response()->json([
+                'message' => 'Te debe '.number_format($efectivo, 0, ',', '.').' pesos en efectivo. Recíbeselos antes de quitarlo.',
+            ], 422);
+        }
+
+        $vinculo->update(['state' => 0]);
+
+        return response()->json(['message' => 'Ya no reparte para tu tienda.']);
     }
 
     private function vincular(int $negocioId, int $domiciliarioId): void

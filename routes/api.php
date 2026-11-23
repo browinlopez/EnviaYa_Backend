@@ -765,6 +765,18 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
             ->middleware('throttle:30,1');
 
         /*
+         * QUITARLO DE LA FLOTA. Baja el vínculo, no la persona: su cuenta,
+         * sus papeles y lo que ya entregó se quedan. Y se niega mientras
+         * lleve pedidos encima o efectivo de la tienda sin entregar; ver el
+         * controlador.
+         *
+         * Detrás del `post` y antes del comódin `{id}` de la ficha, por el
+         * mismo motivo que `buscar`.
+         */
+        Route::delete('domiciliarios/{id}', [AltaDeDomiciliarioController::class, 'desvincular'])
+            ->whereNumber('id');
+
+        /*
          * LA FICHA DE UNO. Solo lectura y recortada a esta tienda: entregas y
          * pedidos encima son los SUYOS, de los otros negocios sale el nombre, y
          * de los documentos la situacion y no el archivo.
