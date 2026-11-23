@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Negocio;
 
 use App\Http\Controllers\Controller;
 use App\Models\Domiciliary;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -183,18 +184,13 @@ class AltaDeDomiciliarioController extends Controller
          * UNA búsqueda que hace un tendero al dar de alta a alguien, no algo
          * que pase en cada pantalla.
          */
-        $digitosDe = "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(%s, ' ', ''), '-', ''), '(', ''), ')', ''), '+', '')";
-
         return Domiciliary::with('user')
-            ->where(function ($w) use ($q, $soloDigitos, $digitosDe) {
+            ->where(function ($w) use ($q, $soloDigitos) {
                 $w->whereHas('user', fn ($u) => $u->where('email', $q))
                     ->when($soloDigitos !== '', fn ($x) => $x
-                        ->orWhereHas('user', fn ($u) => $u->whereRaw(
-                            sprintf($digitosDe, 'phone').' = ?',
-                            [$soloDigitos]
-                        ))
+                        ->orWhereHas('user', fn ($u) => $u->conTelefono($soloDigitos))
                         ->orWhereRaw(
-                            sprintf($digitosDe, 'document').' = ?',
+                            User::soloDigitos('document').' = ?',
                             [$soloDigitos]
                         ));
             })

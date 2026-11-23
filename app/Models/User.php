@@ -10,6 +10,7 @@ use App\Models\Reviews\BusinessReview;
 use App\Models\Reviews\UserReview;
 use App\Models\User\UserAddress;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -240,5 +241,52 @@ class User extends Authenticatable implements Auditable, MustVerifyEmail
     {
         return $this->rolRelation?->name;
         // Devuelve: "Buyer", "Owner", "Domiciliary", etc.
+    }
+
+    /**
+     * Buscar por teléfono SIN QUE IMPORTE CÓMO ESTÁ ESCRITO.
+     *
+     * En la base conviven las dos formas --«3002464977» y «304 536 8709»--
+     * porque las escriben personas distintas: unas lo teclean seguido, otras
+     * lo copian de un contacto o de WhatsApp. Comparar la cadena entera hace
+     * que una persona que existe salga como que no existe, y ESE fallo
+     * siempre empuja a crear algo duplicado:
+     *
+     *   · dando de alta un domiciliario, «No hay nadie con ese dato. Créalo
+     *     abajo», y se acaba con dos fichas de la misma persona;
+     *   · afiliando un cliente, «No encontramos ningún comprador con ese
+     *     número», con el cliente comprando en la tienda desde hace meses.
+     *
+     * Se comparan dígitos contra dígitos. Pierde el índice, y por eso vive
+     * acá y no en cualquier listado: es para búsquedas de UNA persona que
+     * alguien teclea a mano, no para filtrar una tabla.
+     *
+     * @param  Builder  $query
+     */
+    public function scopeConTelefono($query, ?string $telefono)
+    {
+        $digitos = preg_replace('/\D/', '', (string) $telefono);
+
+        if ($digitos === '') {
+            /* Sin dígitos no hay a quién buscar: que no devuelva a cualquiera. */
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->whereRaw(self::soloDigitos('phone').' = ?', [$digitos]);
+    }
+
+    /**
+     * El trozo de SQL que deja un campo en puros dígitos.
+     *
+     * Aparte porque la misma limpieza hace falta sobre `document` en el alta
+     * de domiciliarios, y dos copias de esto se desincronizan el día que
+     * aparezca un separador nuevo.
+     */
+    public static function soloDigitos(string $campo): string
+    {
+        return sprintf(
+            "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(%s, ' ', ''), '-', ''), '(', ''), ')', ''), '+', '')",
+            $campo
+        );
     }
 }
