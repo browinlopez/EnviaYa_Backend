@@ -29,6 +29,47 @@ use Illuminate\Http\Resources\Json\JsonResource;
  */
 class PedidoResource extends JsonResource
 {
+    /**
+     * ─────────────────────────────────────────────────────────────────────
+     * LO QUE HAY QUE TRAER CARGADO ANTES DE PINTAR ESTO.
+     *
+     * No es higiene: con la carga perezosa desactivada, pintar un pedido sin
+     * estas relaciones LANZA. Y lanza DESPUES de haber hecho el trabajo, asi
+     * que la operacion sale bien y la respuesta es un 500.
+     *
+     * Paso de verdad: cancelando un pedido desde la app del tendero, el
+     * pedido quedaba cancelado y la pantalla decia «No se pudo cancelar»
+     * con «Attempted to lazy load [product] on model [OrdersSalesDetail]»
+     * encima. Se arreglo `product` y a la siguiente salto `category`.
+     *
+     * Por eso la lista vive AQUI y no en cada controlador: quien pinta es
+     * quien sabe que lee, y asi anadir un campo al `toArray()` no obliga a
+     * acordarse de tres sitios. Es el mismo patron que `PedidoDeLaAppResource`.
+     *
+     * `.category` Y NO SOLO `.product`: `toArray()` lee
+     * `$d->product->category`, que es un salto mas.
+     * ─────────────────────────────────────────────────────────────────────
+     *
+     * @return list<string>
+     */
+    public static function relaciones(): array
+    {
+        return [
+            'buyer.user',
+            'business.municipality',
+            /*
+             * La direccion llega con sus tres niveles porque `toArray()` los
+             * lee: municipio, departamento y --via municipio-- el pais.
+             */
+            'address.municipality.department.country',
+            'address.department',
+            'domiciliary.user',
+            'details.product.category',
+            'payments',
+            'promotions',
+        ];
+    }
+
     /** @return array<string, mixed> */
     public function toArray(Request $request): array
     {

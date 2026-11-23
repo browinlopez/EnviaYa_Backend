@@ -95,7 +95,29 @@ class CancelacionDelPedidoController extends Controller
         return response()->json([
             'message' => 'Pedido cancelado. Le avisamos al cliente con el motivo.'
                 .($hecho['aviso'] ? ' '.$hecho['aviso'] : ''),
-            'order' => new PedidoResource($order->fresh()),
+            /*
+             * ──────────────────────────────────────────────────────────────
+             * `fresh()` A SECAS DEJABA EL PEDIDO SIN RELACIONES, Y REVENTABA.
+             *
+             * `PedidoResource` lee `details.product` y `domiciliary.user`.
+             * `fresh()` relee la fila y devuelve el modelo PELADO --no
+             * conserva lo que se cargo arriba con `with('buyer')`-- asi que
+             * el recurso iba a buscar el producto de cada renglon y, con la
+             * carga perezosa desactivada, lanzaba:
+             *
+             *   «Attempted to lazy load [product] on model
+             *    [OrdersSalesDetail] but lazy loading is disabled»
+             *
+             * Y lo peor no era el error: EL PEDIDO YA SE HABIA CANCELADO.
+             * El tendero veia «No se pudo cancelar» con una excepcion en
+             * ingles encima, y el pedido cancelado por debajo. Visto en el
+             * emulador validando esta pantalla.
+             *
+             * Se recarga con lo que el recurso necesita, que es lo que
+             * `fresh()` admite como argumento precisamente para esto.
+             * ──────────────────────────────────────────────────────────────
+             */
+            'order' => new PedidoResource($order->fresh(PedidoResource::relaciones())),
             'devolucion' => $hecho['devolucion'],
             'motivo' => $hecho['motivo'],
         ]);

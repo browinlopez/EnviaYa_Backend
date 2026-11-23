@@ -174,7 +174,7 @@ class PesajeDelPedidoController extends Controller
 
         return response()->json([
             'message' => 'Pesaje guardado.',
-            'data' => new PedidoResource($resultado->fresh()),
+            'data' => new PedidoResource($resultado->fresh(PedidoResource::relaciones())),
         ]);
     }
 }

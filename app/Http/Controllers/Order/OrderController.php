@@ -466,7 +466,7 @@ class OrderController extends Controller
                  * hacer lo mismo: ahi el modelo se serializa entero y cualquier
                  * relacion cargada de mas SI saldria en la respuesta.
                  */
-                'order' => new PedidoResource($order->loadMissing('details.product.category', 'business.municipality', 'address.municipality.department.country', 'promotions', 'payments')),
+                'order' => new PedidoResource($order->loadMissing(PedidoResource::relaciones())),
                 'bold_reference_id' => $intent->bold_reference_id ?? null,
                 /*
                  * La app lee el QR / redirect de acá para el pago online.
@@ -606,7 +606,7 @@ class OrderController extends Controller
         return response()->json([
             'message' => 'Pedido cancelado.'
                 .($hecho['aviso'] ? ' '.$hecho['aviso'] : ''),
-            'order' => new PedidoResource($order->fresh()),
+            'order' => new PedidoResource($order->fresh(PedidoResource::relaciones())),
             /* Para que la app pueda decirlo en pantalla y no solo en la
                campana: lo del dinero es lo primero que se pregunta. */
             'devolucion' => $hecho['devolucion'],
