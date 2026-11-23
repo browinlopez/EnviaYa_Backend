@@ -70,13 +70,70 @@ class ProductTypeSchema
              * septiembre. Tenerlo en los dos sitios es cómo se consigue que
              * digan cosas distintas.
              */
+            /*
+             * `columna`, `alias`, `ancho` y `ayuda` son para la CARGA MASIVA,
+             * y son OPCIONALES: un tipo que no las declara no añade ni una
+             * celda a su plantilla ni un alias a su lector.
+             *
+             * Por eso tienda, restaurante y repuestos siguen con el archivo
+             * de seis columnas exacto que tenían, sin que haya un `if` por
+             * tipo de negocio en el importador ni en la plantilla.
+             */
             'fields' => [
-                'active_ingredient' => ['rules' => ['nullable', 'string', 'max:255'], 'label' => 'Principio activo', 'input' => 'text'],
-                'dosage' => ['rules' => ['nullable', 'string', 'max:100'], 'label' => 'Dosis o concentración', 'input' => 'text'],
-                'presentation' => ['rules' => ['nullable', 'string', 'max:255'], 'label' => 'Presentación', 'input' => 'text'],
-                'content' => ['rules' => ['nullable', 'string', 'max:80'], 'label' => 'Contenido', 'input' => 'text'],
-                'registro_invima' => ['rules' => ['nullable', 'string', 'max:40'], 'label' => 'Registro INVIMA', 'input' => 'text'],
-                'requiere_formula' => ['rules' => ['nullable', 'boolean'], 'label' => 'Requiere fórmula médica', 'input' => 'boolean'],
+                'presentation' => [
+                    'rules' => ['nullable', 'string', 'max:255'],
+                    'label' => 'Presentación',
+                    'input' => 'text',
+                    'columna' => 'Presentación',
+                    'ancho' => 18,
+                    'alias' => ['presentacion', 'presentation', 'empaque'],
+                    'ayuda' => 'Cómo viene: caja, frasco, blíster, sobre, tubo, ampolla, unidad…',
+                ],
+                'content' => [
+                    'rules' => ['nullable', 'string', 'max:80'],
+                    'label' => 'Contenido',
+                    'input' => 'text',
+                    'columna' => 'Contenido',
+                    'ancho' => 18,
+                    'alias' => ['contenido', 'content', 'cantidad_contenido'],
+                    'ayuda' => 'Cuánto trae: «10 tabletas», «500 ml», «30 cápsulas». No es la dosis.',
+                ],
+                'registro_invima' => [
+                    'rules' => ['nullable', 'string', 'max:40'],
+                    'label' => 'Registro INVIMA',
+                    'input' => 'text',
+                    'columna' => 'Registro INVIMA',
+                    'ancho' => 24,
+                    'alias' => ['registro_invima', 'invima', 'registro_sanitario', 'registro'],
+                    'ayuda' => 'El registro sanitario, si el producto lo lleva. Tal cual sale en el empaque.',
+                ],
+                'requiere_formula' => [
+                    'rules' => ['nullable', 'boolean'],
+                    'label' => 'Requiere fórmula médica',
+                    'input' => 'boolean',
+                    'columna' => 'Requiere fórmula',
+                    'ancho' => 20,
+                    'alias' => ['requiere_formula', 'formula', 'formula_medica', 'receta'],
+                    'ayuda' => 'Sí o No. Si lo dejas vacío se entiende que NO la requiere.',
+                ],
+                'active_ingredient' => [
+                    'rules' => ['nullable', 'string', 'max:255'],
+                    'label' => 'Principio activo',
+                    'input' => 'text',
+                    'columna' => 'Principio activo',
+                    'ancho' => 26,
+                    'alias' => ['principio_activo', 'active_ingredient', 'principio'],
+                    'ayuda' => 'Opcional, y sólo para medicamentos: «acetaminófen», «ibuprofeno».',
+                ],
+                'dosage' => [
+                    'rules' => ['nullable', 'string', 'max:100'],
+                    'label' => 'Dosis o concentración',
+                    'input' => 'text',
+                    'columna' => 'Dosis',
+                    'ancho' => 14,
+                    'alias' => ['dosis', 'dosage', 'concentracion'],
+                    'ayuda' => 'Opcional. La concentración: «500 mg». No es el contenido.',
+                ],
             ],
         ],
 
@@ -106,6 +163,59 @@ class ProductTypeSchema
             ],
         ],
     ];
+
+    /**
+     * Las columnas extra que este tipo añade a la plantilla de carga.
+     *
+     * Vacío para quien no declare `columna`, que es lo que mantiene la
+     * plantilla de las tiendas igual que estaba.
+     *
+     * @return array<string, array{titulo: string, ancho: int, ayuda: string, input: string}>
+     */
+    public static function columnasDeCarga(?int $type): array
+    {
+        $salida = [];
+
+        foreach (self::SCHEMAS[$type]['fields'] ?? [] as $campo => $def) {
+            if (! isset($def['columna'])) {
+                continue;
+            }
+
+            $salida[$campo] = [
+                'titulo' => $def['columna'],
+                'ancho' => $def['ancho'] ?? 20,
+                'ayuda' => $def['ayuda'] ?? '',
+                'input' => $def['input'] ?? 'text',
+            ];
+        }
+
+        return $salida;
+    }
+
+    /**
+     * Cómo puede venir escrito cada campo en el encabezado del archivo.
+     *
+     * El nombre técnico entra siempre como alias de sí mismo: quien exporte
+     * desde su propio sistema con ese nombre también acierta.
+     *
+     * @return array<string, list<string>>
+     */
+    public static function aliasDeCarga(?int $type): array
+    {
+        $salida = [];
+
+        foreach (self::SCHEMAS[$type]['fields'] ?? [] as $campo => $def) {
+            if (! isset($def['columna'])) {
+                continue;
+            }
+
+            $salida[$campo] = array_values(array_unique(
+                array_merge([$campo], $def['alias'] ?? []),
+            ));
+        }
+
+        return $salida;
+    }
 
     public static function has(?int $type): bool
     {

@@ -9,6 +9,7 @@ use App\Models\Product\CatalogUpload;
 use App\Models\Product\Category;
 use App\Models\Product\Product;
 use App\Models\Product\ProductAlias;
+use App\Support\ProductTypeSchema;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
@@ -86,6 +87,24 @@ class ImportadorDeCatalogo
          */
         $porDefecto = $carga->category_id ? (int) $carga->category_id : null;
 
+        /*
+         * EL TIPO DE NEGOCIO, UNA SOLA VEZ Y FUERA DEL BUCLE.
+         *
+         * De aqui sale que una drogueria pueda subir presentacion,
+         * contenido, registro INVIMA y si pide formula en el mismo
+         * archivo que el precio.
+         *
+         * `aliasDeCarga` devuelve vacio para los tipos que no declaran
+         * columnas, y con el array vacio no se lee nada: para una tienda
+         * el camino queda exactamente como estaba.
+         */
+        $tipo = (int) DB::table('business')
+            ->where('busines_id', $carga->busines_id)
+            ->value('type');
+
+        $aliasExtra = ProductTypeSchema::aliasDeCarga($tipo);
+        $modeloExtra = ProductTypeSchema::model($tipo);
+
         foreach ($filas as $i => $fila) {
             // +2: la fila 1 son los encabezados y las hojas se cuentan desde 1.
             $numero = $i + 2;
@@ -125,6 +144,37 @@ class ImportadorDeCatalogo
                 $f['precio'],
                 $f['cantidad'],
             );
+
+            /*
+             * LO DEL TIPO VA DESPUES, Y SU FALLO NO TUMBA LA FILA.
+             *
+             * El precio y las existencias ya entraron. Si el registro
+             * INVIMA viene raro, lo que NO se puede hacer es rechazar la
+             * fila entera: el producto quedaria fuera del surtido
+             * --invisible para quien compra-- por un dato que no hace
+             * falta para venderlo. El motivo queda en el resumen.
+             *
+             * `updateOrCreate` por `products_id` para que volver a subir el
+             * mismo archivo siga siendo inofensivo, como el resto de la
+             * carga.
+             */
+            if ($modeloExtra && $aliasExtra !== []) {
+                $extra = $this->leerExtra($aliasExtra, $fila, $numero, $errores);
+
+                if ($extra !== []) {
+                    try {
+                        $modeloExtra::updateOrCreate(
+                            ['products_id' => (int) $producto->products_id],
+                            $extra,
+                        );
+                    } catch (\Throwable $e) {
+                        $errores[] = [
+                            'fila' => $numero,
+                            'motivo' => 'El producto se cargo, pero no se pudieron guardar sus datos propios.',
+                        ];
+                    }
+                }
+            }
 
             $existia ? $actualizados++ : $creados++;
         }
@@ -351,6 +401,77 @@ class ImportadorDeCatalogo
             'precio' => $this->aNumero($precio),
             'cantidad' => ($cantidadLeida === null || $cantidadLeida < 0) ? null : (int) $cantidadLeida,
         ];
+    }
+
+    /**
+     * Los campos propios del tipo de negocio que trae esta fila.
+     *
+     * Devuelve SOLO lo que viene escrito: una celda vacia no entra, para que
+     * volver a subir un archivo al que le falta la columna del INVIMA no
+     * borre el que ya estaba guardado.
+     *
+     * @param  array<string, list<string>>  $alias
+     * @param  array<int, array<string, mixed>>  $errores
+     */
+    private function leerExtra(array $alias, $fila, int $numero, array &$errores): array
+    {
+        $extra = [];
+
+        foreach ($alias as $campo => $llaves) {
+            $valor = $this->primerValor($fila, $llaves);
+
+            if ($valor === null) {
+                continue;
+            }
+
+            if ($campo === 'requiere_formula') {
+                $si = $this->comoSiONo($valor);
+
+                if ($si === null) {
+                    $errores[] = [
+                        'fila' => $numero,
+                        'motivo' => 'En «requiere fórmula» escribe Sí o No.',
+                    ];
+
+                    continue;
+                }
+
+                $extra[$campo] = $si;
+
+                continue;
+            }
+
+            $extra[$campo] = trim((string) $valor);
+        }
+
+        return $extra;
+    }
+
+    /**
+     * Si una celda quiere decir si o no.
+     *
+     * Tolerante a proposito: en los archivos de verdad esta columna llega
+     * como «Si», «si», «S», «X», «1» o «TRUE» segun quien lo exporte.
+     *
+     * Lo que NO se hace es adivinar: cualquier otra cosa devuelve `null` y la
+     * fila se queja. «Consultar» o «depende» entendido como «no» marcaria
+     * como libre un medicamento que pide formula, y de los dos errores
+     * posibles ese es el que importa.
+     */
+    private function comoSiONo($valor): ?bool
+    {
+        $t = mb_strtolower(trim((string) $valor));
+        $t = strtr($t, ['á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u']);
+
+        if (in_array($t, ['si', 's', '1', 'true', 'x', 'verdadero', 'yes'], true)) {
+            return true;
+        }
+
+        if (in_array($t, ['no', 'n', '0', 'false', 'falso', ''], true)) {
+            return false;
+        }
+
+        return null;
     }
 
     private function primerValor($fila, array $llaves)
