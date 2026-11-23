@@ -43,6 +43,15 @@ class HistorialDePedidosController extends Controller
 
     private const DIAS_MAXIMOS = 92;
 
+    /**
+     * Cuantos por pagina cuando nadie lo pide.
+     *
+     * Lo que cabe de un vistazo en una pantalla de ordenador. El telefono
+     * pide menos --la lista se trae sola segun se baja-- y lo dice con
+     * `por_pagina`.
+     */
+    private const POR_PAGINA = 25;
+
     public function index(HistorialDePedidosRequest $request)
     {
         $businessId = (int) $request->attributes->get('busines_id');
@@ -83,7 +92,7 @@ class HistorialDePedidosController extends Controller
         $pedidos = $consulta
             ->with(['buyer.user:user_id,name', 'domiciliary.user:user_id,name'])
             ->orderByDesc('sale_date')
-            ->paginate(25, ['*'], 'pagina', $datos['pagina'] ?? 1)
+            ->paginate($datos['por_pagina'] ?? self::POR_PAGINA, ['*'], 'pagina', $datos['pagina'] ?? 1)
             /*
              * Sólo lo que la tabla enseña. Con los modelos completos salían el
              * correo del comprador y del domiciliario, su rol y su estado, y
