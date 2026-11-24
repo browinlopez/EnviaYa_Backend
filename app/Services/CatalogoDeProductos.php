@@ -45,6 +45,73 @@ class CatalogoDeProductos
      * dato el tendero elige algo que ya tiene, el servidor lo rechaza y él no
      * entiende por qué. Es más barato decirlo en la lista.
      */
+    /**
+     * DEJA EN LA CONSULTA SOLO LO QUE ESTE NEGOCIO PUEDE VENDER.
+     *
+     * El catálogo es COMPARTIDO por toda la plataforma, y el buscador era
+     * el único camino que no miraba el tipo de negocio: a una droguería se
+     * le ofrecía detergente, aceite de cocina y papel higiénico. Para
+     * encontrar el acetaminofén había que escribirlo entero, porque la
+     * lista de arranque venía de los 5.629 productos de todos los oficios
+     * ordenados por nombre, y los de farmacia son 784.
+     *
+     * La pertenencia sale del PIVOTE `category_category_business`, que es
+     * la fuente de verdad, igual que en el endpoint del esquema y en la
+     * validación al guardar. Medido contra la base: 2.346 productos para
+     * tienda, 784 para farmacia, 1.785 para restaurante y 714 para
+     * repuestos, y la suma da los 5.629 exactos. Nada queda fuera de los
+     * cuatro.
+     *
+     * ----------------------------------------------------------------
+     * TRES ESCAPES, Y LOS TRES HACEN FALTA.
+     *
+     *  · Un negocio SIN tipo ve todo. Es lo que hacía antes, y dejar a
+     *    alguien con el catálogo vacío por un dato que le falta a su ficha
+     *    es peor que enseñarle de más.
+     *
+     *  · Un producto SIN categoría se ve siempre. Hoy no hay ninguno
+     *    —medido—, pero el día que entre uno por una carga a medias, lo
+     *    que no puede pasar es que se vuelva invisible para los cuatro
+     *    tipos a la vez y nadie entienda por qué no aparece.
+     *
+     *  · Una categoría que no esté en el pivote, igual. Es la misma regla
+     *    que usa `PlantillaDeCatalogo::categorias()`, y por el mismo
+     *    motivo: hay categorías antiguas que nunca se clasificaron.
+     *
+     * ----------------------------------------------------------------
+     * LO QUE NO SE FILTRA: EL ESCÁNER.
+     *
+     * `porCodigo` se queda como está, a propósito. Escanear es un acto
+     * sobre algo que ya se tiene en la mano: si el código existe en el
+     * catálogo, negarlo porque su categoría es de otro oficio sería
+     * decirle al tendero que el producto que está sosteniendo no existe.
+     * Una droguería que vende pañitos húmedos clasificados en «Aseo y
+     * Limpieza» tiene que poder darlos de alta escaneándolos.
+     */
+    private function soloDeSuOficio($consulta, int $businessId): void
+    {
+        $tipo = DB::table('business')->where('busines_id', $businessId)->value('type');
+
+        if (! $tipo) {
+            return;
+        }
+
+        $consulta->where(fn ($q) => $q
+            ->whereNull('products.category_id')
+            ->orWhereExists(fn ($e) => $e
+                ->selectRaw('1')
+                ->from('category_category_business as cb')
+                ->whereColumn('cb.category_id', 'products.category_id')
+                ->where('cb.business_category_id', $tipo),
+            )
+            ->orWhereNotExists(fn ($e) => $e
+                ->selectRaw('1')
+                ->from('category_category_business as cb2')
+                ->whereColumn('cb2.category_id', 'products.category_id'),
+            ),
+        );
+    }
+
     public function buscar(string $texto, int $businessId, int $limite = 25): array
     {
         $texto = trim($texto);
@@ -52,6 +119,8 @@ class CatalogoDeProductos
         $consulta = Product::query()
             ->with(['category', 'group'])
             ->where('state', 1);
+
+        $this->soloDeSuOficio($consulta, $businessId);
 
         if ($texto !== '') {
             /*
