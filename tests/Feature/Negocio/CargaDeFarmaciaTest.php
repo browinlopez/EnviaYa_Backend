@@ -143,7 +143,7 @@ test('la plantilla de una droguería trae las columnas de droguería', function 
 
     $cabecera = [];
 
-    foreach (range('A', 'L') as $col) {
+    foreach (range('A', 'M') as $col) {
         $cabecera[] = $hoja->getCell("{$col}1")->getValue();
     }
 
@@ -155,17 +155,29 @@ test('la plantilla de una droguería trae las columnas de droguería', function 
         'Código de barras', 'Precio', 'Cantidad', 'Nombre', 'Marca', 'Categoría',
     ]);
 
+    /*
+     * TRES COMUNES Y LUEGO LAS CUATRO DE DROGUERÍA.
+     *
+     * Contenido, presentación y frío los llena cualquier oficio, así que van
+     * antes y los trae también el archivo de una tienda. Lo de después es lo
+     * único que una droguería pregunta aparte.
+     */
     expect(array_slice($cabecera, 6))->toBe([
-        'Presentación', 'Contenido', 'Registro INVIMA', 'Requiere fórmula',
-        'Principio activo', 'Dosis',
+        'Contenido', 'Presentación', 'Necesita frío',
+        'Registro INVIMA', 'Requiere fórmula', 'Principio activo', 'Dosis',
     ]);
 });
 
-test('CONTROL: la plantilla de una tienda sigue teniendo seis columnas', function () {
+test('CONTROL: la tienda trae los comunes y NINGUNO de droguería', function () {
     /*
-     * ÉSTA es la prueba que dice que no se rompió nada. El mecanismo es
-     * genérico por tipo, y un tipo que no declara columnas no añade ninguna:
-     * si esta prueba se pone roja, la plantilla de todas las tiendas cambió.
+     * ÉSTA es la prueba de que el mecanismo sigue siendo POR TIPO.
+     *
+     * Una tienda trae las seis de siempre más los tres comunes --contenido,
+     * presentación y frío, que los llena cualquier oficio-- y NINGUNA de
+     * droguería: a un bulto de arroz no se le pide registro INVIMA.
+     *
+     * Antes esta prueba decía «seis columnas y ni una más», porque entonces
+     * sólo farmacia declaraba columnas. Ya no: los comunes son de los cuatro.
      */
     $t = tenderoConCatalogo();
 
@@ -174,12 +186,21 @@ test('CONTROL: la plantilla de una tienda sigue teniendo seis columnas', functio
     /*
      * La ULTIMA columna, y preguntada ANTES de mirar ninguna celda.
      *
-     * `getCell('G1')` no consulta: CREA la celda si no existe, y entonces la
-     * hoja contesta que su ultima columna es la G. Preguntado en ese orden,
-     * esto daba rojo con la plantilla correcta --y, peor, habria dado verde
-     * con una plantilla de siete columnas--.
+     * `getCell('J1')` no consulta: CREA la celda si no existe, y entonces la
+     * hoja contesta que su última columna es la J. Preguntado en ese orden,
+     * esto daba rojo con la plantilla correcta --y, peor, habría dado verde
+     * con una plantilla de más columnas--.
      */
-    expect($hoja->getHighestColumn())->toBe('F');
+    expect($hoja->getHighestColumn())->toBe('I');
+
+    $cabecera = [];
+
+    foreach (range('A', 'I') as $col) {
+        $cabecera[] = $hoja->getCell("{$col}1")->getValue();
+    }
+
+    expect(array_slice($cabecera, 6))->toBe(['Contenido', 'Presentación', 'Necesita frío']);
+    expect($cabecera)->not->toContain('Registro INVIMA');
 });
 
 test('lo que una droguería escribe en sus columnas se guarda', function () {
@@ -200,11 +221,16 @@ test('lo que una droguería escribe en sus columnas se guarda', function () {
 
     expect($producto)->not->toBeNull();
 
+    /*
+     * EL CONTENIDO Y EL ENVASE, EN EL PRODUCTO. Son comunes a los cuatro
+     * oficios y viven en `products`; lo de droguería, en su tabla.
+     */
+    expect($producto->content)->toBe('10 tabletas');
+    expect($producto->presentation)->toBe('Caja');
+
     $farmacia = PharmacyProduct::where('products_id', $producto->products_id)->first();
 
     expect($farmacia)->not->toBeNull();
-    expect($farmacia->presentation)->toBe('Caja');
-    expect($farmacia->content)->toBe('10 tabletas');
     expect($farmacia->registro_invima)->toBe('INVIMA 2010M-014567');
     expect($farmacia->requiere_formula)->toBeFalse();
     expect($farmacia->active_ingredient)->toBe('Acetaminofén');
@@ -250,16 +276,24 @@ test('sin decir nada en la columna, NO requiere fórmula', function () {
     ]));
 
     $producto = Product::where('barcode', '7702057000031')->first();
-    $farmacia = PharmacyProduct::where('products_id', $producto->products_id)->first();
+
+    /* Lo que sí trajo la fila, que es común a cualquier producto. */
+    expect($producto->presentation)->toBe('Frasco');
+    expect($producto->content)->toBe('700 ml');
 
     /*
-     * El alcohol no es un medicamento y nadie va a escribir «No» en su fila.
-     * El defecto de la columna es el que manda, y es el seguro: lo que no se
-     * dice no restringe la venta.
+     * Y NI UNA FILA DE FARMACIA, que es lo que cambió al separar los comunes.
+     *
+     * El alcohol antiséptico no es un medicamento: no tiene registro, ni
+     * principio activo, ni pide fórmula. Antes se le fabricaba una fila con
+     * todo en nulo sólo porque traía presentación y contenido.
+     *
+     * Sin fila, la ficha no pinta nada de droguería, que es lo correcto. Y
+     * para «requiere fórmula» se lee como «no», que es el defecto seguro: lo
+     * que no se dice no restringe la venta.
      */
-    expect($farmacia->requiere_formula)->toBeFalse();
-    expect($farmacia->presentation)->toBe('Frasco');
-    expect($farmacia->active_ingredient)->toBeNull();
+    expect(PharmacyProduct::where('products_id', $producto->products_id)->exists())
+        ->toBeFalse();
 });
 
 test('una celda rara en la fórmula se queja, pero el producto SÍ se vende', function () {

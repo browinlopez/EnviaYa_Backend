@@ -38,7 +38,15 @@ class Product extends Audit
         /* El grupo de variantes y la etiqueta de ESTA presentacion. Ver
            `AgrupadorDeVariantes` y la migracion de `product_groups`. */
         'group_id', 'variante',
+
+        /* Lo que describe el articulo IGUAL en todos los oficios. Estaba
+           repartido por tipo con tres nombres --`pharmacy.content`,
+           `grocery.size`, `restaurant.portion_size`-- para la misma pregunta.
+           Ver `ProductTypeSchema::COMUNES`. */
+        'content', 'presentation', 'requiere_frio',
     ];
+
+    protected $casts = ['requiere_frio' => 'boolean'];
 
     /**
      * CADA PRODUCTO NACE CON SU NOMBRE NORMALIZADO COMO ALIAS.

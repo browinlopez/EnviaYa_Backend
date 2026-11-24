@@ -158,14 +158,35 @@ class ImportadorDeCatalogo
              * mismo archivo siga siendo inofensivo, como el resto de la
              * carga.
              */
-            if ($modeloExtra && $aliasExtra !== []) {
+            if ($aliasExtra !== []) {
                 $extra = $this->leerExtra($aliasExtra, $fila, $numero, $errores);
 
-                if ($extra !== []) {
+                /*
+                 * LOS COMUNES VAN AL PRODUCTO, NO A LA TABLA DEL TIPO.
+                 *
+                 * Contenido, envase y si necesita frio describen el articulo
+                 * igual en los cuatro oficios, asi que viven en `products`.
+                 * Separarlos aqui es lo que permite que una TIENDA --que no
+                 * tiene tabla propia-- tambien pueda cargarlos.
+                 */
+                $comunes = array_intersect_key(
+                    $extra,
+                    array_flip(ProductTypeSchema::camposComunes()),
+                );
+
+                $delTipo = array_diff_key($extra, $comunes);
+
+                if ($comunes !== []) {
+                    DB::table('products')
+                        ->where('products_id', (int) $producto->products_id)
+                        ->update($comunes);
+                }
+
+                if ($modeloExtra && $delTipo !== []) {
                     try {
                         $modeloExtra::updateOrCreate(
                             ['products_id' => (int) $producto->products_id],
-                            $extra,
+                            $delTipo,
                         );
                     } catch (\Throwable $e) {
                         $errores[] = [
@@ -424,13 +445,13 @@ class ImportadorDeCatalogo
                 continue;
             }
 
-            if ($campo === 'requiere_formula') {
+            if ($campo === 'requiere_formula' || $campo === 'requiere_frio') {
                 $si = $this->comoSiONo($valor);
 
                 if ($si === null) {
                     $errores[] = [
                         'fila' => $numero,
-                        'motivo' => 'En «requiere fórmula» escribe Sí o No.',
+                        'motivo' => "En «{$campo}» escribe Sí o No.",
                     ];
 
                     continue;

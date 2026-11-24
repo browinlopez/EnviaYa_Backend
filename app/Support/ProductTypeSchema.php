@@ -30,74 +30,99 @@ class ProductTypeSchema
 
     public const TYPE_CAR_PARTS = 4;
 
+    /**
+     * ==================================================================
+     * LO QUE TIENE CUALQUIER PRODUCTO, SEA DEL OFICIO QUE SEA.
+     *
+     * Viven en `products` --el catalogo COMPARTIDO-- y no en la tabla del
+     * tipo. La regla, que antes no estaba escrita en ningun sitio:
+     *
+     *   · aqui, lo que describe el articulo IGUAL en todos los oficios;
+     *   · en la tabla del tipo, lo que SOLO ese oficio pregunta;
+     *   · en `products_business`, lo que cambia por tienda.
+     *
+     * Los tres estaban repartidos por tipo con tres nombres distintos
+     * --`pharmacy.content`, `grocery.size`, `restaurant.portion_size`--
+     * para la misma pregunta: cuanto trae.
+     * ==================================================================
+     *
+     * @var array<string, array<string, mixed>>
+     */
+    private const COMUNES = [
+        'content' => [
+            'rules' => ['nullable', 'string', 'max:80'],
+            'label' => 'Contenido',
+            'input' => 'text',
+            'columna' => 'Contenido',
+            'ancho' => 18,
+            'alias' => ['contenido', 'content', 'tamano', 'tamaño', 'size'],
+            'ayuda' => 'Cuanto trae: «500 g», «10 tabletas», «1 L», «Personal».',
+        ],
+        'presentation' => [
+            'rules' => ['nullable', 'string', 'max:60'],
+            'label' => 'Presentación',
+            'input' => 'text',
+            'columna' => 'Presentación',
+            'ancho' => 16,
+            'alias' => ['presentacion', 'presentation', 'envase', 'empaque'],
+            'ayuda' => 'En que viene: bolsa, caja, lata, frasco, blíster, tubo, sobre…',
+        ],
+        'requiere_frio' => [
+            'rules' => ['nullable', 'boolean'],
+            'label' => 'Necesita frío',
+            'input' => 'boolean',
+            'columna' => 'Necesita frío',
+            'ancho' => 16,
+            'alias' => ['requiere_frio', 'frio', 'refrigerado', 'cadena_de_frio'],
+            'ayuda' => 'Sí o No. Leche, yogurt, huevos, helado, insulina…',
+        ],
+    ];
+
     private const SCHEMAS = [
         self::TYPE_GROCERY => [
             'type_name' => 'grocery',
             'relation' => 'grocery',
             'model' => GroceryProduct::class,
-            'fields' => [
-                'brand' => ['rules' => ['nullable', 'string', 'max:255'], 'label' => 'Marca', 'input' => 'text'],
-                'size' => ['rules' => ['nullable', 'string', 'max:100'], 'label' => 'Tamaño / Presentación', 'input' => 'text'],
-                'expiration_date' => ['rules' => ['nullable', 'date'], 'label' => 'Fecha de vencimiento', 'input' => 'date'],
-            ],
+
+            /*
+             * SIN CAMPOS PROPIOS, Y NO ES QUE LE FALTEN.
+             *
+             * Tenía tres y los tres sobraban:
+             *
+             *   · `brand` duplicaba `products.brand`. Y como el formulario
+             *     escribía en uno y la carga masiva en el otro, la marca que
+             *     se tecleaba no se podía buscar.
+             *   · `size` es el CONTENIDO, que ahora es común: la misma
+             *     pregunta que `pharmacy.content` y `restaurant.portion_size`.
+             *   · `expiration_date` es del LOTE, y vive en
+             *     `products_business` desde su propia migración.
+             *
+             * Lo que vende una tienda de barrio es «cosas», y «cosa» es lo
+             * que `products` ya describe. Un tipo delgado no es un tipo mal
+             * hecho: es el que no necesita preguntar nada aparte.
+             */
+            'fields' => [],
         ],
 
         self::TYPE_PHARMACY => [
             'type_name' => 'pharmacy',
             'relation' => 'pharmacy',
             'model' => PharmacyProduct::class,
+
             /*
-             * LO QUE UNA DROGUERÍA DE BARRIO SÍ LLENA.
+             * CUATRO, Y SON LOS ÚNICOS QUE UNA DROGUERÍA PREGUNTA APARTE.
              *
-             * `active_ingredient` y `dosage` eran OBLIGATORIOS, y esa es la
-             * razón de que `pharmacy_products` esté vacía: para dar de alta
-             * un pañal o un frasco de alcohol había que inventarse un
-             * principio activo. Pasan a opcionales; se siguen pidiendo, pero
-             * no bloquean.
+             * De los once campos de la ficha de un medicamento, nueve son de
+             * cualquier producto --nombre, marca, código, imagen, categoría,
+             * contenido, envase, precio y existencias-- y ya vivían en
+             * `products` o en `products_business`. Estos cuatro no se le
+             * piden a un bulto de arroz.
              *
-             * `content` es «10 tabletas», «500 ml»: cuánto trae el envase.
-             * NO es `dosage`, que es la concentración —un acetaminofén es de
-             * 500 mg y la caja trae 10—. Meterlos en el mismo campo hace que
-             * la ficha diga «Dosis: 10 tabletas», que es falso.
-             *
-             * `presentation` se queda en TEXTO LIBRE y no en lista cerrada:
-             * una droguería vende en caja, frasco, blíster, sobre, ampolla,
-             * tubo, óvulo y jeringa, y una lista que se queda corta obliga a
-             * mentir en la celda.
-             *
-             * `expiration_date` ya NO está: se mudó a `products_business`
-             * porque el atún de una tienda vence en marzo y el de la otra en
-             * septiembre. Tenerlo en los dos sitios es cómo se consigue que
-             * digan cosas distintas.
-             */
-            /*
-             * `columna`, `alias`, `ancho` y `ayuda` son para la CARGA MASIVA,
-             * y son OPCIONALES: un tipo que no las declara no añade ni una
-             * celda a su plantilla ni un alias a su lector.
-             *
-             * Por eso tienda, restaurante y repuestos siguen con el archivo
-             * de seis columnas exacto que tenían, sin que haya un `if` por
-             * tipo de negocio en el importador ni en la plantilla.
+             * `content` y `presentation` salieron de aquí a `products`: el
+             * mismo frasco trae el mismo contenido lo venda quien lo venda.
+             * `expiration_date` quedó deprecado por el vencimiento del lote.
              */
             'fields' => [
-                'presentation' => [
-                    'rules' => ['nullable', 'string', 'max:255'],
-                    'label' => 'Presentación',
-                    'input' => 'text',
-                    'columna' => 'Presentación',
-                    'ancho' => 18,
-                    'alias' => ['presentacion', 'presentation', 'empaque'],
-                    'ayuda' => 'Cómo viene: caja, frasco, blíster, sobre, tubo, ampolla, unidad…',
-                ],
-                'content' => [
-                    'rules' => ['nullable', 'string', 'max:80'],
-                    'label' => 'Contenido',
-                    'input' => 'text',
-                    'columna' => 'Contenido',
-                    'ancho' => 18,
-                    'alias' => ['contenido', 'content', 'cantidad_contenido'],
-                    'ayuda' => 'Cuánto trae: «10 tabletas», «500 ml», «30 cápsulas». No es la dosis.',
-                ],
                 'registro_invima' => [
                     'rules' => ['nullable', 'string', 'max:40'],
                     'label' => 'Registro INVIMA',
@@ -141,25 +166,136 @@ class ProductTypeSchema
             'type_name' => 'restaurant',
             'relation' => 'restaurant',
             'model' => RestaurantProducts::class,
+
+            /*
+             * `food_type` SALIÓ: era lo que ya hace la categoría --Almuerzos,
+             * Comidas Rápidas, Postres-- y dos clasificaciones para la misma
+             * cosa acaban diciendo cosas distintas. `portion_size` se fue al
+             * contenido común.
+             *
+             * Y ENTRARON TRES. `minutos_preparacion` es el más importante de
+             * todo este archivo: la plataforma entera promete tiempos de
+             * entrega y no había dónde decir que una bandeja paisa tarda
+             * veinticinco minutos y una gaseosa ninguno. Sin eso la promesa es
+             * una adivinanza.
+             */
             'fields' => [
-                'food_type' => ['rules' => ['required', 'string', 'max:255'], 'label' => 'Tipo de comida', 'input' => 'text'],
-                'portion_size' => ['rules' => ['nullable', 'string', 'max:255'], 'label' => 'Tamaño de la porción', 'input' => 'text'],
-                'is_vegan' => ['rules' => ['nullable', 'boolean'], 'label' => 'Vegano', 'input' => 'boolean'],
-                'is_gluten_free' => ['rules' => ['nullable', 'boolean'], 'label' => 'Libre de gluten', 'input' => 'boolean'],
-                'allergens' => ['rules' => ['nullable', 'string', 'max:255'], 'label' => 'Alérgenos', 'input' => 'text'],
+                'minutos_preparacion' => [
+                    'rules' => ['nullable', 'integer', 'min:0', 'max:240'],
+                    'label' => 'Minutos de preparación',
+                    'input' => 'number',
+                    'columna' => 'Minutos de preparación',
+                    'ancho' => 22,
+                    'alias' => ['minutos_preparacion', 'minutos', 'preparacion', 'tiempo'],
+                    'ayuda' => 'Cuánto tarda en salir de la cocina. Una gaseosa, 0.',
+                ],
+                'acompanamientos' => [
+                    'rules' => ['nullable', 'string', 'max:255'],
+                    'label' => 'Con qué viene',
+                    'input' => 'text',
+                    'columna' => 'Con qué viene',
+                    'ancho' => 30,
+                    'alias' => ['acompanamientos', 'acompañamientos', 'incluye', 'viene_con'],
+                    'ayuda' => '«Arroz, ensalada y jugo». Es lo que hace que un corrientazo sea un corrientazo.',
+                ],
+                'es_vegetariano' => [
+                    'rules' => ['nullable', 'boolean'],
+                    'label' => 'Vegetariano',
+                    'input' => 'boolean',
+                    'columna' => 'Vegetariano',
+                    'ancho' => 14,
+                    'alias' => ['es_vegetariano', 'vegetariano'],
+                    'ayuda' => 'Sí o No. No es lo mismo que vegano, y se pide mucho más.',
+                ],
+                'is_vegan' => [
+                    'rules' => ['nullable', 'boolean'],
+                    'label' => 'Vegano',
+                    'input' => 'boolean',
+                    'columna' => 'Vegano',
+                    'ancho' => 12,
+                    'alias' => ['es_vegano', 'vegano', 'is_vegan'],
+                    'ayuda' => 'Sí o No. Sin nada de origen animal.',
+                ],
+                'is_gluten_free' => [
+                    'rules' => ['nullable', 'boolean'],
+                    'label' => 'Sin gluten',
+                    'input' => 'boolean',
+                    'columna' => 'Sin gluten',
+                    'ancho' => 14,
+                    'alias' => ['sin_gluten', 'is_gluten_free', 'gluten'],
+                    'ayuda' => 'Sí o No.',
+                ],
+                'allergens' => [
+                    'rules' => ['nullable', 'string', 'max:255'],
+                    'label' => 'Alérgenos',
+                    'input' => 'text',
+                    'columna' => 'Alérgenos',
+                    'ancho' => 24,
+                    'alias' => ['alergenos', 'alérgenos', 'allergens'],
+                    'ayuda' => 'Maní, leche, huevo, mariscos… Lo que alguien necesita saber antes de pedir.',
+                ],
             ],
         ],
 
         self::TYPE_CAR_PARTS => [
-            'type_name' => 'car_parts',
+            'type_name' => 'carParts',
             'relation' => 'carPart',
             'model' => CarPartsProducts::class,
+
+            /*
+             * `brand` SALIÓ por lo mismo que en tienda: duplicaba
+             * `products.brand`.
+             *
+             * Y `model` + `year` + `compatibility` SE FUNDIERON EN UNO. Los
+             * tres respondían a la misma pregunta --para qué carro sirve--
+             * repartida en tres textos libres que nadie puede cruzar: buscar
+             * «Spark 2012» no acertaba en ninguno de los tres. Uno solo que
+             * diga «Chevrolet Spark 2010-2016, Aveo 2008-2014» es más honesto
+             * y más útil.
+             *
+             * La compatibilidad DE VERDAD --elegir marca, línea y año en tres
+             * desplegables-- es muchos a muchos y necesita su propia tabla de
+             * vehículos con un pivote. Eso se hace cuando haya una tienda de
+             * repuestos de verdad usándolo; mientras tanto, un texto honesto
+             * en vez de tres que fingen estar estructurados.
+             */
             'fields' => [
-                'brand' => ['rules' => ['nullable', 'string', 'max:255'], 'label' => 'Marca', 'input' => 'text'],
-                'model' => ['rules' => ['required', 'string', 'max:255'], 'label' => 'Modelo del vehículo', 'input' => 'text'],
-                'year' => ['rules' => ['nullable', 'integer', 'between:1950,2100'], 'label' => 'Año', 'input' => 'number'],
-                'oem_code' => ['rules' => ['nullable', 'string', 'max:255'], 'label' => 'Código OEM', 'input' => 'text'],
-                'compatibility' => ['rules' => ['nullable', 'string', 'max:255'], 'label' => 'Compatibilidad', 'input' => 'text'],
+                'oem_code' => [
+                    'rules' => ['nullable', 'string', 'max:60'],
+                    'label' => 'Código OEM',
+                    'input' => 'text',
+                    'columna' => 'Código OEM',
+                    'ancho' => 20,
+                    'alias' => ['oem_code', 'oem', 'codigo_oem', 'numero_de_parte'],
+                    'ayuda' => 'El código del fabricante. Es la identidad de la pieza, como el código de barras.',
+                ],
+                'compatibility' => [
+                    'rules' => ['nullable', 'string', 'max:255'],
+                    'label' => 'Para qué vehículos sirve',
+                    'input' => 'text',
+                    'columna' => 'Compatibilidad',
+                    'ancho' => 34,
+                    'alias' => ['compatibilidad', 'compatibility', 'aplicacion', 'vehiculos'],
+                    'ayuda' => '«Chevrolet Spark 2010-2016, Aveo 2008-2014». Marca, línea y años.',
+                ],
+                'posicion' => [
+                    'rules' => ['nullable', 'string', 'max:40'],
+                    'label' => 'Posición',
+                    'input' => 'text',
+                    'columna' => 'Posición',
+                    'ancho' => 16,
+                    'alias' => ['posicion', 'position', 'ubicacion'],
+                    'ayuda' => 'Delantero, trasero, izquierdo, derecho. Es el error clásico al comprar.',
+                ],
+                'condicion' => [
+                    'rules' => ['nullable', 'string', 'max:30'],
+                    'label' => 'Condición',
+                    'input' => 'text',
+                    'columna' => 'Condición',
+                    'ancho' => 16,
+                    'alias' => ['condicion', 'condition', 'tipo_pieza'],
+                    'ayuda' => 'Original, genérico o remanufacturado. Cambia el precio al doble.',
+                ],
             ],
         ],
     ];
@@ -176,6 +312,24 @@ class ProductTypeSchema
     {
         $salida = [];
 
+        /*
+         * LOS COMUNES VAN PRIMERO, Y PARA TODOS LOS TIPOS.
+         *
+         * Contenido y envase los llena cualquier oficio, asi que el
+         * archivo de una tienda tambien los trae. Era lo que faltaba para
+         * que la carga masiva sirviera de algo fuera de farmacia: tienda,
+         * restaurante y repuestos tenian CERO columnas extra.
+         */
+        foreach (self::COMUNES as $campo => $def) {
+            $salida[$campo] = [
+                'titulo' => $def['columna'],
+                'ancho' => $def['ancho'],
+                'ayuda' => $def['ayuda'],
+                'input' => $def['input'],
+                'comun' => true,
+            ];
+        }
+
         foreach (self::SCHEMAS[$type]['fields'] ?? [] as $campo => $def) {
             if (! isset($def['columna'])) {
                 continue;
@@ -186,6 +340,7 @@ class ProductTypeSchema
                 'ancho' => $def['ancho'] ?? 20,
                 'ayuda' => $def['ayuda'] ?? '',
                 'input' => $def['input'] ?? 'text',
+                'comun' => false,
             ];
         }
 
@@ -204,6 +359,12 @@ class ProductTypeSchema
     {
         $salida = [];
 
+        foreach (self::COMUNES as $campo => $def) {
+            $salida[$campo] = array_values(array_unique(
+                array_merge([$campo], $def['alias']),
+            ));
+        }
+
         foreach (self::SCHEMAS[$type]['fields'] ?? [] as $campo => $def) {
             if (! isset($def['columna'])) {
                 continue;
@@ -212,6 +373,53 @@ class ProductTypeSchema
             $salida[$campo] = array_values(array_unique(
                 array_merge([$campo], $def['alias'] ?? []),
             ));
+        }
+
+        return $salida;
+    }
+
+    /**
+     * Los campos comunes, los que viven en `products`.
+     *
+     * @return list<string>
+     */
+    public static function camposComunes(): array
+    {
+        return array_keys(self::COMUNES);
+    }
+
+    /**
+     * Reglas de validacion de los comunes, para el alta y la edicion.
+     *
+     * @return array<string, list<string>>
+     */
+    public static function reglasComunes(): array
+    {
+        $salida = [];
+
+        foreach (self::COMUNES as $campo => $def) {
+            $salida[$campo] = $def['rules'];
+        }
+
+        return $salida;
+    }
+
+    /**
+     * Los comunes como los pinta un formulario, igual que `forApi`.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function comunesParaApi(): array
+    {
+        $salida = [];
+
+        foreach (self::COMUNES as $campo => $def) {
+            $salida[] = [
+                'name' => $campo,
+                'label' => $def['label'],
+                'input' => $def['input'],
+                'required' => in_array('required', $def['rules'], true),
+            ];
         }
 
         return $salida;
@@ -306,6 +514,14 @@ class ProductTypeSchema
      * Descripción del formulario para el cliente (endpoint /product/schema):
      * cada campo con etiqueta, tipo de input y si es obligatorio.
      */
+    /**
+     * Descripcion del formulario para el cliente.
+     *
+     * `common` ES UNA CLAVE NUEVA Y ADITIVA: una app vieja que no la
+     * conozca la ignora y sigue pintando `fields` como siempre. Lleva los
+     * campos que viven en `products` --contenido, envase, frio-- que antes
+     * iban dentro de `fields` repartidos por tipo.
+     */
     public static function forApi(int $type): array
     {
         $fields = [];
@@ -323,6 +539,7 @@ class ProductTypeSchema
             'business_type' => $type,
             'type_name' => self::SCHEMAS[$type]['type_name'] ?? null,
             'fields' => $fields,
+            'common' => self::comunesParaApi(),
         ];
     }
 }
