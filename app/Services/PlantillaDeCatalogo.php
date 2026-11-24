@@ -153,7 +153,7 @@ class PlantillaDeCatalogo
         $this->hojaDeProductos($hoja, $productos, count($categorias), $columnas);
 
         $this->hojaDeInstrucciones($libro->createSheet(), $nombreTienda, $categorias, $columnas);
-        $this->hojaDeListas($libro->createSheet(), $categorias);
+        $this->hojaDeListas($libro->createSheet(), $categorias, $columnas);
 
         /*
          * UNA PLANTILLA VACÍA ABRE EN LA PORTADA, Y UNA CON PRODUCTOS NO.
@@ -186,7 +186,7 @@ class PlantillaDeCatalogo
         foreach (self::COLUMNAS as $letra => [$titulo, $ancho, $obligatoria, $ayuda]) {
             $columnas[$letra] = [
                 $titulo, $ancho, $obligatoria, $ayuda, null,
-                self::EJEMPLOS_BASE[$letra] ?? '',
+                self::EJEMPLOS_BASE[$letra] ?? '', 'text', [],
             ];
         }
 
@@ -199,6 +199,8 @@ class PlantillaDeCatalogo
             $columnas[$letra] = [
                 $def['titulo'], $def['ancho'], false, $def['ayuda'], $campo,
                 $def['ejemplo'] ?? '',
+                $def['input'] ?? 'text',
+                $def['opciones'] ?? [],
             ];
             $letra++;
         }
@@ -337,14 +339,44 @@ class PlantillaDeCatalogo
                     ->setFormula1('CATEGORIAS')
                     ->setShowErrorMessage(true)->setErrorStyle(DataValidation::STYLE_STOP)
                     ->setErrorTitle('Categoría no válida')->setError('Elige una categoría de la lista.');
-            } elseif ($campo !== null && ($columnas[$col][0] ?? '') === 'Requiere fórmula') {
-                /* Sí/No desde la hoja de listas, no escrito a mano: la
-                   plantilla ya tiene dicho que teclear a mano «era la
-                   primera causa de filas rechazadas». */
+            } elseif (($columnas[$col][6] ?? 'text') === 'boolean') {
+                /*
+                 * TODO LO QUE ES SÍ/NO, Y NO SÓLO LO QUE SE LLAMA ASÍ.
+                 *
+                 * Esto comparaba el TÍTULO con la cadena «Requiere fórmula»,
+                 * así que era la única columna con desplegable. «Necesita
+                 * frío», «Vegetariano», «Vegano» y «Sin gluten» son igual de
+                 * Sí/No y se quedaron sin lista: había que escribirlas a mano,
+                 * que es la primera causa de filas rechazadas.
+                 *
+                 * Ahora manda el TIPO del campo. Cualquier booleano que se
+                 * añada mañana nace con su lista sin tocar esto.
+                 */
                 $v->setType(DataValidation::TYPE_LIST)->setShowDropDown(true)
                     ->setFormula1('SI_O_NO')
                     ->setShowErrorMessage(true)->setErrorStyle(DataValidation::STYLE_STOP)
                     ->setErrorTitle('Escribe Sí o No')->setError('Elige Sí o No de la lista.');
+            } elseif (($columnas[$col][7] ?? []) !== []) {
+                /*
+                 * LAS LISTAS QUE SUGIEREN, SIN BLOQUEAR.
+                 *
+                 * Presentación, posición y condición tienen un juego de
+                 * valores que cubre casi todo --bolsa, caja, frasco; delantero
+                 * izquierdo; original, genérico--, pero NO son cerrados: la
+                 * base los guarda como texto libre y siempre habrá un envase
+                 * que no está.
+                 *
+                 * `setShowErrorMessage(false)`: la lista se ofrece y lo escrito
+                 * a mano también entra. Una lista que se queda corta y además
+                 * bloquea obliga a mentir en la celda, que es peor que no
+                 * tenerla.
+                 *
+                 * La categoría SÍ bloquea, y ésa es la diferencia: tiene que
+                 * coincidir con una del sistema o la fila se rechaza.
+                 */
+                $v->setType(DataValidation::TYPE_LIST)->setShowDropDown(true)
+                    ->setFormula1(self::nombreDeLista($columnas[$col][0]))
+                    ->setShowErrorMessage(false);
             } else {
                 $v->setType(DataValidation::TYPE_NONE);
             }
@@ -568,7 +600,21 @@ class PlantillaDeCatalogo
      * Listas-- y la fórmula del desplegable de categorías apunta a
      * `Listas!$A$2:$A$n`, así que la A no se puede mover.
      */
-    private function hojaDeListas(Worksheet $h, array $categorias): void
+    /**
+     * El nombre del rango de una columna, a partir de su título.
+     *
+     * Sin tildes ni espacios: un `definedName` de Excel no los admite.
+     */
+    private static function nombreDeLista(string $titulo): string
+    {
+        $limpio = strtr(mb_strtoupper($titulo), [
+            'Á' => 'A', 'É' => 'E', 'Í' => 'I', 'Ó' => 'O', 'Ú' => 'U', 'Ñ' => 'N',
+        ]);
+
+        return 'LISTA_'.preg_replace('/[^A-Z0-9]/', '_', $limpio);
+    }
+
+    private function hojaDeListas(Worksheet $h, array $categorias, array $columnas = []): void
     {
         $h->setTitle('Listas');
         $h->setCellValue('A1', 'Categorías');
@@ -578,6 +624,8 @@ class PlantillaDeCatalogo
 
         /* La B es el Sí/No de «requiere fórmula». Va en esta misma hoja y no
            en una cuarta porque el libro tiene que seguir teniendo tres. */
+        $h->getColumnDimension('A')->setWidth(28);
+        $h->getColumnDimension('B')->setWidth(10);
         $h->setCellValue('B1', 'Sí o no');
         $h->setCellValue('B2', 'Sí');
         $h->setCellValue('B3', 'No');
@@ -599,6 +647,39 @@ class PlantillaDeCatalogo
             }
 
             $libro->addNamedRange(new NamedRange('SI_O_NO', $h, '$B$2:$B$3'));
+
+            /*
+             * Y UNA COLUMNA POR CADA LISTA QUE DECLARE EL ESQUEMA.
+             *
+             * Presentación, posición, condición… Se escriben acá y se nombran
+             * acá: la hoja de productos sólo dice el nombre del rango, así que
+             * añadir una lista nueva es declarar sus `opciones` en
+             * `ProductTypeSchema` y nada más.
+             */
+            $letra = 'C';
+
+            foreach ($columnas as [$titulo, , , , , , , $opciones]) {
+                if ($opciones === []) {
+                    continue;
+                }
+
+                $h->setCellValue("{$letra}1", $titulo);
+                $h->getStyle("{$letra}1")->getFont()->setBold(true)
+                    ->getColor()->setRGB(self::MORADO);
+                $h->getColumnDimension($letra)->setWidth(24);
+
+                foreach ($opciones as $i => $valor) {
+                    $h->setCellValue($letra.($i + 2), $valor);
+                }
+
+                $libro->addNamedRange(new NamedRange(
+                    self::nombreDeLista($titulo),
+                    $h,
+                    '$'.$letra.'$2:$'.$letra.'$'.(count($opciones) + 1),
+                ));
+
+                $letra++;
+            }
         }
 
         /*

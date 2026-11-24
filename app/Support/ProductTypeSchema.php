@@ -66,6 +66,7 @@ class ProductTypeSchema
             'columna' => 'Presentación',
             'ancho' => 16,
             'alias' => ['presentacion', 'presentation', 'envase', 'empaque'],
+            'opciones' => ['Bolsa', 'Caja', 'Lata', 'Frasco', 'Botella', 'Tarro', 'Sobre', 'Blíster', 'Tubo', 'Paquete', 'Ampolla', 'Rollo', 'Bandeja', 'Unidad', 'Porción', 'Vaso', 'Otro'],
             'ejemplo' => 'Bolsa',
             'ayuda' => 'En que viene: bolsa, caja, lata, frasco, blíster, tubo, sobre…',
         ],
@@ -300,6 +301,7 @@ class ProductTypeSchema
                     'columna' => 'Posición',
                     'ancho' => 16,
                     'alias' => ['posicion', 'position', 'ubicacion'],
+                    'opciones' => ['Delantero', 'Trasero', 'Delantero izquierdo', 'Delantero derecho', 'Trasero izquierdo', 'Trasero derecho', 'Izquierdo', 'Derecho', 'Superior', 'Inferior', 'Universal'],
                     'ejemplo' => 'Delantero izquierdo',
                     'ayuda' => 'Delantero, trasero, izquierdo, derecho. Es el error clásico al comprar.',
                 ],
@@ -310,6 +312,7 @@ class ProductTypeSchema
                     'columna' => 'Condición',
                     'ancho' => 16,
                     'alias' => ['condicion', 'condition', 'tipo_pieza'],
+                    'opciones' => ['Original', 'Genérico', 'Remanufacturado', 'Usado'],
                     'ejemplo' => 'Original',
                     'ayuda' => 'Original, genérico o remanufacturado. Cambia el precio al doble.',
                 ],
@@ -344,6 +347,7 @@ class ProductTypeSchema
                 'ayuda' => $def['ayuda'],
                 'input' => $def['input'],
                 'ejemplo' => $def['ejemplo'] ?? '',
+                'opciones' => $def['opciones'] ?? [],
                 'comun' => true,
             ];
         }
@@ -359,6 +363,7 @@ class ProductTypeSchema
                 'ayuda' => $def['ayuda'] ?? '',
                 'input' => $def['input'] ?? 'text',
                 'ejemplo' => $def['ejemplo'] ?? '',
+                'opciones' => $def['opciones'] ?? [],
                 'comun' => false,
             ];
         }
