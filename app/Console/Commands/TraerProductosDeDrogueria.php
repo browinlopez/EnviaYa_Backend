@@ -54,13 +54,31 @@ class TraerProductosDeDrogueria extends Command
 
     protected $description = 'Trae productos de droguería con foto desde Open Beauty/Food Facts';
 
+    /** Palabras funcionales francesas: lo que mas se cuela. */
+    private const FRANCES = [
+        '/\beau\b/iu',
+        '/\bsans\b/iu',
+        '/\bpour\b/iu',
+        '/\bavec\b/iu',
+        '/\bcheveux\b/iu',
+        '/\bvisage\b/iu',
+        '/\bnettoyant\b/iu',
+        '/\bcrème\b/iu',
+        '/\blait\b/iu',
+        '/\bpeaux\b/iu',
+        '/\bbio -\b/iu',
+    ];
+
     private const ESPERA = 20;
 
     private const CONECTAR = 4;
 
-    private const BEAUTY = 'https://world.openbeautyfacts.org/cgi/search.pl';
+    private const OBF = 'https://world.openbeautyfacts.org/cgi/search.pl';
 
-    private const FOOD = 'https://world.openfoodfacts.org/cgi/search.pl';
+    private const OFF = 'https://world.openfoodfacts.org/cgi/search.pl';
+
+    /** La tercera hermana: productos que no son ni comida ni cosmética. */
+    private const OPF = 'https://world.openproductsfacts.org/cgi/search.pl';
 
     /**
      * Qué se busca y en qué estante va.
@@ -70,45 +88,84 @@ class TraerProductosDeDrogueria extends Command
      * acá y no por lo que diga la fuente, porque sus categorías son de
      * alimentación y cosmética y no coinciden con las de una droguería.
      */
+    /**
+     * QUÉ SE BUSCA, DÓNDE Y EN QUÉ ESTANTE VA.
+     *
+     * POR MARCA Y NO POR MOLÉCULA, que es lo que lo cambió todo. Buscar
+     * «paracetamol» o «acetaminofén» en una base de alimentos no devuelve
+     * nada; buscar «Dolex» o «Genfar» devuelve seis y cuatro productos CON
+     * FOTO, porque alguien los escaneó y los subió. La base no sabe de
+     * principios activos, pero sí de códigos de barras que alguien leyó.
+     *
+     * Medido sobre estas marcas: 1.101 productos distintos con fotografía.
+     *
+     * Y la categoría la decide esta tabla, no la fuente: sus categorías son
+     * de alimentación y cosmética y no coinciden con las de una droguería.
+     *
+     * TODAS SE FILTRAN POR IDIOMA ESPAÑOL. Ver `buscar()`.
+     *
+     * Con el filtro de país puesto para todo, `colgate` devolvía casi nada:
+     * la base tiene setenta y un productos Colgate, pero etiquetados en el
+     * país donde los escanearon. Un tubo de Colgate Total 12 es el mismo en
+     * Bogotá que en Lima, así que para una MARCA el filtro sólo estorba.
+     *
+     * Para un término GENÉRICO sí se deja: «crema» sin país trae cremas de
+     * medio mundo que no se venden acá, y el catálogo se llena de cosas que
+     * nadie va a pedir.
+     *
+     * @var list<array{0:string, 1:string, 2:string}>
+     */
     private const BUSQUEDAS = [
-        // [término, fuente, categoría nuestra]
-        ['shampoo', self::BEAUTY, 'Cuidado Personal'],
-        ['jabon', self::BEAUTY, 'Cuidado Personal'],
-        ['desodorante', self::BEAUTY, 'Cuidado Personal'],
-        ['toallas', self::BEAUTY, 'Cuidado Personal'],
-        ['papel', self::BEAUTY, 'Cuidado Personal'],
-        ['afeitar', self::BEAUTY, 'Cuidado Personal'],
-        ['crema', self::BEAUTY, 'Dermocosmética'],
-        ['protector solar', self::BEAUTY, 'Dermocosmética'],
-        ['bloqueador', self::BEAUTY, 'Dermocosmética'],
-        ['locion', self::BEAUTY, 'Dermocosmética'],
-        ['hidratante', self::BEAUTY, 'Dermocosmética'],
-        ['crema dental', self::BEAUTY, 'Higiene oral'],
-        ['enjuague bucal', self::BEAUTY, 'Higiene oral'],
-        ['cepillo dental', self::BEAUTY, 'Higiene oral'],
-        ['bebe', self::BEAUTY, 'Bebé'],
-        ['pañal', self::BEAUTY, 'Bebé'],
-        /*
-         * DE LA BASE DE ALIMENTOS, SÓLO MARCAS CONCRETAS.
-         *
-         * La primera versión buscaba «vitamina», «avena» y «leche en polvo»,
-         * y trajo ciento dieciocho productos de los que la mayoría eran
-         * MERCADO: gelatina, granola, Corn Flakes, galletas Saltín. Lógico:
-         * es una base de ALIMENTOS, y «avena» ahí es un cereal, no un
-         * suplemento.
-         *
-         * Un término genérico en una base de otro oficio trae el oficio de la
-         * base, no el tuyo. Por eso ahora se nombran marcas que una droguería
-         * sí vende, y punto.
-         */
-        ['pedialyte', self::FOOD, 'Digestivo'],
-        ['suero oral', self::FOOD, 'Digestivo'],
-        ['ensure', self::FOOD, 'Vitaminas y suplementos'],
-        ['glucerna', self::FOOD, 'Vitaminas y suplementos'],
-        ['pediasure', self::FOOD, 'Vitaminas y suplementos'],
-        ['nan', self::FOOD, 'Bebé'],
-        ['nutramigen', self::FOOD, 'Bebé'],
-        ['compota', self::FOOD, 'Bebé'],
+        ['dolex', self::OFF, 'Dolor y fiebre'],
+        ['advil', self::OFF, 'Dolor y fiebre'],
+        ['aspirina bayer', self::OFF, 'Dolor y fiebre'],
+        ['buscapina', self::OFF, 'Dolor y fiebre'],
+        ['genfar', self::OFF, 'Medicina'],
+        ['la sante', self::OFF, 'Medicina'],
+        ['procaps', self::OFF, 'Medicina'],
+        ['memphis', self::OFF, 'Medicina'],
+        ['noraver', self::OFF, 'Gripa y tos'],
+        ['bisolvon', self::OFF, 'Gripa y tos'],
+        ['vick', self::OFF, 'Gripa y tos'],
+        ['alka seltzer', self::OFF, 'Digestivo'],
+        ['pedialyte', self::OFF, 'Digestivo'],
+        ['redoxon', self::OFF, 'Vitaminas y suplementos'],
+        ['centrum', self::OFF, 'Vitaminas y suplementos'],
+        ['ensure', self::OFF, 'Vitaminas y suplementos'],
+        ['glucerna', self::OFF, 'Vitaminas y suplementos'],
+        ['nan nestle', self::OFF, 'Bebé'],
+        ['jgb', self::OPF, 'Primeros auxilios'],
+        ['isodine', self::OPF, 'Primeros auxilios'],
+        ['colgate', self::OBF, 'Higiene oral'],
+        ['listerine', self::OBF, 'Higiene oral'],
+        ['sensodyne', self::OBF, 'Higiene oral'],
+        ['crema dental', self::OBF, 'Higiene oral'],
+        ['enjuague bucal', self::OBF, 'Higiene oral'],
+        ['eucerin', self::OBF, 'Dermocosmética'],
+        ['cetaphil', self::OBF, 'Dermocosmética'],
+        ['nivea', self::OBF, 'Dermocosmética'],
+        ['lubriderm', self::OBF, 'Dermocosmética'],
+        ['asepxia', self::OBF, 'Dermocosmética'],
+        ['protector solar', self::OBF, 'Dermocosmética'],
+        ['crema', self::OBF, 'Dermocosmética'],
+        ['locion', self::OBF, 'Dermocosmética'],
+        ['johnson', self::OBF, 'Cuidado Personal'],
+        ['gillette', self::OBF, 'Cuidado Personal'],
+        ['rexona', self::OBF, 'Cuidado Personal'],
+        ['sedal', self::OBF, 'Cuidado Personal'],
+        ['head shoulders', self::OBF, 'Cuidado Personal'],
+        ['protex', self::OBF, 'Cuidado Personal'],
+        ['yodora', self::OBF, 'Cuidado Personal'],
+        ['nosotras', self::OBF, 'Cuidado Personal'],
+        ['shampoo', self::OBF, 'Cuidado Personal'],
+        ['desodorante', self::OBF, 'Cuidado Personal'],
+        ['jabon', self::OBF, 'Cuidado Personal'],
+        ['afeitar', self::OBF, 'Cuidado Personal'],
+        ['huggies', self::OBF, 'Bebé'],
+        ['winny', self::OBF, 'Bebé'],
+        ['pequenin', self::OBF, 'Bebé'],
+        ['bebe', self::OBF, 'Bebé'],
+        ['tena', self::OBF, 'Cuidado del adulto mayor'],
     ];
 
     public function handle(): int
@@ -218,8 +275,26 @@ class TraerProductosDeDrogueria extends Command
                 ->withHeaders(['User-Agent' => 'VeciPaYa/1.0'])
                 ->get($fuente, [
                     'search_terms' => $termino,
-                    'countries_tags_en' => 'colombia',
-                    'fields' => 'code,product_name,brands,image_front_url,quantity',
+
+                    /*
+                     * POR IDIOMA, NO POR PAÍS.
+                     *
+                     * Con `countries_tags_en=colombia` una marca global casi
+                     * no devolvía nada: la base tiene setenta y seis fichas de
+                     * Colgate, pero etiquetadas en el país donde cada quien la
+                     * escaneó. Al quitar el filtro llegaron setecientas, y la
+                     * mitad en FRANCÉS: «Crème mains», «Baume Réparateur».
+                     *
+                     * El idioma es el filtro que de verdad hacía falta. Un
+                     * tubo de Colgate es el mismo en Bogotá que en Lima, pero
+                     * su ficha sólo sirve si está escrita en español: el
+                     * tendero no va a vender «Roughness Relief Lotion».
+                     */
+                    'languages_tags_en' => 'spanish',
+
+                    /* `product_name_es` primero: la ficha puede tener el
+                       nombre en varios idiomas y el genérico ser el inglés. */
+                    'fields' => 'code,product_name,product_name_es,brands,image_front_url,quantity',
                     'json' => 1,
                     'page_size' => 50,
                 ]);
@@ -236,13 +311,71 @@ class TraerProductosDeDrogueria extends Command
         }
 
         return array_values(array_filter($productos, function ($p) {
+            $nombre = $this->nombreDe($p);
             $codigo = preg_replace('/\D/', '', (string) ($p['code'] ?? ''));
 
             return ! empty($p['image_front_url'])
-                && ! empty(trim((string) ($p['product_name'] ?? '')))
+                && $nombre !== null
                 && strlen($codigo) >= 8
                 && strlen($codigo) <= 14;
         }));
+    }
+
+    /**
+     * EL NOMBRE, LIMPIO, O NADA.
+     *
+     * Las fichas las escribe quien escanea, y algunas traen basura. Dos
+     * casos REALES que entraron y hubo que sacar:
+     *
+     *   «8710847904868&gt; 8710847 904868&gt;»  el codigo repetido, con
+     *       entidades HTML sin decodificar. Un producto cuyo nombre es su
+     *       codigo de barras no es un producto: es una ficha que alguien
+     *       empezo y no termino. En la vitrina sale como un numero.
+     *
+     *   «Auchan baby cosmos bio - eau nettoyante micellaire»  frances,
+     *       colado pese al filtro de idioma de la fuente.
+     */
+    private function nombreDe(array $p): ?string
+    {
+        $crudo = ($p['product_name_es'] ?? '') ?: ($p['product_name'] ?? '');
+
+        /* `&gt;` y compania: la fuente los devuelve sin decodificar. */
+        $nombre = trim(html_entity_decode((string) $crudo, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+
+        if (mb_strlen($nombre) < 3) {
+            return null;
+        }
+
+        /* Mas numeros que letras: es un codigo disfrazado de nombre. */
+        $letras = preg_match_all('/\p{L}/u', $nombre);
+        $numeros = preg_match_all('/\d/u', $nombre);
+
+        if ($letras < 3 || $numeros > $letras) {
+            return null;
+        }
+
+        /* O el codigo, tal cual, metido dentro. */
+        $codigo = preg_replace('/\D/', '', (string) ($p['code'] ?? ''));
+
+        if ($codigo !== '' && str_contains($nombre, $codigo)) {
+            return null;
+        }
+
+        /*
+         * Y una pasada de frances, que es lo que mas se cuela.
+         *
+         * Heuristica, no ciencia: son palabras funcionales que en espanol
+         * no existen o no se escriben asi. Si alguna vez saca un producto
+         * bueno, el precio es bajo comparado con un catalogo a medias en
+         * otro idioma.
+         */
+        foreach (self::FRANCES as $patron) {
+            if (preg_match($patron, $nombre)) {
+                return null;
+            }
+        }
+
+        return mb_substr($nombre, 0, 255);
     }
 
     /** @param  list<int>  $sedes */
@@ -256,7 +389,7 @@ class TraerProductosDeDrogueria extends Command
         $marca = trim(explode(',', (string) ($p['brands'] ?? ''))[0]);
 
         $productoId = DB::table('products')->insertGetId([
-            'name' => mb_substr(trim((string) $p['product_name']), 0, 255),
+            'name' => $this->nombreDe($p),
             'barcode' => preg_replace('/\D/', '', (string) $p['code']),
             'brand' => $marca !== '' ? mb_substr($marca, 0, 120) : null,
             'category_id' => $categoria,
