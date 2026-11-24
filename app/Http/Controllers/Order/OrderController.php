@@ -778,12 +778,24 @@ class OrderController extends Controller
              * vive a cinco kilómetros marcaba como "tarde" una entrega que
              * nadie podía hacer más rápido.
              */
-            $order->promised_minutes = $plazos->minutosPara($distancias->kilometros(
-                $order->business?->latitude !== null ? (float) $order->business->latitude : null,
-                $order->business?->longitude !== null ? (float) $order->business->longitude : null,
-                $order->address?->latitude !== null ? (float) $order->address->latitude : null,
-                $order->address?->longitude !== null ? (float) $order->address->longitude : null,
-            ));
+            /*
+             * Y de lo que TARDA LA COCINA, cuando el negocio lo sabe.
+             *
+             * A un sancocho de treinta y cinco minutos se le prometían los
+             * veinte de todo el mundo, y el pedido entraba como «tarde» sin
+             * que el cocinero hiciera nada mal. Cero para quien no lo declara
+             * --una tienda, una droguería--, y entonces manda la base de
+             * siempre.
+             */
+            $order->promised_minutes = $plazos->minutosPara(
+                $distancias->kilometros(
+                    $order->business?->latitude !== null ? (float) $order->business->latitude : null,
+                    $order->business?->longitude !== null ? (float) $order->business->longitude : null,
+                    $order->address?->latitude !== null ? (float) $order->address->latitude : null,
+                    $order->address?->longitude !== null ? (float) $order->address->longitude : null,
+                ),
+                $order->minutosDeCocina(),
+            );
 
             /*
              * Avisar al domiciliario, y solo a él.

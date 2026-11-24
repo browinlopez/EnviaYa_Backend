@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\DB;
 
 class OrdersSales extends Audit
 {
@@ -228,6 +229,26 @@ class OrdersSales extends Audit
      * a `array_diff`, así que los tres hay que nombrarlos.
      */
     public const ACTIVOS = [self::NUEVO, self::PREPARANDO, self::EN_CAMINO];
+
+    /**
+     * CUÁNTO TARDA LA COCINA EN SOLTAR ESTE PEDIDO.
+     *
+     * EL MÁXIMO Y NO LA SUMA, que es la decisión que importa acá: una cocina
+     * no hace los platos en fila, los hace a la vez. El pedido sale cuando
+     * está listo el más lento. Sumarlos le prometería dos horas a una mesa de
+     * seis y marcaría tarde todo lo que entregara bien.
+     *
+     * Cero cuando ningún producto lo dice --una tienda, una droguería, o un
+     * restaurante que todavía no ha llenado sus platos--, y entonces manda la
+     * base de la plataforma, que es lo que pasaba antes de que esto existiera.
+     */
+    public function minutosDeCocina(): int
+    {
+        return (int) DB::table('orderssales_detail as d')
+            ->join('restaurant_products as r', 'r.products_id', '=', 'd.product_id')
+            ->where('d.orderSales_id', $this->orderSales_id)
+            ->max('r.minutos_preparacion');
+    }
 
     /**
      * Un pago en línea que todavía no se ha confirmado.
