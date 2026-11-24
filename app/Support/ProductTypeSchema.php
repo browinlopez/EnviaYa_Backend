@@ -56,6 +56,7 @@ class ProductTypeSchema
             'columna' => 'Contenido',
             'ancho' => 18,
             'alias' => ['contenido', 'content', 'tamano', 'tamaño', 'size'],
+            'ejemplo' => '500 g',
             'ayuda' => 'Cuanto trae: «500 g», «10 tabletas», «1 L», «Personal».',
         ],
         'presentation' => [
@@ -65,6 +66,7 @@ class ProductTypeSchema
             'columna' => 'Presentación',
             'ancho' => 16,
             'alias' => ['presentacion', 'presentation', 'envase', 'empaque'],
+            'ejemplo' => 'Bolsa',
             'ayuda' => 'En que viene: bolsa, caja, lata, frasco, blíster, tubo, sobre…',
         ],
         'requiere_frio' => [
@@ -74,6 +76,7 @@ class ProductTypeSchema
             'columna' => 'Necesita frío',
             'ancho' => 16,
             'alias' => ['requiere_frio', 'frio', 'refrigerado', 'cadena_de_frio'],
+            'ejemplo' => 'No',
             'ayuda' => 'Sí o No. Leche, yogurt, huevos, helado, insulina…',
         ],
     ];
@@ -130,6 +133,7 @@ class ProductTypeSchema
                     'columna' => 'Registro INVIMA',
                     'ancho' => 24,
                     'alias' => ['registro_invima', 'invima', 'registro_sanitario', 'registro'],
+                    'ejemplo' => 'INVIMA 2019M-0012345',
                     'ayuda' => 'El registro sanitario, si el producto lo lleva. Tal cual sale en el empaque.',
                 ],
                 'requiere_formula' => [
@@ -139,6 +143,7 @@ class ProductTypeSchema
                     'columna' => 'Requiere fórmula',
                     'ancho' => 20,
                     'alias' => ['requiere_formula', 'formula', 'formula_medica', 'receta'],
+                    'ejemplo' => 'No',
                     'ayuda' => 'Sí o No. Si lo dejas vacío se entiende que NO la requiere.',
                 ],
                 'active_ingredient' => [
@@ -148,6 +153,7 @@ class ProductTypeSchema
                     'columna' => 'Principio activo',
                     'ancho' => 26,
                     'alias' => ['principio_activo', 'active_ingredient', 'principio'],
+                    'ejemplo' => 'Acetaminofén',
                     'ayuda' => 'Opcional, y sólo para medicamentos: «acetaminófen», «ibuprofeno».',
                 ],
                 'dosage' => [
@@ -157,6 +163,7 @@ class ProductTypeSchema
                     'columna' => 'Dosis',
                     'ancho' => 14,
                     'alias' => ['dosis', 'dosage', 'concentracion'],
+                    'ejemplo' => '500 mg',
                     'ayuda' => 'Opcional. La concentración: «500 mg». No es el contenido.',
                 ],
             ],
@@ -187,6 +194,7 @@ class ProductTypeSchema
                     'columna' => 'Minutos de preparación',
                     'ancho' => 22,
                     'alias' => ['minutos_preparacion', 'minutos', 'preparacion', 'tiempo'],
+                    'ejemplo' => '25',
                     'ayuda' => 'Cuánto tarda en salir de la cocina. Una gaseosa, 0.',
                 ],
                 'acompanamientos' => [
@@ -196,6 +204,7 @@ class ProductTypeSchema
                     'columna' => 'Con qué viene',
                     'ancho' => 30,
                     'alias' => ['acompanamientos', 'acompañamientos', 'incluye', 'viene_con'],
+                    'ejemplo' => 'Arroz, ensalada y jugo',
                     'ayuda' => '«Arroz, ensalada y jugo». Es lo que hace que un corrientazo sea un corrientazo.',
                 ],
                 'es_vegetariano' => [
@@ -205,6 +214,7 @@ class ProductTypeSchema
                     'columna' => 'Vegetariano',
                     'ancho' => 14,
                     'alias' => ['es_vegetariano', 'vegetariano'],
+                    'ejemplo' => 'No',
                     'ayuda' => 'Sí o No. No es lo mismo que vegano, y se pide mucho más.',
                 ],
                 'is_vegan' => [
@@ -214,6 +224,7 @@ class ProductTypeSchema
                     'columna' => 'Vegano',
                     'ancho' => 12,
                     'alias' => ['es_vegano', 'vegano', 'is_vegan'],
+                    'ejemplo' => 'No',
                     'ayuda' => 'Sí o No. Sin nada de origen animal.',
                 ],
                 'is_gluten_free' => [
@@ -223,6 +234,7 @@ class ProductTypeSchema
                     'columna' => 'Sin gluten',
                     'ancho' => 14,
                     'alias' => ['sin_gluten', 'is_gluten_free', 'gluten'],
+                    'ejemplo' => 'No',
                     'ayuda' => 'Sí o No.',
                 ],
                 'allergens' => [
@@ -232,6 +244,7 @@ class ProductTypeSchema
                     'columna' => 'Alérgenos',
                     'ancho' => 24,
                     'alias' => ['alergenos', 'alérgenos', 'allergens'],
+                    'ejemplo' => 'Maní, leche',
                     'ayuda' => 'Maní, leche, huevo, mariscos… Lo que alguien necesita saber antes de pedir.',
                 ],
             ],
@@ -267,6 +280,7 @@ class ProductTypeSchema
                     'columna' => 'Código OEM',
                     'ancho' => 20,
                     'alias' => ['oem_code', 'oem', 'codigo_oem', 'numero_de_parte'],
+                    'ejemplo' => '96405131',
                     'ayuda' => 'El código del fabricante. Es la identidad de la pieza, como el código de barras.',
                 ],
                 'compatibility' => [
@@ -276,6 +290,7 @@ class ProductTypeSchema
                     'columna' => 'Compatibilidad',
                     'ancho' => 34,
                     'alias' => ['compatibilidad', 'compatibility', 'aplicacion', 'vehiculos'],
+                    'ejemplo' => 'Chevrolet Spark 2010-2016',
                     'ayuda' => '«Chevrolet Spark 2010-2016, Aveo 2008-2014». Marca, línea y años.',
                 ],
                 'posicion' => [
@@ -285,6 +300,7 @@ class ProductTypeSchema
                     'columna' => 'Posición',
                     'ancho' => 16,
                     'alias' => ['posicion', 'position', 'ubicacion'],
+                    'ejemplo' => 'Delantero izquierdo',
                     'ayuda' => 'Delantero, trasero, izquierdo, derecho. Es el error clásico al comprar.',
                 ],
                 'condicion' => [
@@ -294,6 +310,7 @@ class ProductTypeSchema
                     'columna' => 'Condición',
                     'ancho' => 16,
                     'alias' => ['condicion', 'condition', 'tipo_pieza'],
+                    'ejemplo' => 'Original',
                     'ayuda' => 'Original, genérico o remanufacturado. Cambia el precio al doble.',
                 ],
             ],
@@ -326,6 +343,7 @@ class ProductTypeSchema
                 'ancho' => $def['ancho'],
                 'ayuda' => $def['ayuda'],
                 'input' => $def['input'],
+                'ejemplo' => $def['ejemplo'] ?? '',
                 'comun' => true,
             ];
         }
@@ -340,6 +358,7 @@ class ProductTypeSchema
                 'ancho' => $def['ancho'] ?? 20,
                 'ayuda' => $def['ayuda'] ?? '',
                 'input' => $def['input'] ?? 'text',
+                'ejemplo' => $def['ejemplo'] ?? '',
                 'comun' => false,
             ];
         }

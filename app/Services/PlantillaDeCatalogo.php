@@ -85,6 +85,25 @@ class PlantillaDeCatalogo
     /** Filas con listas y formato: alcanza para una carga grande. */
     private const FILAS_MINIMAS = 2000;
 
+    /**
+     * El ejemplo de cada una de las seis columnas comunes a todos los oficios.
+     *
+     * Las demás lo traen de `ProductTypeSchema`, pegado a su campo. Antes
+     * estaban TODOS acá, indexados por LETRA de columna, y al añadir contenido
+     * y presentación las letras se corrieron: la hoja de instrucciones acabó
+     * diciendo que el ejemplo de «Contenido» era «Caja» y el de «Necesita
+     * frío», un registro INVIMA. El ejemplo tiene que viajar con el campo, no
+     * con el sitio donde le toque caer.
+     */
+    private const EJEMPLOS_BASE = [
+        'A' => '7702001000134',
+        'B' => '4600',
+        'C' => '12',
+        'D' => 'Leche entera Alquería 1 L',
+        'E' => 'Alquería',
+        'F' => '',
+    ];
+
     /** [encabezado, ancho, obligatoria, mensaje al pararse en la celda] */
     private const COLUMNAS = [
         'A' => ['Código de barras', 22, true,
@@ -135,7 +154,18 @@ class PlantillaDeCatalogo
         $this->hojaDeInstrucciones($libro->createSheet(), $nombreTienda, $categorias, $columnas);
         $this->hojaDeListas($libro->createSheet(), $categorias);
 
-        $libro->setActiveSheetIndex(0);
+        /*
+         * UNA PLANTILLA VACÍA ABRE EN LA PORTADA, Y UNA CON PRODUCTOS NO.
+         *
+         * Abría siempre en «Productos», o sea en una rejilla en blanco: el
+         * logo, los pasos, la guía de las columnas y la lista de categorías
+         * estaban en la hoja de al lado y no los veía nadie, porque nadie
+         * hace clic en una pestaña que no sabe que necesita.
+         *
+         * Con productos dentro es al revés: quien la baja para corregir
+         * precios ya sabe llenarla y quiere ver su catálogo.
+         */
+        $libro->setActiveSheetIndex($conProductos ? 0 : 1);
 
         return $libro;
     }
@@ -153,7 +183,10 @@ class PlantillaDeCatalogo
         $columnas = [];
 
         foreach (self::COLUMNAS as $letra => [$titulo, $ancho, $obligatoria, $ayuda]) {
-            $columnas[$letra] = [$titulo, $ancho, $obligatoria, $ayuda, null];
+            $columnas[$letra] = [
+                $titulo, $ancho, $obligatoria, $ayuda, null,
+                self::EJEMPLOS_BASE[$letra] ?? '',
+            ];
         }
 
         /* Desde la G. Las extra son todas OPCIONALES a propósito: una
@@ -162,7 +195,10 @@ class PlantillaDeCatalogo
         $letra = 'G';
 
         foreach (ProductTypeSchema::columnasDeCarga($tipo) as $campo => $def) {
-            $columnas[$letra] = [$def['titulo'], $def['ancho'], false, $def['ayuda'], $campo];
+            $columnas[$letra] = [
+                $def['titulo'], $def['ancho'], false, $def['ayuda'], $campo,
+                $def['ejemplo'] ?? '',
+            ];
             $letra++;
         }
 
@@ -400,33 +436,32 @@ class PlantillaDeCatalogo
         $cab->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
         $cab->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB(self::MORADO);
 
-        $ejemplos = ['A' => '7702001000134', 'B' => '4600', 'C' => '12', 'D' => 'Leche entera Alquería 1 L',
-            'E' => 'Alquería', 'F' => $categorias[0] ?? 'Lácteos y Huevos'];
-
-        /*
-         * EL EJEMPLO DEL REGISTRO INVIMA VIVE AQUÍ Y NO EN LA HOJA QUE SE
-         * SUBE, a propósito.
-         *
-         * «INVIMA 2019M-0012345» puesto en la hoja Productos sería un
-         * registro sanitario inventado entrando al catálogo COMPARTIDO de
-         * la plataforma en cuanto alguien subiera la plantilla sin
-         * borrarlo. Las instrucciones no se importan nunca.
-         */
-        $ejemplos += [
-            'G' => 'Caja',
-            'H' => '10 tabletas',
-            'I' => 'INVIMA 2019M-0012345',
-            'J' => 'No',
-            'K' => 'Acetaminófen',
-            'L' => '500 mg',
-        ];
+        /* La categoría de ejemplo, de las que este negocio sí puede usar. */
+        $columnas['F'][5] = $categorias[0] ?? '';
 
         $fila = $inicio + 1;
-        foreach ($columnas as $col => [$titulo, , $obligatoria, $ayuda]) {
+        foreach ($columnas as $col => [$titulo, , $obligatoria, $ayuda, $campo, $ejemplo]) {
             $h->setCellValue("A{$fila}", $titulo);
-            $h->setCellValue("B{$fila}", $obligatoria ? 'Sí' : 'Solo si es nuevo');
+
+            /*
+             * TRES ESTADOS, NO DOS.
+             *
+             * Esto decía «Sí» o «Solo si es nuevo», que valía cuando sólo
+             * existían las seis columnas base: ahí lo no obligatorio era
+             * nombre, marca y categoría, que en efecto sólo hacen falta
+             * para un producto que todavía no está en el catálogo.
+             *
+             * Las del oficio --contenido, registro INVIMA, minutos de
+             * preparación-- no son eso: son OPCIONALES siempre. Decirles
+             * «solo si es nuevo» le dice al tendero que no las llene cuando
+             * está corrigiendo, que es justo cuando más útil sería.
+             */
+            $h->setCellValue(
+                "B{$fila}",
+                $obligatoria ? 'Sí' : ($campo === null ? 'Solo si es nuevo' : 'Opcional'),
+            );
             $h->setCellValue("C{$fila}", $ayuda);
-            $h->setCellValueExplicit("D{$fila}", $ejemplos[$col] ?? '', DataType::TYPE_STRING);
+            $h->setCellValueExplicit("D{$fila}", (string) $ejemplo, DataType::TYPE_STRING);
             $h->getStyle("A{$fila}:D{$fila}")->getAlignment()->setWrapText(true)
                 ->setVertical(Alignment::VERTICAL_TOP);
             $h->getStyle("A{$fila}")->getFont()->setBold(true);
