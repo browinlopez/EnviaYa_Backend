@@ -540,6 +540,26 @@ class ProductTypeSchema
             'type_name' => self::SCHEMAS[$type]['type_name'] ?? null,
             'fields' => $fields,
             'common' => self::comunesParaApi(),
+
+            /*
+             * LAS COLUMNAS QUE DE VERDAD TRAE SU EXCEL.
+             *
+             * El panel enseñaba «basta con tres columnas: código, precio y
+             * cantidad» a todos los oficios, y desde que la plantilla es por
+             * tipo eso es falso: la de una droguería trae trece y la de un
+             * restaurante quince. El archivo salía bien y el texto de al lado
+             * decía otra cosa, que es la peor combinación: quien lo lee rellena
+             * tres columnas y deja las demás vacías sin saber que existen.
+             *
+             * Son los TÍTULOS del Excel, no las etiquetas del formulario:
+             * «Requiere fórmula» es la columna y «Requiere fórmula médica» es
+             * el campo. Si el panel pinta la etiqueta, el tendero busca en la
+             * hoja una columna que no se llama así.
+             */
+            'columnas' => array_values(array_map(
+                fn (array $c) => $c['titulo'],
+                self::columnasDeCarga($type),
+            )),
         ];
     }
 }

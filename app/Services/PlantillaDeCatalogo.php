@@ -14,6 +14,7 @@ use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Conditional;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 /**
@@ -44,11 +45,38 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
  */
 class PlantillaDeCatalogo
 {
+    /*
+     * ==================================================================
+     * LA PALETA ES LA DEL PANEL, NO UNA INVENTADA PARA EL EXCEL.
+     *
+     * Esto tenía sus propios colores --un lila frío `F5F3FA`-- mientras el
+     * panel usa un fondo CÁLIDO `#f6f5f1`. Puestos uno al lado del otro no
+     * parecían del mismo producto: el archivo que baja el tendero se veía
+     * como de otra aplicación.
+     *
+     * Los valores salen tal cual de `EnviaYa_Aliados/src/styles/diseno.css`.
+     * Si allí cambian, acá también; dos paletas para una marca es cómo se
+     * consigue que nada combine.
+     * ==================================================================
+     */
+
+    /** `--brand`. */
     private const MORADO = '1B1464';
 
-    private const LILA = 'EEE9FF';
+    /** `--brand-soft`. */
+    private const LILA = 'EEEBFF';
 
-    private const GRIS = 'F5F3FA';
+    /** `--bg`: cálido, no lila. */
+    private const GRIS = 'F6F5F1';
+
+    /** `--line`, para las rejillas. */
+    private const LINEA = 'ECEAE4';
+
+    /** `--muted`, para lo secundario. */
+    private const TENUE = '5B5E6B';
+
+    /** Una banda apenas visible para las filas pares. */
+    private const BANDA = 'FBFAF8';
 
     private const AMBAR = 'FFF3D6';
 
@@ -156,11 +184,28 @@ class PlantillaDeCatalogo
             $h->setCellValue("{$col}1", $titulo);
             $h->getColumnDimension($col)->setWidth($ancho);
 
+            /*
+             * TODAS LAS CABECERAS IGUALES, Y LO OBLIGATORIO NO SE DICE CON
+             * COLOR.
+             *
+             * Antes las tres obligatorias iban en morado sólido y las demás en
+             * lila pálido, así que la fila 1 parecía dos tablas pegadas. Y el
+             * color no servía para nada: cuando el tendero está escribiendo en
+             * la fila 400 no ve la fila 1.
+             *
+             * Ahora lo obligatorio se marca DONDE SE TRABAJA --la celda vacía
+             * se tiñe sola, más abajo-- y la cabecera sólo tiene que ser
+             * legible y de la marca.
+             *
+             * El título NO lleva asterisco ni nada añadido: es lo que lee el
+             * importador. «Precio *» se normalizaría a `precio_` y la columna
+             * dejaría de reconocerse.
+             */
             $estilo = $h->getStyle("{$col}1");
             $estilo->getFont()->setBold(true)->setSize(11)
-                ->getColor()->setRGB($obligatoria ? 'FFFFFF' : self::MORADO);
+                ->getColor()->setRGB('FFFFFF');
             $estilo->getFill()->setFillType(Fill::FILL_SOLID)
-                ->getStartColor()->setRGB($obligatoria ? self::MORADO : self::LILA);
+                ->getStartColor()->setRGB(self::MORADO);
             $estilo->getAlignment()->setVertical(Alignment::VERTICAL_CENTER)->setIndent(1);
 
             // La explicación también como comentario del encabezado: se ve al
@@ -170,7 +215,7 @@ class PlantillaDeCatalogo
             $nota->setWidth('260pt')->setHeight('90pt');
         }
 
-        $h->getRowDimension(1)->setRowHeight(30);
+        $h->getRowDimension(1)->setRowHeight(34);
         $h->freezePane('A2');
         /* Calculado y no 'A1:F1': con las columnas del tipo, el filtro y el
            borde se quedaban a mitad de la cabecera. */
@@ -182,8 +227,32 @@ class PlantillaDeCatalogo
         $h->getStyle("A2:A{$ultima}")->getNumberFormat()->setFormatCode('@');
         $h->getStyle("B2:B{$ultima}")->getNumberFormat()->setFormatCode('"$" #,##0');
         $h->getStyle("C2:C{$ultima}")->getNumberFormat()->setFormatCode('0');
-        $h->getStyle("D2:{$finCol}{$ultima}")->getFill()->setFillType(Fill::FILL_SOLID)
-            ->getStartColor()->setRGB(self::GRIS);
+        /*
+         * SE QUITÓ EL BLOQUE GRIS, que era lo que hacía que esto se viera
+         * muerto.
+         *
+         * Pintaba de gris sólido desde la D hasta la última columna por DOS MIL
+         * FILAS. En pantalla eso es un rectángulo apagado que ocupa casi toda
+         * la hoja, y no comunicaba nada: su intención era decir «esto es
+         * opcional», pero lo opcional ya lo dice la hoja de instrucciones y el
+         * comentario de cada cabecera.
+         *
+         * En su lugar van franjas alternas apenas visibles, que es lo que hace
+         * una tabla legible sin gritar. Se pintan por CONDICIONAL y no celda a
+         * celda: dos mil filas con relleno explícito engordan el archivo y lo
+         * vuelven lento de abrir.
+         */
+        $banda = new Conditional;
+        $banda->setConditionType(Conditional::CONDITION_EXPRESSION)
+            ->addCondition('MOD(ROW(),2)=0');
+        $banda->getStyle()->getFill()->setFillType(Fill::FILL_SOLID)
+            ->getEndColor()->setRGB(self::BANDA);
+
+        $h->getStyle("A2:{$finCol}{$ultima}")->setConditionalStyles([$banda]);
+
+        /* Y una rejilla tenue, del color de las líneas del panel. */
+        $h->getStyle("A1:{$finCol}{$ultima}")->getBorders()->getAllBorders()
+            ->setBorderStyle(Border::BORDER_HAIR)->getColor()->setRGB(self::LINEA);
 
         // Validaciones: un mensaje al pararse en la celda y un aviso si lo
         // escrito no sirve. Avisan sin bloquear, salvo la categoría.
@@ -224,14 +293,32 @@ class PlantillaDeCatalogo
             $h->setDataValidation("{$col}2:{$col}{$ultima}", $v);
         }
 
-        // Un precio vacío en una fila con código se marca en rojo suave: es la
-        // fila que el importador va a rechazar por «falta el precio».
-        $sinPrecio = new Conditional;
-        $sinPrecio->setConditionType(Conditional::CONDITION_EXPRESSION)
-            ->addCondition('AND($A2<>"",$B2="")');
-        $sinPrecio->getStyle()->getFill()->setFillType(Fill::FILL_SOLID)
-            ->getEndColor()->setRGB(self::ROJO_SUAVE);
-        $h->getStyle("B2:B{$ultima}")->setConditionalStyles([$sinPrecio]);
+        /*
+         * LO QUE FALTA SE TIÑE SOLO, Y SÓLO EN LA FILA QUE SE ESTÁ USANDO.
+         *
+         * Una fila vacía no se marca: la hoja abre limpia. En cuanto se
+         * escribe algo en ella, las obligatorias que sigan en blanco se ponen
+         * en rojo suave. Es el aviso puesto donde se trabaja, en vez de un
+         * color en la fila 1 que no se ve desde la fila 400.
+         *
+         * Son exactamente las filas que el importador va a rechazar, así que
+         * el archivo avisa antes de subirlo.
+         */
+        foreach (['A', 'B', 'C'] as $obligatoria) {
+            $falta = new Conditional;
+            $falta->setConditionType(Conditional::CONDITION_EXPRESSION)
+                ->addCondition(
+                    'AND(COUNTA($A2:$'.$finCol.'2)>0,'.$obligatoria.'2="")',
+                );
+            $falta->getStyle()->getFill()->setFillType(Fill::FILL_SOLID)
+                ->getEndColor()->setRGB(self::ROJO_SUAVE);
+
+            $existentes = $h->getStyle("{$obligatoria}2:{$obligatoria}{$ultima}")
+                ->getConditionalStyles();
+
+            $h->getStyle("{$obligatoria}2:{$obligatoria}{$ultima}")
+                ->setConditionalStyles(array_merge([$falta], $existentes));
+        }
 
         // Con el catálogo de la tienda adentro: listo para editar y volver a subir.
         $fila = 2;
@@ -256,8 +343,41 @@ class PlantillaDeCatalogo
         $h->getColumnDimension('C')->setWidth(62);
         $h->getColumnDimension('D')->setWidth(24);
 
-        $h->setCellValue('A1', 'Cómo llenar tu catálogo'.($tienda ? " · {$tienda}" : ''));
-        $h->getStyle('A1')->getFont()->setBold(true)->setSize(16)->getColor()->setRGB(self::MORADO);
+        /*
+         * UNA BANDA DE MARCA CON EL LOGO, Y VA EN ESTA HOJA Y NO EN LA OTRA.
+         *
+         * En «Productos» no cabe: el importador lee los encabezados en la FILA
+         * 1 --`WithHeadingRow`-- así que meter un logo encima correría la
+         * cabecera y dejaría de reconocer las columnas. Y no sólo rompería la
+         * plantilla nueva: también todos los archivos que los tenderos tienen
+         * ya llenos a medias en el escritorio.
+         *
+         * Así que la marca vive acá, que además es la hoja que se abre
+         * primero.
+         */
+        $h->getRowDimension(1)->setRowHeight(58);
+        $h->getStyle('A1:D1')->getFill()->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()->setRGB(self::MORADO);
+
+        $logo = resource_path('marca/logotipo.png');
+
+        if (is_file($logo)) {
+            $dibujo = new Drawing;
+            $dibujo->setName("VeciPa'Ya");
+            $dibujo->setPath($logo);
+            $dibujo->setHeight(40);
+            $dibujo->setOffsetX(10);
+            $dibujo->setOffsetY(9);
+            $dibujo->setCoordinates('A1');
+            $dibujo->setWorksheet($h);
+        }
+
+        $h->setCellValue('B1', 'Cómo llenar tu catálogo'.($tienda ? " · {$tienda}" : ''));
+        $h->mergeCells('B1:D1');
+        $h->getStyle('B1')->getFont()->setBold(true)->setSize(15)
+            ->getColor()->setRGB('FFFFFF');
+        $h->getStyle('B1')->getAlignment()
+            ->setVertical(Alignment::VERTICAL_CENTER)->setIndent(1);
 
         $pasos = [
             '1. Llena la hoja «Productos»: una fila por producto, desde la fila 2.',
@@ -318,7 +438,9 @@ class PlantillaDeCatalogo
             $fila++;
         }
 
-        $fila++;
+        /* Y las categorías de su oficio, que es lo que nadie encontraba. */
+        $fila = $this->categoriasALaVista($h, $categorias, $fila + 1) + 1;
+
         $h->setCellValue("A{$fila}", 'Consejo: también aceptamos el archivo que exporta tu punto de venta, con sus columnas «barras», «venta1» y «existencia».');
         $h->mergeCells("A{$fila}:D{$fila}");
         $h->getStyle("A{$fila}:D{$fila}")->getFill()->setFillType(Fill::FILL_SOLID)
@@ -328,6 +450,57 @@ class PlantillaDeCatalogo
     }
 
     /** Las categorías, en una hoja escondida: de ahí sale el desplegable. */
+    /**
+     * LAS CATEGORÍAS, ESCRITAS DONDE SE VEN.
+     *
+     * Ya estaban en el desplegable de la columna «Categoría», pero la hoja que
+     * las guarda está OCULTA y la flechita que se ve en la fila 1 es la del
+     * filtro, no la de la lista: hay que pararse en una celda para que
+     * aparezcan. Quien bajaba la plantilla no las encontraba y escribía la
+     * categoría a mano, que es la primera causa de filas rechazadas.
+     *
+     * Acá salen todas de una vez, y son las del TIPO DE NEGOCIO: una droguería
+     * ve sus doce y una tienda las suyas.
+     */
+    private function categoriasALaVista(Worksheet $h, array $categorias, int $desde): int
+    {
+        if ($categorias === []) {
+            return $desde;
+        }
+
+        $h->setCellValue("A{$desde}", 'Categorías que puedes usar');
+        $h->mergeCells("A{$desde}:D{$desde}");
+        $h->getStyle("A{$desde}")->getFont()->setBold(true)->setSize(12)
+            ->getColor()->setRGB(self::MORADO);
+
+        $h->setCellValue('A'.($desde + 1), 'Elígelas del desplegable de la columna «Categoría». Escritas a mano suelen no coincidir, y la fila se rechaza.');
+        $h->mergeCells('A'.($desde + 1).':D'.($desde + 1));
+        $h->getStyle('A'.($desde + 1))->getFont()->setSize(10)
+            ->getColor()->setRGB(self::TENUE);
+
+        /* De a dos por fila: una lista de doce en una sola columna obliga a
+           bajar, y lo que se quiere es verlas todas juntas. */
+        $fila = $desde + 2;
+        $col = 'A';
+
+        foreach ($categorias as $nombre) {
+            $h->setCellValue("{$col}{$fila}", '· '.$nombre);
+            $h->getStyle("{$col}{$fila}")->getFill()->setFillType(Fill::FILL_SOLID)
+                ->getStartColor()->setRGB(self::LILA);
+            $h->getStyle("{$col}{$fila}")->getAlignment()->setIndent(1);
+
+            if ($col === 'A') {
+                $col = 'C';
+                $h->mergeCells("C{$fila}:D{$fila}");
+            } else {
+                $col = 'A';
+                $fila++;
+            }
+        }
+
+        return $col === 'A' ? $fila : $fila + 1;
+    }
+
     /*
      * La columna A son las categorías y la B es Sí/No.
      *
