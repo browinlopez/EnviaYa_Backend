@@ -9,6 +9,7 @@ use App\Support\ProductTypeSchema;
 use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Cell\DataValidation;
+use PhpOffice\PhpSpreadsheet\NamedRange;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
@@ -253,9 +254,23 @@ class PlantillaDeCatalogo
 
         $h->getRowDimension(1)->setRowHeight(34);
         $h->freezePane('A2');
-        /* Calculado y no 'A1:F1': con las columnas del tipo, el filtro y el
-           borde se quedaban a mitad de la cabecera. */
-        $h->setAutoFilter("A1:{$finCol}1");
+        /*
+         * EL FILTRO, SOLO CUANDO HAY FILAS QUE FILTRAR.
+         *
+         * En una plantilla vacía no sirve para nada y hace daño: pone una
+         * flecha en CADA cabecera, incluida la de «Categoría». Quien busca el
+         * desplegable de categorías pulsa esa flecha --es la única que se ve--
+         * y le sale el menú de ordenar y filtrar.
+         *
+         * El desplegable de verdad es el de la validación, y sólo aparece al
+         * pararse en una celda de datos. Dos flechas distintas en la misma
+         * columna, y la equivocada es la más visible.
+         *
+         * Con el catálogo dentro sí tiene sentido: ahí se filtra de verdad.
+         */
+        if ($productos !== []) {
+            $h->setAutoFilter("A1:{$finCol}1");
+        }
         $h->getStyle("A1:{$finCol}1")->getBorders()->getBottom()
             ->setBorderStyle(Border::BORDER_MEDIUM)->getColor()->setRGB(self::MORADO);
 
@@ -308,9 +323,18 @@ class PlantillaDeCatalogo
                     ->setFormula1('0')->setShowErrorMessage(true)->setErrorStyle(DataValidation::STYLE_STOP)
                     ->setErrorTitle('Cantidad no válida')->setError('Un número entero, 0 o más. Ej.: 12');
             } elseif ($col === 'F' && $cuantasCategorias > 0) {
-                $fin = $cuantasCategorias + 1;
+                /*
+                 * POR NOMBRE Y NO POR REFERENCIA A OTRA HOJA.
+                 *
+                 * Excel 2010 en adelante admite `Listas!$A$2:$A$13` en una
+                 * validación, pero las versiones anteriores y algunas de
+                 * LibreOffice exigen un rango CON NOMBRE para una lista que
+                 * vive en otra hoja: sin él, la validación se guarda y el
+                 * desplegable no sale. Un tendero con un Excel viejo es
+                 * exactamente quien va a usar esto.
+                 */
                 $v->setType(DataValidation::TYPE_LIST)->setShowDropDown(true)
-                    ->setFormula1("Listas!\$A\$2:\$A\${$fin}")
+                    ->setFormula1('CATEGORIAS')
                     ->setShowErrorMessage(true)->setErrorStyle(DataValidation::STYLE_STOP)
                     ->setErrorTitle('Categoría no válida')->setError('Elige una categoría de la lista.');
             } elseif ($campo !== null && ($columnas[$col][0] ?? '') === 'Requiere fórmula') {
@@ -318,7 +342,7 @@ class PlantillaDeCatalogo
                    plantilla ya tiene dicho que teclear a mano «era la
                    primera causa de filas rechazadas». */
                 $v->setType(DataValidation::TYPE_LIST)->setShowDropDown(true)
-                    ->setFormula1('Listas!$B$2:$B$3')
+                    ->setFormula1('SI_O_NO')
                     ->setShowErrorMessage(true)->setErrorStyle(DataValidation::STYLE_STOP)
                     ->setErrorTitle('Escribe Sí o No')->setError('Elige Sí o No de la lista.');
             } else {
@@ -557,7 +581,39 @@ class PlantillaDeCatalogo
         $h->setCellValue('B1', 'Sí o no');
         $h->setCellValue('B2', 'Sí');
         $h->setCellValue('B3', 'No');
-        $h->setSheetState(Worksheet::SHEETSTATE_HIDDEN);
+        /*
+         * LOS DOS RANGOS, CON NOMBRE.
+         *
+         * Es lo que apuntan las validaciones de «Categoría» y «Requiere
+         * fórmula». Definirlos acá los deja al lado de los datos que nombran.
+         */
+        $libro = $h->getParent();
+
+        if ($libro !== null) {
+            if ($categorias !== []) {
+                $libro->addNamedRange(new NamedRange(
+                    'CATEGORIAS',
+                    $h,
+                    '$A$2:$A$'.(count($categorias) + 1),
+                ));
+            }
+
+            $libro->addNamedRange(new NamedRange('SI_O_NO', $h, '$B$2:$B$3'));
+        }
+
+        /*
+         * Y LA HOJA SE QUEDA A LA VISTA.
+         *
+         * Estaba oculta porque es maquinaria: nadie tiene por qué editarla.
+         * Pero el desplegable de categorías no se encuentra --la flecha que se
+         * ve en la cabecera es la del FILTRO, y la de la lista sólo aparece al
+         * pararse en una celda-- y quien no lo encuentra escribe la categoría
+         * a mano, que es la primera causa de filas rechazadas.
+         *
+         * Visible, al menos se pueden leer y copiar. Esconder la respuesta
+         * para que el libro quede limpio es ordenar a costa de quien lo usa.
+         */
+        $h->setSheetState(Worksheet::SHEETSTATE_VISIBLE);
     }
 
     /* ------------------------------------------------------------------ */
