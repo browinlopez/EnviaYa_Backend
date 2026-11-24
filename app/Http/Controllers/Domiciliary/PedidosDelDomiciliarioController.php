@@ -62,7 +62,9 @@ class PedidosDelDomiciliarioController extends Controller
          * —y llamarlo si no encuentro el timbre—.
          */
         $mios = OrdersSales::where('domiciliary_id', $domiciliary->domiciliary_id)
-            ->whereIn('state', [OrdersSales::EN_CAMINO, OrdersSales::ENTREGADO])
+            /* Y los que estoy DEVOLVIENDO: los llevo encima hasta que el
+               negocio confirma que los recibió. */
+            ->whereIn('state', [OrdersSales::EN_CAMINO, OrdersSales::ENTREGADO, OrdersSales::DEVOLVIENDO])
             ->confirmados()
             ->with($this->relaciones())
             ->get();
@@ -121,6 +123,7 @@ class PedidosDelDomiciliarioController extends Controller
             'resumen' => [
                 'en_camino' => $mios->where('state', OrdersSales::EN_CAMINO)->count(),
                 'entregados' => $mios->where('state', OrdersSales::ENTREGADO)->count(),
+                'devolviendo' => $mios->where('state', OrdersSales::DEVOLVIENDO)->count(),
                 'por_tomar' => $porTomar->count(),
             ],
         ]);

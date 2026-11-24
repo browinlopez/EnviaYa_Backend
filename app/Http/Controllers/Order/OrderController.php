@@ -18,6 +18,7 @@ use App\Models\User\UserAddress;
 use App\Services\Ajustes;
 use App\Services\ArmadoDelPedido;
 use App\Services\AvisoDePedidoNuevo;
+use App\Services\AvisoDePedidoParaTomar;
 use App\Services\Avisos;
 use App\Services\BoldService;
 use App\Services\CancelacionDelPedido;
@@ -26,6 +27,7 @@ use App\Services\CreditoDeTienda;
 use App\Services\EconomiaDelPedido;
 use App\Services\FacturaService;
 use App\Services\PagoEnLinea;
+use App\Services\PinDeEntrega;
 use App\Services\PlazoPorDistancia;
 use App\Services\ReglasDeDespacho;
 use App\Services\TarifaPorDistancia;
@@ -704,8 +706,12 @@ class OrderController extends Controller
         }
 
         // Acepta pedido
+        $avisarParaTomar = false;
+
         if ($order->state == 1 && $request->state == 2) {
             $order->state = 2;
+            // Ya hay algo que llevar: los domiciliarios del negocio se enteran.
+            $avisarParaTomar = true;
 
             /*
              * Y se le dice al comprador, que hasta ahora no se enteraba.
@@ -764,6 +770,10 @@ class OrderController extends Controller
             $order->domiciliary_id = $domiciliary->domiciliary_id;
             // Ancla del cronómetro de entrega en la app
             $order->dispatched_at = now();
+            // Un PIN nuevo por viaje: ver `PinDeEntrega`.
+            $order->pin_entrega = PinDeEntrega::generar();
+            $order->pin_intentos = 0;
+            $order->llego_at = null;
 
             /*
              * El plazo prometido se CONGELA acá, no se lee del ajuste cuando
@@ -826,12 +836,49 @@ class OrderController extends Controller
             Avisos::para(
                 $order->buyer->user_id,
                 'pedido_en_camino',
-                "Tu pedido salió de {$order->business->name}. Llega en unos {$order->promised_minutes} minutos.",
+                "Tu pedido salió de {$order->business->name}. Llega en unos {$order->promised_minutes} minutos."
+                    ." Tu PIN de entrega es {$order->pin_entrega}: díselo al domiciliario cuando llegue.",
                 ['order_id' => $order->orderSales_id],
             );
 
             // Pedido entregado
         } elseif ($order->state == 3 && $request->state == 4) {
+            /*
+             * EL PIN SE LE PIDE AL DOMICILIARIO: es la prueba de que estuvo
+             * frente al cliente. La política (`moverA`) ya no deja a nadie
+             * más cerrar una entrega en camino; la comprobación de quién es
+             * queda por si eso cambia, para no pedirle un PIN a quien no
+             * está en la puerta.
+             */
+            $esElDomiciliario = $order->domiciliary
+                && (int) $order->domiciliary->user_id === (int) $request->user()?->user_id;
+
+            if ($esElDomiciliario && ($fallo = PinDeEntrega::comprobar($order, $request->input('pin')))) {
+                $estado = $fallo['status'];
+                unset($fallo['status']);
+
+                return response()->json($fallo, $estado);
+            }
+
+            /*
+             * CON QUÉ PAGÓ: el vuelto se calcula aquí y no en la app, para
+             * que quede escrito lo mismo que el domiciliario vio.
+             */
+            if ($request->filled('paga_con')) {
+                $pagaCon = (float) $request->input('paga_con');
+                $cobrar = (float) $order->total;
+
+                if ($pagaCon < $cobrar) {
+                    return response()->json([
+                        'message' => 'Con eso no alcanza: el pedido es de $'.number_format($cobrar, 0, ',', '.').'.',
+                        'reason' => 'paga_con_insuficiente',
+                    ], 422);
+                }
+
+                $order->cash_received = $pagaCon;
+                $order->change_given = $pagaCon - $cobrar;
+            }
+
             $order->state = 4;
             $order->delivery_date = now();
 
@@ -872,6 +919,10 @@ class OrderController extends Controller
         }
 
         $order->save();
+
+        if ($avisarParaTomar) {
+            AvisoDePedidoParaTomar::anunciar($order);
+        }
 
         /*
          * Y se avisa al teléfono del comprador.

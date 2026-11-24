@@ -137,13 +137,16 @@ it('las dos constantes valen lo que valian en el rasgo', function () {
      * dos salen del rasgo `AyudasDeAdmin` que se deshizo: `ACTIVOS` era
      * `[1, 2, 3]` y `PAGO_OK` era `['approved', 'paid']`.
      */
-    expect(OrdersSales::ACTIVOS)->toBe([1, 2, 3]);
+    /* El 24 de noviembre de 2026 entró el 6 (DEVOLVIENDO): un pedido que
+       vuelve al negocio sigue vivo --alguien lo lleva encima--, y por eso
+       cuenta como activo. Cambio de contrato a propósito. */
+    expect(OrdersSales::ACTIVOS)->toBe([1, 2, 3, 6]);
     expect(Payment::COBRADOS)->toBe(['approved', 'paid']);
 
     // Y que salgan de las constantes, no de literales que puedan quedarse
     // viejos el día que un estado cambie de número.
     expect(OrdersSales::ACTIVOS)->toBe([
-        OrdersSales::NUEVO, OrdersSales::PREPARANDO, OrdersSales::EN_CAMINO,
+        OrdersSales::NUEVO, OrdersSales::PREPARANDO, OrdersSales::EN_CAMINO, OrdersSales::DEVOLVIENDO,
     ]);
     expect(OrdersSales::ACTIVOS)->not->toContain(OrdersSales::ENTREGADO);
     expect(OrdersSales::ACTIVOS)->not->toContain(OrdersSales::CANCELADO);

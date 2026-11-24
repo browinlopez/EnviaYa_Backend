@@ -231,6 +231,11 @@ class PedidoDeLaAppResource extends JsonResource
             'delivery_minutes' => $order->delivery_minutes,
             'on_time' => $order->on_time,
             'delay_minutes' => $order->delay_minutes,
+            // Cuándo avisó el domiciliario que estaba en la puerta. El PIN
+            // NO va aquí: ver `OrdersSales::$hidden`.
+            'llego_at' => $order->llego_at,
+            // Si se le pide PIN al entregar: los despachados antes no tienen.
+            'pide_pin' => (bool) $order->pin_entrega,
             'state' => $order->state,
             // Los datos de la persona solo viajan cuando quien pregunta ya
             // tiene que llegar a su puerta. Ver la cabecera de la clase.

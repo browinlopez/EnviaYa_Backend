@@ -57,6 +57,7 @@ use App\Http\Controllers\Conjunto\VisitantesController;
 use App\Http\Controllers\DeviceTokenController;
 use App\Http\Controllers\Domiciliary\ContratoDelDomiciliarioController;
 use App\Http\Controllers\Domiciliary\DomiciliaryController;
+use App\Http\Controllers\Domiciliary\EnCaminoController;
 use App\Http\Controllers\Domiciliary\EvidenciaDeEntregaController;
 use App\Http\Controllers\Domiciliary\IngresosDelDomiciliarioController;
 use App\Http\Controllers\Domiciliary\PedidosDelDomiciliarioController;
@@ -87,6 +88,7 @@ use App\Http\Controllers\Order\CotizacionController;
 use App\Http\Controllers\Order\GeolocalizacionDePedidoController;
 use App\Http\Controllers\Order\MediosDePagoController;
 use App\Http\Controllers\Order\OrderController;
+use App\Http\Controllers\Order\PinDeEntregaController;
 use App\Http\Controllers\Order\RutaDelPedidoController;
 use App\Http\Controllers\Payment\BancosPseController;
 use App\Http\Controllers\Payment\BoldWebhookController;
@@ -519,6 +521,8 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
          * un identificador del cuerpo.
          */
         Route::get('{id}/comprobante', [ComprobanteDelPedidoController::class, 'mio']);
+        // El PIN de entrega que el comprador le dice al domiciliario.
+        Route::get('{id}/pin', [PinDeEntregaController::class, 'delComprador']);
     });
 
     Route::get('paymentMethods', [MediosDePagoController::class, 'paymentMethods']); // Listar metodos de pago
@@ -703,6 +707,9 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
          */
         Route::put('pedidos/{id}/cancelar', [CancelacionDelPedidoController::class, 'cancelar']);
         Route::get('pedidos/{id}/comprobante', [ComprobanteDelPedidoController::class, 'deMiTienda']);
+        // El PIN, por si el cliente no lo encuentra; y cerrar una devolución.
+        Route::get('pedidos/{id}/pin', [PinDeEntregaController::class, 'delNegocio']);
+        Route::post('pedidos/{id}/devolucion', [PinDeEntregaController::class, 'recibirDevolucion']);
         Route::get('ingresos', [ConsultaDePedidosController::class, 'incomeBusiness']);
 
         /*
@@ -891,6 +898,12 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
             ->whereNumber('id');
         Route::get('/orders/{id}/evidencia', [EvidenciaDeEntregaController::class, 'ver'])
             ->whereNumber('id');
+
+        /* En la calle: «Llegué», soltar el pedido y reportar una novedad. */
+        Route::get('/motivos', [EnCaminoController::class, 'motivos']);
+        Route::post('/orders/{id}/llegue', [EnCaminoController::class, 'llegue']);
+        Route::post('/orders/{id}/soltar', [EnCaminoController::class, 'soltar']);
+        Route::post('/orders/{id}/novedad', [EnCaminoController::class, 'novedad']);
 
         /*
          * SU acuerdo de vinculacion: leerlo y firmarlo desde el telefono.

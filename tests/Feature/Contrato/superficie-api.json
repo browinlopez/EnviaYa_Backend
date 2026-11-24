@@ -2253,6 +2253,16 @@
     },
     {
         "verbo": "GET",
+        "uri": "v1/domiciliaries/motivos",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
         "uri": "v1/domiciliaries/orders/{id}/evidencia",
         "nombre": null,
         "middleware": [
@@ -2264,6 +2274,36 @@
     {
         "verbo": "POST",
         "uri": "v1/domiciliaries/orders/{id}/evidencia",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/domiciliaries/orders/{id}/llegue",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/domiciliaries/orders/{id}/novedad",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/domiciliaries/orders/{id}/soltar",
         "nombre": null,
         "middleware": [
             "api",
@@ -2727,6 +2767,28 @@
         ]
     },
     {
+        "verbo": "POST",
+        "uri": "v1/negocio/pedidos/{id}/devolucion",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/negocio/pedidos/{id}/pin",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
         "verbo": "GET",
         "uri": "v1/negocio/productos",
         "nombre": null,
@@ -3017,6 +3079,16 @@
     {
         "verbo": "GET",
         "uri": "v1/orders/{id}/comprobante",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/orders/{id}/pin",
         "nombre": null,
         "middleware": [
             "api",

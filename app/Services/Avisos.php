@@ -46,6 +46,11 @@ class Avisos
         'entrega_asignada' => 'Tienes una entrega',
         'pedido_nuevo' => '¡Pedido nuevo!',
         'mensaje_nuevo' => 'Mensaje nuevo',
+        'pedido_para_tomar' => 'Pedido para tomar',
+        'pedido_soltado' => 'Un domiciliario soltó un pedido',
+        'pedido_devolviendo' => 'No se pudo entregar',
+        'pedido_no_entregado' => 'No pudimos entregar tu pedido',
+        'domiciliario_llego' => 'Tu pedido está en la puerta',
     ];
 
     /**
