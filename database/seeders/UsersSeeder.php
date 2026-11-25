@@ -119,9 +119,34 @@ class UsersSeeder extends Seeder
             User::updateOrCreate(['email' => $data['email']], $data);
         }
 
+        $this->ensureAdminArea();
         $this->ensureBuyerProfile();
         $this->ensureTenderoStore();
         $this->linkTestDomiciliaryToStore();
+    }
+
+    /**
+     * EL ADMINISTRADOR DE PRUEBA, EN TECNOLOGÍA Y COMO GESTOR.
+     *
+     * El panel no deja entrar a nadie sin área. Las migraciones que crearon el
+     * área y el nivel de acceso pasan a «sistema» y a «gestor» a los
+     * administradores que YA existían; en una base recién creada (la de la CI
+     * del panel, la de alguien que clona el proyecto) el administrador lo crea
+     * este seeder DESPUÉS de esas migraciones, así que nacía sin área y como
+     * «consulta», y el panel lo devolvía al login. Se le da lo mismo que le
+     * habría dado la migración. Si ya tiene un área, no se toca.
+     */
+    private function ensureAdminArea(): void
+    {
+        $sistema = DB::table('areas')->where('code', 'sistema')->value('id');
+        if (! $sistema) {
+            return;
+        }
+
+        DB::table('user')
+            ->where('email', 'admin@gmail.com')
+            ->whereNull('area_id')
+            ->update(['area_id' => $sistema, 'access_level' => 'gestor']);
     }
 
     /**
