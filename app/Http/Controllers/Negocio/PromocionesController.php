@@ -12,6 +12,7 @@ use App\Models\Promotion;
 use App\Services\PromocionesDeLaTienda;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -51,12 +52,16 @@ class PromocionesController extends Controller
          * confuso: el tendero la retiró justamente para que desapareciera, y
          * verla en su historial parecería que no funcionó.
          */
-        $lista = Promotion::with('products')
+        $promociones = Promotion::with('products')
             ->where('busines_id', $businessId)
             ->where('state', '!=', Promotion::RETIRADA)
             ->orderByDesc('promotion_id')
             ->limit(50)
-            ->get()
+            ->get();
+
+        $this->conSusPrecios($promociones, $businessId);
+
+        $lista = $promociones
             ->map(fn (Promotion $p) => (new PromocionResource($p))->resolve());
 
         return response()->json([
@@ -237,7 +242,7 @@ class PromocionesController extends Controller
 
         if (! $this->sonSuyos($businessId, $productos)) {
             return response()->json([
-                'message' => 'Alguno de esos productos no es de tu tienda.',
+                'message' => 'Alguno de esos productos no es de tu negocio.',
                 'reason' => 'producto_ajeno',
             ], 422);
         }
@@ -248,7 +253,7 @@ class PromocionesController extends Controller
             // Ver la cabecera del servicio: pasado este tamaño el envío directo
             // agota el tiempo de espera y hay que moverlo a la cola.
             return response()->json([
-                'message' => 'Tu tienda tiene demasiados clientes para enviar desde acá. Escríbenos y lo hacemos por ti.',
+                'message' => 'Tu negocio tiene demasiados clientes para enviar desde acá. Escríbenos y lo hacemos por ti.',
                 'reason' => 'demasiados_destinatarios',
             ], 422);
         }
@@ -279,6 +284,52 @@ class PromocionesController extends Controller
     }
 
     /**
+     * EL PRECIO QUE LE PONE ESTA TIENDA A CADA PRODUCTO.
+     *
+     * `products` trae el nombre y la foto del catálogo maestro; el precio no
+     * está ahí, está en `products_business`, porque cada tienda pone el suyo.
+     *
+     * Sin él, la pantalla de Promociones no puede simular nada al CORREGIR una
+     * promoción ya enviada: la caja de arriba decía «Sobre qué productos: 2
+     * productos» y el recuadro de debajo, «Elige un producto». Al crearla sí
+     * salía, porque ahí los productos venían del surtido, con su precio.
+     *
+     * Y la simulación no es un adorno: es lo único que dice cuánto cuesta la
+     * promoción. «Lleva 3 paga 2» suena inofensivo hasta que uno ve que sobre
+     * algo de $12.500 son $12.500 que deja de ingresar cada tres ventas.
+     *
+     * UNA consulta para todas las promociones de la lista, no una por
+     * promoción: con cincuenta en el historial eso serían cincuenta viajes.
+     *
+     * @param  Collection<int, Promotion>  $promociones
+     */
+    private function conSusPrecios($promociones, int $businessId): void
+    {
+        $ids = $promociones
+            ->flatMap(fn (Promotion $p) => $p->products->pluck('products_id'))
+            ->unique()
+            ->values();
+
+        if ($ids->isEmpty()) {
+            return;
+        }
+
+        $precios = DB::table('products_business')
+            ->where('busines_id', $businessId)
+            ->whereIn('products_id', $ids)
+            ->pluck('price', 'products_id');
+
+        foreach ($promociones as $promocion) {
+            foreach ($promocion->products as $producto) {
+                /* El que ya no esté en el surtido se queda sin precio y la
+                   pantalla no simula nada con él, que es lo correcto: lo
+                   quitaron de la tienda. */
+                $producto->setAttribute('precio_en_la_tienda', $precios[$producto->products_id] ?? null);
+            }
+        }
+    }
+
+    /**
      * La promoción de ESTA tienda, o 404.
      *
      * Un 404 y no un 403 a propósito: responder «prohibido» sobre el número de
@@ -287,10 +338,18 @@ class PromocionesController extends Controller
      */
     private function suya(Request $request, int $id): ?Promotion
     {
-        return Promotion::with('products')
-            ->where('busines_id', (int) $request->attributes->get('busines_id'))
+        $businessId = (int) $request->attributes->get('busines_id');
+
+        $promocion = Promotion::with('products')
+            ->where('busines_id', $businessId)
             ->where('promotion_id', $id)
             ->first();
+
+        if ($promocion) {
+            $this->conSusPrecios(collect([$promocion]), $businessId);
+        }
+
+        return $promocion;
     }
 
     /**
@@ -306,7 +365,7 @@ class PromocionesController extends Controller
         $promocion = $this->suya($request, $id);
 
         if (! $promocion) {
-            return response()->json(['message' => 'Esa promoción no es de tu tienda.'], 404);
+            return response()->json(['message' => 'Esa promoción no es de tu negocio.'], 404);
         }
 
         if ((int) $promocion->state === Promotion::RETIRADA) {
@@ -324,7 +383,7 @@ class PromocionesController extends Controller
 
         if (! $this->sonSuyos($businessId, $productos)) {
             return response()->json([
-                'message' => 'Alguno de esos productos no es de tu tienda.',
+                'message' => 'Alguno de esos productos no es de tu negocio.',
                 'reason' => 'producto_ajeno',
             ], 422);
         }
@@ -355,7 +414,7 @@ class PromocionesController extends Controller
         $promocion = $this->suya($request, $id);
 
         if (! $promocion) {
-            return response()->json(['message' => 'Esa promoción no es de tu tienda.'], 404);
+            return response()->json(['message' => 'Esa promoción no es de tu negocio.'], 404);
         }
 
         $this->promociones->retirar($promocion);

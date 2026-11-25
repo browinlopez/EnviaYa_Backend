@@ -98,6 +98,16 @@ return [
         'maps_server_key' => env('GOOGLE_MAPS_SERVER_KEY', ''),
     ],
 
+    /*
+     * Quién traza las rutas de los pedidos: 'osrm' (libre, sin clave ni
+     * cobro) o 'google' (Directions, se factura por llamada). La URL de
+     * OSRM por defecto es la pública de demostración.
+     */
+    'rutas' => [
+        'proveedor' => env('RUTAS_PROVEEDOR', 'osrm'),
+        'osrm_url' => env('RUTAS_OSRM_URL', 'https://router.project-osrm.org'),
+    ],
+
     'bold' => [
         /*
          * El valor por defecto era 'https://integrations.api.bold.co', que es

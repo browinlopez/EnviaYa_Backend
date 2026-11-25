@@ -75,19 +75,95 @@ function productTestSetup(int $businessType): array
     return [$business, $category];
 }
 
-test('farmacia exige principio activo y dosis', function () {
+/*
+ * ANTES ESTA PRUEBA EXIGIA PRINCIPIO ACTIVO Y DOSIS, y esa regla es la razon
+ * de que `pharmacy_products` llevara anios vacia: para dar de alta un panal,
+ * un frasco de alcohol o unas gasas habia que inventarse un principio activo.
+ *
+ * Una drogueria de barrio vende medicamentos Y todo lo demas. Exigir el dato
+ * del medicamento a lo que no lo es no mejora el catalogo: lo vacia.
+ */
+test('farmacia NO exige principio activo ni dosis: una droguería vende más que medicinas', function () {
     [$business, $category] = productTestSetup(2);
 
     $response = $this->postJson('/v1/product/create', [
-        'name' => 'Acetaminofén',
+        'name' => 'Pañales etapa 3 x 40',
         'category_id' => $category->category_id,
-        'price' => 5000,
+        'price' => 48900,
         'amount' => 10,
         'business_id' => $business->busines_id,
     ]);
 
-    $response->assertStatus(422)
-        ->assertJsonValidationErrors(['active_ingredient', 'dosage']);
+    $response->assertSuccessful();
+});
+
+test('farmacia guarda lo suyo: contenido, registro INVIMA y si pide fórmula', function () {
+    [$business, $category] = productTestSetup(2);
+
+    $this->postJson('/v1/product/create', [
+        'name' => 'Acetaminofén 500 mg',
+        'category_id' => $category->category_id,
+        'price' => 5000,
+        'amount' => 10,
+        'business_id' => $business->busines_id,
+        'dosage' => '500 mg',
+        'presentation' => 'Caja',
+        'content' => '10 tabletas',
+        'registro_invima' => 'INVIMA 2019M-0012345',
+        'requiere_formula' => false,
+    ])->assertSuccessful();
+
+    /*
+     * EL CONTENIDO Y EL ENVASE YA NO SON DE FARMACIA: SON DEL PRODUCTO.
+     *
+     * Estaban en `pharmacy_products` junto con `grocery.size` y
+     * `restaurant.portion_size` --tres nombres para la misma pregunta-- y
+     * subieron a `products`, que es el catalogo compartido: el mismo frasco
+     * trae el mismo contenido lo venda quien lo venda.
+     */
+    $producto = DB::table('products')->latest('products_id')->first();
+
+    expect($producto->content)->toBe('10 tabletas')
+        ->and($producto->presentation)->toBe('Caja');
+
+    $fila = DB::table('pharmacy_products')->latest('pharmacy_product_id')->first();
+
+    expect($fila->registro_invima)->toBe('INVIMA 2019M-0012345')
+        // El contenido NO se mezcla con la concentracion: son dos cosas.
+        ->and($fila->dosage)->toBe('500 mg');
+});
+
+test('lo que requiere fórmula queda marcado', function () {
+    [$business, $category] = productTestSetup(2);
+
+    $this->postJson('/v1/product/create', [
+        'name' => 'Amoxicilina 500 mg',
+        'category_id' => $category->category_id,
+        'price' => 12000,
+        'amount' => 5,
+        'business_id' => $business->busines_id,
+        'requiere_formula' => true,
+    ])->assertSuccessful();
+
+    expect(DB::table('pharmacy_products')->latest('pharmacy_product_id')->value('requiere_formula'))
+        ->toEqual(1);
+});
+
+test('sin decir nada, NO requiere fórmula', function () {
+    /* El booleano lleva defecto y no admite nulo: «no sabemos» y «no
+       requiere» se pintarian igual, asi que son lo mismo. */
+    [$business, $category] = productTestSetup(2);
+
+    $this->postJson('/v1/product/create', [
+        'name' => 'Gasa estéril',
+        'category_id' => $category->category_id,
+        'price' => 3200,
+        'amount' => 20,
+        'business_id' => $business->busines_id,
+    ])->assertSuccessful();
+
+    expect(DB::table('pharmacy_products')->latest('pharmacy_product_id')->value('requiere_formula'))
+        ->toEqual(0);
 });
 
 test('rechaza campos de otro tipo de negocio', function () {
@@ -101,11 +177,21 @@ test('rechaza campos de otro tipo de negocio', function () {
         'business_id' => $business->busines_id,
         'active_ingredient' => 'Paracetamol',
         'dosage' => '500mg',
-        'food_type' => 'Hamburguesa', // campo de restaurante
+
+        /*
+         * `oem_code` y no `food_type`: aquel se quito del esquema de
+         * restaurante --era lo que ya hace la categoria-- y un campo que no es
+         * de NINGUN tipo no se rechaza, se ignora, que es lo que pasa con
+         * cualquier clave desconocida.
+         *
+         * Lo que esta prueba defiende es que un campo que SI es de otro oficio
+         * se rechace en vez de colarse en silencio.
+         */
+        'oem_code' => 'GM-12345', // campo de repuestos
     ]);
 
     $response->assertStatus(422)
-        ->assertJsonValidationErrors(['food_type']);
+        ->assertJsonValidationErrors(['oem_code']);
 });
 
 test('rechaza categoria de otro tipo de negocio', function () {
@@ -173,7 +259,20 @@ test('tienda sigue creando productos como antes (campos opcionales)', function (
 
     $response->assertStatus(201);
 
-    $this->assertDatabaseHas('grocery_products', ['brand' => 'Diana']);
+    /*
+     * LA MARCA VA AL PRODUCTO, NO A LA TABLA DE TIENDA.
+     *
+     * `grocery_products.brand` duplicaba `products.brand`. Y como la carga
+     * masiva escribia en la segunda y el buscador busca por la segunda, la
+     * marca tecleada en el formulario no se podia encontrar: dos columnas con
+     * el mismo nombre y una sola util.
+     *
+     * Tienda se quedo SIN tabla de tipo, asi que esta prueba tambien fija que
+     * dar de alta un producto en una tienda no intenta escribir una fila de
+     * nulos en `grocery_products`.
+     */
+    $this->assertDatabaseHas('products', ['name' => 'Arroz Diana', 'brand' => 'Diana']);
+    $this->assertDatabaseCount('grocery_products', 0);
 });
 
 test('el schema devuelve los campos y categorias del tipo del negocio', function () {
@@ -188,7 +287,24 @@ test('el schema devuelve los campos y categorias del tipo del negocio', function
 
     $fields = collect($response->json('fields'));
 
-    expect($fields->firstWhere('name', 'food_type')['required'])->toBeTrue()
-        ->and($fields->pluck('name'))->toContain('is_vegan', 'allergens')
-        ->and($fields->pluck('name'))->not->toContain('active_ingredient');
+    /*
+     * `food_type` ya no esta: era lo que ya hace la categoria --Almuerzos,
+     * Comidas Rapidas, Postres-- y dos clasificaciones para la misma cosa
+     * acaban diciendo cosas distintas.
+     *
+     * `minutos_preparacion` SI esta, y es el campo que mas falta hacia: la
+     * plataforma promete tiempos de entrega y no habia donde decir que una
+     * bandeja paisa tarda veinticinco minutos y una gaseosa ninguno.
+     */
+    expect($fields->pluck('name'))
+        ->toContain('minutos_preparacion', 'acompanamientos', 'is_vegan', 'allergens')
+        ->not->toContain('food_type')
+        ->not->toContain('active_ingredient');
+
+    /*
+     * Y los COMUNES llegan aparte, en su propia clave. Es aditiva: una app
+     * vieja que no la conozca ignora `common` y sigue pintando `fields`.
+     */
+    expect(collect($response->json('common'))->pluck('name'))
+        ->toContain('content', 'presentation', 'requiere_frio');
 });

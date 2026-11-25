@@ -130,3 +130,12 @@ Schedule::command('ubicaciones:podar')
     ->dailyAt('04:00')
     ->timezone('America/Bogota')
     ->withoutOverlapping();
+
+/*
+| Los pedidos programados, media hora antes: a la tienda se le recuerda y, si
+| va a domicilio, se anuncia a los domiciliarios. Cada minuto para que el aviso
+| no llegue tarde; marca `recordado_at` y no repite.
+*/
+Schedule::command('pedidos:recordar-programados')
+    ->everyMinute()
+    ->withoutOverlapping();

@@ -22,6 +22,12 @@ use App\Services\CancelacionDelPedido;
  * Juntar constantes es justo el cambio en el que es fácil mover un número sin
  * darse cuenta: seis copias del 4 pueden no ser todas el 4. Lo eran
  * —comprobado una por una antes de borrarlas— y esto lo deja escrito.
+ *
+ * EL SEXTO. El 24 de noviembre de 2026 entró DEVOLVIENDO = 6: el
+ * domiciliario no pudo entregar y lleva el pedido de vuelta (ver
+ * `NovedadesDeEntrega`). Va AL FINAL y con número nuevo: ninguno de los cinco
+ * cambia, así que lo que las apps ya pintan sigue igual. Las apps y el panel
+ * tienen que aprender a pintar el 6.
  */
 it('los cinco estados valen lo que valian', function () {
     expect(OrdersSales::NUEVO)->toBe(1);
@@ -29,16 +35,17 @@ it('los cinco estados valen lo que valian', function () {
     expect(OrdersSales::EN_CAMINO)->toBe(3);
     expect(OrdersSales::ENTREGADO)->toBe(4);
     expect(OrdersSales::CANCELADO)->toBe(5);
+    expect(OrdersSales::DEVOLVIENDO)->toBe(6);
 });
 
 it('la lista los tiene los cinco, en orden y sin repetir', function () {
-    expect(OrdersSales::ESTADOS)->toBe([1, 2, 3, 4, 5]);
+    expect(OrdersSales::ESTADOS)->toBe([1, 2, 3, 4, 5, 6]);
 
     /* CONTROL: que la lista salga de las constantes y no sea un literal que
        pueda quedarse viejo. Si alguien cambia `ENTREGADO` y no la lista, esto
        lo dice. */
     expect(OrdersSales::ESTADOS)->toContain(OrdersSales::ENTREGADO);
-    expect(count(array_unique(OrdersSales::ESTADOS)))->toBe(5);
+    expect(count(array_unique(OrdersSales::ESTADOS)))->toBe(6);
 });
 
 it('no queda ninguna copia privada de un estado en el codigo', function () {

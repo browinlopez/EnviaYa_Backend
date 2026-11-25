@@ -31,10 +31,31 @@ class UnidadDeVenta
 
     public const GRAMO = 'gramo';
 
-    public const TODAS = [self::UNIDAD, self::KILO, self::LIBRA, self::GRAMO];
+    /**
+     * El aceite, el vinagre o el jabón líquido sueltos: «me da $1.000 de
+     * aceite». No se pesa en la gramera, se mide, pero para el pedido es lo
+     * mismo que el kilo: precio por litro y una cantidad con decimales.
+     */
+    public const LITRO = 'litro';
 
-    /** Las que se pesan. */
-    public const AL_PESO = [self::KILO, self::LIBRA, self::GRAMO];
+    public const TODAS = [self::UNIDAD, self::KILO, self::LIBRA, self::GRAMO, self::LITRO];
+
+    /**
+     * Las que se MIDEN en vez de contarse: al peso y el litro.
+     *
+     * Se llama «al peso» por historia; lo que importa es que la cantidad
+     * lleva decimales y el precio es por esa medida.
+     */
+    public const AL_PESO = [self::KILO, self::LIBRA, self::GRAMO, self::LITRO];
+
+    /**
+     * El techo de una cantidad pedida en esa unidad. Cien kilos es mucho
+     * queso; cien gramos, poquísimo: el tope tiene que ir con la medida.
+     */
+    public static function maximo(?string $unidad): float
+    {
+        return $unidad === self::GRAMO ? 5000.0 : 100.0;
+    }
 
     public static function esPeso(?string $unidad): bool
     {
@@ -72,6 +93,7 @@ class UnidadDeVenta
             self::KILO => 'kg',
             self::LIBRA => $cantidad == 1 ? 'libra' : 'libras',
             self::GRAMO => 'g',
+            self::LITRO => $cantidad == 1 ? 'litro' : 'litros',
             default => '',
         };
     }

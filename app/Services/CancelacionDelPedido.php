@@ -72,7 +72,7 @@ class CancelacionDelPedido
     public function motivoPorDefecto(string $origen): string
     {
         return $origen === self::TIENDA
-            ? 'Cancelado por la tienda'
+            ? 'Cancelado por el negocio'
             : 'Cancelado por el comprador';
     }
 
@@ -185,13 +185,27 @@ class CancelacionDelPedido
 
         if ($compradorId) {
             $mensaje = $origen === self::TIENDA
-                ? 'La tienda canceló tu pedido #'.$order->orderSales_id.': '.$motivo
+                ? 'El negocio canceló tu pedido #'.$order->orderSales_id.': '.$motivo
                 : 'Tu pedido #'.$order->orderSales_id.' fue cancelado.';
 
             Avisos::para(
                 $compradorId,
                 'pedido_cancelado',
                 $mensaje.($aviso ? ' '.$aviso : ''),
+                $datos,
+            );
+        }
+
+        /*
+         * El domiciliario que ya lo tenía también se entera: sin esto salía a
+         * buscar un pedido que ya no existe.
+         */
+        $domiciliarioId = $order->domiciliary?->user_id;
+        if ($domiciliarioId) {
+            Avisos::para(
+                $domiciliarioId,
+                'pedido_cancelado',
+                'El pedido #'.$order->orderSales_id.' fue cancelado. No lo recojas.',
                 $datos,
             );
         }

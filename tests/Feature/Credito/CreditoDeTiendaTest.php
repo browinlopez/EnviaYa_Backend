@@ -179,7 +179,7 @@ it('el mensaje dice cuánto crédito tiene y cuánto cuesta el pedido', function
 
     $mensaje = credPedir($e, 2)->assertStatus(422)->json('message');
 
-    expect($mensaje)->toStartWith('Tu crédito disponible en esta tienda es $8.000 y el pedido cuesta $');
+    expect($mensaje)->toStartWith('Tu crédito disponible en este negocio es $8.000 y el pedido cuesta $');
 });
 
 it('sin afiliación no se compra a crédito aunque tenga cupo', function () {
@@ -357,7 +357,7 @@ it('con la deuda arrastrada en el tope, la tienda deja de vender a crédito', fu
     $this->getJson("/v1/creditos/tienda/{$e['negocio']}")
         ->assertOk()
         ->assertJsonPath('puede_usar', false)
-        ->assertJsonPath('motivo', 'Por ahora esta tienda no está vendiendo a crédito.');
+        ->assertJsonPath('motivo', 'Por ahora este negocio no está vendiendo a crédito.');
 });
 
 /* ------------------------------------------------------------- alcance -- */

@@ -15,7 +15,24 @@ class PharmacyProduct extends Audit
 
     public $timestamps = false;
 
-    protected $fillable = ['products_id', 'active_ingredient', 'dosage', 'presentation', 'expiration_date'];
+    /*
+     * `expiration_date` se queda en la lista pero YA NO SE USA: el
+     * vencimiento se mudó a `products_business` porque es del lote de cada
+     * tienda, no del producto compartido. Quitarlo de aquí rompería las
+     * filas viejas que todavía lo traen.
+     */
+    protected $fillable = [
+        'products_id',
+        'active_ingredient',
+        'dosage',
+        'content',
+        'presentation',
+        'registro_invima',
+        'requiere_formula',
+        'expiration_date',
+    ];
+
+    protected $casts = ['requiere_formula' => 'boolean'];
 
     /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo

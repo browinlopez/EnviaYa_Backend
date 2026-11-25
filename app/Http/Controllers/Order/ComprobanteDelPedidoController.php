@@ -67,7 +67,7 @@ class ComprobanteDelPedidoController extends Controller
         $negocio = (int) $request->attributes->get('busines_id');
         $pedido = OrdersSales::find($id);
 
-        abort_if(! $pedido || (int) $pedido->busines_id !== $negocio, 404, 'Ese pedido no es de tu tienda.');
+        abort_if(! $pedido || (int) $pedido->busines_id !== $negocio, 404, 'Ese pedido no es de tu negocio.');
 
         return $this->responder($pedido, $facturas);
     }

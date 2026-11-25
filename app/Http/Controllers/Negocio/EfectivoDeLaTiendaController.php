@@ -120,6 +120,16 @@ class EfectivoDeLaTiendaController extends Controller
         $datos = $request->validate([
             'amount' => 'required|numeric|min:1|max:999999999',
             'notes' => 'nullable|string|max:255',
+            /*
+             * LA CLAVE DEL INTENTO, para que el mismo billete no se cuente
+             * dos veces. La pone la app al abrir el formulario y la repite
+             * en cada reintento de ESE intento; ver `recibirEnMostrador`.
+             *
+             * `nullable` a propósito: una app vieja sigue funcionando, con
+             * el riesgo que ya tenía. No se le cierra la puerta a nadie por
+             * no haberse actualizado.
+             */
+            'idempotency_key' => 'nullable|uuid',
         ], [
             'amount.required' => 'Escribe cuánto te entregó.',
             'amount.min' => 'El monto tiene que ser mayor que cero.',
@@ -132,6 +142,7 @@ class EfectivoDeLaTiendaController extends Controller
                 (float) $datos['amount'],
                 (int) $request->user()->user_id,
                 $datos['notes'] ?? null,
+                $datos['idempotency_key'] ?? null,
             );
         } catch (RuntimeException $e) {
             return response()->json([

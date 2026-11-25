@@ -66,7 +66,7 @@ class PesajeDelPedidoController extends Controller
                      * 404 y no 403: responder «prohibido» sobre el número de
                      * otra tienda confirmaría que ese pedido existe.
                      */
-                    abort(404, 'Ese pedido no es de tu tienda.');
+                    abort(404, 'Ese pedido no es de tu negocio.');
                 }
 
                 /*
@@ -104,8 +104,11 @@ class PesajeDelPedidoController extends Controller
                         $desvio = abs($pesado - $pedida) / $pedida;
 
                         if ($desvio > $tope) {
+                            // De más es «quítale un poco»; de menos, que no alcanza.
                             abort(422, sprintf(
-                                'Pesaste %s donde el cliente pidió %s. Si no hay suficiente, llámalo o cancela el pedido.',
+                                $pesado > $pedida
+                                    ? 'Pesaste %s y el cliente pidió %s: quítale un poco.'
+                                    : 'Pesaste %s donde el cliente pidió %s. Si no hay suficiente, llámalo o cancela el pedido.',
                                 UnidadDeVenta::enPalabras($pesado, $linea->sale_unit),
                                 UnidadDeVenta::enPalabras($pedida, $linea->sale_unit),
                             ));
@@ -139,6 +142,8 @@ class PesajeDelPedidoController extends Controller
                 $faltan = OrdersSalesDetail::where('orderSales_id', $pedido->orderSales_id)
                     ->whereNotNull('sale_unit')
                     ->where('sale_unit', '!=', UnidadDeVenta::UNIDAD)
+                    // Lo pedido por valor no se pesa: su precio ya está cerrado.
+                    ->where(fn ($q) => $q->whereNull('pedido_por')->orWhere('pedido_por', '!=', 'valor'))
                     ->whereNull('qty_final')
                     ->count();
 
@@ -174,7 +179,7 @@ class PesajeDelPedidoController extends Controller
 
         return response()->json([
             'message' => 'Pesaje guardado.',
-            'data' => new PedidoResource($resultado->fresh()),
+            'data' => new PedidoResource($resultado->fresh(PedidoResource::relaciones())),
         ]);
     }
 }

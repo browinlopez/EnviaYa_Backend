@@ -221,7 +221,24 @@ it('la forma de la respuesta NO cambio: las mismas claves que el modelo pelado',
     $pelado = $cargado->toArray();
     $porResource = (new MiFichaDeDomiciliarioResource($cargado))->resolve();
 
-    expect(array_keys($porResource))->toBe(array_keys($pelado));
+    /*
+     * `papeles_faltantes` SÍ se añadió a propósito, y por eso se nombra acá
+     * en vez de aflojar la comparación.
+     *
+     * No es una columna de la tabla: lo calcula `PapelesDelDomiciliario`, el
+     * mismo servicio que decide si se le puede despachar. Se añadió porque la
+     * TIENDA ya veía qué papeles le faltaban a cada domiciliario y el dueño
+     * de los papeles no: se enteraba cuando intentaba aceptar un pedido y el
+     * servidor lo rechazaba con un 422.
+     *
+     * Lo que esta prueba sigue defendiendo es lo de siempre: que una columna
+     * NUEVA de la tabla no se publique sola. Un campo calculado que alguien
+     * decidió exponer se escribe acá; una columna que aparece sin que nadie
+     * la haya pensado, no.
+     */
+    $esperadas = array_merge(array_keys($pelado), ['papeles_faltantes']);
+
+    expect(array_keys($porResource))->toBe($esperadas);
     expect(array_keys($porResource['user']))->toBe(array_keys($pelado['user']));
     expect($porResource['document'])->toBe($pelado['document']);
     expect($porResource['user']['email'])->toBe($pelado['user']['email']);

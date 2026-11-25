@@ -11,6 +11,7 @@ use App\Http\Requests\Business\AlternarAfiliacionRequest;
 use App\Http\Requests\Business\BuscarCompradorPorTelefonoRequest;
 use App\Http\Requests\Business\ClientesAfiliadosRequest;
 use App\Http\Requests\Business\DesafiliarClienteRequest;
+use App\Models\Business;
 use App\Models\Business\BusinessUserAffiliation;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -73,13 +74,39 @@ class AffiliationController extends Controller
     }
 
     // Buscar comprador por número de teléfono y rol
+    /** Lo que mide un móvil en Colombia; lo que venga delante es indicativo. */
+    private const LARGO_DEL_MOVIL = 10;
+
     public function searchBuyerByPhone(BuscarCompradorPorTelefonoRequest $request)
     {
 
-        $phone = $request->phone;
+        /*
+         * SE COMPARAN DÍGITOS, NO TEXTO.
+         *
+         * Esto era `where('phone', $phone)`: una comparación exacta de cadenas.
+         * Y los teléfonos están guardados CON ESPACIOS --«308 291 2460»--
+         * mientras que la pantalla que usa esta búsqueda pide el número
+         * seguido; su propio marcador de posición dice «3001234567». O sea
+         * que la app pedía el número de una forma y el servidor sólo aceptaba
+         * la otra: el tendero escribía bien el número de su cliente y le
+         * salía «no encontramos a nadie».
+         *
+         * No vale normalizar sólo lo que llega: lo guardado también viene
+         * sucio y en varias formas. Se limpian los dos lados.
+         *
+         * Se comparan los DIEZ ÚLTIMOS dígitos, que es lo que mide un móvil
+         * colombiano: así «+57 308 291 2460», «57 3082912460» y «3082912460»
+         * encuentran a la misma persona. Lo de delante es el indicativo.
+         */
+        $digitos = preg_replace('/\D+/', '', (string) $request->phone);
+        $ultimos = substr($digitos, -self::LARGO_DEL_MOVIL);
+
+        /* `SUBSTR(x, -10)` se comporta igual en MySQL y en SQLite, que es
+           sobre lo que corre la suite; `RIGHT()` sólo existe en MySQL. */
+        $limpio = "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, ' ', ''), '-', ''), '(', ''), ')', ''), '+', '')";
 
         $user = User::with(['buyer'])
-            ->where('phone', $phone)
+            ->whereRaw("SUBSTR({$limpio}, -".self::LARGO_DEL_MOVIL.') = ?', [$ultimos])
             ->where('rol', 1) // Filtrar por rol igual a 1
             ->whereHas('buyer') // Solo los que tienen relación con comprador
             ->first();
@@ -117,6 +144,9 @@ class AffiliationController extends Controller
         ]);
     }
 
+    /** Cuántos negocios de un mismo tipo puede tener un comprador. */
+    public const AFILIACIONES_POR_TIPO = 3;
+
     // Afiliacion movil usuarios
     public function AfiliationUser(AfiliarClienteRequest $request)
     {
@@ -139,12 +169,28 @@ class AffiliationController extends Controller
             ], 409);
         }
 
-        // 2️⃣ Contar afiliaciones actuales del usuario
-        $affiliationsCount = BusinessUserAffiliation::where('user_id', $userId)->count();
+        /*
+         * 2️⃣ TRES POR TIPO DE NEGOCIO, NO TRES EN TOTAL.
+         *
+         * Se contaban todas juntas: quien era cliente de su tienda y de dos
+         * droguerías ya no podía afiliarse a ningún restaurante, que no
+         * compite con ninguna de las tres. El tope es para no repartirse
+         * entre demasiadas tiendas del MISMO oficio; entre oficios no hay
+         * nada que repartir.
+         *
+         * La respuesta dice el tipo y el tope, para que la app lo cuente en
+         * sus palabras («Ya tienes 3 droguerías»).
+         */
+        $tipo = (int) Business::whereKey($businessId)->value('type');
+        $delMismoTipo = BusinessUserAffiliation::where('user_id', $userId)
+            ->whereHas('business', fn ($q) => $q->where('type', $tipo))
+            ->count();
 
-        if ($affiliationsCount >= 3) {
+        if ($delMismoTipo >= self::AFILIACIONES_POR_TIPO) {
             return response()->json([
-                'message' => 'El usuario ya alcanzó el máximo de 3 negocios afiliados',
+                'message' => 'Ya estás afiliado a '.self::AFILIACIONES_POR_TIPO.' negocios de este tipo.',
+                'limite' => self::AFILIACIONES_POR_TIPO,
+                'tipo' => $tipo,
             ], 422);
         }
 

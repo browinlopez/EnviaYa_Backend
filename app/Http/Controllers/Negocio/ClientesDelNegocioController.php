@@ -47,7 +47,8 @@ class ClientesDelNegocioController extends Controller
 
         $negocioId = (int) $request->attributes->get('busines_id');
 
-        $usuario = User::where('phone', $datos['telefono'])
+        /* Por dígitos: en la base los teléfonos están con espacios y sin ellos. */
+        $usuario = User::conTelefono($datos['telefono'])
             // Rol 1 y con ficha de comprador: es a quien se le puede vender.
             ->where('rol', 1)
             ->whereHas('buyer')
@@ -89,7 +90,7 @@ class ClientesDelNegocioController extends Controller
             'user_id' => $userId,
         ]);
 
-        return response()->json(['message' => 'Ya es cliente de tu tienda.'], 201);
+        return response()->json(['message' => 'Ya es cliente de tu negocio.'], 201);
     }
 
     /**

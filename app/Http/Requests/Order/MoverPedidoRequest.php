@@ -28,6 +28,9 @@ class MoverPedidoRequest extends FormRequest
             'order_id' => 'required|integer',
             'state' => 'required|integer|in:'.implode(',', OrdersSales::DESTINOS_AL_MOVER),
             'user_id' => 'nullable|integer|exists:user,user_id',
+            // Al entregar: el PIN que dijo el cliente y el billete con que pagó.
+            'pin' => 'nullable|string|max:6',
+            'paga_con' => 'nullable|numeric|min:0|max:10000000',
         ];
     }
 }

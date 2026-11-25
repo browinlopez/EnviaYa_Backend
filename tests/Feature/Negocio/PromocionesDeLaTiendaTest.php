@@ -522,3 +522,87 @@ it('los tres tipos de promocion son los que la lista blanca acepta', function ()
     expect(Promotion::TIPOS)->toBe(['ninguno', 'porcentaje', 'nxm']);
     expect(count(array_unique(Promotion::TIPOS)))->toBe(3);
 });
+
+/* ---------------------------------------------------------------------- */
+
+/**
+ * EL PRECIO DE LA TIENDA VIAJA CON CADA PRODUCTO DE LA PROMOCION.
+ *
+ * La pantalla simula cuanto le costaria la promocion --«1 x Atun: paga 3.500
+ * en vez de 5.000»-- y para eso necesita el precio. Al CREARLA le sobraba,
+ * porque los productos venian del surtido; al CORREGIR una ya enviada los
+ * productos vienen de aca, y aca no venia el precio: la caja de arriba decia
+ * «Sobre que productos: 2 productos» y el recuadro de debajo, «Elige un
+ * producto».
+ *
+ * La simulacion es lo unico que dice cuanto cuesta la promocion. Sin ella el
+ * tendero manda un descuento sin saber sobre que.
+ */
+it('cada producto de la promocion trae el precio que le pone ESTA tienda', function () {
+    $t = tiendaConAfiliados(1);
+
+    Sanctum::actingAs($t['tendero']);
+
+    $this->postJson('/v1/negocio/promociones', [
+        'texto' => '30% de descuento hoy.',
+        'tipo' => 'porcentaje',
+        'porcentaje' => 30,
+        'productos' => [$t['productoId']],
+    ])->assertStatus(201);
+
+    $r = $this->getJson('/v1/negocio/promociones')->assertOk();
+
+    expect($r->json('promociones.0.productos.0.price'))->toEqual(5000.0)
+        ->and($r->json('promociones.0.productos.0.name'))->toBe('Atún Van Camps');
+})->group('promociones');
+
+it('el que ya no esta en el surtido viene sin precio, no en cero', function () {
+    // Un cero seria un precio, y la pantalla simularia un regalo.
+    $t = tiendaConAfiliados(1);
+
+    Sanctum::actingAs($t['tendero']);
+
+    $this->postJson('/v1/negocio/promociones', [
+        'texto' => '30% de descuento hoy.',
+        'tipo' => 'porcentaje',
+        'porcentaje' => 30,
+        'productos' => [$t['productoId']],
+    ])->assertStatus(201);
+
+    DB::table('products_business')
+        ->where('busines_id', $t['businessId'])
+        ->where('products_id', $t['productoId'])
+        ->delete();
+
+    $r = $this->getJson('/v1/negocio/promociones')->assertOk();
+
+    expect($r->json('promociones.0.productos.0.price'))->toBeNull();
+})->group('promociones');
+
+it('una lista larga no dispara una consulta por promocion', function () {
+    // Con cincuenta en el historial, una consulta por fila serian cincuenta
+    // viajes para pintar una pantalla.
+    $t = tiendaConAfiliados(1);
+
+    Sanctum::actingAs($t['tendero']);
+
+    for ($i = 0; $i < 3; $i++) {
+        Promotion::create([
+            'busines_id' => $t['businessId'],
+            'description' => 'Aviso '.$i,
+            'state' => 1,
+            'recipients_count' => 1,
+            'sent_at' => now(),
+        ])->products()->attach($t['productoId']);
+    }
+
+    DB::enableQueryLog();
+    $r = $this->getJson('/v1/negocio/promociones')->assertOk();
+    $consultas = collect(DB::getQueryLog())
+        ->filter(fn ($q) => str_contains($q['query'], 'products_business'))
+        ->count();
+    DB::disableQueryLog();
+
+    expect($r->json('promociones'))->toHaveCount(3)
+        ->and($consultas)->toBe(1);
+})->group('promociones');

@@ -157,6 +157,53 @@ test('las cifras son de TODO el rango, no de la pagina', function () {
         ->and($r->json('pedidos.data'))->toHaveCount(25);
 });
 
+test('quien mira decide cuantos por pagina, con tope', function () {
+    /*
+     * El telefono trae la lista segun se baja, asi que pide menos de los
+     * veinticinco que caben en un ordenador: traer el doble de lo que se va
+     * a leer antes de que alguien decida si sigue es datos del tendero
+     * gastados en nada.
+     *
+     * Y con tope: sin el, `por_pagina` enorme convierte la pagina en la
+     * tabla entera y el limite de 92 dias deja de servir de nada.
+     */
+    $t = tiendaConHistorial(array_fill(0, 30, [4, 0, 1, 1000]));
+
+    Sanctum::actingAs($t['tendero']);
+
+    expect($this->getJson('/v1/negocio/pedidos/historial?por_pagina=20')
+        ->assertOk()->json('pedidos.data'))->toHaveCount(20);
+
+    // Por encima del tope no se sirve: se rechaza.
+    $this->getJson('/v1/negocio/pedidos/historial?por_pagina=5000')
+        ->assertStatus(422);
+
+    // Y sin pedirlo, sigue siendo lo de siempre.
+    expect($this->getJson('/v1/negocio/pedidos/historial')
+        ->json('pedidos.data'))->toHaveCount(25);
+});
+
+test('la segunda pagina trae los que faltan, sin repetir', function () {
+    // Es lo que sostiene el desplazamiento infinito: si la pagina dos
+    // repitiera alguno, la lista del telefono tendria filas duplicadas y
+    // nadie lo notaria hasta sumar.
+    $t = tiendaConHistorial(array_fill(0, 30, [4, 0, 1, 1000]));
+
+    Sanctum::actingAs($t['tendero']);
+
+    $una = $this->getJson('/v1/negocio/pedidos/historial?por_pagina=20&pagina=1')
+        ->assertOk();
+    $dos = $this->getJson('/v1/negocio/pedidos/historial?por_pagina=20&pagina=2')
+        ->assertOk();
+
+    $ids = fn ($r) => collect($r->json('pedidos.data'))->pluck('orderSales_id');
+
+    expect($ids($una))->toHaveCount(20)
+        ->and($ids($dos))->toHaveCount(10)
+        ->and($ids($una)->intersect($ids($dos)))->toBeEmpty()
+        ->and($dos->json('pedidos.last_page'))->toBe(2);
+});
+
 test('un rango de anios se recorta a tres meses', function () {
     // Sin tope, una fecha de hace cinco anios hace recorrer la tabla entera
     // para pintar una pantalla que nadie lee.

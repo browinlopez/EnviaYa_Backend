@@ -40,6 +40,12 @@ class ChatDeLaListaResource extends JsonResource
         return [
             'chat_id' => $chat->chat_id,
             'type' => $chat->type,
+            /*
+             * El NOMBRE DEL NEGOCIO, si es un chat con una tienda: el comprador
+             * reconoce «Tienda Lupe», no el nombre de quien la atiende.
+             */
+            'negocio' => $chat->negocio?->name,
+            'business_id' => $chat->busines_id,
             'created_at' => $chat->created_at,
             'last_message' => $ultimo?->content,
             'last_message_at' => $ultimo?->created_at,

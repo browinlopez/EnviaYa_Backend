@@ -25,6 +25,19 @@ class IngresosDelNegocioRequest extends FormRequest
     {
         return [
             'business_id' => 'required|integer|exists:business,busines_id',
+            /*
+             * UN RANGO PROPIO, ADEMAS DE DIA, SEMANA Y MES.
+             *
+             * Los tres periodos de siempre los calcula el servidor y no se
+             * tocan. Esto es lo que el tendero elige con el calendario para
+             * una pregunta concreta: «¿cuanto hice del 3 al 9?».
+             *
+             * Van juntas o no van: media pareja no define un rango, y
+             * rellenar la que falta con una fecha inventada daria una cifra
+             * que parece un dato.
+             */
+            'desde' => 'nullable|date|required_with:hasta',
+            'hasta' => 'nullable|date|required_with:desde',
         ];
     }
 }

@@ -20,6 +20,7 @@ use App\Models\Order\OrderGeolocation;
 use App\Models\Order\OrdersSales;
 use App\Models\User;
 use App\Services\CreditoDeTienda;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
@@ -41,7 +42,7 @@ class ConsultaDePedidosController extends Controller
 
         $orders = OrdersSales::where('buyer_id', $buyer->buyer_id)
             ->confirmados()
-            ->with('details.product.category', 'business.municipality', 'promotions', 'payments', 'address.municipality.department.country', 'address.alias', 'domiciliary.user')
+            ->with('details.product.category', 'business.municipality', 'promotions', 'payments', 'address.municipality.department.country', 'address.department', 'address.alias', 'domiciliary.user')
             ->get();
 
         $formattedOrders = $orders->map(
@@ -155,6 +156,16 @@ class ConsultaDePedidosController extends Controller
          * existe para pagos online: las ventas en efectivo no contaban.
          */
         $incomeOrders = fn () => OrdersSales::where('busines_id', $business_id)
+            /*
+             * UN CANCELADO NO ES UN INGRESO, aunque se hubiera pagado.
+             *
+             * Al cancelar uno pagado la plata se devuelve (`DevolucionDelPedido`)
+             * pero `payment_state` se queda en «paid», así que el pedido seguía
+             * sumando en el ingreso de hoy, de la semana, del mes y en la
+             * gráfica. Visto en la tienda de prueba: de $70.500 «de hoy»,
+             * $47.600 eran pedidos cancelados.
+             */
+            ->where('state', '!=', OrdersSales::CANCELADO)
             ->where(function ($q) {
                 $q->where('payment_state', 'paid')->orWhere('state', 4);
             });
@@ -238,9 +249,27 @@ class ConsultaDePedidosController extends Controller
             default => 'Pagado en la app',
         };
 
-        $porMedio = $incomeOrders()
+        /*
+         * Y SE DESGLOSA PARA CADA PERIODO QUE LA PANTALLA SABE ENSEÑAR.
+         *
+         * Era una sola consulta, la de la semana, y la pantalla de Ganancias
+         * la ponía debajo de los tres botones --Hoy, Semana, Mes-- cambiando
+         * el pie para que dijera cuál estaba mirando. El pie cambiaba; las
+         * cifras no.
+         *
+         * Se veía en una captura cualquiera: «Desde el primero del mes:
+         * $1.149.900» arriba y «Efectivo $0 · En la app $0 · Fiado $0»
+         * justo debajo, con el pie diciendo «Mes». Un millón largo que no
+         * salió de ningún bolsillo. En una pantalla de dinero una etiqueta
+         * que no cuadra con su cifra hace dudar de las dos, y la de arriba
+         * era la buena.
+         *
+         * Son tres `GROUP BY` sobre una tabla que ya se está recorriendo seis
+         * veces en esta misma respuesta, así que el coste es el que ya había.
+         */
+        $porMedioEntre = fn ($desde, $hasta) => $incomeOrders()
             ->select('methods_id', DB::raw('SUM(total) as total'))
-            ->whereBetween('sale_date', [$currentWeekStart, $currentWeekEnd])
+            ->whereBetween('sale_date', [$desde, $hasta])
             ->groupBy('methods_id')
             ->get()
             ->groupBy(fn ($f) => $bolsillo((int) $f->methods_id))
@@ -249,6 +278,8 @@ class ConsultaDePedidosController extends Controller
             ->map(fn ($total, $medio) => ['medio' => $medio, 'total' => $total])
             ->values()
             ->all();
+
+        $porMedio = $porMedioEntre($currentWeekStart, $currentWeekEnd);
 
         $month_start = now()->startOfMonth();
         $month_end = (clone $month_start)->endOfMonth();
@@ -275,8 +306,88 @@ class ConsultaDePedidosController extends Controller
             ];
         })->values()->all();
 
+        /*
+         * ────────────────────────────────────────────────────────────────
+         * EL RANGO QUE ELIGE EL TENDERO, cuando lo elige.
+         *
+         * Dia, semana y mes son los de siempre y los decide el servidor.
+         * Esto responde a una pregunta concreta --«¿cuanto hice del 3 al
+         * 9?»-- y por eso solo viaja si se pide: sin fechas, `rango` es
+         * `null` y la respuesta es exactamente la de antes.
+         *
+         * SE REUSAN LAS MISMAS PIEZAS que los otros periodos --`incomeOrders`
+         * y `bolsillo`-- para que la cifra de un rango de siete dias que
+         * caiga justo en la semana sea LA MISMA que la de «Semana». Con dos
+         * consultas distintas acabarian discrepando en los bordes, y nadie
+         * sabria cual creer.
+         *
+         * CON EL MISMO TOPE DE 92 DIAS que el historial, y por lo mismo: sin
+         * el, una fecha de hace cinco anios hace recorrer la tabla entera.
+         * ────────────────────────────────────────────────────────────────
+         */
+        $rango = null;
+
+        if ($request->filled('desde') && $request->filled('hasta')) {
+            $desde = Carbon::parse($request->desde)->startOfDay();
+            $hasta = Carbon::parse($request->hasta)->endOfDay();
+
+            // Al reves se corrige: es un error de dedo, no una consulta vacia.
+            if ($desde->gt($hasta)) {
+                [$desde, $hasta] = [$hasta->copy()->startOfDay(), $desde->copy()->endOfDay()];
+            }
+
+            if ($desde->diffInDays($hasta) > 92) {
+                $desde = $hasta->copy()->subDays(92)->startOfDay();
+            }
+
+            $delRango = fn () => $incomeOrders()->whereBetween('sale_date', [$desde, $hasta]);
+            $cuantas = (clone $delRango())->count();
+
+            $rango = [
+                'desde' => $desde->toDateString(),
+                'hasta' => $hasta->toDateString(),
+                'total' => (float) (clone $delRango())->sum('total'),
+                'ventas' => $cuantas,
+                'ticket_promedio' => $cuantas
+                    ? round((float) (clone $delRango())->sum('total') / $cuantas, 2)
+                    : 0.0,
+                'por_medio' => (clone $delRango())
+                    ->select('methods_id', DB::raw('SUM(total) as total'))
+                    ->groupBy('methods_id')
+                    ->get()
+                    ->groupBy(fn ($f) => $bolsillo((int) $f->methods_id))
+                    ->map(fn ($g) => (float) $g->sum('total'))
+                    ->sortDesc()
+                    ->map(fn ($total, $medio) => ['medio' => $medio, 'total' => $total])
+                    ->values()
+                    ->all(),
+                /*
+                 * DIA A DIA, pero solo si el rango cabe en una pantalla.
+                 *
+                 * Con treinta y un dias salen treinta y una barras de ocho
+                 * pixeles: una mancha. Pasado el mes se manda vacio y la
+                 * pantalla ensena las cifras sin grafica, que es lo honesto.
+                 */
+                'dia_a_dia' => $desde->diffInDays($hasta) <= 31
+                    ? collect(range(0, (int) $desde->diffInDays($hasta)))
+                        ->map(function ($i) use ($desde, $incomeOrders) {
+                            $dia = $desde->copy()->addDays($i);
+
+                            return [
+                                'dia' => $dia->toDateString(),
+                                'total' => (float) $incomeOrders()
+                                    ->whereBetween('sale_date', [$dia->copy()->startOfDay(), $dia->copy()->endOfDay()])
+                                    ->sum('total'),
+                            ];
+                        })
+                        ->all()
+                    : [],
+            ];
+        }
+
         return response()->json([
             'business_id' => $business_id,
+            'rango' => $rango,
 
             'week_start' => $currentWeekStart->toDateString(),
             'week_end' => $currentWeekEnd->toDateString(),
@@ -297,6 +408,16 @@ class ConsultaDePedidosController extends Controller
             'ticket_promedio' => $cuantasSemana ? round((float) $currentWeekTotal / $cuantasSemana, 2) : 0.0,
             'hoy' => (float) (clone $hoy)->sum('total'),
             'ventas_hoy' => (clone $hoy)->count(),
+            /*
+             * LO DEL MOSTRADOR DE HOY, aparte: el inicio lo suma al ingreso
+             * del día y dice de dónde salió. No entra en `hoy`, que sigue
+             * siendo lo de la app para las pantallas que ya lo leen así.
+             */
+            'hoy_mostrador' => (float) DB::table('ventas_mostrador')
+                ->where('busines_id', $business_id)
+                ->where('estado_pago', 'pagada')
+                ->whereBetween('vendida_at', [now()->startOfDay(), now()->endOfDay()])
+                ->sum('total'),
             'ultimas_semanas' => $ultimasSemanas,
 
             'weekly_income' => $weeklyIncome,
@@ -317,6 +438,10 @@ class ConsultaDePedidosController extends Controller
 
             // Cómo le pagaron esta semana, de mayor a menor.
             'por_medio' => $porMedio,
+            // Y los otros dos periodos de la pantalla de Ganancias, para que
+            // el desglose diga lo mismo que la cifra que tiene encima.
+            'por_medio_hoy' => $porMedioEntre(now()->startOfDay(), now()->endOfDay()),
+            'por_medio_mes' => $porMedioEntre($month_start, $month_end),
         ]);
     }
 

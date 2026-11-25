@@ -41,6 +41,7 @@ class CashDeposit extends Audit
         'settlement_id',
         'amount',
         'reference',
+        'idempotency_key',
         'deposited_at',
         'receipt_path',
         'state',

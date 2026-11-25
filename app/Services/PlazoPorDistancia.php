@@ -20,15 +20,45 @@ namespace App\Services;
  * Los minutos se redondean hacia ARRIBA y de cinco en cinco: nadie promete
  * "23 minutos", y un plazo redondo se lee como lo que es —una estimación— en
  * vez de fingir una precisión que no existe.
- */
+ *
+ * --------------------------------------------------------------------------
+ * Y LO QUE DE VERDAD TARDA LA COCINA, CUANDO EL NEGOCIO LO SABE.
+ *
+ * La base es un número de plataforma: el mismo para la tienda de la esquina
+ * y para el restaurante que hace un sancocho. A un plato que tarda treinta y
+ * cinco minutos en salir se le prometían los veinte de todo el mundo, y el
+ * pedido entraba como «tarde» sin que el cocinero hiciera nada mal.
+ *
+ * Desde que los platos tienen `minutos_preparacion`, ese número entra acá.
+ ======================================================================== */
 class PlazoPorDistancia
 {
     /** A cuántos minutos se redondea. */
     private const PASO_MINUTOS = 5;
 
-    public function minutosPara(?float $km): int
+    /**
+     * @param  float|null  $km  Lo lejos que vive quien pidió.
+     * @param  int  $preparacion  Lo que tarda la cocina en soltar el pedido.
+     */
+    public function minutosPara(?float $km, int $preparacion = 0): int
     {
-        $base = (int) Ajustes::valor('operacion.tiempo_entrega_min');
+        /*
+         * LA COCINA MANDA SOBRE LA BASE, Y NO SE SUMA.
+         *
+         * `max` y no `base + preparacion` porque la base YA incluye preparar:
+         * su propio ajuste se llama «lo que cuesta preparar y salir». Sumarlos
+         * contaría la preparación dos veces y prometería una hora por un
+         * almuerzo.
+         *
+         * Lo que hace esto es poner un SUELO: si la cocina dice que tarda más
+         * que el número genérico de la plataforma, gana la cocina. Si tarda
+         * menos --una gaseosa, cero-- manda la base, porque salir de la tienda
+         * y montarse en la moto cuesta igual.
+         */
+        $base = max(
+            (int) Ajustes::valor('operacion.tiempo_entrega_min'),
+            max(0, $preparacion),
+        );
 
         /*
          * Sin distancia —una tienda sin coordenadas, o alguien que todavía no

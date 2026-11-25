@@ -80,7 +80,7 @@ test('al cliente le llega el aviso CON el motivo', function () {
         ->first();
 
     expect($aviso)->not->toBeNull()
-        ->and($aviso->message)->toContain('La tienda canceló')
+        ->and($aviso->message)->toContain('El negocio canceló')
         ->and($aviso->message)->toContain('Se nos fue la luz');
 });
 

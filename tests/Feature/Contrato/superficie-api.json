@@ -1150,6 +1150,18 @@
         ]
     },
     {
+        "verbo": "POST",
+        "uri": "v1/admin/products/{id}/catalogo-general",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "modulo:productos,gestionar"
+        ]
+    },
+    {
         "verbo": "GET",
         "uri": "v1/admin/reports-desglose",
         "nombre": null,
@@ -2253,6 +2265,66 @@
     },
     {
         "verbo": "GET",
+        "uri": "v1/domiciliaries/motivos",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/domiciliaries/orders/{id}/evidencia",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/domiciliaries/orders/{id}/evidencia",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/domiciliaries/orders/{id}/llegue",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/domiciliaries/orders/{id}/novedad",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/domiciliaries/orders/{id}/soltar",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
         "uri": "v1/domiciliaries/pedidos",
         "nombre": null,
         "middleware": [
@@ -2363,6 +2435,18 @@
         ]
     },
     {
+        "verbo": "POST",
+        "uri": "v1/negocio/chats/{chat}/reportes",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio",
+            "throttle:5,10"
+        ]
+    },
+    {
         "verbo": "GET",
         "uri": "v1/negocio/clientes/buscar",
         "nombre": null,
@@ -2387,6 +2471,28 @@
     {
         "verbo": "POST",
         "uri": "v1/negocio/clientes/{userId}",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/negocio/costos",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/negocio/costos",
         "nombre": null,
         "middleware": [
             "api",
@@ -2452,6 +2558,17 @@
     },
     {
         "verbo": "GET",
+        "uri": "v1/negocio/cuanto-te-queda",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "GET",
         "uri": "v1/negocio/domiciliarios",
         "nombre": null,
         "middleware": [
@@ -2488,6 +2605,17 @@
     {
         "verbo": "GET",
         "uri": "v1/negocio/domiciliarios/rendimiento",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "DELETE",
+        "uri": "v1/negocio/domiciliarios/{id}",
         "nombre": null,
         "middleware": [
             "api",
@@ -2543,6 +2671,50 @@
     {
         "verbo": "POST",
         "uri": "v1/negocio/efectivo/{id}/entregas",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/negocio/gastos",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/negocio/gastos",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "DELETE",
+        "uri": "v1/negocio/gastos/{id}",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "PUT",
+        "uri": "v1/negocio/gastos/{id}",
         "nombre": null,
         "middleware": [
             "api",
@@ -2684,6 +2856,39 @@
         ]
     },
     {
+        "verbo": "POST",
+        "uri": "v1/negocio/pedidos/{id}/devolucion",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/negocio/pedidos/{id}/listo",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/negocio/pedidos/{id}/pin",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
         "verbo": "GET",
         "uri": "v1/negocio/productos",
         "nombre": null,
@@ -2774,6 +2979,17 @@
     {
         "verbo": "PUT",
         "uri": "v1/negocio/productos/precios",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/negocio/productos/propio",
         "nombre": null,
         "middleware": [
             "api",
@@ -2882,6 +3098,50 @@
         ]
     },
     {
+        "verbo": "GET",
+        "uri": "v1/negocio/ventas-mostrador",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/negocio/ventas-mostrador",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/negocio/ventas-mostrador/{id}/cancelar",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/negocio/ventas-mostrador/{id}/pago",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
         "verbo": "POST",
         "uri": "v1/orders/IncomeBusiness",
         "nombre": null,
@@ -2974,6 +3234,16 @@
     {
         "verbo": "GET",
         "uri": "v1/orders/{id}/comprobante",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/orders/{id}/pin",
         "nombre": null,
         "middleware": [
             "api",
@@ -3135,6 +3405,28 @@
         "middleware": [
             "api",
             "throttle:6,1"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/sos",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "throttle:30,1"
+        ]
+    },
+    {
+        "verbo": "PATCH",
+        "uri": "v1/sos/{id}",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "throttle:30,1"
         ]
     },
     {

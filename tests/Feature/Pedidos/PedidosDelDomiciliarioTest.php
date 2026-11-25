@@ -96,6 +96,17 @@ test('ve tambien los que puede tomar de su tienda', function () {
     expect($r->json('resumen.por_tomar'))->toBe(1);
 });
 
+test('no le ofrece un pedido que el cliente recoge en la tienda', function () {
+    $e = escenarioDomiciliario();
+    // El mismo pedido «por tomar», pero para recoger: no hay nada que llevar.
+    DB::table('orderssales')->where('orderSales_id', $e['porTomar'])->update(['pickup' => 1]);
+
+    $r = misPedidos($e['repartidor'])->assertOk();
+
+    expect(collect($r->json('orders'))->pluck('order_id'))->not->toContain($e['porTomar'])
+        ->and($r->json('resumen.por_tomar'))->toBe(0);
+});
+
 test('de un pedido que todavia no es suyo no recibe los datos de la persona', function () {
     $e = escenarioDomiciliario();
 

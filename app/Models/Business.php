@@ -233,6 +233,12 @@ class Business extends Audit
             'sale_unit',
             'min_qty',
             'step_qty',
+            'por_valor',
+            'stock_weight',
+            // La categoría de ESTE negocio para el producto, si la tiene.
+            'category_id',
+            // Lo que le cuesta. Sólo lo publica el catálogo del dueño.
+            'costo',
         ]);
     }
 
@@ -258,11 +264,29 @@ class Business extends Audit
         return $this->hasMany(ProductBusiness::class, 'busines_id', 'busines_id');
     }
 
-    /** @return BelongsToMany<Domiciliary, $this> */
+    /**
+     * LA FLOTA DE LA TIENDA: SOLO LOS VÍNCULOS VIVOS.
+     *
+     * `business_domiciliary` tiene su `state` desde siempre y esta relación
+     * lo traía --`withPivot`-- pero no filtraba por él. No se notaba porque
+     * nada lo ponía nunca en 0: no había forma de quitar a nadie de una
+     * tienda.
+     *
+     * Al añadir `DELETE /negocio/domiciliarios/{id}` salió a la primera: se
+     * desvinculaba a alguien y la torre, el elegidor de «despachar» y el
+     * efectivo lo seguían enseñando, porque los tres leen de acá.
+     *
+     * Lo cazó la prueba «y deja de salir en la torre», que es justo el tipo
+     * de cosa que no se ve mirando el endpoint nuevo: el fallo estaba en la
+     * pieza vieja que él destapa.
+     *
+     * @return BelongsToMany<Domiciliary, $this>
+     */
     public function domiciliaries(): BelongsToMany
     {
         return $this->belongsToMany(Domiciliary::class, 'business_domiciliary', 'busines_id', 'domiciliary_id')
-            ->withPivot('state');
+            ->withPivot('state')
+            ->wherePivot('state', 1);
     }
 
     /** @return BelongsToMany<User, $this> */

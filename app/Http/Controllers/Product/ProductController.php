@@ -69,6 +69,24 @@ class ProductController extends Controller
             'price' => 'required|numeric|min:0',
             'amount' => 'required|integer|min:0',
             'business_id' => 'required|integer|exists:business,busines_id',
+
+            /*
+             * MARCA Y CÓDIGO DE BARRAS, QUE FALTABAN LOS DOS.
+             *
+             * La marca la pedía el esquema de TIENDA y se guardaba en
+             * `grocery_products.brand`, al lado de `products.brand` que ya
+             * existía. Como la carga masiva escribe en la segunda y el buscador
+             * busca por la segunda, la marca tecleada en el formulario no se
+             * podía encontrar. Al quitar el duplicado hay que pedirla acá, que
+             * es donde se escribe el producto.
+             *
+             * Y el código de barras NO SE PEDÍA EN NINGÚN SITIO: un producto
+             * dado de alta por este camino no se podía encontrar escaneándolo
+             * nunca más. Único en todo el catálogo compartido, así que se
+             * valida contra la tabla: dos tiendas no pueden reclamar el mismo.
+             */
+            'brand' => 'nullable|string|max:120',
+            'barcode' => 'nullable|string|max:20|unique:products,barcode',
         ]);
 
         /*
@@ -102,19 +120,30 @@ class ProductController extends Controller
         $this->rejectForeignFields($request, $type);
         $this->assertCategoryMatchesType((int) $request->category_id, $type);
 
-        // Campos extra con las reglas del tipo de negocio (los required
-        // de este tipo sí se exigen; antes todo era nullable).
-        $extra = $request->validate(ProductTypeSchema::rules($type));
+        /*
+         * Los campos extra con las reglas del tipo de negocio (los required de
+         * este tipo sí se exigen) y los COMUNES, que viven en `products` y no
+         * en la tabla del tipo --opcionales, así que una app que no los mande
+         * sigue dando de alta igual que antes--, en UNA validación: eran dos
+         * seguidas sobre la misma petición.
+         */
+        $reglasExtra = ProductTypeSchema::rules($type);
+        $reglasComunes = ProductTypeSchema::reglasComunes();
+        $validado = $request->validate(array_merge($reglasExtra, $reglasComunes));
+        $extra = array_intersect_key($validado, $reglasExtra);
+        $comunes = array_intersect_key($validado, $reglasComunes);
 
         DB::beginTransaction();
         try {
             // Crear producto base
-            $product = Product::create([
+            $product = Product::create(array_merge([
                 'name' => $request->name,
                 'description' => $request->description,
                 'category_id' => $request->category_id,
+                'brand' => $request->brand,
+                'barcode' => $request->barcode ?: null,
                 'state' => true,
-            ]);
+            ], $comunes));
 
             // Relación con el negocio
             ProductBusiness::create([
@@ -125,12 +154,22 @@ class ProductController extends Controller
                 'qualification' => 0,
             ]);
 
-            // Datos adicionales en la tabla del tipo correspondiente
+            /*
+             * Datos adicionales en la tabla del tipo, SI el tipo tiene.
+             *
+             * Tienda ya no tiene campos propios --los tres que tenia eran
+             * comunes o duplicados-- asi que `fields` le queda vacio. Sin esta
+             * comprobacion, dar de alta un producto en una tienda reventaria
+             * con una fila de nulos en `grocery_products`.
+             */
             $model = ProductTypeSchema::model($type);
-            $model::create(array_merge(
-                ['products_id' => $product->products_id],
-                $extra,
-            ));
+
+            if ($model && $extra !== []) {
+                $model::create(array_merge(
+                    ['products_id' => $product->products_id],
+                    $extra,
+                ));
+            }
 
             DB::commit();
 

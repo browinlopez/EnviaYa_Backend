@@ -150,7 +150,8 @@
         @forelse ($renglones as $r)
             <tr>
                 <td>{{ $r['producto'] }}</td>
-                <td class="der">{{ $r['cantidad'] }}</td>
+                {{-- Lo pesado con su medida: «0,52 kg», «1 litro»; lo que se cuenta, el número. --}}
+                <td class="der">{{ ($r['unidad'] ?? 'unidad') === 'unidad' ? $r['cantidad'] : \App\Support\UnidadDeVenta::enPalabras((float) $r['cantidad'], $r['unidad']) }}</td>
                 <td class="der">{{ $pesos($r['precio_unit']) }}</td>
                 <td class="der">{{ $pesos($r['importe']) }}</td>
             </tr>

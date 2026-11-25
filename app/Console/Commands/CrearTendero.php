@@ -58,12 +58,12 @@ class CrearTendero extends Command
         {--telefono= : Teléfono de contacto}
         {--clave= : Contraseña. Si no se pasa, se genera y se imprime una vez}';
 
-    protected $description = 'Crea o repone la cuenta de quien administra una tienda';
+    protected $description = 'Crea o repone la cuenta de quien administra un negocio';
 
     public function handle(): int
     {
         if (! Rol::find(self::ROL_TENDERO)) {
-            $this->error('No existe el rol 2 (tendero) en la tabla `rol`.');
+            $this->error('No existe el rol 2 (dueño de negocio) en la tabla `rol`.');
             $this->line('Siémbralo antes: php artisan db:seed --class=RolesAndPermissionsSeeder');
 
             return self::FAILURE;
@@ -103,7 +103,7 @@ class CrearTendero extends Command
         }
 
         $email = $this->option('email') ?: $this->ask('Correo');
-        $nombre = $this->option('nombre') ?: ('Tendero '.$negocio->name);
+        $nombre = $this->option('nombre') ?: ('Dueño de '.$negocio->name);
 
         /*
          * La clave se genera si no la dan, y se imprime UNA vez. Pasarla por
@@ -194,7 +194,7 @@ class CrearTendero extends Command
         $this->line(sprintf('    negocio    %d · %s', $negocio->busines_id, $negocio->name));
         $this->line(sprintf('    usuario    %d · %s', $usuario->user_id, $usuario->email));
         $this->line(sprintf('    owner      %d', $owner->owner_id));
-        $this->line('    rol        2 (tendero)');
+        $this->line('    rol        2 (dueño de negocio)');
 
         if ($generada) {
             $this->newLine();

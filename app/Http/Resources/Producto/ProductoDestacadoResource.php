@@ -109,6 +109,8 @@ class ProductoDestacadoResource extends JsonResource
             'sale_unit' => $product->pivot->sale_unit ?? 'unidad',
             'min_qty' => $product->pivot->min_qty !== null ? (float) $product->pivot->min_qty : null,
             'step_qty' => $product->pivot->step_qty !== null ? (float) $product->pivot->step_qty : null,
+            // Si se puede pedir por plata: «$1.500 de queso».
+            'por_valor' => (bool) ($product->pivot->por_valor ?? false),
         ];
     }
 

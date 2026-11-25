@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Resources\Producto;
 
+use App\Support\CategoriaDelNegocio;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -49,11 +50,26 @@ class ProductoDelCatalogoPropioResource extends JsonResource
         return [
             'product_id' => $product->products_id,
             'name' => $product->name,
+            /*
+             * EL CÓDIGO DE BARRAS, que es el «código del producto» para quien
+             * atiende un mostrador: el impreso en la caja, el que lee el
+             * escáner de la propia app.
+             *
+             * No viajaba. La ficha del producto del tendero enseñaba bajo
+             * «Referencia» nuestro identificador --«Código del producto:
+             * #4»-- y el de verdad, 7700000000040, estaba en la base sin que
+             * nadie pudiera verlo. Así no hay manera de comprobar que el
+             * producto de la estantería es el de la pantalla.
+             *
+             * Lo curioso es que la OTRA ruta del mismo catálogo
+             * --`/negocio/productos`, con `ProductoDeLaTiendaResource`-- sí
+             * lo manda desde siempre. Dos formas de la misma cosa y el campo
+             * sólo en una.
+             */
+            'barcode' => $product->barcode,
             'description' => $product->description,
-            'category' => $product->category ? [
-                'category_id' => $product->category->category_id,
-                'name' => $product->category->name,
-            ] : null,
+            // La de este negocio si la tiene; si no, la del producto.
+            'category' => CategoriaDelNegocio::de($product->pivot->category_id ?? null, $product->category_id),
             'image' => $product->image,
             'state' => $product->state,
             /* La presentacion y de que tarjeta cuelga. Ver
@@ -66,7 +82,24 @@ class ProductoDelCatalogoPropioResource extends JsonResource
                 'image' => $product->group->image,
             ] : null,
             'price' => $product->pivot->price,
+            // Lo que le cuesta: este catálogo sólo lo ve su dueño (`negarNegocioAjeno`).
+            'costo' => $product->pivot->costo !== null ? (float) $product->pivot->costo : null,
             'amount' => $product->pivot->amount,
+            // Cómo lo vende esta tienda: por unidad, al peso o por litro, y si
+            // acepta que se lo pidan por plata. Ver `UnidadDeVenta`.
+            'sale_unit' => $product->pivot->sale_unit ?? 'unidad',
+            'por_valor' => (bool) ($product->pivot->por_valor ?? false),
+            'min_qty' => $product->pivot->min_qty !== null ? (float) $product->pivot->min_qty : null,
+            // Lo que se mide tiene sus existencias en kilos o litros.
+            'stock_weight' => (float) ($product->pivot->stock_weight ?? 0),
+            /*
+             * Lo creó esta tienda y el equipo aún no lo completa: la ficha
+             * dice «Solo en tu tienda · El equipo lo está completando».
+             */
+            'propio' => $product->busines_id_propietario !== null
+                && (int) $product->busines_id_propietario === (int) $product->pivot->busines_id
+                && ! $product->en_catalogo_general,
+            'en_revision' => $product->busines_id_propietario !== null && $product->revisado_at === null,
             'qualification' => $product->pivot->qualification,
             'business_type' => $business->type,
             'extra' => $extraData, // datos extra según tipo

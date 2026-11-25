@@ -36,6 +36,17 @@ class MandarMensajeRequest extends FormRequest
             'user_id' => 'required|exists:user,user_id',
             'recipient_id' => 'required|exists:user,user_id',
             'content' => 'required|string|max:'.$this->tope(),
+
+            /*
+             * OPCIONAL, y eso es lo que deja intacta a la app publicada.
+             *
+             * Quien no lo manda --la app de hoy-- sigue igual que siempre:
+             * el servidor deduce el negocio cuando no hay duda y lo deja
+             * nulo cuando la hay. Quien si lo manda --el panel, que sabe
+             * que local esta mirando-- consigue que dos locales del mismo
+             * dueno tengan dos conversaciones separadas.
+             */
+            'busines_id' => 'sometimes|nullable|integer|exists:business,busines_id',
         ];
     }
 

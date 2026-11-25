@@ -29,6 +29,47 @@ use Illuminate\Http\Resources\Json\JsonResource;
  */
 class PedidoResource extends JsonResource
 {
+    /**
+     * ─────────────────────────────────────────────────────────────────────
+     * LO QUE HAY QUE TRAER CARGADO ANTES DE PINTAR ESTO.
+     *
+     * No es higiene: con la carga perezosa desactivada, pintar un pedido sin
+     * estas relaciones LANZA. Y lanza DESPUES de haber hecho el trabajo, asi
+     * que la operacion sale bien y la respuesta es un 500.
+     *
+     * Paso de verdad: cancelando un pedido desde la app del tendero, el
+     * pedido quedaba cancelado y la pantalla decia «No se pudo cancelar»
+     * con «Attempted to lazy load [product] on model [OrdersSalesDetail]»
+     * encima. Se arreglo `product` y a la siguiente salto `category`.
+     *
+     * Por eso la lista vive AQUI y no en cada controlador: quien pinta es
+     * quien sabe que lee, y asi anadir un campo al `toArray()` no obliga a
+     * acordarse de tres sitios. Es el mismo patron que `PedidoDeLaAppResource`.
+     *
+     * `.category` Y NO SOLO `.product`: `toArray()` lee
+     * `$d->product->category`, que es un salto mas.
+     * ─────────────────────────────────────────────────────────────────────
+     *
+     * @return list<string>
+     */
+    public static function relaciones(): array
+    {
+        return [
+            'buyer.user',
+            'business.municipality',
+            /*
+             * La direccion llega con sus tres niveles porque `toArray()` los
+             * lee: municipio, departamento y --via municipio-- el pais.
+             */
+            'address.municipality.department.country',
+            'address.department',
+            'domiciliary.user',
+            'details.product.category',
+            'payments',
+            'promotions',
+        ];
+    }
+
     /** @return array<string, mixed> */
     public function toArray(Request $request): array
     {
@@ -39,6 +80,9 @@ class PedidoResource extends JsonResource
             'buyer_id' => $pedido->buyer_id,
             'busines_id' => $pedido->busines_id,
             'total' => $pedido->total,
+            // La promoción que pone la tienda: sin ella, el panel mostraba lo
+            // que suman los productos y no lo que de verdad entra.
+            'discount' => $pedido->discount,
             // Con cuánto paga y cuánto cambio llevarle. Solo en efectivo.
             'cash_tendered' => $pedido->cash_tendered,
             'change_due' => $pedido->change_due,
@@ -49,6 +93,8 @@ class PedidoResource extends JsonResource
             'delivery_date' => $pedido->delivery_date,
             'state' => $pedido->state,
             'is_scheduled' => $pedido->is_scheduled,
+            // Para recoger: si ya se le avisó al cliente que pase.
+            'ready_at' => $pedido->ready_at,
             'has_review' => $pedido->has_review,
             'dispatched_at' => $pedido->dispatched_at,
             // Compromiso y cumplimiento. `promised_minutes` es lo que el reloj

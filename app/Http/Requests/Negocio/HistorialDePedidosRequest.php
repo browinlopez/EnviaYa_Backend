@@ -32,6 +32,18 @@ class HistorialDePedidosRequest extends FormRequest
             'estado' => 'nullable|in:todos,entregados,cancelados',
             'pago' => 'nullable|in:todos,efectivo,app,fiado',
             'pagina' => 'nullable|integer|min:1',
+            /*
+             * CUANTOS POR PAGINA LO PIDE QUIEN MIRA, no el servidor.
+             *
+             * En una pantalla de ordenador caben veinticinco de un vistazo;
+             * en un telefono no, y ademas la lista se trae sola segun se
+             * baja. Pedir veinticinco ahi es traer el doble de lo que se va
+             * a leer antes de que alguien decida si sigue.
+             *
+             * Con tope: sin el, `por_pagina=100000` convierte la pagina en
+             * la tabla entera y el tope de 92 dias deja de servir de nada.
+             */
+            'por_pagina' => 'nullable|integer|min:5|max:50',
         ];
     }
 }

@@ -33,7 +33,7 @@ class SimularTorre extends Command
         {--extra=0 : Crea N domiciliarios de prueba, para ver la torre con una flota grande}
         {--limpiar : Borra las posiciones y los domiciliarios simulados y sale}';
 
-    protected $description = 'Mueve a los domiciliarios de una tienda por Barranquilla para probar la torre (solo local)';
+    protected $description = 'Mueve a los domiciliarios de un negocio por Barranquilla para probar la torre (solo local)';
 
     private const SIMULADA = 9;
 
@@ -77,7 +77,7 @@ class SimularTorre extends Command
             ->all();
 
         if ($ids === []) {
-            $this->error("La tienda {$negocio} no tiene domiciliarios vinculados.");
+            $this->error("El negocio {$negocio} no tiene domiciliarios vinculados.");
 
             return self::FAILURE;
         }

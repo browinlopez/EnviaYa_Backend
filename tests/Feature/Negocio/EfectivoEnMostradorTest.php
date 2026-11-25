@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\CustodiaDeEfectivo;
 use App\Services\LiquidacionService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 
 /**
@@ -141,3 +142,91 @@ test('lo que ya consigno a la plataforma no le queda pendiente con la tienda', f
         ->firstWhere('domiciliary_id', $e['domi']);
     expect($suyo['pendiente'])->toEqual(0);
 });
+
+/* ---------------------------------------------------------------------- */
+
+/**
+ * EL MISMO BILLETE NO SE CUENTA DOS VECES.
+ *
+ * Recibir efectivo no era idempotente, y con una red de barrio eso es un
+ * agujero de plata:
+ *
+ *   1. el tendero toca «Recibir $5.000»;
+ *   2. la peticion sale, el servidor la ejecuta --baja el saldo, crea el
+ *      deposito-- y la respuesta no llega;
+ *   3. la app dice «No se pudo guardar, intentalo de nuevo», que es lo unico
+ *      honesto que puede decir cuando no sabe;
+ *   4. el tendero vuelve a tocar «Recibir», porque es lo natural;
+ *   5. quedan DOS entregas de $5.000 por un solo billete.
+ *
+ * Medido contra el servidor local antes del arreglo: con el cliente abortando
+ * a los 0,3 s el saldo bajo de 49.600 a 44.600 con la app creyendo que habia
+ * fallado, y al reintentar quedo en 39.600. Al domiciliario se le abonaron
+ * $10.000 por $5.000 reales, y a favor suyo.
+ */
+test('reintentar la misma entrega no la cuenta dos veces', function () {
+    $e = escenarioDeEfectivo();
+    entregaEnEfectivo($e['mio'], $e['domi'], 30000);
+    Sanctum::actingAs($e['user']);
+
+    $clave = (string) Str::uuid();
+
+    $primera = $this->postJson("/v1/negocio/efectivo/{$e['domi']}/entregas", [
+        'amount' => 20000, 'idempotency_key' => $clave,
+    ])->assertCreated();
+
+    /* El reintento: mismo monto, misma clave. Para quien reintenta, que le
+       digan «ya estaba» y que le digan «listo» son la misma cosa. */
+    $segunda = $this->postJson("/v1/negocio/efectivo/{$e['domi']}/entregas", [
+        'amount' => 20000, 'idempotency_key' => $clave,
+    ])->assertCreated();
+
+    expect($segunda->json('entrega.id'))->toBe($primera->json('entrega.id'))
+        ->and($segunda->json('saldo'))->toBe($primera->json('saldo'))
+        ->and(DB::table('cash_deposits')->where('domiciliary_id', $e['domi'])->count())->toBe(1);
+})->group('efectivo');
+
+test('dos entregas DE VERDAD iguales siguen siendo dos', function () {
+    /*
+     * Es el caso que impide resolver esto con una heuristica del tipo «mismo
+     * monto en los ultimos treinta segundos»: entregar dos billetes de
+     * $10.000 seguidos pasa de verdad, y fundirlos seria el mismo error al
+     * reves --la tienda perderia plata en vez de ganarla--.
+     */
+    $e = escenarioDeEfectivo();
+    entregaEnEfectivo($e['mio'], $e['domi'], 30000);
+    Sanctum::actingAs($e['user']);
+
+    $this->postJson("/v1/negocio/efectivo/{$e['domi']}/entregas", [
+        'amount' => 10000, 'idempotency_key' => (string) Str::uuid(),
+    ])->assertCreated();
+
+    $this->postJson("/v1/negocio/efectivo/{$e['domi']}/entregas", [
+        'amount' => 10000, 'idempotency_key' => (string) Str::uuid(),
+    ])->assertCreated()->assertJsonPath('pendiente', 10000);
+
+    expect(DB::table('cash_deposits')->where('domiciliary_id', $e['domi'])->count())->toBe(2);
+})->group('efectivo');
+
+test('una app vieja, sin clave, sigue funcionando', function () {
+    // No se le cierra la puerta a nadie por no haberse actualizado: sigue
+    // con el riesgo que ya tenia, que no es peor que antes.
+    $e = escenarioDeEfectivo();
+    entregaEnEfectivo($e['mio'], $e['domi'], 30000);
+    Sanctum::actingAs($e['user']);
+
+    $this->postJson("/v1/negocio/efectivo/{$e['domi']}/entregas", ['amount' => 15000])
+        ->assertCreated()->assertJsonPath('pendiente', 15000);
+})->group('efectivo');
+
+test('una clave que no es un uuid se rechaza', function () {
+    // El unico de la tabla es el indice: una cadena cualquiera repetida por
+    // dos pantallas distintas fundiria dos entregas que no tienen que ver.
+    $e = escenarioDeEfectivo();
+    entregaEnEfectivo($e['mio'], $e['domi'], 30000);
+    Sanctum::actingAs($e['user']);
+
+    $this->postJson("/v1/negocio/efectivo/{$e['domi']}/entregas", [
+        'amount' => 10000, 'idempotency_key' => 'entrega-1',
+    ])->assertStatus(422);
+})->group('efectivo');

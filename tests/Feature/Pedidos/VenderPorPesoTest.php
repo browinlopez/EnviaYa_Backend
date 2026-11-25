@@ -46,6 +46,8 @@ function productoAlPeso(array $e, string $unidad = 'kg', float $precio = 12000):
         'amount' => 0,
         'sale_unit' => $unidad,
         'stock_weight' => 10,
+        // El queso de estas pruebas sí se pide por plata: la opción nace apagada.
+        'por_valor' => 1,
     ]);
 
     return $productId;
@@ -161,7 +163,7 @@ test('un pedido con algo al peso nace por pesar', function () {
     $queso = productoAlPeso($e);
 
     $this->postJson('/v1/orders/orders', cuerpoPedido($e, [
-        'products' => [porPlata($queso, 3000)],
+        'products' => [porCantidad($queso, 0.25)],
     ]))->assertSuccessful();
 
     expect((int) OrdersSales::latest('orderSales_id')->first()->weighing_state)
@@ -177,7 +179,7 @@ test('no sale de la tienda sin pesar', function () {
     $queso = productoAlPeso($e);
 
     $this->postJson('/v1/orders/orders', cuerpoPedido($e, [
-        'products' => [porPlata($queso, 3000)],
+        'products' => [porCantidad($queso, 0.25)],
     ]))->assertSuccessful();
 
     $orden = OrdersSales::latest('orderSales_id')->first();
@@ -198,8 +200,8 @@ test('no sale de la tienda sin pesar', function () {
 
 test('pesar guarda lo que pesó y NO cambia el total', function () {
     /*
-     * El corazón del diseño. El cliente pidió $3.000 de queso: eso es lo que
-     * paga, pese lo que pese la báscula. Si el total se moviera habría que
+     * El corazón del diseño. El cliente pidió 250 g de queso ($3.000): eso es
+     * lo que paga, pese lo que pese la báscula. Si el total se moviera habría que
      * recobrar o devolver, y con QR o PSE eso es una devolución manual por
      * pedido.
      */
@@ -207,7 +209,7 @@ test('pesar guarda lo que pesó y NO cambia el total', function () {
     $queso = productoAlPeso($e);
 
     $this->postJson('/v1/orders/orders', cuerpoPedido($e, [
-        'products' => [porPlata($queso, 3000)],
+        'products' => [porCantidad($queso, 0.25)],
     ]))->assertSuccessful();
 
     $orden = OrdersSales::latest('orderSales_id')->first();
@@ -423,7 +425,7 @@ test('el panel recibe el id de la linea con el que tiene que pesar', function ()
     $queso = productoAlPeso($e);
 
     $this->postJson('/v1/orders/orders', cuerpoPedido($e, [
-        'products' => [porPlata($queso, 3000)],
+        'products' => [porCantidad($queso, 0.25)],
     ]))->assertSuccessful();
 
     tenderoDe($e);
@@ -436,7 +438,7 @@ test('el panel recibe el id de la linea con el que tiene que pesar', function ()
         ->and($linea['orderDet_id'])->not->toBeNull()
         // Y con lo que hace falta para pintar la fila del pesaje.
         ->and($linea['sale_unit'])->toBe('kg')
-        ->and($linea['pedido_por'])->toBe('valor');
+        ->and($linea['pedido_por'])->toBe('cantidad');
 
     pesar($e, $pedido['order_id'], [
         ['orderDet_id' => $linea['orderDet_id'], 'qty_final' => 0.26],
@@ -518,7 +520,7 @@ test('una oferta por LIBRAS se vende al peso, no como unidad', function () {
     expect((int) $orden->weighing_state)->toBe(OrdersSales::POR_PESAR);
 });
 
-test('las cuatro unidades de venta valen lo que la base ya tiene escrito', function () {
+test('las unidades de venta valen lo que la base ya tiene escrito', function () {
     /*
      * CON LITERALES. Los valores estan en la columna `products_business.sale_unit`
      * de ofertas ya configuradas y viajan en las respuestas del catalogo:
@@ -532,13 +534,142 @@ test('las cuatro unidades de venta valen lo que la base ya tiene escrito', funct
     expect(UnidadDeVenta::LIBRA)->toBe('libra');
     expect(UnidadDeVenta::GRAMO)->toBe('gramo');
 
-    expect(UnidadDeVenta::AL_PESO)->toBe(['kg', 'libra', 'gramo']);
-    expect(UnidadDeVenta::TODAS)->toBe(['unidad', 'kg', 'libra', 'gramo']);
+    expect(UnidadDeVenta::LITRO)->toBe('litro');
 
-    // Las cuatro distintas: es lo unico que el resto del codigo necesita.
-    expect(count(array_unique(UnidadDeVenta::TODAS)))->toBe(4);
+    expect(UnidadDeVenta::AL_PESO)->toBe(['kg', 'libra', 'gramo', 'litro']);
+    expect(UnidadDeVenta::TODAS)->toBe(['unidad', 'kg', 'libra', 'gramo', 'litro']);
+
+    // Todas distintas: es lo unico que el resto del codigo necesita.
+    expect(count(array_unique(UnidadDeVenta::TODAS)))->toBe(5);
 
     // Y la que se vende por unidades NO se pesa.
     expect(UnidadDeVenta::esPeso('unidad'))->toBeFalse();
     expect(UnidadDeVenta::esPeso('libra'))->toBeTrue();
+});
+
+/* ---------------------------------------------------------------------- */
+/* «VECINO, ME DA $1.500 DE QUESO» */
+/* ---------------------------------------------------------------------- */
+
+test('lo pedido por valor NO se pesa: su precio ya está cerrado', function () {
+    /*
+     * El cliente pagó $1.500 y el tendero corta lo que alcance. Exigirle
+     * pesar sería un paso más en cada pedido sin nada que registrar.
+     */
+    $e = escenarioPedido();
+    $queso = productoAlPeso($e);
+
+    $this->postJson('/v1/orders/orders', cuerpoPedido($e, [
+        'products' => [porPlata($queso, 1500)],
+    ]))->assertSuccessful();
+
+    $orden = OrdersSales::latest('orderSales_id')->first();
+
+    expect((float) $orden->subtotal)->toBe(1500.0)
+        ->and((int) $orden->weighing_state)->toBe(OrdersSales::SIN_PESAJE);
+});
+
+test('por valor y por medida juntos: solo se pesa lo de medida', function () {
+    $e = escenarioPedido();
+    $queso = productoAlPeso($e);
+    $tomate = productoAlPeso($e, 'kg', 4000);
+
+    $this->postJson('/v1/orders/orders', cuerpoPedido($e, [
+        'products' => [porPlata($queso, 1500), porCantidad($tomate, 0.5)],
+    ]))->assertSuccessful();
+
+    $orden = OrdersSales::latest('orderSales_id')->first();
+    $lineaTomate = OrdersSalesDetail::where('orderSales_id', $orden->orderSales_id)
+        ->where('product_id', $tomate)->first();
+
+    expect((int) $orden->weighing_state)->toBe(OrdersSales::POR_PESAR);
+
+    tenderoDe($e);
+
+    // Con pesar el tomate basta: el queso por valor no cuenta como «falta».
+    pesar($e, $orden->orderSales_id, [
+        ['orderDet_id' => $lineaTomate->orderDet_id, 'qty_final' => 0.52],
+    ])->assertOk();
+
+    expect((int) $orden->fresh()->weighing_state)->toBe(OrdersSales::PESADO);
+});
+
+test('si la tienda no lo vende por valor, pedirlo así da 422 y no crea el pedido', function () {
+    $e = escenarioPedido();
+    $pechuga = productoAlPeso($e);
+    DB::table('products_business')->where('products_id', $pechuga)->update(['por_valor' => 0]);
+
+    $antes = OrdersSales::count();
+
+    $r = $this->postJson('/v1/orders/orders', cuerpoPedido($e, [
+        'products' => [porPlata($pechuga, 2000)],
+    ]));
+
+    $r->assertStatus(422);
+    expect($r->json('product_ids'))->toBe([$pechuga])
+        ->and(OrdersSales::count())->toBe($antes);
+
+    // Por medida, en cambio, sí.
+    $this->postJson('/v1/orders/orders', cuerpoPedido($e, [
+        'products' => [porCantidad($pechuga, 0.5)],
+    ]))->assertSuccessful();
+});
+
+test('500 gramos se pueden pedir: el tope va con la medida', function () {
+    /*
+     * El tope era 100 para todo. En kilos es mucho; en gramos, 100 g era lo
+     * máximo y los botones de 250 g y 500 g de la app daban 422.
+     */
+    $e = escenarioPedido();
+    $comino = productoAlPeso($e, 'gramo', 30);   // $30 el gramo
+
+    $this->postJson('/v1/orders/orders', cuerpoPedido($e, [
+        'products' => [porCantidad($comino, 500)],
+    ]))->assertSuccessful();
+
+    expect((float) OrdersSales::latest('orderSales_id')->first()->subtotal)->toBe(15000.0);
+});
+
+test('200 kilos no es un pedido: es un error de dedo', function () {
+    $e = escenarioPedido();
+    $queso = productoAlPeso($e);
+
+    $this->postJson('/v1/orders/orders', cuerpoPedido($e, [
+        'products' => [porCantidad($queso, 200)],
+    ]))->assertStatus(422);
+});
+
+test('«$1.000 de aceite»: el litro se vende igual que el kilo', function () {
+    $e = escenarioPedido();
+    $aceite = productoAlPeso($e, 'litro', 8000);   // $8.000 el litro
+
+    $this->postJson('/v1/orders/orders', cuerpoPedido($e, [
+        'products' => [porPlata($aceite, 1000)],
+    ]))->assertSuccessful();
+
+    $orden = OrdersSales::latest('orderSales_id')->first();
+    $linea = OrdersSalesDetail::where('orderSales_id', $orden->orderSales_id)->first();
+
+    expect((float) $orden->subtotal)->toBe(1000.0)
+        ->and($linea->sale_unit)->toBe('litro')
+        ->and((float) $linea->qty_requested)->toBe(0.125)
+        ->and(UnidadDeVenta::enPalabras(0.125, 'litro'))->toBe('0,125 litros');
+});
+
+test('se vende aunque el inventario diga cero: el tendero no lo lleva al día', function () {
+    /*
+     * La tienda de barrio no cuenta el queso cada mañana. Si la app dice 0 kg
+     * pero hay queso en la nevera, el pedido tiene que entrar; el inventario
+     * queda en negativo y se corrige cuando el tendero quiera.
+     */
+    $e = escenarioPedido();
+    $queso = productoAlPeso($e);
+    DB::table('products_business')->where('products_id', $queso)->update(['stock_weight' => 0]);
+
+    $this->postJson('/v1/orders/orders', cuerpoPedido($e, [
+        'products' => [porCantidad($queso, 0.5)],
+    ]))->assertSuccessful();
+
+    expect((float) DB::table('products_business')->where('products_id', $queso)->value('stock_weight'))
+        ->toBe(-0.5);
 });

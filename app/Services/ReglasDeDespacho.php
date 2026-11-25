@@ -28,6 +28,14 @@ class ReglasDeDespacho
      */
     public function impedimento(OrdersSales $order, $domiciliary): ?array
     {
+        // Un pedido para recoger no se despacha: lo entrega la tienda en la mano.
+        if ($order->pickup) {
+            return [
+                'message' => 'Este pedido lo recoge el cliente en el negocio: no lleva domiciliario.',
+                'reason' => 'es_para_recoger',
+            ];
+        }
+
         /*
          * Los que dio de alta una tienda no reparten sin papeles: el acuerdo
          * firmado y cédula, licencia y SOAT vigentes. Va primero porque es lo

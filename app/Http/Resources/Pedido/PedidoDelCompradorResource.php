@@ -72,6 +72,7 @@ class PedidoDelCompradorResource extends JsonResource
             // Desglose, para que cada rol sepa qué parte le corresponde:
             // el negocio cobra el subtotal y el domiciliario el domicilio.
             'subtotal' => $order->subtotal,
+            'discount' => $order->discount,
             'domicilio' => $order->domicilio,
             /*
              * `domiciliary_fee` SE RETIRA DE AQUÍ, 13 de noviembre de 2026.
@@ -107,12 +108,17 @@ class PedidoDelCompradorResource extends JsonResource
             'payment_state' => $order->payment_state,
             'sale_date' => $order->sale_date,
             'is_scheduled' => $order->is_scheduled,
+            // Para recoger: cuándo la tienda dijo «ya está listo».
+            'ready_at' => $order->ready_at,
             'delivery_date' => $order->delivery_date,
             'delivery_type' => $order->pickup ? 'pickup' : 'delivery',
             'pickup' => (bool) $order->pickup,
             'pickup_time' => $order->pickup_time,
             'has_review' => $order->has_review,
             'dispatched_at' => $order->dispatched_at,
+            /* Cuando el domiciliario marcó «Llegué»: el seguimiento cambia a
+               «Tu domiciliario llegó» con la recarga que dispara el aviso. */
+            'llego_at' => $order->llego_at,
             // Compromiso y cumplimiento del plazo. Se mandan resueltos desde
             // acá para que la app no tenga que reimplementar la regla y
             // contarla distinto que el informe del panel.

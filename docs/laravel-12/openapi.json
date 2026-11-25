@@ -4789,6 +4789,70 @@
                 "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
             }
         },
+        "/v1/admin/products/{id}/catalogo-general": {
+            "post": {
+                "operationId": "post_v1_admin_products_id_catalogo_general",
+                "tags": [
+                    "admin"
+                ],
+                "summary": "App\\Http\\Controllers\\Admin\\Api\\ProductosApiController@catalogoGeneral",
+                "x-middleware": [
+                    "admin",
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "modulo:productos,gestionar"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    },
+                    "422": {
+                        "description": "Validacion fallida."
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "general": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "required": [
+                                    "general"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Admin\\CatalogoGeneralRequest"
+            }
+        },
         "/v1/admin/reports-desglose": {
             "get": {
                 "operationId": "get_v1_admin_reports_desglose",
@@ -6201,6 +6265,7 @@
                                             "caida",
                                             "robo",
                                             "agresion",
+                                            "extorsion",
                                             "falla_vehiculo",
                                             "condicion_insegura",
                                             "otro"
@@ -7707,7 +7772,28 @@
                         "description": "Validacion fallida."
                     }
                 },
-                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "chat_id": {
+                                        "type": "string"
+                                    },
+                                    "user_id": {
+                                        "type": "string"
+                                    },
+                                    "recipient_id": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Chat\\MensajesDelChatRequest"
             }
         },
         "/v1/chats/send-message": {
@@ -7753,6 +7839,9 @@
                                     },
                                     "content": {
                                         "type": "string"
+                                    },
+                                    "busines_id": {
+                                        "type": "integer"
                                     }
                                 },
                                 "required": [
@@ -7860,6 +7949,9 @@
                                 "properties": {
                                     "user_id": {
                                         "type": "string"
+                                    },
+                                    "busines_id": {
+                                        "type": "integer"
                                     }
                                 },
                                 "required": [
@@ -9173,6 +9265,299 @@
                 }
             }
         },
+        "/v1/domiciliaries/motivos": {
+            "get": {
+                "operationId": "get_v1_domiciliaries_motivos",
+                "tags": [
+                    "domiciliaries"
+                ],
+                "summary": "App\\Http\\Controllers\\Domiciliary\\EnCaminoController@motivos",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    }
+                }
+            }
+        },
+        "/v1/domiciliaries/orders/{id}/evidencia": {
+            "get": {
+                "operationId": "get_v1_domiciliaries_orders_id_evidencia",
+                "tags": [
+                    "domiciliaries"
+                ],
+                "summary": "App\\Http\\Controllers\\Domiciliary\\EvidenciaDeEntregaController@ver",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            },
+            "post": {
+                "operationId": "post_v1_domiciliaries_orders_id_evidencia",
+                "tags": [
+                    "domiciliaries"
+                ],
+                "summary": "App\\Http\\Controllers\\Domiciliary\\EvidenciaDeEntregaController@guardar",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "422": {
+                        "description": "Validacion fallida."
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "foto": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "required": [
+                                    "foto"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Domiciliary\\SubirEvidenciaRequest"
+            }
+        },
+        "/v1/domiciliaries/orders/{id}/llegue": {
+            "post": {
+                "operationId": "post_v1_domiciliaries_orders_id_llegue",
+                "tags": [
+                    "domiciliaries"
+                ],
+                "summary": "App\\Http\\Controllers\\Domiciliary\\EnCaminoController@llegue",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "422": {
+                        "description": "Validacion fallida."
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+            }
+        },
+        "/v1/domiciliaries/orders/{id}/novedad": {
+            "post": {
+                "operationId": "post_v1_domiciliaries_orders_id_novedad",
+                "tags": [
+                    "domiciliaries"
+                ],
+                "summary": "App\\Http\\Controllers\\Domiciliary\\EnCaminoController@novedad",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "422": {
+                        "description": "Validacion fallida."
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "motivo": {
+                                        "type": "string"
+                                    },
+                                    "nota": {
+                                        "type": "string"
+                                    },
+                                    "latitude": {
+                                        "type": "number"
+                                    },
+                                    "longitude": {
+                                        "type": "number"
+                                    }
+                                },
+                                "required": [
+                                    "motivo"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Domiciliary\\ReportarNovedadRequest"
+            }
+        },
+        "/v1/domiciliaries/orders/{id}/soltar": {
+            "post": {
+                "operationId": "post_v1_domiciliaries_orders_id_soltar",
+                "tags": [
+                    "domiciliaries"
+                ],
+                "summary": "App\\Http\\Controllers\\Domiciliary\\EnCaminoController@soltar",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "422": {
+                        "description": "Validacion fallida."
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "motivo": {
+                                        "type": "string"
+                                    },
+                                    "nota": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "motivo"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Domiciliary\\SoltarPedidoRequest"
+            }
+        },
         "/v1/domiciliaries/pedidos": {
             "get": {
                 "operationId": "get_v1_domiciliaries_pedidos",
@@ -9676,6 +10061,81 @@
                 "x-form-request": "App\\Http\\Requests\\Negocio\\ProponerProductoRequest"
             }
         },
+        "/v1/negocio/chats/{chat}/reportes": {
+            "post": {
+                "operationId": "post_v1_negocio_chats_chat_reportes",
+                "tags": [
+                    "negocio"
+                ],
+                "summary": "\\App\\Http\\Controllers\\Seguridad\\ReporteDeChatController@reportar",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "negocio",
+                    "throttle:5,10"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    },
+                    "422": {
+                        "description": "Validacion fallida."
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "chat",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "reason": {
+                                        "type": "string",
+                                        "enum": [
+                                            "extorsion",
+                                            "amenazas",
+                                            "mensajes_ofensivos",
+                                            "estafa",
+                                            "suplantacion",
+                                            "otro"
+                                        ]
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "reason"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Seguridad\\ReportarChatRequest"
+            }
+        },
         "/v1/negocio/clientes/buscar": {
             "get": {
                 "operationId": "get_v1_negocio_clientes_buscar",
@@ -9793,6 +10253,91 @@
                     }
                 ],
                 "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+            }
+        },
+        "/v1/negocio/costos": {
+            "get": {
+                "operationId": "get_v1_negocio_costos",
+                "tags": [
+                    "negocio"
+                ],
+                "summary": "App\\Http\\Controllers\\Negocio\\CuantoTeQuedaController@costos",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "negocio"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    }
+                }
+            },
+            "put": {
+                "operationId": "put_v1_negocio_costos",
+                "tags": [
+                    "negocio"
+                ],
+                "summary": "App\\Http\\Controllers\\Negocio\\CuantoTeQuedaController@guardarCostos",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "negocio"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    },
+                    "422": {
+                        "description": "Validacion fallida."
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "costos": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "required": [
+                                    "costos"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Negocio\\GuardarCostosRequest"
             }
         },
         "/v1/negocio/creditos": {
@@ -10049,6 +10594,37 @@
                 ]
             }
         },
+        "/v1/negocio/cuanto-te-queda": {
+            "get": {
+                "operationId": "get_v1_negocio_cuanto_te_queda",
+                "tags": [
+                    "negocio"
+                ],
+                "summary": "App\\Http\\Controllers\\Negocio\\CuantoTeQuedaController@cuenta",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "negocio"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    }
+                }
+            }
+        },
         "/v1/negocio/domiciliarios": {
             "get": {
                 "operationId": "get_v1_negocio_domiciliarios",
@@ -10178,6 +10754,49 @@
             }
         },
         "/v1/negocio/domiciliarios/{id}": {
+            "delete": {
+                "operationId": "delete_v1_negocio_domiciliarios_id_",
+                "tags": [
+                    "negocio"
+                ],
+                "summary": "App\\Http\\Controllers\\Negocio\\AltaDeDomiciliarioController@desvincular",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "negocio"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    },
+                    "422": {
+                        "description": "Validacion fallida."
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+            },
             "get": {
                 "operationId": "get_v1_negocio_domiciliarios_id_",
                 "tags": [
@@ -10386,6 +11005,212 @@
                     }
                 ],
                 "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+            }
+        },
+        "/v1/negocio/gastos": {
+            "get": {
+                "operationId": "get_v1_negocio_gastos",
+                "tags": [
+                    "negocio"
+                ],
+                "summary": "App\\Http\\Controllers\\Negocio\\CuantoTeQuedaController@gastos",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "negocio"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    }
+                }
+            },
+            "post": {
+                "operationId": "post_v1_negocio_gastos",
+                "tags": [
+                    "negocio"
+                ],
+                "summary": "App\\Http\\Controllers\\Negocio\\CuantoTeQuedaController@crearGasto",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "negocio"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    },
+                    "422": {
+                        "description": "Validacion fallida."
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "tipo": {
+                                        "type": "string"
+                                    },
+                                    "nombre": {
+                                        "type": "string"
+                                    },
+                                    "monto": {
+                                        "type": "number"
+                                    },
+                                    "frecuencia": {
+                                        "type": "string"
+                                    },
+                                    "fecha": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    }
+                                },
+                                "required": [
+                                    "tipo",
+                                    "monto",
+                                    "frecuencia"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Negocio\\CrearGastoRequest"
+            }
+        },
+        "/v1/negocio/gastos/{id}": {
+            "delete": {
+                "operationId": "delete_v1_negocio_gastos_id_",
+                "tags": [
+                    "negocio"
+                ],
+                "summary": "App\\Http\\Controllers\\Negocio\\CuantoTeQuedaController@quitarGasto",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "negocio"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    },
+                    "422": {
+                        "description": "Validacion fallida."
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+            },
+            "put": {
+                "operationId": "put_v1_negocio_gastos_id_",
+                "tags": [
+                    "negocio"
+                ],
+                "summary": "App\\Http\\Controllers\\Negocio\\CuantoTeQuedaController@actualizarGasto",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "negocio"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    },
+                    "422": {
+                        "description": "Validacion fallida."
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "monto": {
+                                        "type": "number"
+                                    },
+                                    "nombre": {
+                                        "type": "string"
+                                    },
+                                    "solo_este_mes": {
+                                        "type": "boolean"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Negocio\\ActualizarGastoRequest"
             }
         },
         "/v1/negocio/ingresos": {
@@ -10742,6 +11567,12 @@
                                     },
                                     "user_id": {
                                         "type": "integer"
+                                    },
+                                    "pin": {
+                                        "type": "string"
+                                    },
+                                    "paga_con": {
+                                        "type": "number"
                                     }
                                 },
                                 "required": [
@@ -10950,6 +11781,137 @@
                 ]
             }
         },
+        "/v1/negocio/pedidos/{id}/devolucion": {
+            "post": {
+                "operationId": "post_v1_negocio_pedidos_id_devolucion",
+                "tags": [
+                    "negocio"
+                ],
+                "summary": "App\\Http\\Controllers\\Order\\PinDeEntregaController@recibirDevolucion",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "negocio"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    },
+                    "422": {
+                        "description": "Validacion fallida."
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+            }
+        },
+        "/v1/negocio/pedidos/{id}/listo": {
+            "post": {
+                "operationId": "post_v1_negocio_pedidos_id_listo",
+                "tags": [
+                    "negocio"
+                ],
+                "summary": "App\\Http\\Controllers\\Order\\ListoParaRecogerController",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "negocio"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    },
+                    "422": {
+                        "description": "Validacion fallida."
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+            }
+        },
+        "/v1/negocio/pedidos/{id}/pin": {
+            "get": {
+                "operationId": "get_v1_negocio_pedidos_id_pin",
+                "tags": [
+                    "negocio"
+                ],
+                "summary": "App\\Http\\Controllers\\Order\\PinDeEntregaController@delNegocio",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "negocio"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
         "/v1/negocio/productos": {
             "get": {
                 "operationId": "get_v1_negocio_productos",
@@ -11033,7 +11995,8 @@
                                             "unidad",
                                             "kg",
                                             "libra",
-                                            "gramo"
+                                            "gramo",
+                                            "litro"
                                         ]
                                     },
                                     "stock_weight": {
@@ -11044,6 +12007,9 @@
                                     },
                                     "step_qty": {
                                         "type": "number"
+                                    },
+                                    "por_valor": {
+                                        "type": "boolean"
                                     }
                                 },
                                 "required": [
@@ -11356,6 +12322,82 @@
                 "x-form-request": "App\\Http\\Requests\\Negocio\\PreciosEnLoteRequest"
             }
         },
+        "/v1/negocio/productos/propio": {
+            "post": {
+                "operationId": "post_v1_negocio_productos_propio",
+                "tags": [
+                    "negocio"
+                ],
+                "summary": "App\\Http\\Controllers\\Negocio\\CatalogoController@propio",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "negocio"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    },
+                    "422": {
+                        "description": "Validacion fallida."
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "price": {
+                                        "type": "number"
+                                    },
+                                    "sale_unit": {
+                                        "type": "string",
+                                        "enum": [
+                                            "unidad",
+                                            "kg",
+                                            "libra",
+                                            "gramo",
+                                            "litro"
+                                        ]
+                                    },
+                                    "por_valor": {
+                                        "type": "boolean"
+                                    },
+                                    "amount": {
+                                        "type": "number"
+                                    },
+                                    "costo": {
+                                        "type": "number"
+                                    }
+                                },
+                                "required": [
+                                    "name",
+                                    "price"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Negocio\\CrearProductoPropioRequest"
+            }
+        },
         "/v1/negocio/productos/tiendas-para-copiar": {
             "get": {
                 "operationId": "get_v1_negocio_productos_tiendas_para_copiar",
@@ -11508,6 +12550,9 @@
                                     "price": {
                                         "type": "number"
                                     },
+                                    "costo": {
+                                        "type": "number"
+                                    },
                                     "amount": {
                                         "type": "integer"
                                     },
@@ -11517,7 +12562,8 @@
                                             "unidad",
                                             "kg",
                                             "libra",
-                                            "gramo"
+                                            "gramo",
+                                            "litro"
                                         ]
                                     },
                                     "stock_weight": {
@@ -11528,6 +12574,9 @@
                                     },
                                     "step_qty": {
                                         "type": "number"
+                                    },
+                                    "por_valor": {
+                                        "type": "boolean"
                                     },
                                     "expiration_date": {
                                         "type": "string",
@@ -11869,6 +12918,188 @@
                 }
             }
         },
+        "/v1/negocio/ventas-mostrador": {
+            "get": {
+                "operationId": "get_v1_negocio_ventas_mostrador",
+                "tags": [
+                    "negocio"
+                ],
+                "summary": "App\\Http\\Controllers\\Negocio\\VentaDeMostradorController@delDia",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "negocio"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    }
+                }
+            },
+            "post": {
+                "operationId": "post_v1_negocio_ventas_mostrador",
+                "tags": [
+                    "negocio"
+                ],
+                "summary": "App\\Http\\Controllers\\Negocio\\VentaDeMostradorController@registrar",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "negocio"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    },
+                    "422": {
+                        "description": "Validacion fallida."
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "lineas": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "forma_de_pago": {
+                                        "type": "string",
+                                        "enum": [
+                                            "efectivo",
+                                            "transferencia",
+                                            "qr"
+                                        ]
+                                    },
+                                    "cash_tendered": {
+                                        "type": "number"
+                                    }
+                                },
+                                "required": [
+                                    "lineas"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Negocio\\RegistrarVentaDeMostradorRequest"
+            }
+        },
+        "/v1/negocio/ventas-mostrador/{id}/cancelar": {
+            "post": {
+                "operationId": "post_v1_negocio_ventas_mostrador_id_cancelar",
+                "tags": [
+                    "negocio"
+                ],
+                "summary": "App\\Http\\Controllers\\Negocio\\VentaDeMostradorController@cancelar",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "negocio"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    },
+                    "422": {
+                        "description": "Validacion fallida."
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+            }
+        },
+        "/v1/negocio/ventas-mostrador/{id}/pago": {
+            "get": {
+                "operationId": "get_v1_negocio_ventas_mostrador_id_pago",
+                "tags": [
+                    "negocio"
+                ],
+                "summary": "App\\Http\\Controllers\\Negocio\\VentaDeMostradorController@pago",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "negocio"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
         "/v1/orders/IncomeBusiness": {
             "post": {
                 "operationId": "post_v1_orders_IncomeBusiness",
@@ -11906,6 +13137,14 @@
                                 "properties": {
                                     "business_id": {
                                         "type": "integer"
+                                    },
+                                    "desde": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "hasta": {
+                                        "type": "string",
+                                        "format": "date-time"
                                     }
                                 },
                                 "required": [
@@ -12238,6 +13477,10 @@
                                                     "is_scheduled": {
                                                         "type": "boolean"
                                                     },
+                                                    "llego_at": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    },
                                                     "methods_id": {
                                                         "type": "integer"
                                                     },
@@ -12262,12 +13505,22 @@
                                                         "type": "string",
                                                         "nullable": true
                                                     },
+                                                    "pide_codigo": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "pide_pin": {
+                                                        "type": "boolean"
+                                                    },
                                                     "promised_minutes": {
                                                         "type": "string",
                                                         "nullable": true
                                                     },
                                                     "promotions": {
                                                         "type": "object"
+                                                    },
+                                                    "ready_at": {
+                                                        "type": "string",
+                                                        "nullable": true
                                                     },
                                                     "sale_date": {
                                                         "type": "string"
@@ -12280,6 +13533,9 @@
                                                     },
                                                     "total": {
                                                         "type": "string"
+                                                    },
+                                                    "weighing_state": {
+                                                        "type": "integer"
                                                     }
                                                 }
                                             }
@@ -12631,6 +13887,9 @@
                                                         }
                                                     }
                                                 },
+                                                "discount": {
+                                                    "type": "string"
+                                                },
                                                 "dispatched_at": {
                                                     "type": "string",
                                                     "nullable": true
@@ -12663,6 +13922,10 @@
                                                 },
                                                 "promotions": {
                                                     "type": "object"
+                                                },
+                                                "ready_at": {
+                                                    "type": "string",
+                                                    "nullable": true
                                                 },
                                                 "sale_date": {
                                                     "type": "string"
@@ -12736,6 +13999,12 @@
                                     },
                                     "user_id": {
                                         "type": "integer"
+                                    },
+                                    "pin": {
+                                        "type": "string"
+                                    },
+                                    "paga_con": {
+                                        "type": "number"
                                     }
                                 },
                                 "required": [
@@ -12989,6 +14258,9 @@
                                                         }
                                                     }
                                                 },
+                                                "discount": {
+                                                    "type": "string"
+                                                },
                                                 "dispatched_at": {
                                                     "type": "string",
                                                     "nullable": true
@@ -13037,6 +14309,10 @@
                                                 "promotions": {
                                                     "type": "object"
                                                 },
+                                                "ready_at": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
                                                 "sale_date": {
                                                     "type": "string"
                                                 },
@@ -13083,6 +14359,43 @@
                     "orders"
                 ],
                 "summary": "App\\Http\\Controllers\\Order\\ComprobanteDelPedidoController@mio",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
+        "/v1/orders/{id}/pin": {
+            "get": {
+                "operationId": "get_v1_orders_id_pin",
+                "tags": [
+                    "orders"
+                ],
+                "summary": "App\\Http\\Controllers\\Order\\PinDeEntregaController@delComprador",
                 "x-middleware": [
                     "api",
                     "audit.api",
@@ -13990,6 +15303,110 @@
                 "x-form-request": "App\\Http\\Requests\\Landing\\SolicitudDesdeLaWebRequest"
             }
         },
+        "/v1/sos": {
+            "post": {
+                "operationId": "post_v1_sos",
+                "tags": [
+                    "sos"
+                ],
+                "summary": "\\App\\Http\\Controllers\\Seguridad\\SosController@lanzar",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "throttle:30,1"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "422": {
+                        "description": "Validacion fallida."
+                    }
+                },
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "latitude": {
+                                        "type": "number"
+                                    },
+                                    "longitude": {
+                                        "type": "number"
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "robo",
+                                            "extorsion",
+                                            "accidente_transito",
+                                            "otro"
+                                        ]
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Seguridad\\LanzarSosRequest"
+            }
+        },
+        "/v1/sos/{id}": {
+            "patch": {
+                "operationId": "patch_v1_sos_id_",
+                "tags": [
+                    "sos"
+                ],
+                "summary": "\\App\\Http\\Controllers\\Seguridad\\SosController@afinar",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "throttle:30,1"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "422": {
+                        "description": "Validacion fallida."
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+            }
+        },
         "/v1/top-businesses-free": {
             "get": {
                 "operationId": "get_v1_top_businesses_free",
@@ -14122,6 +15539,9 @@
                                     },
                                     "alias_id": {
                                         "type": "integer"
+                                    },
+                                    "nombre": {
+                                        "type": "string"
                                     },
                                     "latitude": {
                                         "type": "number"

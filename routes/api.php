@@ -57,6 +57,8 @@ use App\Http\Controllers\Conjunto\VisitantesController;
 use App\Http\Controllers\DeviceTokenController;
 use App\Http\Controllers\Domiciliary\ContratoDelDomiciliarioController;
 use App\Http\Controllers\Domiciliary\DomiciliaryController;
+use App\Http\Controllers\Domiciliary\EnCaminoController;
+use App\Http\Controllers\Domiciliary\EvidenciaDeEntregaController;
 use App\Http\Controllers\Domiciliary\IngresosDelDomiciliarioController;
 use App\Http\Controllers\Domiciliary\PedidosDelDomiciliarioController;
 use App\Http\Controllers\ErroresDeLaAppController;
@@ -68,6 +70,7 @@ use App\Http\Controllers\Negocio\CargaDeCatalogoController;
 use App\Http\Controllers\Negocio\CatalogoController;
 use App\Http\Controllers\Negocio\ClientesDelNegocioController;
 use App\Http\Controllers\Negocio\CreditosDelNegocioController;
+use App\Http\Controllers\Negocio\CuantoTeQuedaController;
 use App\Http\Controllers\Negocio\DocumentosDelDomiciliarioController;
 use App\Http\Controllers\Negocio\EfectivoDeLaTiendaController;
 use App\Http\Controllers\Negocio\FichaDelDomiciliarioController;
@@ -79,13 +82,16 @@ use App\Http\Controllers\Negocio\ProductosDelNegocioController;
 use App\Http\Controllers\Negocio\PromocionesController;
 use App\Http\Controllers\Negocio\RendimientoDeDomiciliariosController;
 use App\Http\Controllers\Negocio\TorreDeControlController;
+use App\Http\Controllers\Negocio\VentaDeMostradorController;
 use App\Http\Controllers\Operacion\EfectivoController;
 use App\Http\Controllers\Order\ComprobanteDelPedidoController;
 use App\Http\Controllers\Order\ConsultaDePedidosController;
 use App\Http\Controllers\Order\CotizacionController;
 use App\Http\Controllers\Order\GeolocalizacionDePedidoController;
+use App\Http\Controllers\Order\ListoParaRecogerController;
 use App\Http\Controllers\Order\MediosDePagoController;
 use App\Http\Controllers\Order\OrderController;
+use App\Http\Controllers\Order\PinDeEntregaController;
 use App\Http\Controllers\Order\RutaDelPedidoController;
 use App\Http\Controllers\Payment\BancosPseController;
 use App\Http\Controllers\Payment\BoldWebhookController;
@@ -96,6 +102,8 @@ use App\Http\Controllers\Product\ProductController;
 use App\Http\Controllers\Review\ResenasDeDomiciliarioController;
 use App\Http\Controllers\Review\ResenasDeNegocioController;
 use App\Http\Controllers\Review\ReviewController;
+use App\Http\Controllers\Seguridad\ReporteDeChatController;
+use App\Http\Controllers\Seguridad\SosController;
 use App\Http\Controllers\Soporte\AyudaDesdeLaAppController;
 use App\Http\Controllers\User\DireccionesController;
 use App\Http\Controllers\User\NotificacionesController;
@@ -290,6 +298,19 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
      */
     Route::middleware('throttle:5,10')->post('/ayuda', [AyudaDesdeLaAppController::class, 'store']);
     Route::get('/ayuda', [AyudaDesdeLaAppController::class, 'index']);
+
+    /*
+     * SOS: el botón rojo del domiciliario y del tendero.
+     *
+     * TOPE ALTO Y NO BAJO, al revés que `/ayuda`. Ahí cinco envíos en un
+     * minuto son alguien golpeando el botón; aquí son alguien asustado, y
+     * contestarle «demasiados intentos» a quien está pidiendo auxilio es
+     * exactamente el fallo que no se puede cometer. Las repeticiones no
+     * ensucian nada: dentro de tres minutos el controlador devuelve la misma
+     * alerta en vez de crear otra.
+     */
+    Route::middleware('throttle:30,1')->post('/sos', [SosController::class, 'lanzar']);
+    Route::middleware('throttle:30,1')->patch('/sos/{id}', [SosController::class, 'afinar']);
 
     /* Los bancos de PSE. Sin esta lista el cliente no puede elegir el suyo, y
        sin banco elegido no hay cobro que abrir. */
@@ -504,6 +525,8 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
          * un identificador del cuerpo.
          */
         Route::get('{id}/comprobante', [ComprobanteDelPedidoController::class, 'mio']);
+        // El PIN de entrega que el comprador le dice al domiciliario.
+        Route::get('{id}/pin', [PinDeEntregaController::class, 'delComprador']);
     });
 
     Route::get('paymentMethods', [MediosDePagoController::class, 'paymentMethods']); // Listar metodos de pago
@@ -655,6 +678,20 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::post('efectivo/{id}/entregas', [EfectivoDeLaTiendaController::class, 'recibir'])
             ->whereNumber('id');
 
+        /*
+         * DENUNCIAR A UN COMPRADOR DESDE EL CHAT.
+         *
+         * Va en el grupo `negocio` porque esto lo hace el tendero y porque de
+         * ahi sale la tienda desde la que denuncia, sin tener que preguntarla.
+         *
+         * `throttle:5,10` y no el `30,1` del SOS: aquello es una emergencia en
+         * la calle y conviene que pase siempre; esto se escribe con calma, y
+         * cinco en diez minutos ya son mas de las que nadie escribe de verdad.
+         */
+        Route::middleware('throttle:5,10')
+            ->post('chats/{chat}/reportes', [ReporteDeChatController::class, 'reportar'])
+            ->whereNumber('chat');
+
         // Pedidos. `updateStatus` ya comprobaba pertenencia por su cuenta
         // —es la unica del grupo que lo hacia— y se reutiliza tal cual.
         Route::get('pedidos', [ConsultaDePedidosController::class, 'ordersBusiness']);
@@ -666,6 +703,8 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
          */
         Route::get('pedidos/historial', [HistorialDePedidosController::class, 'index']);
         Route::put('pedidos/estado', [OrderController::class, 'updateStatus']);
+        // Para recoger: «ya está listo», y al cliente le llega el aviso.
+        Route::post('pedidos/{id}/listo', ListoParaRecogerController::class)->whereNumber('id');
 
         /*
          * CANCELAR. La tienda no tenía cómo: el único camino al estado 5
@@ -674,6 +713,9 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
          */
         Route::put('pedidos/{id}/cancelar', [CancelacionDelPedidoController::class, 'cancelar']);
         Route::get('pedidos/{id}/comprobante', [ComprobanteDelPedidoController::class, 'deMiTienda']);
+        // El PIN, por si el cliente no lo encuentra; y cerrar una devolución.
+        Route::get('pedidos/{id}/pin', [PinDeEntregaController::class, 'delNegocio']);
+        Route::post('pedidos/{id}/devolucion', [PinDeEntregaController::class, 'recibirDevolucion']);
         Route::get('ingresos', [ConsultaDePedidosController::class, 'incomeBusiness']);
 
         /*
@@ -703,6 +745,34 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
          * no es un número.
          */
         Route::put('productos/precios', [ProductosDelNegocioController::class, 'precios']);
+
+        /*
+         * «CUÁNTO TE QUEDA»: la cuenta del negocio (ventas, costo de lo
+         * vendido, comisión y gastos), los costos de sus productos y sus
+         * gastos fijos y sueltos.
+         */
+        Route::get('cuanto-te-queda', [CuantoTeQuedaController::class, 'cuenta']);
+        /*
+         * LA VENTA EN EL MOSTRADOR: lo que se vende en persona, sin app.
+         * Entra en «Cuánto te queda» y descuenta el inventario. Ver
+         * `VentaDeMostradorController`.
+         */
+        Route::post('ventas-mostrador', [VentaDeMostradorController::class, 'registrar']);
+        Route::get('ventas-mostrador', [VentaDeMostradorController::class, 'delDia']);
+        // El QR Bre-B: cómo va el pago y cancelarlo si el vecino no pagó.
+        Route::get('ventas-mostrador/{id}/pago', [VentaDeMostradorController::class, 'pago'])->whereNumber('id');
+        Route::post('ventas-mostrador/{id}/cancelar', [VentaDeMostradorController::class, 'cancelar'])->whereNumber('id');
+        /*
+         * «Hormiga culona, $3.000»: un producto que el catálogo no tiene,
+         * solo para esta tienda, con nombre y precio. Ver `crearPropio`.
+         */
+        Route::post('productos/propio', [CatalogoController::class, 'propio']);
+        Route::get('costos', [CuantoTeQuedaController::class, 'costos']);
+        Route::put('costos', [CuantoTeQuedaController::class, 'guardarCostos']);
+        Route::get('gastos', [CuantoTeQuedaController::class, 'gastos']);
+        Route::post('gastos', [CuantoTeQuedaController::class, 'crearGasto']);
+        Route::put('gastos/{id}', [CuantoTeQuedaController::class, 'actualizarGasto'])->whereNumber('id');
+        Route::delete('gastos/{id}', [CuantoTeQuedaController::class, 'quitarGasto'])->whereNumber('id');
         Route::get('productos/tiendas-para-copiar', [ProductosDelNegocioController::class, 'tiendasParaCopiar']);
         Route::post('productos/copiar', [ProductosDelNegocioController::class, 'copiar']);
         Route::get('productos/esquema', [EsquemaDeProductoController::class, 'schema']);
@@ -735,6 +805,18 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
             ->middleware('throttle:30,1');
         Route::post('domiciliarios', [AltaDeDomiciliarioController::class, 'guardar'])
             ->middleware('throttle:30,1');
+
+        /*
+         * QUITARLO DE LA FLOTA. Baja el vínculo, no la persona: su cuenta,
+         * sus papeles y lo que ya entregó se quedan. Y se niega mientras
+         * lleve pedidos encima o efectivo de la tienda sin entregar; ver el
+         * controlador.
+         *
+         * Detrás del `post` y antes del comódin `{id}` de la ficha, por el
+         * mismo motivo que `buscar`.
+         */
+        Route::delete('domiciliarios/{id}', [AltaDeDomiciliarioController::class, 'desvincular'])
+            ->whereNumber('id');
 
         /*
          * LA FICHA DE UNO. Solo lectura y recortada a esta tienda: entregas y
@@ -832,6 +914,30 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
          * de otro.
          */
         Route::get('/cash-balance', [EfectivoController::class, 'miSaldo']);
+
+        /*
+         * LA FOTO DE QUE SE ENTREGO.
+         *
+         * Aparte de marcar el pedido como entregado, y a proposito: la
+         * evidencia NO es obligatoria. Si fueran la misma llamada, una foto
+         * que no sube --y en la calle no sube la mitad-- impediria cerrar
+         * una entrega que SI ocurrio, y reintentar la subida reintentaria
+         * la entrega. Puede llegar tarde, o no llegar.
+         *
+         * Sin identificador de domiciliario: sale de la sesion, igual que
+         * el acuerdo y el efectivo. Y se comprueba que el pedido sea SUYO;
+         * no basta con ser domiciliario.
+         */
+        Route::post('/orders/{id}/evidencia', [EvidenciaDeEntregaController::class, 'guardar'])
+            ->whereNumber('id');
+        Route::get('/orders/{id}/evidencia', [EvidenciaDeEntregaController::class, 'ver'])
+            ->whereNumber('id');
+
+        /* En la calle: «Llegué», soltar el pedido y reportar una novedad. */
+        Route::get('/motivos', [EnCaminoController::class, 'motivos']);
+        Route::post('/orders/{id}/llegue', [EnCaminoController::class, 'llegue']);
+        Route::post('/orders/{id}/soltar', [EnCaminoController::class, 'soltar']);
+        Route::post('/orders/{id}/novedad', [EnCaminoController::class, 'novedad']);
 
         /*
          * SU acuerdo de vinculacion: leerlo y firmarlo desde el telefono.
@@ -1006,6 +1112,8 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::post('products', [ProductosApiController::class, 'storeProduct'])->middleware('modulo:productos,gestionar');
         Route::get('products/{id}', [ProductosApiController::class, 'showProduct'])->middleware('modulo:productos');
         Route::put('products/{id}', [ProductosApiController::class, 'updateProduct'])->middleware('modulo:productos,gestionar');
+        // La bandeja de productos de tenderos: al catálogo general o solo en su tienda.
+        Route::post('products/{id}/catalogo-general', [ProductosApiController::class, 'catalogoGeneral'])->middleware('modulo:productos,gestionar');
 
         Route::get('orders', [PedidosApiController::class, 'orders'])->middleware('modulo:ordenes');
         Route::get('orders/{id}', [PedidosApiController::class, 'showOrder'])->middleware('modulo:ordenes');

@@ -6,6 +6,9 @@ namespace App\Http\Controllers\Negocio;
 
 use App\Http\Controllers\Controller;
 use App\Models\Domiciliary;
+use App\Models\Order\OrdersSales;
+use App\Models\User;
+use App\Services\CustodiaDeEfectivo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -30,6 +33,8 @@ use Illuminate\Support\Facades\Hash;
  */
 class AltaDeDomiciliarioController extends Controller
 {
+    public function __construct(private CustodiaDeEfectivo $custodia) {}
+
     /**
      * Busca a un domiciliario que ya exista, por teléfono, correo o cédula.
      * Solo coincidencias exactas: esto no es un directorio para curiosear.
@@ -95,7 +100,7 @@ class AltaDeDomiciliarioController extends Controller
 
             $this->vincular($negocioId, $id);
 
-            return response()->json(['message' => 'Quedó vinculado a tu tienda.', 'domiciliary_id' => $id], 201);
+            return response()->json(['message' => 'Quedó vinculado a tu negocio.', 'domiciliary_id' => $id], 201);
         }
 
         $datos = $request->validate([
@@ -115,7 +120,7 @@ class AltaDeDomiciliarioController extends Controller
 
         if (Domiciliary::where('document', $documento)->exists()) {
             return response()->json([
-                'message' => 'Ya hay un domiciliario con esa cédula. Búscalo para vincularlo a tu tienda.',
+                'message' => 'Ya hay un domiciliario con esa cédula. Búscalo para vincularlo a tu negocio.',
                 'errors' => ['document' => ['Ya hay un domiciliario con esa cédula.']],
             ], 422);
         }
@@ -165,14 +170,98 @@ class AltaDeDomiciliarioController extends Controller
 
         $soloDigitos = preg_replace('/\D/', '', $q);
 
+        /*
+         * HAY QUE LIMPIAR LOS DOS LADOS, NO SOLO LO QUE SE TECLEA.
+         *
+         * Antes se quitaban los símbolos de la búsqueda y se comparaba contra
+         * el teléfono TAL CUAL ESTÁ GUARDADO. Y en la base están de las dos
+         * maneras: «3002464977» y «303 632 7859». Buscando el segundo como lo
+         * teclea cualquiera --seguido-- la respuesta era «No hay nadie con ese
+         * dato. Créalo abajo», con la persona existiendo.
+         *
+         * Eso es justo lo contrario de lo que esta pantalla promete
+         * --«vincúlalo sin crearle otra cuenta»--: el tendero le abre una
+         * cuenta nueva a alguien que ya reparte, y a partir de ahí hay dos
+         * fichas de la misma persona, cada una con sus papeles y su efectivo.
+         *
+         * Se compara dígito contra dígito. Pierde el índice, y da igual: es
+         * UNA búsqueda que hace un tendero al dar de alta a alguien, no algo
+         * que pase en cada pantalla.
+         */
         return Domiciliary::with('user')
             ->where(function ($w) use ($q, $soloDigitos) {
                 $w->whereHas('user', fn ($u) => $u->where('email', $q))
                     ->when($soloDigitos !== '', fn ($x) => $x
-                        ->orWhereHas('user', fn ($u) => $u->where('phone', $soloDigitos))
-                        ->orWhere('document', $soloDigitos));
+                        ->orWhereHas('user', fn ($u) => $u->conTelefono($soloDigitos))
+                        ->orWhereRaw(
+                            User::soloDigitos('document').' = ?',
+                            [$soloDigitos]
+                        ));
             })
             ->first();
+    }
+
+    /**
+     * QUITARLO DE LA TIENDA, QUE NO ES BORRARLO.
+     *
+     * Se podía dar de alta y editar, pero no quitar. Y la gente se va: deja
+     * de repartir, se cambia de barrio, o la tienda lo da de alta por error.
+     * Sin esto seguía saliendo en la torre, en el elegidor de «despachar» y
+     * en el efectivo, para siempre.
+     *
+     * LO QUE SE QUITA ES EL VÍNCULO, no la persona. Su cuenta, sus papeles,
+     * su acuerdo y su historial se quedan donde están --también el de ESTA
+     * tienda: lo que entregó lo entregó--. Se marca `state = 0` en vez de
+     * borrar la fila, porque de ella cuelgan las entregas y el efectivo, y
+     * porque `vincular()` sabe resucitarla si vuelve.
+     *
+     * Y NO SE QUITA A QUIEN ESTÁ EN LA CALLE. Con pedidos encima o con
+     * efectivo tuyo sin entregar, desvincularlo lo borra de la torre mientras
+     * sigue ahí fuera con tu plata: el tendero pierde la pantalla donde ver
+     * dónde está justo cuando más la necesita. Se dice qué falta y se deja
+     * para después.
+     */
+    public function desvincular(Request $request, int $id)
+    {
+        $negocioId = (int) $request->attributes->get('busines_id');
+
+        $vinculo = DB::table('business_domiciliary')
+            ->where('busines_id', $negocioId)
+            ->where('domiciliary_id', $id)
+            ->where('state', 1);
+
+        /* 404 y no 403: confirmar que ese domiciliario existe pero es de otra
+           tienda ya dice algo de la flota del vecino. */
+        if (! $vinculo->exists()) {
+            return response()->json([
+                'message' => 'Ese domiciliario no está vinculado a tu negocio.',
+            ], 404);
+        }
+
+        $aBordo = OrdersSales::where('busines_id', $negocioId)
+            ->where('domiciliary_id', $id)
+            ->whereIn('state', OrdersSales::ACTIVOS)
+            ->count();
+
+        if ($aBordo > 0) {
+            return response()->json([
+                'message' => $aBordo === 1
+                    ? 'Todavía lleva un pedido tuyo encima. Espera a que lo entregue.'
+                    : "Todavía lleva {$aBordo} pedidos tuyos encima. Espera a que los entregue.",
+            ], 422);
+        }
+
+        $efectivo = round($this->custodia->saldo($id), 2);
+
+        if ($efectivo > 0) {
+            return response()->json([
+                'message' => 'Te debe '.number_format($efectivo, 0, ',', '.').' pesos en efectivo. Recíbeselos antes de quitarlo.',
+            ], 422);
+        }
+
+        $vinculo->update(['state' => 0]);
+
+        return response()->json(['message' => 'Ya no reparte para tu negocio.']);
     }
 
     private function vincular(int $negocioId, int $domiciliarioId): void

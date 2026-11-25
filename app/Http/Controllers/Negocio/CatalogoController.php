@@ -6,9 +6,11 @@ namespace App\Http\Controllers\Negocio;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Negocio\BuscarEnElCatalogoRequest;
+use App\Http\Requests\Negocio\CrearProductoPropioRequest;
 use App\Http\Requests\Negocio\ProponerProductoRequest;
 use App\Services\CatalogoDeProductos;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * El catálogo maestro, visto desde una tienda.
@@ -76,7 +78,11 @@ class CatalogoController extends Controller
     {
         $datos = $request->validated();
 
-        $producto = $this->catalogo->proponer($datos, 'tendero');
+        $producto = $this->catalogo->proponer(
+            $datos,
+            'tendero',
+            (int) $request->attributes->get('busines_id') ?: null,
+        );
 
         return response()->json([
             'message' => 'Producto agregado al catálogo.',
@@ -86,6 +92,52 @@ class CatalogoController extends Controller
                 'name' => $producto->name,
                 'brand' => $producto->brand,
                 'image' => $producto->image,
+            ],
+        ], 201);
+    }
+
+    /**
+     * POST negocio/productos/propio — «hormiga culona, $3.000».
+     *
+     * Para lo que el cliente pidió, la tienda tiene y el catálogo no. Con
+     * nombre y precio basta para venderlo ya; queda en la bandeja del panel
+     * para que el equipo lo complete.
+     */
+    public function propio(CrearProductoPropioRequest $request)
+    {
+        $datos = $request->validated();
+
+        $negocio = (int) $request->attributes->get('busines_id');
+
+        /*
+         * El mismo nombre dos veces en la misma tienda es un doble toque, no
+         * dos productos: se devuelve el que ya estaba.
+         */
+        $repetido = DB::table('products as p')
+            ->join('products_business as pb', 'pb.products_id', '=', 'p.products_id')
+            ->where('pb.busines_id', $negocio)
+            ->where('p.busines_id_propietario', $negocio)
+            ->whereRaw('LOWER(p.name) = ?', [mb_strtolower(trim($datos['name']))])
+            ->value('p.products_id');
+
+        if ($repetido) {
+            return response()->json([
+                'message' => 'Ya tenías un producto con ese nombre.',
+                'data' => ['products_id' => (int) $repetido, 'ya_existia' => true],
+            ]);
+        }
+
+        $fila = $this->catalogo->crearPropio($negocio, $datos);
+
+        return response()->json([
+            'message' => 'Listo, ya lo puedes vender.',
+            'data' => [
+                'products_id' => (int) $fila->products_id,
+                'name' => trim($datos['name']),
+                'price' => (float) $fila->price,
+                'sale_unit' => $fila->sale_unit,
+                'por_valor' => (bool) $fila->por_valor,
+                'ya_existia' => false,
             ],
         ], 201);
     }

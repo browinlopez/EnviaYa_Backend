@@ -82,8 +82,8 @@ it('los tres motivos del rechazo al mover un pedido se conservan', function () {
     $nadie->setRawAttributes(['user_id' => 999, 'rol' => 1], true);
 
     foreach ([
-        2 => 'Solo la tienda del pedido puede aceptarlo.',
-        3 => 'Solo la tienda o el domiciliario que lo toma pueden despacharlo.',
+        2 => 'Solo el negocio del pedido puede aceptarlo.',
+        3 => 'Solo el negocio o el domiciliario que lo toma pueden despacharlo.',
         4 => 'Solo el domiciliario asignado puede marcar la entrega.',
         9 => 'Transición no reconocida.',
     ] as $destino => $esperado) {

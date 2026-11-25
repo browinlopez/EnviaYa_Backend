@@ -8,6 +8,7 @@ use App\Models\Order\OrdersSales;
 use App\Models\Order\OrdersSalesDetail;
 use App\Support\UnidadDeVenta;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Escribe el pedido y sus lineas.
@@ -102,11 +103,26 @@ class ArmadoDelPedido
              * esos pedidos con un tiempo de entrega de cero minutos y se
              * llevaban el promedio al suelo.
              */
-            'delivery_date' => $esProgramado ? $fechaDeEntrega : null,
+            /*
+             * A LA HORA DE AQUÍ. La app manda la hora en ISO con zona
+             * (`2026-11-25T20:00:00.000Z`, que son las 3 p. m. en Colombia) y
+             * se guardaba tal cual: el pedido de las 3 quedaba para las 8 de
+             * la noche. La columna no lleva zona, así que se escribe en la de
+             * la aplicación, la misma en que se leen `sale_date` y `now()`.
+             */
+            'delivery_date' => $esProgramado ? self::aLaHoraLocal($fechaDeEntrega) : null,
             'is_scheduled' => $esProgramado,
             'pickup' => $esRecogida,
+            /*
+             * EL CÓDIGO PARA RECOGER. El cliente lo ve en su app y lo dice en
+             * el mostrador; sin él, la tienda no puede entregarlo. Es el mismo
+             * PIN del domiciliario, que en un pedido a domicilio nace al
+             * despachar. Ver `PinDeEntrega`.
+             */
+            'pin_entrega' => $esRecogida ? PinDeEntrega::generar() : null,
+            'pin_intentos' => 0,
             'pickup_time' => $esRecogida && $horaDeRecogida
-                ? Carbon::parse($horaDeRecogida)->format('Y-m-d H:i:s')
+                ? self::aLaHoraLocal($horaDeRecogida)
                 : null,
             'state' => 1,
             /*
@@ -152,11 +168,26 @@ class ArmadoDelPedido
 
         $hayQuePesar = false;
 
+        /*
+         * Lo que le cuesta cada producto a la tienda, CONGELADO en la línea
+         * igual que el precio: si mañana le sube, la cuenta de lo vendido
+         * hoy no cambia. Ver `CuentaDelNegocio`.
+         */
+        $costos = DB::table('products_business')
+            ->where('busines_id', $order->busines_id)
+            ->whereIn('products_id', collect($lineas)->pluck('product_id')->all())
+            ->pluck('costo', 'products_id');
+
         foreach ($lineas as $p) {
             $unidad = $surtido[$p['product_id']]->sale_unit ?? UnidadDeVenta::UNIDAD;
             $alPeso = UnidadDeVenta::esPeso($unidad);
 
-            if ($alPeso) {
+            /*
+             * Solo se pesa lo pedido por MEDIDA. «$1.500 de queso» ya tiene
+             * precio cerrado: el tendero corta lo que alcance y no hay nada
+             * que registrar --pesarlo sería un paso de más en cada pedido--.
+             */
+            if ($alPeso && ($p['pedido_por'] ?? 'cantidad') !== 'valor') {
                 $hayQuePesar = true;
             }
 
@@ -173,6 +204,7 @@ class ArmadoDelPedido
                  */
                 'amount' => $alPeso ? 1 : $p['amount'],
                 'unit_price' => (float) $precios[$p['product_id']],
+                'unit_cost' => $costos[$p['product_id']] ?? null,
                 // Congelada, igual que el precio: si el tendero cambia manana
                 // la unidad del producto, los pedidos de ayer no se releen.
                 'sale_unit' => $unidad,
@@ -251,5 +283,17 @@ class ArmadoDelPedido
         $pedida = $linea['requested_qty'] ?? null;
 
         return $pedida === null ? null : (float) $pedida;
+    }
+
+    /** Una fecha que llega con zona (o sin ella), escrita en la de la app. */
+    public static function aLaHoraLocal($fecha): ?string
+    {
+        if (! $fecha) {
+            return null;
+        }
+
+        return Carbon::parse($fecha)
+            ->setTimezone(config('app.timezone'))
+            ->format('Y-m-d H:i:s');
     }
 }

@@ -126,8 +126,8 @@ class ProductosDelNegocioController extends Controller
         if ($otras > 0 && $tocaCompartido) {
             return response()->json([
                 'message' => ($otras === 1
-                    ? 'Otra tienda vende este mismo producto'
-                    : "Otras {$otras} tiendas venden este mismo producto")
+                    ? 'Otro negocio vende este mismo producto'
+                    : "Otros {$otras} negocios venden este mismo producto")
                     .', así que su nombre, su categoría y su disponibilidad son de todas y no se cambian desde acá. '
                     .'El precio y las existencias sí son tuyos: para dejar de ofrecerlo, pon las existencias en cero.',
             ], 422);
@@ -137,6 +137,7 @@ class ProductosDelNegocioController extends Controller
             $deLaTienda = array_filter(
                 [
                     'price' => $datos['price'] ?? null,
+                    'costo' => $datos['costo'] ?? null,
                     'amount' => $datos['amount'] ?? null,
                     'expiration_date' => $datos['expiration_date'] ?? null,
                     // Como lo vende ESTA tienda. `null` es «no lo mandaste» y
@@ -145,6 +146,7 @@ class ProductosDelNegocioController extends Controller
                     'stock_weight' => $datos['stock_weight'] ?? null,
                     'min_qty' => $datos['min_qty'] ?? null,
                     'step_qty' => $datos['step_qty'] ?? null,
+                    'por_valor' => isset($datos['por_valor']) ? (bool) $datos['por_valor'] : null,
                 ],
                 fn ($v) => $v !== null,
             );
@@ -224,6 +226,7 @@ class ProductosDelNegocioController extends Controller
                 'stock_weight' => $datos['stock_weight'] ?? null,
                 'min_qty' => $datos['min_qty'] ?? null,
                 'step_qty' => $datos['step_qty'] ?? null,
+                'por_valor' => isset($datos['por_valor']) ? (bool) $datos['por_valor'] : null,
             ], fn ($v) => $v !== null),
         );
 
@@ -235,7 +238,7 @@ class ProductosDelNegocioController extends Controller
         return response()->json([
             'message' => $yaLoTenia
                 ? 'Ya lo tenías: se actualizó el precio y las existencias.'
-                : 'Producto agregado a tu tienda.',
+                : 'Producto agregado a tu negocio.',
             'actualizado' => $yaLoTenia,
         ], $yaLoTenia ? 200 : 201);
     }
@@ -259,7 +262,7 @@ class ProductosDelNegocioController extends Controller
             return response()->json(['message' => 'Ese producto no es de tu negocio.'], 404);
         }
 
-        return response()->json(['message' => 'Producto retirado de tu tienda.']);
+        return response()->json(['message' => 'Producto retirado de tu negocio.']);
     }
 
     /**
@@ -355,7 +358,7 @@ class ProductosDelNegocioController extends Controller
         $datos = $request->validated();
 
         if ((int) $datos['desde'] === $businessId) {
-            return response()->json(['message' => 'Esa ya es tu tienda.'], 422);
+            return response()->json(['message' => 'Esa ya es tu negocio.'], 422);
         }
 
         $r = $this->catalogo->copiarDe($businessId, (int) $datos['desde']);

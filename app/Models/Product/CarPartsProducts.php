@@ -18,6 +18,11 @@ class CarPartsProducts extends Audit
         'year',
         'oem_code',
         'compatibility',
+
+        /* Las dos preguntas del mostrador: de que lado va, y si es original.
+           Llevarse el freno del otro lado es el error clasico. */
+        'posicion',
+        'condicion',
     ];
 
     /** @return BelongsTo<Product, $this> */
