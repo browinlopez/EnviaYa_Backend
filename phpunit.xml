@@ -82,5 +82,7 @@
         <env name="APNS_KEY_ID" value=""/>
         <env name="APNS_TEAM_ID" value=""/>
         <env name="APNS_BUNDLE_ID" value=""/>
+        <!-- El límite de /login de producción, aunque el .env local lo suba. -->
+        <env name="AUTH_INTENTOS_DE_ACCESO" value="10" force="true"/>
     </php>
 </phpunit>

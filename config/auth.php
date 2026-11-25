@@ -102,6 +102,23 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Intentos de acceso por minuto
+    |--------------------------------------------------------------------------
+    |
+    | Cuántas veces por minuto se puede llamar a /login y /register desde una
+    | misma IP. Es la barrera contra la fuerza bruta y por eso es baja: 10.
+    |
+    | Solo se sube en el recorrido con navegador del panel, que entra con una
+    | cuenta por área, una detrás de otra, desde la misma IP: con 10 se topaba
+    | con el 429 a mitad del recorrido y la prueba fallaba sin que nada
+    | estuviera roto. Nunca se sube en producción.
+    |
+    */
+
+    'intentos_de_acceso' => (int) env('AUTH_INTENTOS_DE_ACCESO', 10),
+
     'passwords' => [
         'users' => [
             'provider' => 'users',
