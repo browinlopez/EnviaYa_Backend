@@ -35,13 +35,19 @@ class PinDeEntrega
      * Null si se puede entregar; si no, la respuesta de error (mensaje, motivo
      * y código HTTP). Cuenta el intento fallido en el pedido.
      */
-    public static function comprobar(OrdersSales $pedido, ?string $pin): ?array
+    public static function comprobar(OrdersSales $pedido, ?string $pin, bool $enLaTienda = false): ?array
     {
         if (! $pedido->pin_entrega) {
             return null;
         }
 
-        if ((int) $pedido->pin_intentos >= self::INTENTOS) {
+        /*
+         * EN EL MOSTRADOR NO SE BLOQUEA. El bloqueo frena a quien prueba
+         * números en una puerta; en la tienda quien escribe es el tendero,
+         * con la persona delante, y bloquear dejaría al cliente de verdad
+         * sin su pedido.
+         */
+        if (! $enLaTienda && (int) $pedido->pin_intentos >= self::INTENTOS) {
             return [
                 'message' => 'Se acabaron los intentos del PIN. Pídeselo al negocio: lo ve en el pedido.',
                 'reason' => 'pin_bloqueado',
@@ -51,10 +57,29 @@ class PinDeEntrega
 
         $pin = preg_replace('/\D/', '', (string) $pin);
 
+        if ($pin === '' && $enLaTienda) {
+            return [
+                'message' => 'Pídele el código para recoger: son 3 números que ve en su app.',
+                'reason' => 'pin_requerido',
+                'status' => 422,
+            ];
+        }
+
         if ($pin === '') {
             return [
                 'message' => 'Pídele al cliente el PIN de entrega: son 3 números que ve en su app.',
                 'reason' => 'pin_requerido',
+                'status' => 422,
+            ];
+        }
+
+        if (! hash_equals((string) $pedido->pin_entrega, $pin) && $enLaTienda) {
+            $pedido->pin_intentos = (int) $pedido->pin_intentos + 1;
+            $pedido->save();
+
+            return [
+                'message' => 'Ese código no es. Pídele que lo mire en su pedido, en la app.',
+                'reason' => 'pin_incorrecto',
                 'status' => 422,
             ];
         }

@@ -11,6 +11,7 @@ use App\Http\Requests\Business\AlternarAfiliacionRequest;
 use App\Http\Requests\Business\BuscarCompradorPorTelefonoRequest;
 use App\Http\Requests\Business\ClientesAfiliadosRequest;
 use App\Http\Requests\Business\DesafiliarClienteRequest;
+use App\Models\Business;
 use App\Models\Business\BusinessUserAffiliation;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -143,6 +144,9 @@ class AffiliationController extends Controller
         ]);
     }
 
+    /** Cuántos negocios de un mismo tipo puede tener un comprador. */
+    public const AFILIACIONES_POR_TIPO = 3;
+
     // Afiliacion movil usuarios
     public function AfiliationUser(AfiliarClienteRequest $request)
     {
@@ -165,12 +169,28 @@ class AffiliationController extends Controller
             ], 409);
         }
 
-        // 2️⃣ Contar afiliaciones actuales del usuario
-        $affiliationsCount = BusinessUserAffiliation::where('user_id', $userId)->count();
+        /*
+         * 2️⃣ TRES POR TIPO DE NEGOCIO, NO TRES EN TOTAL.
+         *
+         * Se contaban todas juntas: quien era cliente de su tienda y de dos
+         * droguerías ya no podía afiliarse a ningún restaurante, que no
+         * compite con ninguna de las tres. El tope es para no repartirse
+         * entre demasiadas tiendas del MISMO oficio; entre oficios no hay
+         * nada que repartir.
+         *
+         * La respuesta dice el tipo y el tope, para que la app lo cuente en
+         * sus palabras («Ya tienes 3 droguerías»).
+         */
+        $tipo = (int) Business::whereKey($businessId)->value('type');
+        $delMismoTipo = BusinessUserAffiliation::where('user_id', $userId)
+            ->whereHas('business', fn ($q) => $q->where('type', $tipo))
+            ->count();
 
-        if ($affiliationsCount >= 3) {
+        if ($delMismoTipo >= self::AFILIACIONES_POR_TIPO) {
             return response()->json([
-                'message' => 'El usuario ya alcanzó el máximo de 3 negocios afiliados',
+                'message' => 'Ya estás afiliado a '.self::AFILIACIONES_POR_TIPO.' negocios de este tipo.',
+                'limite' => self::AFILIACIONES_POR_TIPO,
+                'tipo' => $tipo,
             ], 422);
         }
 

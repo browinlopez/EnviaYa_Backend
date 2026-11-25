@@ -1,0 +1,6 @@
+# Configuración de pnpm. Paquetes a los que se les deja correr su script de
+# instalación (pnpm los bloquea por defecto): los dos bajan su binario nativo,
+# sin el cual Vite y Tailwind no compilan los recursos.
+allowBuilds:
+  esbuild: true
+  '@tailwindcss/oxide': true

@@ -81,6 +81,12 @@ class PedidosDelDomiciliarioController extends Controller
             ? OrdersSales::whereIn('busines_id', $negocios)
                 ->where('state', self::POR_TOMAR)
                 ->whereNull('domiciliary_id')
+                /*
+                 * SIN LOS QUE SE RECOGEN EN LA TIENDA: ahí no hay nada que
+                 * llevar. Se le ofrecían al domiciliario como «Sin nombre ·
+                 * Dirección no registrada», porque no tienen dirección.
+                 */
+                ->where(fn ($q) => $q->where('pickup', false)->orWhereNull('pickup'))
                 ->confirmados()
                 /*
                  * SIN LAS DEL COMPRADOR, porque esta mitad no las enseña.

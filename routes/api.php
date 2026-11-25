@@ -70,6 +70,7 @@ use App\Http\Controllers\Negocio\CargaDeCatalogoController;
 use App\Http\Controllers\Negocio\CatalogoController;
 use App\Http\Controllers\Negocio\ClientesDelNegocioController;
 use App\Http\Controllers\Negocio\CreditosDelNegocioController;
+use App\Http\Controllers\Negocio\CuantoTeQuedaController;
 use App\Http\Controllers\Negocio\DocumentosDelDomiciliarioController;
 use App\Http\Controllers\Negocio\EfectivoDeLaTiendaController;
 use App\Http\Controllers\Negocio\FichaDelDomiciliarioController;
@@ -81,11 +82,13 @@ use App\Http\Controllers\Negocio\ProductosDelNegocioController;
 use App\Http\Controllers\Negocio\PromocionesController;
 use App\Http\Controllers\Negocio\RendimientoDeDomiciliariosController;
 use App\Http\Controllers\Negocio\TorreDeControlController;
+use App\Http\Controllers\Negocio\VentaDeMostradorController;
 use App\Http\Controllers\Operacion\EfectivoController;
 use App\Http\Controllers\Order\ComprobanteDelPedidoController;
 use App\Http\Controllers\Order\ConsultaDePedidosController;
 use App\Http\Controllers\Order\CotizacionController;
 use App\Http\Controllers\Order\GeolocalizacionDePedidoController;
+use App\Http\Controllers\Order\ListoParaRecogerController;
 use App\Http\Controllers\Order\MediosDePagoController;
 use App\Http\Controllers\Order\OrderController;
 use App\Http\Controllers\Order\PinDeEntregaController;
@@ -699,6 +702,8 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
          */
         Route::get('pedidos/historial', [HistorialDePedidosController::class, 'index']);
         Route::put('pedidos/estado', [OrderController::class, 'updateStatus']);
+        // Para recoger: «ya está listo», y al cliente le llega el aviso.
+        Route::post('pedidos/{id}/listo', ListoParaRecogerController::class)->whereNumber('id');
 
         /*
          * CANCELAR. La tienda no tenía cómo: el único camino al estado 5
@@ -739,6 +744,34 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
          * no es un número.
          */
         Route::put('productos/precios', [ProductosDelNegocioController::class, 'precios']);
+
+        /*
+         * «CUÁNTO TE QUEDA»: la cuenta del negocio (ventas, costo de lo
+         * vendido, comisión y gastos), los costos de sus productos y sus
+         * gastos fijos y sueltos.
+         */
+        Route::get('cuanto-te-queda', [CuantoTeQuedaController::class, 'cuenta']);
+        /*
+         * LA VENTA EN EL MOSTRADOR: lo que se vende en persona, sin app.
+         * Entra en «Cuánto te queda» y descuenta el inventario. Ver
+         * `VentaDeMostradorController`.
+         */
+        Route::post('ventas-mostrador', [VentaDeMostradorController::class, 'registrar']);
+        Route::get('ventas-mostrador', [VentaDeMostradorController::class, 'delDia']);
+        // El QR Bre-B: cómo va el pago y cancelarlo si el vecino no pagó.
+        Route::get('ventas-mostrador/{id}/pago', [VentaDeMostradorController::class, 'pago'])->whereNumber('id');
+        Route::post('ventas-mostrador/{id}/cancelar', [VentaDeMostradorController::class, 'cancelar'])->whereNumber('id');
+        /*
+         * «Hormiga culona, $3.000»: un producto que el catálogo no tiene,
+         * solo para esta tienda, con nombre y precio. Ver `crearPropio`.
+         */
+        Route::post('productos/propio', [CatalogoController::class, 'propio']);
+        Route::get('costos', [CuantoTeQuedaController::class, 'costos']);
+        Route::put('costos', [CuantoTeQuedaController::class, 'guardarCostos']);
+        Route::get('gastos', [CuantoTeQuedaController::class, 'gastos']);
+        Route::post('gastos', [CuantoTeQuedaController::class, 'crearGasto']);
+        Route::put('gastos/{id}', [CuantoTeQuedaController::class, 'actualizarGasto'])->whereNumber('id');
+        Route::delete('gastos/{id}', [CuantoTeQuedaController::class, 'quitarGasto'])->whereNumber('id');
         Route::get('productos/tiendas-para-copiar', [ProductosDelNegocioController::class, 'tiendasParaCopiar']);
         Route::post('productos/copiar', [ProductosDelNegocioController::class, 'copiar']);
         Route::get('productos/esquema', [EsquemaDeProductoController::class, 'schema']);
@@ -1078,6 +1111,8 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::post('products', [ProductosApiController::class, 'storeProduct'])->middleware('modulo:productos,gestionar');
         Route::get('products/{id}', [ProductosApiController::class, 'showProduct'])->middleware('modulo:productos');
         Route::put('products/{id}', [ProductosApiController::class, 'updateProduct'])->middleware('modulo:productos,gestionar');
+        // La bandeja de productos de tenderos: al catálogo general o solo en su tienda.
+        Route::post('products/{id}/catalogo-general', [ProductosApiController::class, 'catalogoGeneral'])->middleware('modulo:productos,gestionar');
 
         Route::get('orders', [PedidosApiController::class, 'orders'])->middleware('modulo:ordenes');
         Route::get('orders/{id}', [PedidosApiController::class, 'showOrder'])->middleware('modulo:ordenes');

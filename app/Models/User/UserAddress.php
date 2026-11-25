@@ -38,6 +38,8 @@ class UserAddress extends Audit
         'apartment',
         'municipality_id',
         'alias_id',
+        // El nombre que le da la persona: «Donde mi mamá».
+        'nombre',
         'latitude',
         'longitude',
         'state',

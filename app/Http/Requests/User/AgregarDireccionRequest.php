@@ -59,6 +59,7 @@ class AgregarDireccionRequest extends FormRequest
             'department' => 'nullable|string|max:120',
             'municipality_id' => 'nullable|integer|exists:municipalities,id',
             'alias_id' => 'nullable|integer|exists:alias,alias_id',
+            'nombre' => 'nullable|string|max:40',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
         ];

@@ -26,6 +26,8 @@ class ActualizarProductoRequest extends FormRequest
     {
         return [
             'price' => 'nullable|numeric|min:0',
+            // Lo que le costó a la tienda. Opcional: sin él la cuenta lo avisa.
+            'costo' => 'nullable|numeric|min:0|max:100000000',
             'amount' => 'nullable|integer|min:0',
             /*
              * COMO LO VENDE ESTA TIENDA. Por unidad o al peso --kilo, libra o
@@ -40,8 +42,11 @@ class ActualizarProductoRequest extends FormRequest
              */
             'sale_unit' => 'nullable|string|in:'.implode(',', UnidadDeVenta::TODAS),
             'stock_weight' => 'nullable|numeric|min:0|max:100000',
-            'min_qty' => 'nullable|numeric|min:0.001|max:100',
-            'step_qty' => 'nullable|numeric|min:0.001|max:100',
+            // Hasta 5.000: en gramos, cien es casi nada.
+            'min_qty' => 'nullable|numeric|min:0.001|max:5000',
+            'step_qty' => 'nullable|numeric|min:0.001|max:5000',
+            // «Se puede pedir por valor»: $1.500 de queso.
+            'por_valor' => 'nullable|boolean',
             'expiration_date' => 'nullable|date',
             'name' => 'nullable|string|max:255',
             'description' => 'nullable|string',

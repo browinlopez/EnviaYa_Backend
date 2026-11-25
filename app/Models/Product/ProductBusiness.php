@@ -20,6 +20,8 @@ class ProductBusiness extends Audit
         'busines_id',
         'products_id',
         'price',
+        // Lo que le cuesta a esta tienda, por la misma unidad en que lo vende.
+        'costo',
         'amount',
         'qualification',
         // El vencimiento es del LOTE de esta tienda, no del producto compartido.
@@ -39,6 +41,8 @@ class ProductBusiness extends Audit
         'stock_weight',
         'min_qty',
         'step_qty',
+        // Si se puede pedir por plata: «$1.500 de queso». Ver la migración.
+        'por_valor',
     ];
 
     protected $casts = [
@@ -48,6 +52,7 @@ class ProductBusiness extends Audit
         'stock_weight' => 'decimal:3',
         'min_qty' => 'decimal:3',
         'step_qty' => 'decimal:3',
+        'por_valor' => 'boolean',
     ];
 
     /** @return BelongsTo<Business, $this> */

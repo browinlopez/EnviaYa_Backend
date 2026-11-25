@@ -47,6 +47,10 @@ class DireccionResource extends JsonResource
         return [
             'address_id' => $a->address_id,
             'address' => $a->address,
+            // La calle y el número que escribió la persona, junto a la del mapa.
+            'street' => $a->street,
+            // El nombre propio, si se lo dio («Donde mi mamá»).
+            'nombre' => $a->nombre,
             'latitude' => $a->latitude,
             'longitude' => $a->longitude,
             'alias_id' => $a->alias?->alias_id,

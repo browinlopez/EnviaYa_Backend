@@ -19,6 +19,7 @@ use App\Models\Promotion;
 use App\Models\User;
 use App\Services\PlazoPorDistancia;
 use App\Services\TarifaPorDistancia;
+use App\Support\ProductTypeSchema;
 use Illuminate\Http\Request;
 
 class ConsultaDeNegociosController extends Controller
@@ -367,12 +368,17 @@ class ConsultaDeNegociosController extends Controller
          * pelado: bastaba conservar el id —de un favorito, de un pedido viejo,
          * de un enlace— para seguir viendo la tienda y su catálogo como si nada.
          */
-        $business = Business::with([
+        $business = Business::where('state', 1)->findOrFail($request->busines_id);
+
+        /* El grupo y la tabla del oficio, de una vez: sin esto cada producto
+           pediría los suyos por separado, y una droguería tiene miles. */
+        $relacionDelOficio = ProductTypeSchema::relation((int) $business->type);
+        $business->load(array_filter([
             'owners', 'reviews', 'municipality', 'products.category',
+            'products.group',
+            $relacionDelOficio ? 'products.'.$relacionDelOficio : null,
             'products' => fn ($q) => $q->where('products.state', 1),
-        ])
-            ->where('state', 1)
-            ->findOrFail($request->busines_id);
+        ]));
 
         /*
          * LAS PROMOCIONES VIGENTES DE ESTA TIENDA.
@@ -471,7 +477,7 @@ class ConsultaDeNegociosController extends Controller
                 ->filter(fn ($p) => (float) ($p->pivot->price ?? 0) > 0)
                 ->values()
                 ->map(fn ($product) => (new ProductoDeLaFichaResource(
-                    $product, $estaAfiliado, $promoDe,
+                    $product, $estaAfiliado, $promoDe, (int) $business->type,
                 ))->resolve()),
 
             /*

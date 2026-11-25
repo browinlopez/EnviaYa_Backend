@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Models\Chat;
 
 use App\Models\Audit\Audit;
+use App\Models\Business;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Chat extends Audit
@@ -27,6 +29,16 @@ class Chat extends Audit
          */
         'busines_id',
     ];
+
+    /**
+     * El negocio del chat, si es con una tienda.
+     *
+     * @return BelongsTo<Business, $this>
+     */
+    public function negocio(): BelongsTo
+    {
+        return $this->belongsTo(Business::class, 'busines_id', 'busines_id');
+    }
 
     /** @return HasMany<ChatParticipant, $this> */
     public function participants(): HasMany

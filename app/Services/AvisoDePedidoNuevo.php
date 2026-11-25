@@ -57,6 +57,15 @@ class AvisoDePedidoNuevo
         $mensaje = 'Pedido nuevo #'.$order->orderSales_id
             .' por $'.number_format((float) $order->total, 0, ',', '.').'.';
 
+        // Si es programado, se dice para cuándo: «pedido nuevo» a secas se
+        // lee como «prepáralo ya».
+        if ($order->is_scheduled && $order->delivery_date) {
+            $mensaje .= ' Programado para '.RecordatorioDeProgramados::cuando($order->delivery_date)
+                .($order->pickup ? ', lo recogen en el negocio.' : '.');
+        } elseif ($order->pickup) {
+            $mensaje .= ' Lo recogen en el negocio.';
+        }
+
         /*
          * A CADA DUEÑO, y no solo al primero: un negocio puede tener varios, y
          * dejar fuera a los demás significa que quien esté de turno no recibe

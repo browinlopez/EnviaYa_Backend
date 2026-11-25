@@ -34,6 +34,8 @@ class OrdersSalesDetail extends Audit
         'orderSales_id', 'product_id', 'amount', 'unit_price',
         'sale_unit', 'pedido_por', 'qty_requested', 'qty_final',
         'line_total', 'weighed_at', 'weighed_by',
+        // El costo de la tienda al vender, congelado como el precio.
+        'unit_cost',
     ];
 
     protected $casts = [
@@ -41,6 +43,7 @@ class OrdersSalesDetail extends Audit
         'qty_requested' => 'decimal:3',
         'qty_final' => 'decimal:3',
         'line_total' => 'decimal:2',
+        'unit_cost' => 'decimal:2',
         'weighed_at' => 'datetime',
     ];
 

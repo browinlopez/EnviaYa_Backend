@@ -29,6 +29,7 @@ use App\Services\FacturaService;
 use App\Services\PagoEnLinea;
 use App\Services\PinDeEntrega;
 use App\Services\PlazoPorDistancia;
+use App\Services\RecordatorioDeProgramados;
 use App\Services\ReglasDeDespacho;
 use App\Services\TarifaPorDistancia;
 use Carbon\Carbon;
@@ -90,7 +91,7 @@ class OrderController extends Controller
              * que la dan por hecha, en silencio.
              */
             'products.*.pedido_por' => 'sometimes|nullable|in:valor,cantidad',
-            'products.*.requested_qty' => 'sometimes|nullable|numeric|min:0.001|max:100',
+            'products.*.requested_qty' => 'sometimes|nullable|numeric|min:0.001|max:5000',
             'products.*.requested_value' => 'sometimes|nullable|numeric|min:100|max:1000000',
             'methods_id' => 'required|integer|exists:payment_methods,methods_id',
             'payer' => 'nullable|array',
@@ -144,7 +145,7 @@ class OrderController extends Controller
          */
         if (! $business->state) {
             return response()->json([
-                'message' => 'Esta tienda no está disponible.',
+                'message' => 'Este negocio no está disponible.',
             ], 422);
         }
 
@@ -162,7 +163,7 @@ class OrderController extends Controller
          */
         if (! $business->recibiendo_ahora) {
             return response()->json([
-                'message' => 'La tienda dejó de recibir pedidos por ahora. Intenta más tarde o escoge otra.',
+                'message' => 'El negocio dejó de recibir pedidos por ahora. Intenta más tarde o escoge otra.',
             ], 422);
         }
 
@@ -205,7 +206,7 @@ class OrderController extends Controller
 
             if (! $distancias->reparteHasta($km)) {
                 return response()->json([
-                    'message' => 'Esta tienda no reparte hasta tu dirección. Elige otra dirección o recoge en tienda.',
+                    'message' => 'Este negocio no reparte hasta tu dirección. Elige otra dirección o recoge en el negocio.',
                     'reason' => 'out_of_range',
                     'distance_km' => round($km, 2),
                     'max_km' => (float) Ajustes::valor('operacion.radio_maximo_km'),
@@ -245,6 +246,10 @@ class OrderController extends Controller
                 'message' => 'Actualiza la app para comprar productos que se venden al peso.',
                 'product_ids' => $sinPeso,
             ], 422);
+        }
+
+        if ($fuera = $economia->lineasQueNoSePuedenPedirAsi($request->products, $surtido)) {
+            return response()->json($fuera, 422);
         }
 
         /* ========= PROGRAMACIÓN ========= */
@@ -578,7 +583,7 @@ class OrderController extends Controller
 
         if ((int) $order->state !== 1) {
             return response()->json([
-                'message' => 'Ya no se puede cancelar: la tienda empezó a prepararlo. '
+                'message' => 'Ya no se puede cancelar: el negocio empezó a prepararlo. '
                     .'Escríbele por el chat del pedido.',
             ], 422);
         }
@@ -710,8 +715,15 @@ class OrderController extends Controller
 
         if ($order->state == 1 && $request->state == 2) {
             $order->state = 2;
-            // Ya hay algo que llevar: los domiciliarios del negocio se enteran.
-            $avisarParaTomar = true;
+            /*
+             * Ya hay algo que llevar: los domiciliarios del negocio se enteran.
+             * Salvo que nadie lo vaya a llevar --lo recoge el cliente-- o que
+             * sea para dentro de horas: ese lo anuncia el recordatorio de los
+             * programados, media hora antes, y no ahora para que alguien lo
+             * tome y se quede esperando toda la tarde.
+             */
+            $avisarParaTomar = ! $order->pickup
+                && ! RecordatorioDeProgramados::faltaMucho($order);
 
             /*
              * Y se le dice al comprador, que hasta ahora no se enteraba.
@@ -838,6 +850,38 @@ class OrderController extends Controller
                 'pedido_en_camino',
                 "Tu pedido salió de {$order->business->name}. Llega en unos {$order->promised_minutes} minutos."
                     ." Tu PIN de entrega es {$order->pin_entrega}: díselo al domiciliario cuando llegue.",
+                ['order_id' => $order->orderSales_id],
+            );
+
+            /*
+             * LO RECOGIÓ EN LA TIENDA. Un pedido para recoger no pasa por «en
+             * camino»: no hay domiciliario. La tienda lo entrega en la mano y
+             * lo cierra ella; antes sólo el domiciliario podía cerrar un
+             * pedido, así que estos se quedaban abiertos para siempre.
+             */
+        } elseif ($order->state == 2 && $request->state == 4 && $order->pickup) {
+            /*
+             * CON EL CÓDIGO DEL CLIENTE: es la prueba de que quien está en el
+             * mostrador es el dueño del pedido. Los pedidos de antes no tienen
+             * código y se entregan como siempre.
+             */
+            if ($fallo = PinDeEntrega::comprobar($order, $request->input('pin'), enLaTienda: true)) {
+                $estado = $fallo['status'];
+                unset($fallo['status']);
+
+                return response()->json($fallo, $estado);
+            }
+
+            $order->state = 4;
+            $order->delivery_date = now();
+            $order->ready_at ??= now();
+
+            $cobros->registrar($order, $request->user()?->user_id);
+
+            Avisos::para(
+                $order->buyer->user_id,
+                'pedido_entregado',
+                "Recogiste tu pedido de {$order->business->name}. ¿Nos cuentas qué tal?",
                 ['order_id' => $order->orderSales_id],
             );
 

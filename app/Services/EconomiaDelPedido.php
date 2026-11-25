@@ -154,6 +154,63 @@ class EconomiaDelPedido
         return $sinPeso;
     }
 
+    /**
+     * LO QUE LA TIENDA NO VENDE DE ESA FORMA.
+     *
+     * Dos casos:
+     *   · «$1.500 de X» cuando la tienda no aceptó que X se pida por valor
+     *     --nadie pide «$2.000 de pechuga entera»--;
+     *   · una cantidad por encima del tope de su medida: 200 kilos de queso
+     *     no es un pedido, es un error de dedo.
+     *
+     * Devuelve el cuerpo del 422, o null si todo cabe.
+     *
+     * @return array{message:string,product_ids:list<int>}|null
+     */
+    public function lineasQueNoSePuedenPedirAsi(iterable $lineas, $surtido = null): ?array
+    {
+        $porValor = [];
+        $demasiado = [];
+
+        foreach ($lineas as $linea) {
+            $id = (int) ($linea['product_id'] ?? 0);
+            $item = $surtido[$id] ?? null;
+            $unidad = $item->sale_unit ?? UnidadDeVenta::UNIDAD;
+
+            if (! UnidadDeVenta::esPeso($unidad)) {
+                continue;
+            }
+
+            if (($linea['pedido_por'] ?? null) === 'valor') {
+                if (! ($item->por_valor ?? false)) {
+                    $porValor[] = $id;
+                }
+
+                continue;
+            }
+
+            if ((float) ($linea['requested_qty'] ?? 0) > UnidadDeVenta::maximo($unidad)) {
+                $demasiado[] = $id;
+            }
+        }
+
+        if ($porValor !== []) {
+            return [
+                'message' => 'El negocio no vende ese producto por valor. Pídelo por cantidad.',
+                'product_ids' => $porValor,
+            ];
+        }
+
+        if ($demasiado !== []) {
+            return [
+                'message' => 'Esa cantidad es más de lo que se puede pedir de una vez.',
+                'product_ids' => $demasiado,
+            ];
+        }
+
+        return null;
+    }
+
     public function calcular(
         iterable $lineas,
         $precios,

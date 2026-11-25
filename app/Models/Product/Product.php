@@ -44,6 +44,10 @@ class Product extends Audit
            `grocery.size`, `restaurant.portion_size`-- para la misma pregunta.
            Ver `ProductTypeSchema::COMUNES`. */
         'content', 'presentation', 'requiere_frio',
+        // Producto propio de una tienda: ver `CatalogoDeProductos::crearPropio`.
+        'busines_id_propietario',
+        'en_catalogo_general',
+        'revisado_at',
     ];
 
     protected $casts = ['requiere_frio' => 'boolean'];

@@ -115,16 +115,29 @@ class TrazoDeLaRuta
     /**
      * El trazo entre dos puntos, con su caché.
      *
+     * QUIÉN TRAZA: OSRM POR DEFECTO, GOOGLE SI SE PIDE.
+     *
+     * Google Directions se factura por llamada y su clave de servidor sólo
+     * se puede limitar por IP. Mientras no haga falta, el trazado lo hace
+     * OSRM --software libre sobre los mapas de OpenStreetMap--, que no cobra
+     * ni pide clave. `RUTAS_PROVEEDOR=google` vuelve a Google;
+     * `RUTAS_OSRM_URL` apunta a otra instancia de OSRM (la pública es de
+     * demostración: para producción conviene una propia).
+     *
+     * Los dos devuelven la polilínea con la MISMA codificación (precisión
+     * 5), así que la app la lee igual venga de donde venga.
+     *
      * @param  string  $origen  «lat,lng»
      * @param  string  $destino  «lat,lng»
      *
-     * @throws RuntimeException si Google responde mal
+     * @throws RuntimeException si el trazador responde mal
      */
     public function entre(string $origen, string $destino): ?string
     {
+        $google = config('services.rutas.proveedor') === 'google';
         $clave = (string) config('services.google.maps_server_key');
 
-        if ($clave === '') {
+        if ($google && $clave === '') {
             Log::error('No hay GOOGLE_MAPS_SERVER_KEY: no se puede trazar la ruta');
 
             return null;
@@ -136,32 +149,83 @@ class TrazoDeLaRuta
          * misma entrada. El prefijo lleva versión para poder invalidar todo de
          * golpe el día que haya que cambiar cómo se traza.
          */
-        $memoria = 'ruta:v2:'.md5(
-            $this->normalizar($origen).'|'.$this->normalizar($destino),
-        );
+        $tramo = $this->normalizar($origen).'|'.$this->normalizar($destino);
+        $memoria = 'ruta:v2:'.md5($tramo);
 
-        return Cache::remember(
+        /*
+         * UN «NO» TAMBIÉN SE RECUERDA, UN RATO.
+         *
+         * `Cache::remember` no guarda un null. Cuando el trazador respondía
+         * «no hay ruta» --o Google «REQUEST_DENIED» con un 200--, cada vez
+         * que alguien abría el seguimiento se le volvía a preguntar, y se
+         * volvía a recibir el mismo no. Diez minutos de silencio bastan para
+         * no martillar y no dejan una ruta rota para siempre.
+         */
+        $negativa = 'ruta:sin:'.md5($tramo);
+        if (Cache::has($negativa)) {
+            return null;
+        }
+
+        $polilinea = Cache::remember(
             $memoria,
             now()->addMinutes(self::MINUTOS_EN_CACHE),
-            function () use ($origen, $destino, $clave) {
-                $respuesta = Http::connectTimeout(3)->timeout(8)->get(
-                    'https://maps.googleapis.com/maps/api/directions/json',
-                    [
-                        'origin' => $origen,
-                        'destination' => $destino,
-                        'key' => $clave,
-                        /* En moto, que es como se reparte acá. */
-                        'mode' => 'driving',
-                    ],
-                );
-
-                if ($respuesta->failed()) {
-                    throw new RuntimeException($respuesta->body());
-                }
-
-                return $respuesta->json('routes.0.overview_polyline.points');
-            },
+            fn () => $google
+                ? $this->conGoogle($origen, $destino, $clave)
+                : $this->conOsrm($origen, $destino),
         );
+
+        if (! $polilinea) {
+            Cache::put($negativa, true, now()->addMinutes(10));
+        }
+
+        return $polilinea;
+    }
+
+    private function conGoogle(string $origen, string $destino, string $clave): ?string
+    {
+        $respuesta = Http::connectTimeout(3)->timeout(8)->get(
+            'https://maps.googleapis.com/maps/api/directions/json',
+            [
+                'origin' => $origen,
+                'destination' => $destino,
+                'key' => $clave,
+                /* En moto, que es como se reparte acá. */
+                'mode' => 'driving',
+            ],
+        );
+
+        if ($respuesta->failed()) {
+            throw new RuntimeException($respuesta->body());
+        }
+
+        $puntos = $respuesta->json('routes.0.overview_polyline.points');
+        if (! $puntos) {
+            Log::warning('Google no trazó la ruta', [
+                'status' => $respuesta->json('status'),
+                'error' => $respuesta->json('error_message'),
+            ]);
+        }
+
+        return $puntos;
+    }
+
+    private function conOsrm(string $origen, string $destino): ?string
+    {
+        /* OSRM pide «lng,lat», al revés que Google. */
+        [$latA, $lngA] = explode(',', $this->normalizar($origen));
+        [$latB, $lngB] = explode(',', $this->normalizar($destino));
+        $base = rtrim((string) config('services.rutas.osrm_url'), '/');
+
+        $respuesta = Http::connectTimeout(3)->timeout(8)->get(
+            "{$base}/route/v1/driving/{$lngA},{$latA};{$lngB},{$latB}",
+            ['overview' => 'full', 'geometries' => 'polyline'],
+        );
+
+        if ($respuesta->failed()) {
+            throw new RuntimeException($respuesta->body());
+        }
+
+        return $respuesta->json('routes.0.geometry');
     }
 
     /** «lat,lng», o null si falta alguna de las dos. */

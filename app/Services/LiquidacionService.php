@@ -90,7 +90,26 @@ class LiquidacionService
                     'o.methods_id',
                 ]);
 
-            if ($pedidos->isEmpty()) {
+            /*
+             * LO COBRADO CON QR EN EL MOSTRADOR. Bold lo recibió a nombre de
+             * la plataforma: se le debe a la tienda, menos lo que cobró la
+             * pasarela. Con solo esto --sin pedidos-- también hay corte.
+             */
+            $ventasQr = collect();
+            if ($tipo === 'business') {
+                $anuladasQr = Settlement::where('state', Settlement::ANULADA)->select('id');
+                $ventasQr = DB::table('ventas_mostrador')
+                    ->where('busines_id', $destinatarioId)
+                    ->where('forma_de_pago', 'qr')
+                    ->where('estado_pago', 'pagada')
+                    ->where(fn ($q) => $q->whereNull('settlement_id')->orWhereIn('settlement_id', $anuladasQr))
+                    ->tap(fn ($q) => FiltroDeFechas::desde($q, 'vendida_at', $desde))
+                    ->tap(fn ($q) => FiltroDeFechas::hasta($q, 'vendida_at', $hasta))
+                    ->lockForUpdate()
+                    ->get(['venta_id', 'total', 'comision_pasarela']);
+            }
+
+            if ($pedidos->isEmpty() && $ventasQr->isEmpty()) {
                 throw new RuntimeException(
                     'No hay pedidos entregados sin liquidar en ese periodo.'
                 );
@@ -178,8 +197,16 @@ class LiquidacionService
                 }
             }
 
+            $porQr = round((float) $ventasQr->sum(fn ($v) => (float) $v->total - (float) $v->comision_pasarela), 2);
+            if ($ventasQr->isNotEmpty()) {
+                DB::table('ventas_mostrador')
+                    ->whereIn('venta_id', $ventasQr->pluck('venta_id'))
+                    ->update(['settlement_id' => $liq->id]);
+            }
+
             $liq->update([
                 'counter_cash' => $mostrador,
+                'counter_qr' => $porQr,
                 'credit_sales' => round($totales['credito'], 2),
                 'carried_in' => round($arrastrado, 2),
                 'carried_from_id' => $arrastre?->id,
@@ -196,7 +223,7 @@ class LiquidacionService
                  * significaría nada.
                  */
                 'platform_fee' => round($totales['retenido'], 2),
-                'net_payable' => round($totales['net'] + $arrastrado - $mostrador, 2),
+                'net_payable' => round($totales['net'] + $arrastrado - $mostrador + $porQr, 2),
             ]);
 
             return $liq->fresh();

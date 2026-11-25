@@ -105,7 +105,7 @@ class DocumentosDelDomiciliarioController extends Controller
                 'number' => $datos['number'] ?? null,
                 'expires_at' => $datos['expires_at'] ?? null,
                 'media_id' => (int) $archivo['id'],
-                'notes' => mb_substr('Lo subió la tienda '.($tienda ?? ''), 0, 255),
+                'notes' => mb_substr('Lo subió el negocio '.($tienda ?? ''), 0, 255),
                 'state' => 1,
             ]);
         });

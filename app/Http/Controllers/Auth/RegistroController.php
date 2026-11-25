@@ -49,10 +49,10 @@ class RegistroController extends Controller
          */
         if (! $request->has('consentimiento')) {
             return response()->json([
-                'message' => 'Tu version de la app no permite completar el registro. Actualizala desde la tienda y vuelve a intentarlo.',
+                'message' => 'Tu version de la app no permite completar el registro. Actualizala desde la tienda de aplicaciones y vuelve a intentarlo.',
                 'errors' => [
                     'consentimiento' => [
-                        'Tu version de la app no permite completar el registro. Actualizala desde la tienda y vuelve a intentarlo.',
+                        'Tu version de la app no permite completar el registro. Actualizala desde la tienda de aplicaciones y vuelve a intentarlo.',
                     ],
                 ],
             ], 422);

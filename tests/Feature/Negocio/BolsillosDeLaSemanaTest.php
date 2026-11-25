@@ -315,3 +315,19 @@ test('un mes sin ventas da lista vacia en los tres, no tres ceros', function () 
         ->and($r->json('por_medio'))->toBe([])
         ->and($r->json('por_medio_mes'))->toBe([]);
 });
+
+test('un pedido pagado y luego cancelado no cuenta como ingreso', function () {
+    /*
+     * Al cancelarlo la plata se devuelve, pero `payment_state` se queda en
+     * «paid»: el ingreso lo seguía sumando hoy, en la semana y en el mes.
+     */
+    $t = tenderoConVentas([[2, 10000], [2, 25000]]);
+    DB::table('orderssales')->where('busines_id', $t['businessId'])
+        ->where('total', 25000)->update(['state' => 5]);
+
+    Sanctum::actingAs($t['tendero']);
+    $r = $this->getJson('/v1/negocio/ingresos')->assertOk();
+
+    expect($r->json('current_week_income'))->toEqual(10000)
+        ->and($r->json('total_income'))->toEqual(10000);
+});

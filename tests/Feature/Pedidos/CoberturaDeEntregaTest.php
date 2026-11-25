@@ -130,6 +130,10 @@ test('recoger en tienda no depende del radio', function () {
         pedidoHacia($e, 0),
         ['pickup' => true, 'address_id' => null],
     ))->assertSuccessful();
+
+    // Y nace con su código para recogerlo: tres números.
+    $pin = DB::table('orderssales')->latest('orderSales_id')->value('pin_entrega');
+    expect($pin)->toMatch('/^\d{3}$/');
 });
 
 test('sin coordenadas se deja pasar, no se castiga el dato que falta', function () {

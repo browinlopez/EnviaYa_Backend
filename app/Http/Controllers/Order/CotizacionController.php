@@ -79,7 +79,7 @@ class CotizacionController extends Controller
              * que la dan por hecha, en silencio.
              */
             'products.*.pedido_por' => 'sometimes|nullable|in:valor,cantidad',
-            'products.*.requested_qty' => 'sometimes|nullable|numeric|min:0.001|max:100',
+            'products.*.requested_qty' => 'sometimes|nullable|numeric|min:0.001|max:5000',
             'products.*.requested_value' => 'sometimes|nullable|numeric|min:100|max:1000000',
             'address_id' => 'sometimes|nullable|integer',
             'pickup' => 'sometimes|boolean',
@@ -109,7 +109,7 @@ class CotizacionController extends Controller
 
         if ($vigentes === []) {
             return response()->json([
-                'message' => 'Ninguno de esos productos sigue disponible en la tienda.',
+                'message' => 'Ninguno de esos productos sigue disponible en el negocio.',
                 'no_estan' => $faltantes->values(),
             ], 422);
         }
@@ -138,6 +138,10 @@ class CotizacionController extends Controller
                 'message' => 'Actualiza la app para comprar productos que se venden al peso.',
                 'product_ids' => $sinPeso,
             ], 422);
+        }
+
+        if ($fuera = $this->economia->lineasQueNoSePuedenPedirAsi($vigentes, $surtido)) {
+            return response()->json($fuera, 422);
         }
 
         $cifras = $this->economia->calcular(

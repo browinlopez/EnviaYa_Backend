@@ -31,7 +31,7 @@ class RegistrarPesajeRequest extends FormRequest
              * Hasta tres decimales: la bascula de mostrador pesa en gramos y
              * un kilo tiene mil. Mas precision seria inventarla.
              */
-            'lineas.*.qty_final' => 'required|numeric|min:0.001|max:1000',
+            'lineas.*.qty_final' => 'required|numeric|min:0.001|max:5000',
         ];
     }
 }

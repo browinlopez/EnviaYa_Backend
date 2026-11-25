@@ -33,7 +33,7 @@ class PinDeEntregaController extends Controller
             return response()->json(['message' => 'Ese pedido no es tuyo.'], 404);
         }
 
-        return response()->json(['data' => $this->datos($pedido)]);
+        return response()->json(['data' => $this->datos($pedido, paraElCliente: true)]);
     }
 
     public function delNegocio(Request $request, int $id)
@@ -72,13 +72,21 @@ class PinDeEntregaController extends Controller
         return OrdersSales::where('orderSales_id', $id)->where('busines_id', $negocio)->first();
     }
 
-    private function datos(OrdersSales $pedido): array
+    private function datos(OrdersSales $pedido, bool $paraElCliente = false): array
     {
         $enCamino = (int) $pedido->state === OrdersSales::EN_CAMINO;
 
+        /*
+         * EL CÓDIGO PARA RECOGER SOLO LO VE EL CLIENTE. Si la tienda lo
+         * viera, pedirlo en el mostrador no probaría nada.
+         */
+        $paraRecoger = $paraElCliente
+            && $pedido->pickup
+            && in_array((int) $pedido->state, [OrdersSales::NUEVO, OrdersSales::PREPARANDO], true);
+
         return [
-            // Sólo mientras sirve: entregado o cancelado, el PIN ya no abre nada.
-            'pin' => $enCamino ? $pedido->pin_entrega : null,
+            'pin' => ($enCamino || $paraRecoger) ? $pedido->pin_entrega : null,
+            'para_recoger' => $paraRecoger,
             'bloqueado' => $enCamino && (int) $pedido->pin_intentos >= PinDeEntrega::INTENTOS,
             'llego_at' => $pedido->llego_at,
         ];

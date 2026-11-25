@@ -42,7 +42,7 @@ class ProductosDelPanel
      * aquí duplicaría cada renglón una vez por tienda que ofrece el mismo
      * producto.
      */
-    public function listado(?string $categoria = null, ?int $negocio = null): Builder
+    public function listado(?string $categoria = null, ?int $negocio = null, bool $nuevosDeTenderos = false): Builder
     {
         $q = DB::table('products as p')
             ->leftJoin('products_business as pb', 'pb.products_id', '=', 'p.products_id')
@@ -50,7 +50,12 @@ class ProductosDelPanel
             ->leftJoin('category as c', 'c.category_id', '=', 'p.category_id')
             ->select([
                 'p.products_id', 'p.name', 'p.description', 'p.image', 'p.state',
+                // De dónde salió y si ya lo ven todas las tiendas.
+                'p.origen', 'p.barcode', 'p.brand', 'p.category_id',
+                'p.en_catalogo_general', 'p.busines_id_propietario', 'p.revisado_at', 'p.created_at',
                 'pb.busines_products_id', 'pb.price', 'pb.amount', 'pb.qualification',
+                // Lo que se mide tiene sus existencias en kilos o litros.
+                'pb.sale_unit', 'pb.stock_weight',
                 'b.busines_id', 'b.name as business_name', 'c.name as category_name',
             ])
             ->selectSub(
@@ -62,6 +67,19 @@ class ProductosDelPanel
 
         if ($categoria) {
             $q->where('c.name', $categoria);
+        }
+
+        /*
+         * LA BANDEJA: lo que dieron de alta los tenderos y el equipo aún no
+         * revisa. Una fila por producto --la de la tienda que lo creó--, no
+         * una por cada tienda que después lo agregó.
+         */
+        if ($nuevosDeTenderos) {
+            $q->where('p.origen', 'tendero')
+                ->whereNull('p.revisado_at')
+                ->where(fn ($w) => $w
+                    ->whereNull('p.busines_id_propietario')
+                    ->orWhereColumn('pb.busines_id', 'p.busines_id_propietario'));
         }
 
         // El join a `business` ya estaba —se usa para el nombre y para
@@ -84,8 +102,8 @@ class ProductosDelPanel
     {
         $r = ListadoPaginado::soloAgregados($q, "
             COUNT(*) as total,
-            COALESCE(SUM(pb.price * pb.amount), 0) as inventario,
-            SUM(CASE WHEN pb.amount = 0 THEN 1 ELSE 0 END) as agotados,
+            COALESCE(SUM(pb.price * CASE WHEN pb.sale_unit IS NOT NULL AND pb.sale_unit <> 'unidad' THEN pb.stock_weight ELSE pb.amount END), 0) as inventario,
+            SUM(CASE WHEN (CASE WHEN pb.sale_unit IS NOT NULL AND pb.sale_unit <> 'unidad' THEN pb.stock_weight ELSE pb.amount END) <= 0 THEN 1 ELSE 0 END) as agotados,
             SUM(CASE WHEN p.image IS NULL OR p.image = '' THEN 1 ELSE 0 END) as sin_imagen
         ");
 
@@ -120,6 +138,15 @@ class ProductosDelPanel
                 DB::raw('SUM(CASE WHEN pb.amount = 0 THEN 1 ELSE 0 END) as agotados'),
                 DB::raw('COALESCE(SUM(pb.price * pb.amount), 0) as valor'),
             ]);
+    }
+
+    /** Cuántos productos de tenderos esperan revisión: el contador de la pestaña. */
+    public function pendientesDeTenderos(): int
+    {
+        return DB::table('products')
+            ->where('origen', 'tendero')
+            ->whereNull('revisado_at')
+            ->count();
     }
 
     /** Un producto del catálogo, por su identificador. */

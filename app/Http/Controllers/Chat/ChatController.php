@@ -110,6 +110,9 @@ class ChatController extends Controller
                 'content' => $request->content,
             ]);
 
+            // Quien escribe ya vio la conversación hasta su propio mensaje.
+            $this->marcarLeido($chat->chat_id, (int) $sender->user_id);
+
             /*
              * El mensaje sale por el websocket, además de guardarse.
              *
@@ -158,6 +161,16 @@ class ChatController extends Controller
              * `ResumenDeMensaje` traduce esas tarjetas a una frase y deja el
              * texto normal como estaba.
              */
+            /*
+             * Si escribe LA TIENDA, el aviso dice el nombre de la tienda. El
+             * cliente le escribió a «Tienda de prueba», no a la persona que la
+             * atiende: ver «Geovanny Boom» en la campana no le dice nada.
+             */
+            $deQuien = (string) ($sender->name ?? '');
+            if ($chat->busines_id && (int) $sender->rol === 2) {
+                $deQuien = (string) ($chat->negocio()->value('name') ?: $deQuien);
+            }
+
             Avisos::para(
                 $recipient->user_id,
                 'mensaje_nuevo',
@@ -167,9 +180,15 @@ class ChatController extends Controller
                     // Para que tocar el aviso abra ESE chat: la pantalla necesita
                     // saber con quien se habla, no solo el numero del chat.
                     'remitente_id' => $sender->user_id,
-                    'remitente_nombre' => (string) ($sender->name ?? ''),
+                    'remitente_nombre' => $deQuien,
+                    // Con quién se habla: el chat abierto desde el aviso dice
+                    // «Cliente», «Negocio» o «Domiciliario» bajo el nombre.
+                    'remitente_rol' => (int) $sender->rol,
+                    // De qué negocio es el chat: abierto desde el aviso, una
+                    // pre-orden vieja sin negocio no se podía repetir.
+                    'business_id' => $chat->busines_id,
                 ],
-                titulo: (string) ($sender->name ?: 'Mensaje nuevo'),
+                titulo: $deQuien !== '' ? $deQuien : 'Mensaje nuevo',
             );
 
             return response()->json([
@@ -211,6 +230,9 @@ class ChatController extends Controller
                 ]);
             }
 
+            // Abrirla es leerla: sus mensajes dejan de contar como nuevos.
+            $this->marcarLeido((int) $chat->chat_id, (int) $request->user()?->user_id);
+
             return $this->formatChatResponse($chat);
         }
 
@@ -243,6 +265,8 @@ class ChatController extends Controller
             ]);
         }
 
+        $this->marcarLeido((int) $chat->chat_id, (int) $request->user()?->user_id);
+
         return $this->formatChatResponse($chat);
     }
 
@@ -251,8 +275,23 @@ class ChatController extends Controller
 
         $message = Message::findOrFail($request->message_id);
 
-        // Editar el mensaje de otro. Solo su autor.
-        if ($no = $this->negarCuentaAjena($request, $message->user_id)) {
+        /*
+         * Editar el mensaje de otro: solo su autor... SALVO para contestar una
+         * pre-orden.
+         *
+         * La pre-orden la escribe el tendero y la confirma o la cancela el
+         * cliente, y eso se guarda cambiando el `status` de la tarjeta. Con la
+         * regla de «solo el autor» el cliente recibía un 403 que la app se
+         * tragaba: los productos sí pasaban al carrito, pero la tarjeta se
+         * quedaba «pendiente» para siempre en los dos teléfonos.
+         *
+         * Se permite lo justo: la otra persona del chat cambia el ESTADO de
+         * una tarjeta de pre-orden a confirmada o cancelada. Los productos,
+         * las cantidades y los precios tienen que llegar idénticos; si cambia
+         * cualquier otra cosa, vuelve a mandar la regla del autor.
+         */
+        if (! $this->contestaUnaPreorden($request, $message)
+            && ($no = $this->negarCuentaAjena($request, $message->user_id))) {
             return $no;
         }
 
@@ -263,6 +302,32 @@ class ChatController extends Controller
             'success' => true,
             'message' => (new MensajeResource($message))->resolve(),
         ]);
+    }
+
+    /** ¿Es la otra persona del chat respondiendo a una pre-orden, y nada más? */
+    private function contestaUnaPreorden(Request $request, Message $message): bool
+    {
+        $antes = json_decode((string) $message->content, true);
+        $despues = $request->input('content');
+
+        if (! is_array($antes) || ($antes['type'] ?? null) !== 'preorder' || ! is_array($despues)) {
+            return false;
+        }
+
+        if (! in_array($despues['status'] ?? null, ['confirmed', 'cancelled'], true)) {
+            return false;
+        }
+
+        $sinEstado = fn (array $c) => array_diff_key($c, ['status' => true]);
+        if ($sinEstado($antes) != $sinEstado($despues)) {
+            return false;
+        }
+
+        $yo = $request->user()?->user_id;
+
+        return $yo !== null && ChatParticipant::where('chat_id', $message->chat_id)
+            ->where('user_id', $yo)
+            ->exists();
     }
 
     /**
@@ -297,6 +362,7 @@ class ChatController extends Controller
             ))
             ->with([
                 'participants.user',
+                'negocio:busines_id,name',
                 'messages' => fn ($q) => $q->latest('created_at')->limit(1),
             ])
             ->get()
@@ -305,8 +371,29 @@ class ChatController extends Controller
             ->sortByDesc(fn ($chat) => optional($chat->messages->first())->created_at)
             ->values();
 
+        /*
+         * CUÁNTOS SIN LEER, por conversación y en UNA consulta: los mensajes
+         * de los demás después del último que esta persona leyó.
+         * La app ya pintaba `unread_count` y nunca llegaba.
+         */
+        $yo = (int) ($request->user()?->user_id ?? $request->user_id);
+        $sinLeer = $chats->isEmpty() ? collect() : DB::table('messages as m')
+            ->join('chat_participants as p', function ($j) use ($yo) {
+                $j->on('p.chat_id', '=', 'm.chat_id')->where('p.user_id', '=', $yo);
+            })
+            ->whereIn('m.chat_id', $chats->pluck('chat_id'))
+            ->where('m.user_id', '!=', $yo)
+            // Por número de mensaje y no por hora: ver la migración
+            // `hasta_donde_leyo_cada_uno`.
+            ->where(fn ($q) => $q->whereNull('p.last_read_message_id')
+                ->orWhereColumn('m.message_id', '>', 'p.last_read_message_id'))
+            ->groupBy('m.chat_id')
+            ->selectRaw('m.chat_id, COUNT(*) as cuantos')
+            ->pluck('cuantos', 'chat_id');
+
         $formattedChats = $chats->map(
-            fn ($chat) => (new ChatDeLaListaResource($chat))->resolve(),
+            fn ($chat) => (new ChatDeLaListaResource($chat))->resolve()
+                + ['unread_count' => (int) ($sinLeer[$chat->chat_id] ?? 0)],
         );
 
         return response()->json($formattedChats);
@@ -361,6 +448,36 @@ class ChatController extends Controller
         }
 
         return $deLosDos->count() === 1 ? (int) $deLosDos->first() : null;
+    }
+
+    /** Lo que había en el chat hasta ahora, esta persona ya lo vio. */
+    private function marcarLeido(int $chatId, int $userId): void
+    {
+        if ($chatId <= 0 || $userId <= 0) {
+            return;
+        }
+
+        $ultimo = DB::table('messages')->where('chat_id', $chatId)->max('message_id');
+        if ($ultimo === null) {
+            return;
+        }
+
+        DB::table('chat_participants')
+            ->where('chat_id', $chatId)
+            ->where('user_id', $userId)
+            ->update(['last_read_message_id' => $ultimo]);
+
+        /*
+         * Y SUS AVISOS DE «MENSAJE NUEVO», TAMBIÉN LEÍDOS. Si no, la campana
+         * seguía contando como pendientes mensajes que ya se leyeron en el
+         * chat, y la campana y la barra decían números distintos.
+         */
+        DB::table('notifications')
+            ->where('user_id', $userId)
+            ->where('tipo', 'mensaje_nuevo')
+            ->where('read', false)
+            ->where('datos->chat_id', $chatId)
+            ->update(['read' => true]);
     }
 
     /**

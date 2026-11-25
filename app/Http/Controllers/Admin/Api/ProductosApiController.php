@@ -32,6 +32,7 @@ class ProductosApiController extends Controller
         $q = $catalogo->listado(
             categoria: trim((string) $request->query('category', '')) ?: null,
             negocio: ((int) $request->query('business_id')) ?: null,
+            nuevosDeTenderos: $request->boolean('pendientes'),
         );
 
         $r = ListadoPaginado::responder(
@@ -53,6 +54,8 @@ class ProductosApiController extends Controller
         $r['data'] = $this->conImagenPrincipal(
             collect($r['data']), 'productos', 'products_id', 'image', $medios
         );
+        // El contador de la pestaña «Nuevos de tenderos».
+        $r['pendientesDeTenderos'] = $catalogo->pendientesDeTenderos();
 
         return response()->json($r);
     }
@@ -123,11 +126,37 @@ class ProductosApiController extends Controller
             'description' => 'sometimes|nullable|string',
             'image' => 'sometimes|nullable|string',
             'state' => 'sometimes|boolean',
+            // Lo que el tendero no puso al crearlo rápido: el equipo lo completa.
+            'category_id' => 'sometimes|nullable|integer|exists:category,category_id',
+            'barcode' => 'sometimes|nullable|string|max:20|unique:products,barcode,'.$id.',products_id',
+            'brand' => 'sometimes|nullable|string|max:120',
         ]);
 
         if ($datos) {
             DB::table('products')->where('products_id', $id)->update($datos);
         }
+
+        return $this->showProduct($id);
+    }
+
+    /**
+     * POST admin/products/{id}/catalogo-general {general: bool}
+     *
+     * LA DECISIÓN DEL EQUIPO sobre un producto que creó un tendero: pasarlo
+     * al catálogo general --las demás tiendas lo encuentran al buscar-- o
+     * dejarlo solo en su tienda. Las dos lo sacan de la bandeja.
+     */
+    public function catalogoGeneral(Request $request, $id)
+    {
+        abort_if(! DB::table('products')->where('products_id', $id)->exists(), 404, 'El producto no existe.');
+
+        $datos = $request->validate(['general' => 'required|boolean']);
+
+        DB::table('products')->where('products_id', $id)->update([
+            'en_catalogo_general' => $datos['general'],
+            'revisado_at' => now(),
+            'updated_at' => now(),
+        ]);
 
         return $this->showProduct($id);
     }

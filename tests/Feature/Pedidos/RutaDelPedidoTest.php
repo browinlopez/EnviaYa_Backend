@@ -18,6 +18,8 @@ use Laravel\Sanctum\Sanctum;
  * tarde al mismo edificio pagaba dos veces.
  */
 beforeEach(function () {
+    // Estas pruebas son las de Google; las de OSRM van al final.
+    config(['services.rutas.proveedor' => 'google']);
     config(['services.google.maps_server_key' => 'clave-de-prueba']);
     Cache::flush();
 
@@ -236,4 +238,31 @@ test('la app publicada sigue pidiendo por origen y destino', function () {
     fakeRutaOk();
 
     pedirRuta('10.9878,-74.7889', '10.9950,-74.7800')->assertOk();
+});
+
+/* ============================ CON OSRM ============================
+   El trazador por defecto: libre y sin clave. */
+
+test('con OSRM se traza sin clave y se devuelve su polilinea', function () {
+    config(['services.rutas.proveedor' => 'osrm', 'services.google.maps_server_key' => '']);
+    Http::fake(['router.project-osrm.org/*' => Http::response([
+        'routes' => [['geometry' => 'osrm_poly']],
+    ])]);
+
+    pedirRuta('10.9878,-74.7889', '10.9950,-74.7800')
+        ->assertOk()
+        ->assertJson(['polilinea' => 'osrm_poly']);
+
+    // OSRM va «lng,lat»: al reves que Google.
+    Http::assertSent(fn ($r) => str_contains($r->url(), '-74.78890,10.98780;-74.78000,10.99500'));
+});
+
+test('un «no hay ruta» no se vuelve a preguntar en cada apertura', function () {
+    config(['services.rutas.proveedor' => 'osrm']);
+    Http::fake(['router.project-osrm.org/*' => Http::response(['code' => 'NoRoute', 'routes' => []])]);
+
+    pedirRuta('10.9878,-74.7889', '10.9950,-74.7800')->assertStatus(503);
+    pedirRuta('10.9878,-74.7889', '10.9950,-74.7800')->assertStatus(503);
+
+    Http::assertSentCount(1);
 });

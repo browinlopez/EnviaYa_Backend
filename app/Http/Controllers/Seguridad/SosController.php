@@ -71,7 +71,7 @@ class SosController extends Controller
          */
         if (! in_array($rol, [self::TENDERO, self::DOMICILIARIO], true)) {
             return response()->json([
-                'message' => 'El SOS es para domiciliarios y tenderos. Si necesitas ayuda, escríbenos desde Soporte.',
+                'message' => 'El SOS es para domiciliarios y dueños de negocio. Si necesitas ayuda, escríbenos desde Soporte.',
             ], 403);
         }
 

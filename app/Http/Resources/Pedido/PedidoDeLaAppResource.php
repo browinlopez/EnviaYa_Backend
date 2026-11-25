@@ -222,6 +222,12 @@ class PedidoDeLaAppResource extends JsonResource
             'payment_state' => $order->payment_state,
             'sale_date' => $order->sale_date,
             'is_scheduled' => $order->is_scheduled,
+            'ready_at' => $order->ready_at,
+            // Para recoger: la tienda pide el código antes de entregarlo. El
+            // código no viaja: solo si hace falta pedirlo.
+            'pide_codigo' => (bool) $order->pickup && (bool) $order->pin_entrega,
+            // 1 = falta pesar lo pedido por medida; la app no deja despachar.
+            'weighing_state' => (int) $order->weighing_state,
             'delivery_date' => $order->delivery_date,
             'delivery_type' => $order->pickup ? 'pickup' : 'delivery',
             'pickup' => (bool) $order->pickup,

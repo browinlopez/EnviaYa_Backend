@@ -192,6 +192,8 @@ class ProductTypeSchema
                     'rules' => ['nullable', 'integer', 'min:0', 'max:240'],
                     'label' => 'Minutos de preparación',
                     'input' => 'number',
+                    // Lo que lee el comprador: «30 min», no «30» a secas.
+                    'unidad' => 'min',
                     'columna' => 'Minutos de preparación',
                     'ancho' => 22,
                     'alias' => ['minutos_preparacion', 'minutos', 'preparacion', 'tiempo'],
@@ -444,6 +446,72 @@ class ProductTypeSchema
                 'input' => $def['input'],
                 'required' => in_array('required', $def['rules'], true),
             ];
+        }
+
+        return $salida;
+    }
+
+    /**
+     * ==================================================================
+     * LO QUE EL COMPRADOR LEE DE UN PRODUCTO, IGUAL PARA TODOS LOS OFICIOS.
+     *
+     * Cada oficio guarda lo suyo en su tabla --el principio activo en
+     * `pharmacy_products`, los alérgenos en `restaurant_products`, la
+     * compatibilidad en `car_parts_products`-- y la ficha del negocio no
+     * mandaba nada de eso: el tendero lo llenaba y quien compraba no lo
+     * veía nunca. Ni siquiera «requiere fórmula médica».
+     *
+     * Se manda como UNA lista de `{campo, etiqueta, valor}` ya en texto, en
+     * vez de un objeto distinto por oficio: la app pinta filas «Etiqueta ·
+     * valor» sin saber de droguerías ni de repuestos, y un oficio nuevo
+     * declarado aquí aparece solo. Las etiquetas son las mismas que ve el
+     * tendero al llenarlo.
+     *
+     * Solo lo que tiene valor. De los sí/no, solo los que valen SÍ: «Vegano:
+     * no» en cada plato es ruido, y «Requiere fórmula: no» se entiende sin
+     * decirlo.
+     * ==================================================================
+     *
+     * @return list<array{campo: string, etiqueta: string, valor: string}>
+     */
+    public static function detallesParaElComprador(?int $type, $product): array
+    {
+        $salida = [];
+
+        $poner = function (string $campo, array $def, $valor) use (&$salida): void {
+            if ($valor === null || $valor === '') {
+                return;
+            }
+            if (($def['input'] ?? 'text') === 'boolean') {
+                if (! filter_var($valor, FILTER_VALIDATE_BOOLEAN)) {
+                    return;
+                }
+                $valor = 'Sí';
+            }
+            $texto = trim((string) $valor);
+            if (isset($def['unidad'])) {
+                $texto .= ' '.$def['unidad'];
+            }
+            $salida[] = [
+                'campo' => $campo,
+                'etiqueta' => $def['label'],
+                'valor' => $texto,
+            ];
+        };
+
+        $poner('brand', ['label' => 'Marca'], $product->brand ?? null);
+
+        foreach (self::COMUNES as $campo => $def) {
+            $poner($campo, $def, $product->{$campo} ?? null);
+        }
+
+        $relacion = self::relation((int) $type);
+        $fila = $relacion ? $product->{$relacion} : null;
+
+        if ($fila) {
+            foreach (self::SCHEMAS[$type]['fields'] as $campo => $def) {
+                $poner($campo, $def, $fila->{$campo} ?? null);
+            }
         }
 
         return $salida;

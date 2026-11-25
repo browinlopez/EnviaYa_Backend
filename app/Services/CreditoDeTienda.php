@@ -154,14 +154,14 @@ class CreditoDeTienda
             }
 
             if (! $this->estaAfiliado($negocioId, $userId)) {
-                throw new RuntimeException('Solo puedes dar crédito a clientes afiliados a tu tienda.');
+                throw new RuntimeException('Solo puedes dar crédito a clientes afiliados a tu negocio.');
             }
 
             $tope = $negocio->credit_debt_cap;
 
             if ($tope === null || (float) $tope <= 0) {
                 throw new RuntimeException(
-                    'Tu tienda todavía no tiene crédito habilitado. Pídeselo al equipo de VeciPa’Ya.'
+                    'Tu negocio todavía no tiene crédito habilitado. Pídeselo al equipo de VeciPa’Ya.'
                 );
             }
 
@@ -199,7 +199,7 @@ class CreditoDeTienda
         $total = round((float) $order->total, 2);
 
         if (! $this->estaAfiliado($negocioId, $userId)) {
-            throw new RuntimeException('Para pagar con crédito tienes que estar afiliado a esta tienda.');
+            throw new RuntimeException('Para pagar con crédito tienes que estar afiliado a este negocio.');
         }
 
         $credito = StoreCredit::where('busines_id', $negocioId)
@@ -208,14 +208,14 @@ class CreditoDeTienda
             ->first();
 
         if (! $credito || (float) $credito->credit_limit <= 0) {
-            throw new RuntimeException('Esta tienda no te ha dado crédito.');
+            throw new RuntimeException('Este negocio no te ha dado crédito.');
         }
 
         $tope = Business::where('busines_id', $negocioId)->value('credit_debt_cap');
 
         if ($tope === null || (float) $tope <= 0 || $this->deudaDeLaTienda($negocioId) >= (float) $tope) {
             throw new RuntimeException(
-                'Por ahora esta tienda no está vendiendo a crédito. Elige otro método de pago.'
+                'Por ahora este negocio no está vendiendo a crédito. Elige otro método de pago.'
             );
         }
 
@@ -223,7 +223,7 @@ class CreditoDeTienda
 
         if ($total > $disponible + 0.005) {
             throw new RuntimeException(sprintf(
-                'Tu crédito disponible en esta tienda es %s y el pedido cuesta %s.',
+                'Tu crédito disponible en este negocio es %s y el pedido cuesta %s.',
                 $this->pesos($disponible),
                 $this->pesos($total),
             ));
@@ -280,7 +280,7 @@ class CreditoDeTienda
                 ->first();
 
             if (! $credito) {
-                throw new RuntimeException('Este cliente no tiene crédito en tu tienda.');
+                throw new RuntimeException('Este cliente no tiene crédito en tu negocio.');
             }
 
             $usado = $this->usado($credito->id);

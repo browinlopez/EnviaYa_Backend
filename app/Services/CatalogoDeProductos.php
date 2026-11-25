@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Models\Product\Product;
 use App\Models\Product\ProductBusiness;
+use App\Support\UnidadDeVenta;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -118,7 +119,15 @@ class CatalogoDeProductos
 
         $consulta = Product::query()
             ->with(['category', 'group'])
-            ->where('state', 1);
+            ->where('state', 1)
+            /*
+             * Lo que otra tienda creó para sí --«hormiga culona»-- no aparece
+             * acá hasta que el equipo lo pase al catálogo general. Lo propio,
+             * sí: es suyo.
+             */
+            ->where(fn ($q) => $q
+                ->where('en_catalogo_general', 1)
+                ->orWhere('busines_id_propietario', $businessId));
 
         $this->soloDeSuOficio($consulta, $businessId);
 
@@ -203,7 +212,7 @@ class CatalogoDeProductos
      * deja al tendero esperando y termina con él llamando por teléfono; la
      * marca de origen permite revisarlo después sin bloquear la venta de hoy.
      */
-    public function proponer(array $datos, string $origen = 'tendero'): Product
+    public function proponer(array $datos, string $origen = 'tendero', ?int $negocio = null): Product
     {
         $barcode = isset($datos['barcode'])
             ? preg_replace('/\D/', '', (string) $datos['barcode'])
@@ -233,9 +242,53 @@ class CatalogoDeProductos
             'image' => $datos['image'] ?? null,
             'state' => 1,
             'origen' => $origen,
+            /*
+             * Lo que da de alta un tendero se vende YA en su tienda, pero las
+             * demás no lo ven hasta que el equipo lo revise: un nombre mal
+             * escrito o una foto equivocada se quedan en una tienda y no se
+             * reparten por todo el catálogo.
+             */
+            'busines_id_propietario' => $negocio,
+            'en_catalogo_general' => $negocio === null,
         ]);
 
         return $producto;
+    }
+
+    /**
+     * «HORMIGA CULONA, $3.000»: un producto que el catálogo no tiene, con lo
+     * mínimo para venderlo ya. Solo nombre y precio; el equipo lo completa
+     * --foto, categoría, código-- desde la bandeja del panel.
+     *
+     * Crea el producto y lo pone en la tienda en una sola transacción: un
+     * producto creado pero no enlazado sería uno que nadie ve ni vende.
+     */
+    public function crearPropio(int $negocio, array $datos): ProductBusiness
+    {
+        return DB::transaction(function () use ($negocio, $datos) {
+            $producto = Product::create([
+                'name' => trim((string) $datos['name']),
+                'state' => 1,
+                'origen' => 'tendero',
+                'busines_id_propietario' => $negocio,
+                'en_catalogo_general' => false,
+            ]);
+
+            $unidad = $datos['sale_unit'] ?? UnidadDeVenta::UNIDAD;
+
+            return $this->agregarATienda(
+                $negocio,
+                (int) $producto->products_id,
+                (float) $datos['price'],
+                UnidadDeVenta::esPeso($unidad) ? 0 : (int) ($datos['amount'] ?? 0),
+                array_filter([
+                    'sale_unit' => $unidad,
+                    'por_valor' => UnidadDeVenta::esPeso($unidad) && ! empty($datos['por_valor']),
+                    'stock_weight' => UnidadDeVenta::esPeso($unidad) ? (float) ($datos['amount'] ?? 0) : null,
+                    'costo' => isset($datos['costo']) ? (float) $datos['costo'] : null,
+                ], fn ($v) => $v !== null),
+            );
+        });
     }
 
     /**

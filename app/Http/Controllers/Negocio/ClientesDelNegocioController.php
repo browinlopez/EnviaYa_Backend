@@ -90,7 +90,7 @@ class ClientesDelNegocioController extends Controller
             'user_id' => $userId,
         ]);
 
-        return response()->json(['message' => 'Ya es cliente de tu tienda.'], 201);
+        return response()->json(['message' => 'Ya es cliente de tu negocio.'], 201);
     }
 
     /**

@@ -57,7 +57,7 @@ class OrdersSalesPolicy
             // Aceptar el pedido es decisión de la tienda que lo va a preparar.
             2 => $this->esDuenoDelNegocio($userId, $order->busines_id)
                 ? null
-                : 'Solo la tienda del pedido puede aceptarlo.',
+                : 'Solo el negocio del pedido puede aceptarlo.',
 
             /*
              * Despachar tiene dos caminos legítimos y los dos pasan por acá: el
@@ -69,16 +69,21 @@ class OrdersSalesPolicy
             3 => ($this->esDuenoDelNegocio($userId, $order->busines_id)
                     || (int) $userIdDomiciliario === $userId)
                 ? null
-                : 'Solo la tienda o el domiciliario que lo toma pueden despacharlo.',
+                : 'Solo el negocio o el domiciliario que lo toma pueden despacharlo.',
 
             /*
              * Entregar solo lo puede declarar quien lo lleva. Es la transición
              * que mueve dinero —registra el cobro en efectivo y la ganancia del
              * domiciliario—, así que acá no se admite ni el tendero.
              */
-            4 => ($order->domiciliary && (int) $order->domiciliary->user_id === $userId)
-                ? null
-                : 'Solo el domiciliario asignado puede marcar la entrega.',
+            // Lo entrega quien lo lleva; si lo recoge el cliente, la tienda.
+            4 => $order->pickup
+                ? ($this->esDuenoDelNegocio($userId, $order->busines_id)
+                    ? null
+                    : 'Solo el negocio puede entregar un pedido para recoger.')
+                : (($order->domiciliary && (int) $order->domiciliary->user_id === $userId)
+                    ? null
+                    : 'Solo el domiciliario asignado puede marcar la entrega.'),
 
             default => 'Transición no reconocida.',
         };

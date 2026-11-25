@@ -118,8 +118,12 @@ it('la forma del tendero es un subconjunto estricto de la del comprador', functi
     /* Y la del comprador tiene SIETE más. Eran ocho hasta el 13 de noviembre
        de 2026, cuando se le quitó `domiciliary_fee` al comprador; el tendero
        nunca la tuvo, así que lo que cambia es la cuenta y NO la relación de
-       subconjunto, que es lo que esta prueba defiende. */
-    expect(count($comprador) - count($tendero))->toBe(7);
+       subconjunto, que es lo que esta prueba defiende.
+
+       Ocho desde el 24 de noviembre de 2026: el comprador recibe `llego_at`
+       para que su seguimiento diga «Tu domiciliario llegó» sin recargar a
+       mano. */
+    expect(count($comprador) - count($tendero))->toBe(8);
 });
 
 it('el comprador YA NO recibe lo que gana el domiciliario, ni su correo', function () {
