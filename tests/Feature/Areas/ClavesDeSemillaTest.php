@@ -186,3 +186,22 @@ it('con permiso explícito sí corre en producción', function () {
     expect(User::where('email', 'admin@gmail.com')->exists())->toBeTrue();
 
 });
+
+it('el administrador sembrado entra al panel: área de Tecnología y gestor', function () {
+    /*
+     * Las migraciones dan área y nivel a los administradores que YA existían; en
+     * una base nueva el administrador lo crea el seeder después, y nacía sin
+     * área y como «consulta». El panel no deja entrar a nadie sin área, así que
+     * el recorrido de la CI del panel se quedaba en el login.
+     */
+    config(['semillas.clave' => 'una-clave-de-prueba']);
+    expect(DB::table('areas')->where('code', 'sistema')->exists())->toBeTrue();
+
+    sembrar(UsersSeeder::class);
+
+    $admin = User::where('email', 'admin@gmail.com')->first();
+    $sistema = DB::table('areas')->where('code', 'sistema')->value('id');
+
+    expect((int) $admin->area_id)->toBe((int) $sistema)
+        ->and($admin->access_level)->toBe('gestor');
+});

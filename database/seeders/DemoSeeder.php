@@ -112,6 +112,7 @@ class DemoSeeder extends Seeder
         $conjuntos = $this->conjuntos();
         $propietarios = $this->propietarios();
         $negocios = $this->negocios($propietarios);
+        $this->catalogoDeEjemplo();
         $this->catalogo($negocios);
         $domiciliarios = $this->domiciliarios($negocios);
         $compradores = $this->compradores($conjuntos);
@@ -123,6 +124,7 @@ class DemoSeeder extends Seeder
         $this->sst($domiciliarios);
         $this->calidad($compradores, $negocios, $domiciliarios, $pedidos, $areas);
         $this->liquidaciones($negocios, $domiciliarios, $areas);
+        $this->auditoria($areas, $negocios);
 
         $this->resumen($areas, $negocios, $domiciliarios, $compradores, $pedidos);
     }
@@ -377,6 +379,126 @@ class DemoSeeder extends Seeder
      * droguería no puede terminar vendiendo repuestos, porque la app clasifica
      * el producto por su categoría y quedaría en un carrusel que no le toca.
      */
+    /**
+     * UN CATÁLOGO MÍNIMO CUANDO LA BASE NO TIENE NINGUNO.
+     *
+     * El catálogo de verdad entra por `ProductFromExcelSeeder`, cuyo Excel no
+     * vive en el repositorio. En una base nueva (la CI del panel, quien clona
+     * el proyecto) no había un solo producto: los negocios sembrados salían
+     * vacíos y la pantalla de productos del panel no tenía nada que paginar ni
+     * buscar. Si ya hay productos activos, no se toca nada.
+     */
+    private function catalogoDeEjemplo(): void
+    {
+        if (DB::table('products')->where('state', 1)->exists()) {
+            return;
+        }
+
+        $porCategoria = [
+            'Abarrotes' => [
+                'Arroz blanco 500 g', 'Arroz blanco 1000 g', 'Aceite de girasol 1000 ml',
+                'Aceite vegetal 500 ml', 'Aceite de oliva 250 ml', 'Azúcar 1000 g',
+                'Sal refinada 500 g', 'Panela 500 g', 'Lentejas 500 g', 'Fríjol rojo 500 g',
+                'Garbanzo 500 g', 'Pasta spaghetti 250 g', 'Harina de maíz 1000 g',
+                'Café molido 250 g', 'Chocolate de mesa 250 g', 'Atún en lata 160 g',
+                'Sardinas en lata 425 g', 'Avena en hojuelas 400 g',
+            ],
+            'Bebidas' => [
+                'Gaseosa cola 1500 ml', 'Gaseosa naranja 400 ml', 'Agua sin gas 600 ml',
+                'Jugo de mora 1000 ml', 'Bebida energética 250 ml', 'Té frío limón 500 ml',
+            ],
+            'Lácteos y Huevos' => [
+                'Leche entera 1000 ml', 'Leche deslactosada 1000 ml', 'Huevos AA x 12',
+                'Huevos AA x 30', 'Queso campesino 250 g', 'Queso costeño 500 g',
+                'Kumis 1000 ml', 'Yogur de fresa 200 g', 'Mantequilla 125 g',
+            ],
+            'Snacks' => [
+                'Papas fritas 45 g', 'Galletas de soda x 6', 'Galletas de chocolate x 6',
+                'Maní salado 100 g', 'Chocolatina 30 g', 'Bocadillo x 18',
+            ],
+            'Aseo y Limpieza' => [
+                'Detergente en polvo 1000 g', 'Jabón de loza 500 g', 'Cloro 1000 ml',
+                'Papel higiénico x 4', 'Jabón de baño 110 g', 'Crema dental 75 ml',
+                'Esponja de loza', 'Suavizante 1000 ml',
+            ],
+            'Medicina' => ['Acetaminofén 500 mg x 10', 'Ibuprofeno 400 mg x 10', 'Suero oral 500 ml'],
+            'Cuidado Personal' => ['Desodorante 150 ml', 'Champú 400 ml', 'Toallas higiénicas x 10'],
+            'Comidas Rápidas' => ['Hamburguesa sencilla', 'Perro caliente', 'Salchipapa'],
+            'Almuerzos' => ['Almuerzo del día', 'Bandeja paisa'],
+            'Bebidas y Jugos' => ['Jugo natural en agua', 'Limonada de coco'],
+            'Repuestos' => ['Bujía para moto', 'Pastillas de freno moto', 'Cadena de moto 428'],
+            'Accesorios' => ['Casco certificado', 'Guantes para moto'],
+        ];
+
+        foreach ($porCategoria as $categoria => $nombres) {
+            $categoriaId = DB::table('category')->where('name', $categoria)->value('category_id');
+            if (! $categoriaId) {
+                continue;
+            }
+
+            foreach ($nombres as $nombre) {
+                if (DB::table('products')->where('name', $nombre)->exists()) {
+                    continue;
+                }
+
+                DB::table('products')->insert([
+                    'name' => $nombre,
+                    'category_id' => $categoriaId,
+                    'state' => 1,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
+    }
+
+    /**
+     * UN HISTORIAL DE AUDITORÍA DE EJEMPLO.
+     *
+     * Lo que se hace desde la consola no se audita (`audit.console = false`),
+     * así que una base recién sembrada dejaba la pantalla de auditoría vacía y
+     * sin nada que filtrar ni paginar. Son cambios plausibles del equipo sobre
+     * negocios y usuarios, marcados con la etiqueta `demo`.
+     *
+     * @param  array<string, int>  $areas
+     * @param  array<int, int>  $negocios
+     */
+    private function auditoria(array $areas, array $negocios): void
+    {
+        if (DB::table('audits')->where('tags', 'demo')->exists()) {
+            return;
+        }
+
+        $quienes = array_values($areas);
+        if ($quienes === [] || $negocios === []) {
+            return;
+        }
+
+        $eventos = ['updated', 'updated', 'updated', 'created', 'deleted'];
+
+        for ($i = 0; $i < 40; $i++) {
+            $evento = $eventos[$i % count($eventos)];
+            $negocio = $negocios[$i % count($negocios)];
+            $cuando = $this->hoy->copy()->subDays($i % 20)->setTime(8 + $i % 10, ($i * 7) % 60);
+
+            DB::table('audits')->insert([
+                'user_type' => 'App\\Models\\User',
+                'user_id' => $quienes[$i % count($quienes)],
+                'event' => $evento,
+                'auditable_type' => 'App\\Models\\Business',
+                'auditable_id' => $negocio,
+                'old_values' => $evento === 'created' ? '[]' : json_encode(['state' => 1]),
+                'new_values' => $evento === 'deleted' ? '[]' : json_encode(['state' => $i % 2]),
+                'url' => 'http://localhost/v1/admin/businesses/'.$negocio,
+                'ip_address' => '127.0.0.1',
+                'user_agent' => 'Panel',
+                'tags' => 'demo',
+                'created_at' => $cuando,
+                'updated_at' => $cuando,
+            ]);
+        }
+    }
+
     private function catalogo(array $negocios): void
     {
         foreach ($negocios as $i => $negocioId) {
