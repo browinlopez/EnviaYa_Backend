@@ -120,7 +120,8 @@ use Illuminate\Support\Facades\Route;
 */
 
 // --- Autenticación: throttle agresivo contra fuerza bruta ---
-Route::middleware('throttle:10,1')->group(function () {
+// 10 por minuto en todos los entornos de verdad; ver `auth.intentos_de_acceso`.
+Route::middleware('throttle:'.config('auth.intentos_de_acceso').',1')->group(function () {
     Route::post('/register', [RegistroController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
 });
