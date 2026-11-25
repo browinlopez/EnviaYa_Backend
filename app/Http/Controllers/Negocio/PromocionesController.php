@@ -324,7 +324,7 @@ class PromocionesController extends Controller
                 /* El que ya no esté en el surtido se queda sin precio y la
                    pantalla no simula nada con él, que es lo correcto: lo
                    quitaron de la tienda. */
-                $producto->precio_en_la_tienda = $precios[$producto->products_id] ?? null;
+                $producto->setAttribute('precio_en_la_tienda', $precios[$producto->products_id] ?? null);
             }
         }
     }

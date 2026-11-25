@@ -94,7 +94,7 @@ class NovedadesDeEntrega
         });
 
         $hecho->loadMissing('business.owners');
-        foreach ($hecho->business?->owners ?? [] as $duenio) {
+        foreach ($hecho->business->owners as $duenio) {
             if ($duenio->user_id) {
                 Avisos::para(
                     $duenio->user_id,
@@ -160,7 +160,7 @@ class NovedadesDeEntrega
         $texto = mb_strtolower(self::MOTIVOS[$motivo]);
 
         $fresco->loadMissing('business.owners', 'buyer');
-        foreach ($fresco->business?->owners ?? [] as $duenio) {
+        foreach ($fresco->business->owners as $duenio) {
             if ($duenio->user_id) {
                 Avisos::para(
                     $duenio->user_id,

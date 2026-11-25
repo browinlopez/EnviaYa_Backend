@@ -121,6 +121,7 @@ class OrdersSales extends Audit
         'delivery_date' => 'datetime',
         'dispatched_at' => 'datetime',
         'ready_at' => 'datetime',
+        'llego_at' => 'datetime',
         'recordado_at' => 'datetime',
         'recordado_15_at' => 'datetime',
         'promised_minutes' => 'integer',

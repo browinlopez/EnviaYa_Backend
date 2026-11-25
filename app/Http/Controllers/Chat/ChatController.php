@@ -376,7 +376,7 @@ class ChatController extends Controller
          * de los demás después del último que esta persona leyó.
          * La app ya pintaba `unread_count` y nunca llegaba.
          */
-        $yo = (int) ($request->user()?->user_id ?? $request->user_id);
+        $yo = (int) $request->user()->user_id;
         $sinLeer = $chats->isEmpty() ? collect() : DB::table('messages as m')
             ->join('chat_participants as p', function ($j) use ($yo) {
                 $j->on('p.chat_id', '=', 'm.chat_id')->where('p.user_id', '=', $yo);

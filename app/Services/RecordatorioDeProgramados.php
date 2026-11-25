@@ -91,7 +91,7 @@ class RecordatorioDeProgramados
             ? "{$falta}: el pedido programado #{$pedido->orderSales_id} es para las {$hora} y {$como}. Todavía no lo has aceptado."
             : "{$falta}: el pedido programado #{$pedido->orderSales_id} es para las {$hora} y {$como}. Tenlo listo.";
 
-        foreach ($pedido->business?->owners ?? [] as $duenio) {
+        foreach ($pedido->business->owners as $duenio) {
             if ($duenio->user_id) {
                 Avisos::para(
                     $duenio->user_id,
@@ -107,7 +107,7 @@ class RecordatorioDeProgramados
          * en el aviso: es lo que tendrá que decir en el mostrador.
          */
         if ($pedido->buyer?->user_id) {
-            $tienda = $pedido->business?->name ?? 'el negocio';
+            $tienda = $pedido->business->name;
             $paraCliente = $pedido->pickup
                 ? "{$falta} tu pedido de {$tienda} estará listo para recoger, a las {$hora}."
                     .($pedido->pin_entrega ? " Tu código para recogerlo es {$pedido->pin_entrega}." : '')

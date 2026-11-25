@@ -198,7 +198,7 @@ class CobroDeMostradorConQr
     }
 
     /** `expires_at` llega en nanosegundos; `expires_in`, en segundos. */
-    private function caducidad(array $siguiente): ?Carbon
+    private function caducidad(array $siguiente): Carbon
     {
         $crudo = $siguiente['expires_at'] ?? null;
         if (is_numeric($crudo)) {
