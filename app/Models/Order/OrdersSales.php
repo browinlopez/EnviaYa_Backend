@@ -147,6 +147,9 @@ class OrdersSales extends Audit
          */
         'total' => 'decimal:2',
         'subtotal' => 'decimal:2',
+        // El descuento es plata como el total: sin esto MySQL lo daba como
+        // texto y SQLite como entero, y el contrato dependía de la base.
+        'discount' => 'decimal:2',
         'domicilio' => 'decimal:2',
         'domiciliary_fee' => 'decimal:2',
         'weighing_state' => 'integer',

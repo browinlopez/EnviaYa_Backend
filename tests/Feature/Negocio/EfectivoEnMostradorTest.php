@@ -6,8 +6,8 @@ use App\Models\Rol;
 use App\Models\User;
 use App\Services\CustodiaDeEfectivo;
 use App\Services\LiquidacionService;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 
 /**

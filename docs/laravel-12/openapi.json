@@ -13634,7 +13634,7 @@
                                                     }
                                                 },
                                                 "discount": {
-                                                    "type": "integer"
+                                                    "type": "string"
                                                 },
                                                 "dispatched_at": {
                                                     "type": "string",
@@ -14005,7 +14005,7 @@
                                                     }
                                                 },
                                                 "discount": {
-                                                    "type": "integer"
+                                                    "type": "string"
                                                 },
                                                 "dispatched_at": {
                                                     "type": "string",
