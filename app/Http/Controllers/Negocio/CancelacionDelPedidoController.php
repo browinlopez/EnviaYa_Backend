@@ -60,7 +60,7 @@ class CancelacionDelPedidoController extends Controller
              * tienda confirmaría que ese pedido existe. Los identificadores
              * son correlativos.
              */
-            return response()->json(['message' => 'Ese pedido no es de tu tienda.'], 404);
+            return response()->json(['message' => 'Ese pedido no es de tu negocio.'], 404);
         }
 
         if ((int) $order->state === CancelacionDelPedido::CANCELADO) {

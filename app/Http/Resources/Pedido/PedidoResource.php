@@ -80,6 +80,9 @@ class PedidoResource extends JsonResource
             'buyer_id' => $pedido->buyer_id,
             'busines_id' => $pedido->busines_id,
             'total' => $pedido->total,
+            // La promoción que pone la tienda: sin ella, el panel mostraba lo
+            // que suman los productos y no lo que de verdad entra.
+            'discount' => $pedido->discount,
             // Con cuánto paga y cuánto cambio llevarle. Solo en efectivo.
             'cash_tendered' => $pedido->cash_tendered,
             'change_due' => $pedido->change_due,
@@ -90,6 +93,8 @@ class PedidoResource extends JsonResource
             'delivery_date' => $pedido->delivery_date,
             'state' => $pedido->state,
             'is_scheduled' => $pedido->is_scheduled,
+            // Para recoger: si ya se le avisó al cliente que pase.
+            'ready_at' => $pedido->ready_at,
             'has_review' => $pedido->has_review,
             'dispatched_at' => $pedido->dispatched_at,
             // Compromiso y cumplimiento. `promised_minutes` es lo que el reloj

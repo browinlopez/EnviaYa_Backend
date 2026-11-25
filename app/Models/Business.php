@@ -233,6 +233,12 @@ class Business extends Audit
             'sale_unit',
             'min_qty',
             'step_qty',
+            'por_valor',
+            'stock_weight',
+            // La categoría de ESTE negocio para el producto, si la tiene.
+            'category_id',
+            // Lo que le cuesta. Sólo lo publica el catálogo del dueño.
+            'costo',
         ]);
     }
 

@@ -171,6 +171,8 @@ test('el pedido no se queda a medias si algo falla despues de escribirlo', funct
 
     $this->putJson('/v1/orders/update', [
         'order_id' => $e['orderId'], 'state' => 4,
+        // Despachar le dio un PIN: sin él, el domiciliario no cierra.
+        'pin' => OrdersSales::find($e['orderId'])->pin_entrega,
     ])->assertOk();
 
     $pedido = OrdersSales::find($e['orderId']);

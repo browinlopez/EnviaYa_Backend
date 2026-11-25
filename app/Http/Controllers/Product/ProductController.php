@@ -120,16 +120,18 @@ class ProductController extends Controller
         $this->rejectForeignFields($request, $type);
         $this->assertCategoryMatchesType((int) $request->category_id, $type);
 
-        // Campos extra con las reglas del tipo de negocio (los required
-        // de este tipo sí se exigen; antes todo era nullable).
-        $extra = $request->validate(ProductTypeSchema::rules($type));
-
         /*
-         * Y los COMUNES, que viven en `products` y no en la tabla del tipo.
-         * Opcionales los tres, asi que una app que no los mande sigue dando de
-         * alta productos igual que antes.
+         * Los campos extra con las reglas del tipo de negocio (los required de
+         * este tipo sí se exigen) y los COMUNES, que viven en `products` y no
+         * en la tabla del tipo --opcionales, así que una app que no los mande
+         * sigue dando de alta igual que antes--, en UNA validación: eran dos
+         * seguidas sobre la misma petición.
          */
-        $comunes = $request->validate(ProductTypeSchema::reglasComunes());
+        $reglasExtra = ProductTypeSchema::rules($type);
+        $reglasComunes = ProductTypeSchema::reglasComunes();
+        $validado = $request->validate(array_merge($reglasExtra, $reglasComunes));
+        $extra = array_intersect_key($validado, $reglasExtra);
+        $comunes = array_intersect_key($validado, $reglasComunes);
 
         DB::beginTransaction();
         try {

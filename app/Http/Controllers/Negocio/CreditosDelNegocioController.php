@@ -101,7 +101,7 @@ class CreditosDelNegocioController extends Controller
          * quedaba suelto cuando el abono fallaba después.
          */
         if (! StoreCredit::where('busines_id', $negocioId)->where('user_id', $userId)->exists()) {
-            return response()->json(['message' => 'Ese cliente no tiene crédito en tu tienda.'], 422);
+            return response()->json(['message' => 'Ese cliente no tiene crédito en tu negocio.'], 422);
         }
 
         $mediaId = null;

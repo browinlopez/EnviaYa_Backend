@@ -84,3 +84,23 @@ test('al domiciliario le llegan las dos juntas', function () {
     expect($r->json('orders.0.delivery_address.address'))
         ->toBe('Carrera 51B #82-40 apto 501, Calle 84, Barranquilla');
 });
+
+test('una dirección guarda el nombre que le da la persona, y lo devuelve', function () {
+    // «Otros» dos veces no dice cuál es cuál; «Donde mi mamá», sí.
+    $user = compradorConSesion();
+
+    test()->postJson('/v1/users/addresses/add', [
+        'user_id' => $user->user_id,
+        'address' => 'Calle 84, Barranquilla',
+        'street' => 'Carrera 51B #82-40',
+        'nombre' => '  Donde mi mamá ',
+    ])->assertCreated();
+
+    expect(DB::table('user_address')->where('user_id', $user->user_id)->value('nombre'))
+        ->toBe('Donde mi mamá');
+
+    $lista = test()->postJson('/v1/users/addresses', ['user_id' => $user->user_id])->json();
+    $una = collect($lista['addresses'] ?? $lista['data'] ?? $lista)->first();
+    expect($una['nombre'])->toBe('Donde mi mamá')
+        ->and($una['street'])->toBe('Carrera 51B #82-40');
+});

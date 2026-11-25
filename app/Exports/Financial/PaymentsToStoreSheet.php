@@ -49,7 +49,7 @@ class PaymentsToStoreSheet implements FromCollection, WithHeadings, WithStyles, 
 
     public function title(): string
     {
-        return 'Pagos a Tenderos';
+        return 'Pagos a negocios';
     }
 
     public function headings(): array

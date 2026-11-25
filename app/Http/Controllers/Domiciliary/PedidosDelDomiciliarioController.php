@@ -62,7 +62,9 @@ class PedidosDelDomiciliarioController extends Controller
          * —y llamarlo si no encuentro el timbre—.
          */
         $mios = OrdersSales::where('domiciliary_id', $domiciliary->domiciliary_id)
-            ->whereIn('state', [OrdersSales::EN_CAMINO, OrdersSales::ENTREGADO])
+            /* Y los que estoy DEVOLVIENDO: los llevo encima hasta que el
+               negocio confirma que los recibió. */
+            ->whereIn('state', [OrdersSales::EN_CAMINO, OrdersSales::ENTREGADO, OrdersSales::DEVOLVIENDO])
             ->confirmados()
             ->with($this->relaciones())
             ->get();
@@ -79,6 +81,12 @@ class PedidosDelDomiciliarioController extends Controller
             ? OrdersSales::whereIn('busines_id', $negocios)
                 ->where('state', self::POR_TOMAR)
                 ->whereNull('domiciliary_id')
+                /*
+                 * SIN LOS QUE SE RECOGEN EN LA TIENDA: ahí no hay nada que
+                 * llevar. Se le ofrecían al domiciliario como «Sin nombre ·
+                 * Dirección no registrada», porque no tienen dirección.
+                 */
+                ->where(fn ($q) => $q->where('pickup', false)->orWhereNull('pickup'))
                 ->confirmados()
                 /*
                  * SIN LAS DEL COMPRADOR, porque esta mitad no las enseña.
@@ -121,6 +129,7 @@ class PedidosDelDomiciliarioController extends Controller
             'resumen' => [
                 'en_camino' => $mios->where('state', OrdersSales::EN_CAMINO)->count(),
                 'entregados' => $mios->where('state', OrdersSales::ENTREGADO)->count(),
+                'devolviendo' => $mios->where('state', OrdersSales::DEVOLVIENDO)->count(),
                 'por_tomar' => $porTomar->count(),
             ],
         ]);

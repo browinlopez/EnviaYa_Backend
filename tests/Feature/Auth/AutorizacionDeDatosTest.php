@@ -113,7 +113,7 @@ it('a una compilacion sin la casilla se le dice que actualice, no que le falta m
 
     $respuesta = $this->postJson('/v1/register', $datos)->assertStatus(422);
 
-    expect($respuesta->json('errors.consentimiento.0'))->toContain('Actualizala desde la tienda');
+    expect($respuesta->json('errors.consentimiento.0'))->toContain('Actualizala desde la tienda de aplicaciones');
 
     // Y lo que no cambia: sigue sin crearse la cuenta.
     expect(User::where('email', $datos['email'])->exists())->toBeFalse();

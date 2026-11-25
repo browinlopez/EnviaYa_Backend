@@ -186,7 +186,7 @@ class PlantillaDeCatalogo
         foreach (self::COLUMNAS as $letra => [$titulo, $ancho, $obligatoria, $ayuda]) {
             $columnas[$letra] = [
                 $titulo, $ancho, $obligatoria, $ayuda, null,
-                self::EJEMPLOS_BASE[$letra] ?? '', 'text', [],
+                self::EJEMPLOS_BASE[$letra], 'text', [],
             ];
         }
 

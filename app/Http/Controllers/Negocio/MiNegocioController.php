@@ -172,18 +172,18 @@ class MiNegocioController extends Controller
     private function mensajeDePausa($negocio): string
     {
         if ($negocio->accepting_orders) {
-            return 'Tu tienda volvió a recibir pedidos.';
+            return 'Tu negocio volvió a recibir pedidos.';
         }
 
         if ($negocio->accepting_until === null) {
-            return 'Tu tienda dejó de recibir pedidos. No te va a entrar ninguno hasta que la vuelvas a encender.';
+            return 'Tu negocio dejó de recibir pedidos. No te va a entrar ninguno hasta que la vuelvas a encender.';
         }
 
         // La hora, dicha como se dice en Barranquilla. `translatedFormat` usa
         // el idioma de la aplicación, que es español.
         $hora = $negocio->accepting_until->timezone(config('app.timezone'))->translatedFormat('g:i a');
 
-        return "Tu tienda queda en pausa hasta las {$hora}. Se enciende sola.";
+        return "Tu negocio queda en pausa hasta las {$hora}. Se enciende sola.";
     }
 
     private function ficha($b): array

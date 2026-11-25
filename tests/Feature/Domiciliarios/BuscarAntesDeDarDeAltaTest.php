@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Domiciliary;
+use App\Models\Order\OrdersSales;
 use App\Models\Rol;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -159,7 +160,7 @@ it('lo quita de la tienda sin borrar su cuenta', function () {
         ->where('busines_id', $this->negocio)
         ->where('domiciliary_id', $d->domiciliary_id)
         ->value('state'))->toEqual(0)
-        ->and(App\Models\Domiciliary::find($d->domiciliary_id))->not->toBeNull();
+        ->and(Domiciliary::find($d->domiciliary_id))->not->toBeNull();
 })->group('alta-de-domiciliario');
 
 it('y deja de salir en la torre', function () {
@@ -182,7 +183,7 @@ it('NO se quita a quien lleva un pedido encima', function () {
     DB::table('business_domiciliary')->insert([
         'busines_id' => $this->negocio, 'domiciliary_id' => $d->domiciliary_id, 'state' => 1,
     ]);
-    conPedidoEncima($this->negocio, $d->domiciliary_id, App\Models\Order\OrdersSales::EN_CAMINO);
+    conPedidoEncima($this->negocio, $d->domiciliary_id, OrdersSales::EN_CAMINO);
 
     $r = $this->deleteJson('/v1/negocio/domiciliarios/'.$d->domiciliary_id)
         ->assertStatus(422);
@@ -198,7 +199,7 @@ it('un pedido ya entregado no lo retiene', function () {
     DB::table('business_domiciliary')->insert([
         'busines_id' => $this->negocio, 'domiciliary_id' => $d->domiciliary_id, 'state' => 1,
     ]);
-    conPedidoEncima($this->negocio, $d->domiciliary_id, App\Models\Order\OrdersSales::ENTREGADO);
+    conPedidoEncima($this->negocio, $d->domiciliary_id, OrdersSales::ENTREGADO);
 
     $this->deleteJson('/v1/negocio/domiciliarios/'.$d->domiciliary_id)->assertOk();
 })->group('alta-de-domiciliario');

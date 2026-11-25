@@ -42,7 +42,7 @@ class ConsultaDePedidosController extends Controller
 
         $orders = OrdersSales::where('buyer_id', $buyer->buyer_id)
             ->confirmados()
-            ->with('details.product.category', 'business.municipality', 'promotions', 'payments', 'address.municipality.department.country', 'address.alias', 'domiciliary.user')
+            ->with('details.product.category', 'business.municipality', 'promotions', 'payments', 'address.municipality.department.country', 'address.department', 'address.alias', 'domiciliary.user')
             ->get();
 
         $formattedOrders = $orders->map(
@@ -156,6 +156,16 @@ class ConsultaDePedidosController extends Controller
          * existe para pagos online: las ventas en efectivo no contaban.
          */
         $incomeOrders = fn () => OrdersSales::where('busines_id', $business_id)
+            /*
+             * UN CANCELADO NO ES UN INGRESO, aunque se hubiera pagado.
+             *
+             * Al cancelar uno pagado la plata se devuelve (`DevolucionDelPedido`)
+             * pero `payment_state` se queda en «paid», así que el pedido seguía
+             * sumando en el ingreso de hoy, de la semana, del mes y en la
+             * gráfica. Visto en la tienda de prueba: de $70.500 «de hoy»,
+             * $47.600 eran pedidos cancelados.
+             */
+            ->where('state', '!=', OrdersSales::CANCELADO)
             ->where(function ($q) {
                 $q->where('payment_state', 'paid')->orWhere('state', 4);
             });
@@ -398,6 +408,16 @@ class ConsultaDePedidosController extends Controller
             'ticket_promedio' => $cuantasSemana ? round((float) $currentWeekTotal / $cuantasSemana, 2) : 0.0,
             'hoy' => (float) (clone $hoy)->sum('total'),
             'ventas_hoy' => (clone $hoy)->count(),
+            /*
+             * LO DEL MOSTRADOR DE HOY, aparte: el inicio lo suma al ingreso
+             * del día y dice de dónde salió. No entra en `hoy`, que sigue
+             * siendo lo de la app para las pantallas que ya lo leen así.
+             */
+            'hoy_mostrador' => (float) DB::table('ventas_mostrador')
+                ->where('busines_id', $business_id)
+                ->where('estado_pago', 'pagada')
+                ->whereBetween('vendida_at', [now()->startOfDay(), now()->endOfDay()])
+                ->sum('total'),
             'ultimas_semanas' => $ultimasSemanas,
 
             'weekly_income' => $weeklyIncome,

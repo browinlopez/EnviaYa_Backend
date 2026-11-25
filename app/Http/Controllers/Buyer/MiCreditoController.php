@@ -34,13 +34,13 @@ class MiCreditoController extends Controller
         $motivo = null;
 
         if ($cupo['limite'] <= 0) {
-            $motivo = 'Esta tienda no te ha dado crédito.';
+            $motivo = 'Este negocio no te ha dado crédito.';
         } elseif (! $this->creditos->estaAfiliado($negocioId, $userId)) {
-            $motivo = 'Para usar tu crédito tienes que estar afiliado a esta tienda.';
+            $motivo = 'Para usar tu crédito tienes que estar afiliado a este negocio.';
         } elseif (! $this->creditos->resumenDeLaTienda($negocioId)['puede_vender']) {
-            $motivo = 'Por ahora esta tienda no está vendiendo a crédito.';
+            $motivo = 'Por ahora este negocio no está vendiendo a crédito.';
         } elseif ($cupo['disponible'] <= 0) {
-            $motivo = 'Ya usaste todo tu crédito en esta tienda. Cuando le abones, se vuelve a liberar.';
+            $motivo = 'Ya usaste todo tu crédito en este negocio. Cuando le abones, se vuelve a liberar.';
         }
 
         return response()->json([

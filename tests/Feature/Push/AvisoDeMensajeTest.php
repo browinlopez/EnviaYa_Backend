@@ -3,6 +3,7 @@
 use App\Jobs\EnviarAvisoPush;
 use App\Models\Rol;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Sanctum\Sanctum;
 
@@ -124,4 +125,40 @@ it('un mensaje largo se recorta antes de salir', function () {
         EnviarAvisoPush::class,
         fn ($job) => mb_strlen($job->cuerpo) <= 125,
     );
+});
+
+it('si escribe la tienda, el aviso dice el nombre de la TIENDA, no el de quien la atiende', function () {
+    $tendero = User::factory()->create(['rol' => 2, 'name' => 'Geovanny Boom']);
+    $cliente = User::factory()->create(['rol' => 1, 'name' => 'Ana']);
+
+    $ownerId = DB::table('owner')->insertGetId(
+        ['user_id' => $tendero->user_id, 'state' => 1],
+        'owner_id',
+    );
+    $tipo = DB::table('category_business')->insertGetId(['name' => 'Tienda'], 'id');
+    $negocio = DB::table('business')->insertGetId([
+        'name' => 'Tienda de prueba',
+        'qualification' => 0,
+        'state' => 1,
+        'type' => $tipo,
+    ], 'busines_id');
+    DB::table('owner_busines')->insert([
+        'owner_id' => $ownerId, 'busines_id' => $negocio, 'state' => 1,
+    ]);
+
+    Sanctum::actingAs($tendero);
+
+    $this->postJson('/v1/chats/send-message', [
+        'user_id' => $tendero->user_id,
+        'recipient_id' => $cliente->user_id,
+        'content' => 'Ya te armé el pedido',
+        'busines_id' => $negocio,
+    ])->assertCreated();
+
+    // El cliente le escribió a «Tienda de prueba»: el nombre de la persona
+    // que atiende no le dice nada en la campana.
+    Queue::assertPushed(EnviarAvisoPush::class, fn ($job) => (int) $job->userId === (int) $cliente->user_id
+        && $job->titulo === 'Tienda de prueba'
+        && $job->datos['remitente_nombre'] === 'Tienda de prueba'
+        && (int) $job->datos['remitente_rol'] === 2);
 });

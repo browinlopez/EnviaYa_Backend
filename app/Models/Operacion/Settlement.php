@@ -43,6 +43,7 @@ class Settlement extends Model
         'credit_sales',
         'carried_in',
         'counter_cash',
+        'counter_qr',
         'carried_from_id',
         'net_payable',
         'state',

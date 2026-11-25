@@ -242,7 +242,7 @@ class PromocionesController extends Controller
 
         if (! $this->sonSuyos($businessId, $productos)) {
             return response()->json([
-                'message' => 'Alguno de esos productos no es de tu tienda.',
+                'message' => 'Alguno de esos productos no es de tu negocio.',
                 'reason' => 'producto_ajeno',
             ], 422);
         }
@@ -253,7 +253,7 @@ class PromocionesController extends Controller
             // Ver la cabecera del servicio: pasado este tamaño el envío directo
             // agota el tiempo de espera y hay que moverlo a la cola.
             return response()->json([
-                'message' => 'Tu tienda tiene demasiados clientes para enviar desde acá. Escríbenos y lo hacemos por ti.',
+                'message' => 'Tu negocio tiene demasiados clientes para enviar desde acá. Escríbenos y lo hacemos por ti.',
                 'reason' => 'demasiados_destinatarios',
             ], 422);
         }
@@ -324,7 +324,7 @@ class PromocionesController extends Controller
                 /* El que ya no esté en el surtido se queda sin precio y la
                    pantalla no simula nada con él, que es lo correcto: lo
                    quitaron de la tienda. */
-                $producto->precio_en_la_tienda = $precios[$producto->products_id] ?? null;
+                $producto->setAttribute('precio_en_la_tienda', $precios[$producto->products_id] ?? null);
             }
         }
     }
@@ -365,7 +365,7 @@ class PromocionesController extends Controller
         $promocion = $this->suya($request, $id);
 
         if (! $promocion) {
-            return response()->json(['message' => 'Esa promoción no es de tu tienda.'], 404);
+            return response()->json(['message' => 'Esa promoción no es de tu negocio.'], 404);
         }
 
         if ((int) $promocion->state === Promotion::RETIRADA) {
@@ -383,7 +383,7 @@ class PromocionesController extends Controller
 
         if (! $this->sonSuyos($businessId, $productos)) {
             return response()->json([
-                'message' => 'Alguno de esos productos no es de tu tienda.',
+                'message' => 'Alguno de esos productos no es de tu negocio.',
                 'reason' => 'producto_ajeno',
             ], 422);
         }
@@ -414,7 +414,7 @@ class PromocionesController extends Controller
         $promocion = $this->suya($request, $id);
 
         if (! $promocion) {
-            return response()->json(['message' => 'Esa promoción no es de tu tienda.'], 404);
+            return response()->json(['message' => 'Esa promoción no es de tu negocio.'], 404);
         }
 
         $this->promociones->retirar($promocion);

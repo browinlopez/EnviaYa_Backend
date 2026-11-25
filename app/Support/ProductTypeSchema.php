@@ -192,6 +192,8 @@ class ProductTypeSchema
                     'rules' => ['nullable', 'integer', 'min:0', 'max:240'],
                     'label' => 'Minutos de preparación',
                     'input' => 'number',
+                    // Lo que lee el comprador: «30 min», no «30» a secas.
+                    'unidad' => 'min',
                     'columna' => 'Minutos de preparación',
                     'ancho' => 22,
                     'alias' => ['minutos_preparacion', 'minutos', 'preparacion', 'tiempo'],
@@ -340,7 +342,7 @@ class ProductTypeSchema
          * que la carga masiva sirviera de algo fuera de farmacia: tienda,
          * restaurante y repuestos tenian CERO columnas extra.
          */
-        foreach (self::COMUNES as $campo => $def) {
+        foreach (self::comunes() as $campo => $def) {
             $salida[$campo] = [
                 'titulo' => $def['columna'],
                 'ancho' => $def['ancho'],
@@ -352,7 +354,7 @@ class ProductTypeSchema
             ];
         }
 
-        foreach (self::SCHEMAS[$type]['fields'] ?? [] as $campo => $def) {
+        foreach (self::esquemas()[$type]['fields'] ?? [] as $campo => $def) {
             if (! isset($def['columna'])) {
                 continue;
             }
@@ -383,13 +385,13 @@ class ProductTypeSchema
     {
         $salida = [];
 
-        foreach (self::COMUNES as $campo => $def) {
+        foreach (self::comunes() as $campo => $def) {
             $salida[$campo] = array_values(array_unique(
                 array_merge([$campo], $def['alias']),
             ));
         }
 
-        foreach (self::SCHEMAS[$type]['fields'] ?? [] as $campo => $def) {
+        foreach (self::esquemas()[$type]['fields'] ?? [] as $campo => $def) {
             if (! isset($def['columna'])) {
                 continue;
             }
@@ -407,9 +409,36 @@ class ProductTypeSchema
      *
      * @return list<string>
      */
+    /**
+     * Los campos comunes, con su forma declarada.
+     *
+     * Se leen por aquí y no por la constante: PHPStan conoce el valor exacto
+     * de una constante privada y daba por fijas las claves que son optativas
+     * («ejemplo», «opciones»), así que marcaba de sobra cada `??` que las
+     * cubre. La forma de abajo es la que de verdad promete cada campo.
+     *
+     * @return array<string, array{rules: list<string>, label: string, input: string, columna: string, ancho: int, alias: list<string>, ayuda: string, ejemplo?: string, opciones?: list<string>}>
+     */
+    private static function comunes(): array
+    {
+        return self::COMUNES;
+    }
+
+    /**
+     * Los esquemas por tipo de negocio, con su forma declarada. Ver
+     * `comunes()`: cada campo propio puede no tener columna en el archivo de
+     * carga, ni ejemplo, ni opciones.
+     *
+     * @return array<int, array{type_name: string, relation: string, model: class-string, fields: array<string, array{rules: list<string>, label: string, input: string, columna?: string, ancho?: int, alias?: list<string>, ayuda?: string, ejemplo?: string, opciones?: list<string>, unidad?: string}>}>
+     */
+    private static function esquemas(): array
+    {
+        return self::SCHEMAS;
+    }
+
     public static function camposComunes(): array
     {
-        return array_keys(self::COMUNES);
+        return array_keys(self::comunes());
     }
 
     /**
@@ -421,7 +450,7 @@ class ProductTypeSchema
     {
         $salida = [];
 
-        foreach (self::COMUNES as $campo => $def) {
+        foreach (self::comunes() as $campo => $def) {
             $salida[$campo] = $def['rules'];
         }
 
@@ -437,7 +466,7 @@ class ProductTypeSchema
     {
         $salida = [];
 
-        foreach (self::COMUNES as $campo => $def) {
+        foreach (self::comunes() as $campo => $def) {
             $salida[] = [
                 'name' => $campo,
                 'label' => $def['label'],
@@ -449,15 +478,81 @@ class ProductTypeSchema
         return $salida;
     }
 
+    /**
+     * ==================================================================
+     * LO QUE EL COMPRADOR LEE DE UN PRODUCTO, IGUAL PARA TODOS LOS OFICIOS.
+     *
+     * Cada oficio guarda lo suyo en su tabla --el principio activo en
+     * `pharmacy_products`, los alérgenos en `restaurant_products`, la
+     * compatibilidad en `car_parts_products`-- y la ficha del negocio no
+     * mandaba nada de eso: el tendero lo llenaba y quien compraba no lo
+     * veía nunca. Ni siquiera «requiere fórmula médica».
+     *
+     * Se manda como UNA lista de `{campo, etiqueta, valor}` ya en texto, en
+     * vez de un objeto distinto por oficio: la app pinta filas «Etiqueta ·
+     * valor» sin saber de droguerías ni de repuestos, y un oficio nuevo
+     * declarado aquí aparece solo. Las etiquetas son las mismas que ve el
+     * tendero al llenarlo.
+     *
+     * Solo lo que tiene valor. De los sí/no, solo los que valen SÍ: «Vegano:
+     * no» en cada plato es ruido, y «Requiere fórmula: no» se entiende sin
+     * decirlo.
+     * ==================================================================
+     *
+     * @return list<array{campo: string, etiqueta: string, valor: string}>
+     */
+    public static function detallesParaElComprador(?int $type, $product): array
+    {
+        $salida = [];
+
+        $poner = function (string $campo, array $def, $valor) use (&$salida): void {
+            if ($valor === null || $valor === '') {
+                return;
+            }
+            if (($def['input'] ?? 'text') === 'boolean') {
+                if (! filter_var($valor, FILTER_VALIDATE_BOOLEAN)) {
+                    return;
+                }
+                $valor = 'Sí';
+            }
+            $texto = trim((string) $valor);
+            if (isset($def['unidad'])) {
+                $texto .= ' '.$def['unidad'];
+            }
+            $salida[] = [
+                'campo' => $campo,
+                'etiqueta' => $def['label'],
+                'valor' => $texto,
+            ];
+        };
+
+        $poner('brand', ['label' => 'Marca'], $product->brand ?? null);
+
+        foreach (self::comunes() as $campo => $def) {
+            $poner($campo, $def, $product->{$campo} ?? null);
+        }
+
+        $relacion = self::relation((int) $type);
+        $fila = $relacion ? $product->{$relacion} : null;
+
+        if ($fila) {
+            foreach (self::esquemas()[$type]['fields'] as $campo => $def) {
+                $poner($campo, $def, $fila->{$campo} ?? null);
+            }
+        }
+
+        return $salida;
+    }
+
     public static function has(?int $type): bool
     {
-        return $type !== null && isset(self::SCHEMAS[$type]);
+        return $type !== null && isset(self::esquemas()[$type]);
     }
 
     /** Nombres de los campos extra del tipo dado. */
     public static function fieldNames(int $type): array
     {
-        return array_keys(self::SCHEMAS[$type]['fields'] ?? []);
+        return array_keys(self::esquemas()[$type]['fields'] ?? []);
     }
 
     /** Reglas de validación de los campos extra del tipo dado. */
@@ -465,7 +560,7 @@ class ProductTypeSchema
     {
         return array_map(
             fn (array $field) => $field['rules'],
-            self::SCHEMAS[$type]['fields'] ?? [],
+            self::esquemas()[$type]['fields'] ?? [],
         );
     }
 
@@ -494,7 +589,7 @@ class ProductTypeSchema
         $own = self::fieldNames($type);
         $all = [];
 
-        foreach (self::SCHEMAS as $schema) {
+        foreach (self::esquemas() as $schema) {
             $all = array_merge($all, array_keys($schema['fields']));
         }
 
@@ -504,19 +599,19 @@ class ProductTypeSchema
     /** Nombre de la relación en el modelo Product (grocery, pharmacy, ...). */
     public static function relation(int $type): ?string
     {
-        return self::SCHEMAS[$type]['relation'] ?? null;
+        return self::esquemas()[$type]['relation'] ?? null;
     }
 
     /** Todas las relaciones de subtipo, para eager loading. */
     public static function allRelations(): array
     {
-        return array_column(self::SCHEMAS, 'relation');
+        return array_column(self::esquemas(), 'relation');
     }
 
     /** Clase del modelo de subtipo del tipo dado. */
     public static function model(int $type): ?string
     {
-        return self::SCHEMAS[$type]['model'] ?? null;
+        return self::esquemas()[$type]['model'] ?? null;
     }
 
     /**
@@ -550,7 +645,7 @@ class ProductTypeSchema
     {
         $fields = [];
 
-        foreach (self::SCHEMAS[$type]['fields'] ?? [] as $name => $field) {
+        foreach (self::esquemas()[$type]['fields'] ?? [] as $name => $field) {
             $fields[] = [
                 'name' => $name,
                 'label' => $field['label'],
@@ -561,7 +656,7 @@ class ProductTypeSchema
 
         return [
             'business_type' => $type,
-            'type_name' => self::SCHEMAS[$type]['type_name'] ?? null,
+            'type_name' => self::esquemas()[$type]['type_name'] ?? null,
             'fields' => $fields,
             'common' => self::comunesParaApi(),
 

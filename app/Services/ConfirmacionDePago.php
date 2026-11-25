@@ -33,7 +33,17 @@ class ConfirmacionDePago
      */
     public static function confirmar(OrdersSales $order): bool
     {
-        $estabaEsperando = $order->esperandoPago();
+        /*
+         * El paso de «esperando» a «pagado» se hace en UNA sola sentencia
+         * condicionada. La respuesta de la pasarela y el webhook pueden llegar
+         * casi a la vez: leyendo y luego guardando, los dos veían «esperando»
+         * y el pedido se anunciaba dos veces --la tienda veía 2 pedidos nuevos
+         * con uno solo--. Con la condición en el UPDATE, solo uno gana.
+         */
+        $estabaEsperando = OrdersSales::query()
+            ->whereKey($order->getKey())
+            ->where('payment_state', OrdersSales::ESPERANDO_PAGO)
+            ->update(['payment_state' => 'paid']) === 1;
 
         $order->payment_state = 'paid';
         $order->save();

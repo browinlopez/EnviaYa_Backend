@@ -31,6 +31,16 @@ class OrdersSales extends Audit
 
     public $timestamps = true;
 
+    /**
+     * EL PIN NO VIAJA SOLO.
+     *
+     * Es la prueba de que el domiciliario estuvo frente al comprador: si
+     * saliera en el JSON del pedido que recibe el domiciliario, se lo podría
+     * leer de la respuesta y la prueba no probaría nada. Oculto por defecto;
+     * quien debe verlo --el comprador y el negocio-- lo recibe a propósito.
+     */
+    protected $hidden = ['pin_entrega', 'pin_intentos'];
+
     protected $fillable = [
         'buyer_id',
         'busines_id',
@@ -58,6 +68,14 @@ class OrdersSales extends Audit
         'delivery_subsidy',
         // Lo que el domiciliario quedó debiendo por cobrar en efectivo.
         'cash_due',
+        // El PIN de entrega y sus intentos: ver `$hidden`.
+        'pin_entrega',
+        'pin_intentos',
+        // Cuándo avisó el domiciliario que estaba en la puerta.
+        'llego_at',
+        // Con qué billete pagó el cliente y cuánto se le devolvió.
+        'cash_received',
+        'change_given',
         // Con cuánto dijo el cliente que va a pagar, para preparar el cambio.
         'cash_tendered',
         // Si lleva algo al peso y si ya se pesó. Ver la migración.
@@ -102,6 +120,10 @@ class OrdersSales extends Audit
         'sale_date' => 'datetime',
         'delivery_date' => 'datetime',
         'dispatched_at' => 'datetime',
+        'ready_at' => 'datetime',
+        'llego_at' => 'datetime',
+        'recordado_at' => 'datetime',
+        'recordado_15_at' => 'datetime',
         'promised_minutes' => 'integer',
         'route_traced_at' => 'datetime',
         'platform_fee' => 'decimal:2',
@@ -126,6 +148,9 @@ class OrdersSales extends Audit
          */
         'total' => 'decimal:2',
         'subtotal' => 'decimal:2',
+        // El descuento es plata como el total: sin esto MySQL lo daba como
+        // texto y SQLite como entero, y el contrato dependía de la base.
+        'discount' => 'decimal:2',
         'domicilio' => 'decimal:2',
         'domiciliary_fee' => 'decimal:2',
         'weighing_state' => 'integer',
@@ -186,6 +211,15 @@ class OrdersSales extends Audit
     /** Cancelado. La fila NO se borra: ver `CancelacionDelPedido`. */
     public const CANCELADO = 5;
 
+    /**
+     * Devolviendo: el domiciliario no pudo entregar --ver
+     * `NovedadesDeEntrega`-- y lleva el producto y la plata de vuelta al
+     * negocio. Termina en CANCELADO cuando el negocio confirma que los
+     * recibió; mientras tanto sigue activo: el pedido existe y alguien lo
+     * lleva encima.
+     */
+    public const DEVOLVIENDO = 6;
+
     /** Los cinco, para recorrerlos o validarlos. */
     public const ESTADOS = [
         self::NUEVO,
@@ -193,6 +227,7 @@ class OrdersSales extends Audit
         self::EN_CAMINO,
         self::ENTREGADO,
         self::CANCELADO,
+        self::DEVOLVIENDO,
     ];
 
     /**
@@ -228,7 +263,7 @@ class OrdersSales extends Audit
      * más cerca que deja llegar PHP: una expresión constante no puede llamar
      * a `array_diff`, así que los tres hay que nombrarlos.
      */
-    public const ACTIVOS = [self::NUEVO, self::PREPARANDO, self::EN_CAMINO];
+    public const ACTIVOS = [self::NUEVO, self::PREPARANDO, self::EN_CAMINO, self::DEVOLVIENDO];
 
     /**
      * CUÁNTO TARDA LA COCINA EN SOLTAR ESTE PEDIDO.

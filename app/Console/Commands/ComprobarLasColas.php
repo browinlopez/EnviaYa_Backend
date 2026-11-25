@@ -141,7 +141,7 @@ class ComprobarLasColas extends Command
             ."  fallidos ............. {$fallidos}\n"
             ."  el mas viejo lleva ... {$minutos} min\n\n"
             .implode("\n\n", $motivos)."\n\n"
-            ."Lo que deja de pasar mientras esto siga asi: el tendero no recibe el\n"
+            ."Lo que deja de pasar mientras esto siga asi: el dueño del negocio no recibe el\n"
             ."aviso de un pedido nuevo, el mapa no traza rutas y las cargas de\n"
             ."catalogo se quedan quietas. Nada de eso da error en pantalla.\n";
 

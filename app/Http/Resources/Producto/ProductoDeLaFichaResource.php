@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Resources\Producto;
 
+use App\Support\CategoriaDelNegocio;
+use App\Support\ProductTypeSchema;
+use App\Support\UnidadDeVenta;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -37,6 +40,7 @@ class ProductoDeLaFichaResource extends JsonResource
         mixed $producto,
         private readonly bool $estaAfiliado,
         private $promoDe,
+        private readonly ?int $tipoDeNegocio = null,
     ) {
         parent::__construct($producto);
     }
@@ -56,10 +60,11 @@ class ProductoDeLaFichaResource extends JsonResource
             'product_id' => $product->products_id,
             'name' => $product->name,
             'description' => $product->description,
-            'category_id' => $product->category_id,
-            // La ficha agrupa por nombre de categoría, igual que el
-            // listado; con solo el id no podía pintar las secciones.
-            'category' => $product->category?->name,
+            /* La categoría con la que ESTE negocio enseña el producto: la
+               suya si la tiene, la del producto si no. La ficha agrupa por
+               el nombre. */
+            'category_id' => CategoriaDelNegocio::de($product->pivot->category_id ?? null, $product->category_id)['category_id'] ?? null,
+            'category' => CategoriaDelNegocio::de($product->pivot->category_id ?? null, $product->category_id)['name'] ?? null,
             'image' => $product->image,
             'state' => (bool) $product->state,
             /*
@@ -86,6 +91,8 @@ class ProductoDeLaFichaResource extends JsonResource
             'sale_unit' => $product->pivot->sale_unit ?? 'unidad',
             'min_qty' => $product->pivot->min_qty !== null ? (float) $product->pivot->min_qty : null,
             'step_qty' => $product->pivot->step_qty !== null ? (float) $product->pivot->step_qty : null,
+            // Si se puede pedir por plata: «$1.500 de queso».
+            'por_valor' => (bool) ($product->pivot->por_valor ?? false),
             /*
                  * `null` cuando no hay ninguna. La app pinta la etiqueta
                  * solo si viene algo.
@@ -97,7 +104,27 @@ class ProductoDeLaFichaResource extends JsonResource
                  * Es peor que no ensenar nada: el cliente llega al total
                  * esperando otro numero.
                  */
-            'promocion' => in_array($product->pivot->sale_unit ?? 'unidad', ['kg', 'libra', 'gramo'], true)
+            /*
+             * LAS PRESENTACIONES Y LA FICHA DEL OFICIO.
+             *
+             * `group` y `variante` los mandaba el listado viejo, y al pasar
+             * el catálogo a esta puerta se quedaron fuera: la app recibía
+             * «ACEITE RIQUISIMO 250ML», «500ML» y «900ML» como tres productos
+             * sueltos aunque la base los tiene en un mismo grupo. Con `group`
+             * la ficha los junta en una tarjeta y se elige el tamaño.
+             *
+             * `detalles`: lo que el oficio pregunta aparte (ver
+             * `ProductTypeSchema::detallesParaElComprador`).
+             */
+            'brand' => $product->brand,
+            'variante' => $product->variante,
+            'group' => $product->group ? [
+                'group_id' => (int) $product->group->group_id,
+                'name' => $product->group->name,
+                'image' => $product->group->image,
+            ] : null,
+            'detalles' => ProductTypeSchema::detallesParaElComprador($this->tipoDeNegocio, $product),
+            'promocion' => UnidadDeVenta::esPeso($product->pivot->sale_unit ?? 'unidad')
                 ? null
                 : $promoDe((int) $product->products_id),
         ];

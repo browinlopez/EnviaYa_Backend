@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Events\AvisoPersonal;
 use App\Jobs\EnviarAvisoPush;
 use App\Models\Notification;
+use App\Models\User;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -46,6 +47,44 @@ class Avisos
         'entrega_asignada' => 'Tienes una entrega',
         'pedido_nuevo' => '¡Pedido nuevo!',
         'mensaje_nuevo' => 'Mensaje nuevo',
+        'pedido_para_tomar' => 'Pedido para tomar',
+        'pedido_soltado' => 'Un domiciliario soltó un pedido',
+        'pedido_devolviendo' => 'No se pudo entregar',
+        'pedido_no_entregado' => 'No pudimos entregar tu pedido',
+        'domiciliario_llego' => 'Tu pedido está en la puerta',
+        'pedido_listo_para_recoger' => 'Ya puedes pasar por tu pedido',
+        'pedido_programado_pronto' => 'Pedido programado',
+        'pedido_programado_15' => 'Pedido programado en 15 minutos',
+        'recordatorio_programado' => 'Tu pedido programado',
+        'recordatorio_programado_15' => 'Tu pedido es en 15 minutos',
+        'promocion' => 'Promoción nueva',
+    ];
+
+    /*
+     * LO QUE EN LA VIDA DE UN PEDIDO PASA UNA SOLA VEZ.
+     *
+     * Un pedido se acepta, sale, llega y se entrega una vez. Si por cualquier
+     * camino --un reintento, un estado que se corrige y se vuelve a poner--
+     * el mismo aviso se pide dos veces para el mismo pedido y la misma
+     * persona, la campana enseñaba cinco «Tu pedido fue entregado» iguales.
+     * Para estos tipos, si ya existe, no se crea otro.
+     *
+     * Los demás SÍ pueden repetirse con razón: un pedido lo pueden soltar dos
+     * domiciliarios distintos, y un chat trae muchos mensajes.
+     */
+    private const UNA_VEZ_POR_PEDIDO = [
+        'pedido_nuevo',
+        'pedido_aceptado',
+        'pedido_en_camino',
+        'domiciliario_llego',
+        'pedido_entregado',
+        'pedido_cancelado',
+        'pedido_no_entregado',
+        'pedido_listo_para_recoger',
+        'pedido_programado_pronto',
+        'pedido_programado_15',
+        'recordatorio_programado',
+        'recordatorio_programado_15',
     ];
 
     /**
@@ -69,6 +108,17 @@ class Avisos
         bool $push = true,
         ?string $titulo = null,
     ): ?Notification {
+        $pedido = $datos['order_id'] ?? null;
+        if ($pedido !== null && in_array($tipo, self::UNA_VEZ_POR_PEDIDO, true)) {
+            $yaEsta = Notification::where('user_id', $userId)
+                ->where('tipo', $tipo)
+                ->where('datos->order_id', $pedido)
+                ->first();
+            if ($yaEsta) {
+                return $yaEsta;
+            }
+        }
+
         try {
             $aviso = Notification::create([
                 'user_id' => $userId,
@@ -120,7 +170,14 @@ class Avisos
                     $mensaje,
                     // El tipo viaja para que la app sepa a qué pantalla llevar
                     // al tocarla; sin él, el destino se perdería.
-                    ['tipo' => $tipo] + array_map(
+                    /*
+                     * Y el ROL de quien lo recibe: «pedido cancelado» le llega
+                     * al comprador, a la tienda y al domiciliario, y a cada
+                     * uno lo lleva a una pantalla distinta. Con la app recién
+                     * abierta desde la notificación, todavía no sabe quién
+                     * entró.
+                     */
+                    ['tipo' => $tipo, 'rol' => (string) (User::whereKey($userId)->value('rol') ?? '')] + array_map(
                         fn ($v) => is_scalar($v) ? (string) $v : json_encode($v),
                         $datos,
                     ),

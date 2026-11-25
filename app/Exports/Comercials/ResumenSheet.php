@@ -69,8 +69,8 @@ class ResumenSheet implements FromArray, WithStyles, WithTitle
             ['Usuarios nuevos', $newUsers],
             ['Usuarios recurrentes', $recurrentUsers],
             ['Tasa repetición (%)', $repeatRate],
-            ['Tiendas activas', $businessWithOrders],
-            ['Tiendas inactivas', $inactiveBusinesses],
+            ['Negocios activos', $businessWithOrders],
+            ['Negocios inactivos', $inactiveBusinesses],
             ['CAC', $CAC],
         ];
     }

@@ -71,6 +71,7 @@ class DireccionesController extends Controller
             'apartment' => $request->apartment,
             'municipality_id' => $municipioId,
             'alias_id' => $request->alias_id,
+            'nombre' => $request->nombre ? trim((string) $request->nombre) : null,
             'latitude' => $request->latitude,
             'longitude' => $request->longitude,
             'state' => true,

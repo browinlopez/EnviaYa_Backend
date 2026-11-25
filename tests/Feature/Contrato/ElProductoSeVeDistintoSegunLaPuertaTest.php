@@ -117,7 +117,7 @@ it('la vitrina no manda los campos del peso, y los destacados si los mandan', fu
      * qué pantalla de qué app le afecta.
      */
     expect($soloEnDestacados)->toBe([
-        'category', 'group', 'min_qty', 'sale_unit', 'step_qty', 'variante',
+        'category', 'group', 'min_qty', 'por_valor', 'sale_unit', 'step_qty', 'variante',
     ]);
 
     $soloEnVitrina = array_values(array_diff(

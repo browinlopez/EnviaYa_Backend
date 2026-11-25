@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Resources\Producto;
 
+use App\Support\CategoriaDelNegocio;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -66,12 +67,12 @@ class ProductoDeLaTiendaResource extends JsonResource
             'brand' => $p->brand,
             'description' => $p->description,
             'image' => $p->image,
-            'category' => $p->category ? [
-                'category_id' => (int) $p->category->category_id,
-                'name' => $p->category->name,
-            ] : null,
+            // La de este negocio si la tiene; si no, la del producto.
+            'category' => CategoriaDelNegocio::de($pb->category_id ?? null, $p->category_id),
             'state' => (bool) $p->state,
             'price' => (float) $pb->price,
+            // Lo que le cuesta a la tienda: sólo lo ve ella, en su catálogo.
+            'costo' => $pb->costo !== null ? (float) $pb->costo : null,
             'amount' => (int) $pb->amount,
             /*
              * Como lo vende ESTA tienda. Con una unidad de peso, `price` es el
@@ -82,6 +83,8 @@ class ProductoDeLaTiendaResource extends JsonResource
             'stock_weight' => (float) $pb->stock_weight,
             'min_qty' => $pb->min_qty !== null ? (float) $pb->min_qty : null,
             'step_qty' => $pb->step_qty !== null ? (float) $pb->step_qty : null,
+            // Si se puede pedir por plata: «$1.500 de queso».
+            'por_valor' => (bool) ($pb->por_valor ?? false),
             // Sin precio no se ofrece al comprador: ver la cabecera.
             'sin_precio' => (float) $pb->price <= 0,
             // El vencimiento es del LOTE de esta tienda: ver la cabecera.

@@ -43,9 +43,10 @@ test('pedir los mensajes tiene DOS entradas, no una', function () {
      *   · sin él: se exigen las DOS personas, porque entonces el chat se
      *     busca —o se abre— por la pareja.
      *
-     * Por eso su validación NO se mueve a un `FormRequest`: uno valida una
-     * sola vez y antes de entrar, así que tendría que decidir la rama antes
-     * de que el controlador la decida.
+     * Las dos formas caben en un solo `FormRequest`
+     * (`MensajesDelChatRequest`): `required_without:chat_id` exige las
+     * personas solo cuando no viene el chat. Lo que esta prueba cuida es que
+     * los errores sigan saliendo en los mismos campos que antes.
      */
     alguienConSesion();
 

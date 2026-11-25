@@ -42,6 +42,19 @@ class CategorySeeder extends Seeder
                 ['name' => $category['name']],
                 $category + ['state' => 1],
             );
+
+            /*
+             * Y su fila en `category_category_business`, que es donde se lee hoy
+             * a qué tipo de negocio pertenece una categoría. La migración que
+             * creó esa tabla copió lo que ya había en la columna; en una base
+             * nueva este seeder corre DESPUÉS, así que la tabla quedaba vacía y
+             * ningún negocio sembrado tenía catálogo.
+             */
+            $id = DB::table('category')->where('name', $category['name'])->value('category_id');
+            DB::table('category_category_business')->insertOrIgnore([
+                'category_id' => $id,
+                'business_category_id' => $category['business_category_id'],
+            ]);
         }
     }
 }

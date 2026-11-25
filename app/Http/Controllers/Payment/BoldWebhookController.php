@@ -6,10 +6,12 @@ namespace App\Http\Controllers\Payment;
 
 use App\Events\PaymentStatusUpdated;
 use App\Http\Controllers\Controller;
+use App\Models\Negocio\VentaDeMostrador;
 use App\Models\Order\OrdersSales;
 use App\Models\Payment\Payment;
 use App\Models\Payment\PaymentEvent;
 use App\Models\Payment\PaymentIntent;
+use App\Services\CobroDeMostradorConQr;
 use App\Services\ConfirmacionDePago;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
@@ -126,6 +128,25 @@ class BoldWebhookController extends Controller
             ]);
 
             return response()->json(['ok' => true, 'duplicated' => true]);
+        }
+
+        /*
+         * UNA VENTA DEL MOSTRADOR no es un pedido: no tiene `Payment` ni
+         * `PaymentIntent`. Su referencia empieza por `MOS-` y se resuelve
+         * aparte. Ver `CobroDeMostradorConQr`.
+         */
+        if (CobroDeMostradorConQr::esDeMostrador($reference)) {
+            $venta = VentaDeMostrador::where('bold_referencia', $reference)->first();
+            if ($venta) {
+                $cobro = app(CobroDeMostradorConQr::class);
+                if (in_array($type, self::APPROVED_TYPES, true)) {
+                    $cobro->confirmar($venta);
+                } elseif (in_array($type, self::REJECTED_TYPES, true)) {
+                    $cobro->rechazar($venta);
+                }
+            }
+
+            return response()->json(['ok' => true, 'matched' => (bool) $venta]);
         }
 
         $payment = $this->resolvePayment($transactionId, $reference);

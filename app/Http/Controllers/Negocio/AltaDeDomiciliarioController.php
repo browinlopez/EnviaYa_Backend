@@ -100,7 +100,7 @@ class AltaDeDomiciliarioController extends Controller
 
             $this->vincular($negocioId, $id);
 
-            return response()->json(['message' => 'Quedó vinculado a tu tienda.', 'domiciliary_id' => $id], 201);
+            return response()->json(['message' => 'Quedó vinculado a tu negocio.', 'domiciliary_id' => $id], 201);
         }
 
         $datos = $request->validate([
@@ -120,7 +120,7 @@ class AltaDeDomiciliarioController extends Controller
 
         if (Domiciliary::where('document', $documento)->exists()) {
             return response()->json([
-                'message' => 'Ya hay un domiciliario con esa cédula. Búscalo para vincularlo a tu tienda.',
+                'message' => 'Ya hay un domiciliario con esa cédula. Búscalo para vincularlo a tu negocio.',
                 'errors' => ['document' => ['Ya hay un domiciliario con esa cédula.']],
             ], 422);
         }
@@ -234,7 +234,7 @@ class AltaDeDomiciliarioController extends Controller
            tienda ya dice algo de la flota del vecino. */
         if (! $vinculo->exists()) {
             return response()->json([
-                'message' => 'Ese domiciliario no está vinculado a tu tienda.',
+                'message' => 'Ese domiciliario no está vinculado a tu negocio.',
             ], 404);
         }
 
@@ -261,7 +261,7 @@ class AltaDeDomiciliarioController extends Controller
 
         $vinculo->update(['state' => 0]);
 
-        return response()->json(['message' => 'Ya no reparte para tu tienda.']);
+        return response()->json(['message' => 'Ya no reparte para tu negocio.']);
     }
 
     private function vincular(int $negocioId, int $domiciliarioId): void
