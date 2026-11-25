@@ -4832,7 +4832,25 @@
                         }
                     }
                 ],
-                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "general": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "required": [
+                                    "general"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Admin\\CatalogoGeneralRequest"
             }
         },
         "/v1/admin/reports-desglose": {
@@ -7754,7 +7772,28 @@
                         "description": "Validacion fallida."
                     }
                 },
-                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "chat_id": {
+                                        "type": "string"
+                                    },
+                                    "user_id": {
+                                        "type": "string"
+                                    },
+                                    "recipient_id": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Chat\\MensajesDelChatRequest"
             }
         },
         "/v1/chats/send-message": {
@@ -9326,7 +9365,26 @@
                         }
                     }
                 ],
-                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "foto": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "required": [
+                                    "foto"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Domiciliary\\SubirEvidenciaRequest"
             }
         },
         "/v1/domiciliaries/orders/{id}/llegue": {
@@ -9408,7 +9466,34 @@
                         }
                     }
                 ],
-                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "motivo": {
+                                        "type": "string"
+                                    },
+                                    "nota": {
+                                        "type": "string"
+                                    },
+                                    "latitude": {
+                                        "type": "number"
+                                    },
+                                    "longitude": {
+                                        "type": "number"
+                                    }
+                                },
+                                "required": [
+                                    "motivo"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Domiciliary\\ReportarNovedadRequest"
             }
         },
         "/v1/domiciliaries/orders/{id}/soltar": {
@@ -9449,7 +9534,28 @@
                         }
                     }
                 ],
-                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "motivo": {
+                                        "type": "string"
+                                    },
+                                    "nota": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "motivo"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Domiciliary\\SoltarPedidoRequest"
             }
         },
         "/v1/domiciliaries/pedidos": {
@@ -10210,7 +10316,28 @@
                         "description": "Validacion fallida."
                     }
                 },
-                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "costos": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "required": [
+                                    "costos"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Negocio\\GuardarCostosRequest"
             }
         },
         "/v1/negocio/creditos": {
@@ -10941,7 +11068,40 @@
                         "description": "Validacion fallida."
                     }
                 },
-                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "tipo": {
+                                        "type": "string"
+                                    },
+                                    "nombre": {
+                                        "type": "string"
+                                    },
+                                    "monto": {
+                                        "type": "number"
+                                    },
+                                    "frecuencia": {
+                                        "type": "string"
+                                    },
+                                    "fecha": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    }
+                                },
+                                "required": [
+                                    "tipo",
+                                    "monto",
+                                    "frecuencia"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Negocio\\CrearGastoRequest"
             }
         },
         "/v1/negocio/gastos/{id}": {
@@ -11029,7 +11189,28 @@
                         }
                     }
                 ],
-                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "monto": {
+                                        "type": "number"
+                                    },
+                                    "nombre": {
+                                        "type": "string"
+                                    },
+                                    "solo_este_mes": {
+                                        "type": "boolean"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Negocio\\ActualizarGastoRequest"
             }
         },
         "/v1/negocio/ingresos": {
@@ -12173,7 +12354,48 @@
                         "description": "Validacion fallida."
                     }
                 },
-                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "price": {
+                                        "type": "number"
+                                    },
+                                    "sale_unit": {
+                                        "type": "string",
+                                        "enum": [
+                                            "unidad",
+                                            "kg",
+                                            "libra",
+                                            "gramo",
+                                            "litro"
+                                        ]
+                                    },
+                                    "por_valor": {
+                                        "type": "boolean"
+                                    },
+                                    "amount": {
+                                        "type": "number"
+                                    },
+                                    "costo": {
+                                        "type": "number"
+                                    }
+                                },
+                                "required": [
+                                    "name",
+                                    "price"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Negocio\\CrearProductoPropioRequest"
             }
         },
         "/v1/negocio/productos/tiendas-para-copiar": {
@@ -12757,7 +12979,39 @@
                         "description": "Validacion fallida."
                     }
                 },
-                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "lineas": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "forma_de_pago": {
+                                        "type": "string",
+                                        "enum": [
+                                            "efectivo",
+                                            "transferencia",
+                                            "qr"
+                                        ]
+                                    },
+                                    "cash_tendered": {
+                                        "type": "number"
+                                    }
+                                },
+                                "required": [
+                                    "lineas"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Negocio\\RegistrarVentaDeMostradorRequest"
             }
         },
         "/v1/negocio/ventas-mostrador/{id}/cancelar": {

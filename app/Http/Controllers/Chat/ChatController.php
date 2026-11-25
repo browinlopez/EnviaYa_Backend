@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Chat\ChatsDeUnaPersonaRequest;
 use App\Http\Requests\Chat\MandarMensajeRequest;
 use App\Http\Requests\Chat\MarcarMensajeRequest;
+use App\Http\Requests\Chat\MensajesDelChatRequest;
 use App\Http\Resources\Chat\ChatDeLaListaResource;
 use App\Http\Resources\Chat\ChatResource;
 use App\Http\Resources\Chat\MensajeResource;
@@ -199,14 +200,11 @@ class ChatController extends Controller
         });
     }
 
-    public function getMessages(Request $request)
+    public function getMessages(MensajesDelChatRequest $request)
     {
         // si viene chat_id se comporta igual que antes
+        // Las dos formas de pedirla las valida `MensajesDelChatRequest`.
         if ($request->filled('chat_id')) {
-            $request->validate([
-                'chat_id' => 'required|exists:chats,chat_id',
-            ]);
-
             $chat = Chat::with(['messages.user', 'participants.user'])
                 ->find($request->chat_id);
 
@@ -236,12 +234,7 @@ class ChatController extends Controller
             return $this->formatChatResponse($chat);
         }
 
-        // 🔹 si NO viene chat_id, validar que lleguen dos user_id
-        $request->validate([
-            'user_id' => 'required|exists:user,user_id',
-            'recipient_id' => 'required|exists:user,user_id',
-        ]);
-
+        // Sin chat_id, la pareja: ya validada por `MensajesDelChatRequest`.
         $userId = $request->input('user_id');
         $recipientId = $request->input('recipient_id');
 

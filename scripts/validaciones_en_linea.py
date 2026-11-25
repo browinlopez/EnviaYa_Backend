@@ -122,10 +122,15 @@ LLAMADA = '$request->validate('
 #        de validar, asi que un FormRequest invertiria las dos respuestas.
 #        Lo que cambio es que esas ocho ya no dicen «se puede convertir»:
 #        las reglas viven en el FormRequest y lo que queda es estructural.
+#    38  al 25 de noviembre de 2026: el contador había llegado a 52 con los
+#        endpoints nuevos (mostrador, producto propio, «Cuánto te queda»,
+#        entregas del domiciliario, la bandeja del panel). Esos estrenaron
+#        su FormRequest, y `getMessages` del chat también: sus dos ramas
+#        caben en uno con `required_without`.
 #
 # Subirlo es una decision, no un arreglo del CI. Si hace falta subirlo, el
 # motivo va en `docs/laravel-12/EXCEPCIONES.md` junto a los demas.
-TOPE = 39
+TOPE = 38
 
 BARRA = chr(92)
 PREFIJO = 'App' + BARRA + 'Http' + BARRA + 'Controllers' + BARRA

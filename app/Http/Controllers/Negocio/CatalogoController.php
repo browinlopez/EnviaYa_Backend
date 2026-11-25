@@ -6,9 +6,9 @@ namespace App\Http\Controllers\Negocio;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Negocio\BuscarEnElCatalogoRequest;
+use App\Http\Requests\Negocio\CrearProductoPropioRequest;
 use App\Http\Requests\Negocio\ProponerProductoRequest;
 use App\Services\CatalogoDeProductos;
-use App\Support\UnidadDeVenta;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -103,16 +103,9 @@ class CatalogoController extends Controller
      * nombre y precio basta para venderlo ya; queda en la bandeja del panel
      * para que el equipo lo complete.
      */
-    public function propio(Request $request)
+    public function propio(CrearProductoPropioRequest $request)
     {
-        $datos = $request->validate([
-            'name' => 'required|string|min:2|max:120',
-            'price' => 'required|numeric|min:1|max:100000000',
-            'sale_unit' => 'nullable|string|in:'.implode(',', UnidadDeVenta::TODAS),
-            'por_valor' => 'nullable|boolean',
-            'amount' => 'nullable|numeric|min:0|max:100000',
-            'costo' => 'nullable|numeric|min:0|max:100000000',
-        ]);
+        $datos = $request->validated();
 
         $negocio = (int) $request->attributes->get('busines_id');
 

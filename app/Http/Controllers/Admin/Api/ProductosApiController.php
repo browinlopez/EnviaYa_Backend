@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\CatalogoGeneralRequest;
 use App\Http\Requests\Admin\CrearProductoDelCatalogoRequest;
 use App\Queries\ProductosDelPanel;
 use App\Services\MediaService;
@@ -146,11 +147,11 @@ class ProductosApiController extends Controller
      * al catálogo general --las demás tiendas lo encuentran al buscar-- o
      * dejarlo solo en su tienda. Las dos lo sacan de la bandeja.
      */
-    public function catalogoGeneral(Request $request, $id)
+    public function catalogoGeneral(CatalogoGeneralRequest $request, $id)
     {
         abort_if(! DB::table('products')->where('products_id', $id)->exists(), 404, 'El producto no existe.');
 
-        $datos = $request->validate(['general' => 'required|boolean']);
+        $datos = $request->validated();
 
         DB::table('products')->where('products_id', $id)->update([
             'en_catalogo_general' => $datos['general'],

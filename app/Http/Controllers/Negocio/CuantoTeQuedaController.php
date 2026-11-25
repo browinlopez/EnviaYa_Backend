@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Negocio;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Negocio\ActualizarGastoRequest;
+use App\Http\Requests\Negocio\CrearGastoRequest;
+use App\Http\Requests\Negocio\CuentaDelNegocioRequest;
+use App\Http\Requests\Negocio\GuardarCostosRequest;
 use App\Models\Negocio\GastoDelMes;
 use App\Models\Negocio\GastoDelNegocio;
 use App\Models\Order\OrdersSales;
@@ -14,7 +18,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 
 /**
  * «CUÁNTO TE QUEDA»: la cuenta del negocio, los costos de sus productos y
@@ -31,12 +34,9 @@ class CuantoTeQuedaController extends Controller
     }
 
     /** GET negocio/cuanto-te-queda?periodo=mes|semana&fecha=YYYY-MM-DD */
-    public function cuenta(Request $request, CuentaDelNegocio $cuenta): JsonResponse
+    public function cuenta(CuentaDelNegocioRequest $request, CuentaDelNegocio $cuenta): JsonResponse
     {
-        $datos = $request->validate([
-            'periodo' => 'nullable|in:mes,semana',
-            'fecha' => 'nullable|date',
-        ]);
+        $datos = $request->validated();
 
         return response()->json($cuenta->para(
             $this->negocio($request),
@@ -84,13 +84,9 @@ class CuantoTeQuedaController extends Controller
     }
 
     /** PUT negocio/costos — { costos: [{ products_id, costo }] }. `costo` null lo borra. */
-    public function guardarCostos(Request $request): JsonResponse
+    public function guardarCostos(GuardarCostosRequest $request): JsonResponse
     {
-        $datos = $request->validate([
-            'costos' => 'required|array|min:1|max:500',
-            'costos.*.products_id' => 'required|integer',
-            'costos.*.costo' => 'nullable|numeric|min:0|max:100000000',
-        ]);
+        $datos = $request->validated();
 
         $negocio = $this->negocio($request);
         $cambiados = 0;
@@ -123,15 +119,9 @@ class CuantoTeQuedaController extends Controller
     }
 
     /** POST negocio/gastos */
-    public function crearGasto(Request $request): JsonResponse
+    public function crearGasto(CrearGastoRequest $request): JsonResponse
     {
-        $datos = $request->validate([
-            'tipo' => ['required', Rule::in(array_keys(GastoDelNegocio::TIPOS))],
-            'nombre' => 'nullable|string|max:60',
-            'monto' => 'required|numeric|min:1|max:100000000',
-            'frecuencia' => ['required', Rule::in([GastoDelNegocio::MENSUAL, GastoDelNegocio::UNA_VEZ])],
-            'fecha' => 'nullable|date',
-        ]);
+        $datos = $request->validated();
 
         $gasto = GastoDelNegocio::create([
             'busines_id' => $this->negocio($request),
@@ -154,13 +144,9 @@ class CuantoTeQuedaController extends Controller
      * Con `solo_este_mes`, el valor cambia nada más este mes (el recibo que
      * vino distinto); sin él, cambia de aquí en adelante.
      */
-    public function actualizarGasto(Request $request, int $id): JsonResponse
+    public function actualizarGasto(ActualizarGastoRequest $request, int $id): JsonResponse
     {
-        $datos = $request->validate([
-            'monto' => 'nullable|numeric|min:1|max:100000000',
-            'nombre' => 'nullable|string|max:60',
-            'solo_este_mes' => 'nullable|boolean',
-        ]);
+        $datos = $request->validated();
 
         $gasto = $this->delNegocio($request, $id);
         $periodo = now()->format('Y-m');

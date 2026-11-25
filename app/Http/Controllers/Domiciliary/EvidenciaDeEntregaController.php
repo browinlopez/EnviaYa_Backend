@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Domiciliary;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Domiciliary\SubirEvidenciaRequest;
 use App\Models\Order\OrdersSales;
 use App\Services\EvidenciaDeEntrega;
 use Illuminate\Http\Request;
@@ -32,20 +33,8 @@ class EvidenciaDeEntregaController extends Controller
     public function __construct(private EvidenciaDeEntrega $evidencias) {}
 
     /** Sube la foto de una entrega. */
-    public function guardar(Request $request, int $id)
+    public function guardar(SubirEvidenciaRequest $request, int $id)
     {
-        $request->validate([
-            /*
-             * `image` ya exige que sea una imagen de verdad y no un .php con
-             * otro nombre. 4 MB es el tope del servicio: esto se sube desde
-             * la calle, con la red del teléfono y el cliente esperando.
-             */
-            'foto' => 'required|image|mimes:jpg,jpeg,png,webp|max:4096',
-        ], [
-            'foto.required' => 'Falta la foto.',
-            'foto.image' => 'Eso no es una imagen.',
-            'foto.max' => 'La foto supera los 4 MB. Vuelve a tomarla con menos calidad.',
-        ]);
 
         $pedido = $this->suyo($request, $id);
 

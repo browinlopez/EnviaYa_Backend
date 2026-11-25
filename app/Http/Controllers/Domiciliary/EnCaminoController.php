@@ -6,13 +6,14 @@ namespace App\Http\Controllers\Domiciliary;
 
 use App\Events\OrderStatusUpdated;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Domiciliary\ReportarNovedadRequest;
+use App\Http\Requests\Domiciliary\SoltarPedidoRequest;
 use App\Models\Order\OrdersSales;
 use App\Services\Avisos;
 use App\Services\NovedadesDeEntrega;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\Rule;
 use RuntimeException;
 
 /**
@@ -82,12 +83,9 @@ class EnCaminoController extends Controller
         return response()->json(['data' => ['llego_at' => $pedido->llego_at]]);
     }
 
-    public function soltar(Request $request, int $id)
+    public function soltar(SoltarPedidoRequest $request, int $id)
     {
-        $datos = $request->validate([
-            'motivo' => ['required', 'string', Rule::in(array_keys(NovedadesDeEntrega::MOTIVOS_PARA_SOLTAR))],
-            'nota' => 'nullable|string|max:500',
-        ], ['motivo.in' => 'Ese motivo no existe.']);
+        $datos = $request->validated();
 
         [$pedido, $domiciliarioId] = $this->suyo($request, $id);
 
@@ -104,14 +102,9 @@ class EnCaminoController extends Controller
         return response()->json(['message' => 'Listo, lo soltaste. El negocio ya sabe.']);
     }
 
-    public function novedad(Request $request, int $id)
+    public function novedad(ReportarNovedadRequest $request, int $id)
     {
-        $datos = $request->validate([
-            'motivo' => ['required', 'string', Rule::in(array_keys(NovedadesDeEntrega::MOTIVOS))],
-            'nota' => 'nullable|string|max:500',
-            'latitude' => 'nullable|numeric|between:-90,90',
-            'longitude' => 'nullable|numeric|between:-180,180',
-        ], ['motivo.in' => 'Ese motivo no existe.']);
+        $datos = $request->validated();
 
         [$pedido, $domiciliarioId] = $this->suyo($request, $id);
 

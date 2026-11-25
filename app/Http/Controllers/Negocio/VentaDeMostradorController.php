@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Negocio;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Negocio\RegistrarVentaDeMostradorRequest;
+use App\Http\Requests\Negocio\VentasDelDiaRequest;
 use App\Models\Negocio\LineaDeVentaDeMostrador;
 use App\Models\Negocio\VentaDeMostrador;
 use App\Models\Product\ProductBusiness;
@@ -35,25 +37,9 @@ class VentaDeMostradorController extends Controller
     }
 
     /** POST negocio/ventas-mostrador */
-    public function registrar(Request $request): JsonResponse
+    public function registrar(RegistrarVentaDeMostradorRequest $request): JsonResponse
     {
-        $datos = $request->validate([
-            'lineas' => 'required|array|min:1|max:100',
-            'lineas.*.products_id' => 'required|integer',
-            'lineas.*.amount' => 'nullable|integer|min:1|max:1000',
-            'lineas.*.pedido_por' => 'nullable|in:valor,cantidad',
-            'lineas.*.requested_value' => 'nullable|numeric|min:100|max:1000000',
-            'lineas.*.requested_qty' => 'nullable|numeric|min:0.001|max:5000',
-            /*
-             * EL PRECIO QUE SE CAMBIÓ EN EL MOSTRADOR. En persona el tendero
-             * rebaja o redondea --«a usted se lo dejo en $3.000»--: es su
-             * venta, en su tienda. Sin él, manda el precio del producto.
-             */
-            'lineas.*.price' => 'nullable|numeric|min:1|max:100000000',
-            // `qr`: Bre-B por Bold. Ver `CobroDeMostradorConQr`.
-            'forma_de_pago' => 'nullable|in:efectivo,transferencia,qr',
-            'cash_tendered' => 'nullable|numeric|min:0|max:10000000',
-        ]);
+        $datos = $request->validated();
 
         $negocio = $this->negocio($request);
         $ids = collect($datos['lineas'])->pluck('products_id')->unique()->all();
@@ -216,9 +202,9 @@ class VentaDeMostradorController extends Controller
     }
 
     /** GET negocio/ventas-mostrador?fecha=YYYY-MM-DD — las ventas de ese día. */
-    public function delDia(Request $request): JsonResponse
+    public function delDia(VentasDelDiaRequest $request): JsonResponse
     {
-        $datos = $request->validate(['fecha' => 'nullable|date']);
+        $datos = $request->validated();
         $dia = isset($datos['fecha']) ? Carbon::parse($datos['fecha']) : now();
 
         $ventas = VentaDeMostrador::where('busines_id', $this->negocio($request))
