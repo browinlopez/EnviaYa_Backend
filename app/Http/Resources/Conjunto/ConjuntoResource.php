@@ -51,7 +51,7 @@ class ConjuntoResource extends JsonResource
             'gate_notes' => $c->gate_notes,
             'require_authorization' => (bool) $c->require_authorization,
             // Desde cuántas horas adentro se avisa: las suyas o las 4 de la plataforma.
-            'horas_alerta_adentro' => $c->horas_alerta_adentro
+            'horas_alerta_adentro' => ($c->horas_alerta_adentro ?? null)
                 ? (int) $c->horas_alerta_adentro
                 : ResidentialComplex::HORAS_ALERTA_ADENTRO,
             'towers_count' => $c->towers_count,

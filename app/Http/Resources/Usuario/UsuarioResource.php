@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Resources\Usuario;
 
+use App\Models\Conjunto\ComplexStaff;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Arr;
@@ -85,11 +86,6 @@ class UsuarioResource extends JsonResource
         'policy_accepted_at',
         'policy_version',
         'policy_ip',
-        /*
-         * Añadida a propósito el 26 de noviembre: el panel de aliados la lee
-         * para llevar al celador a «Crea tu clave» antes de la portería.
-         */
-        'must_change_password',
         // Las que carga el login segun el rol. Sin estas tres, la app no sabe
         // a que pantalla llevar a la persona.
         'buyer',
@@ -112,6 +108,19 @@ class UsuarioResource extends JsonResource
          */
         $u = $this->resource;
         $datos = Arr::only($u->toArray(), self::CAMPOS);
+
+        /*
+         * Añadida a propósito el 26 de noviembre, y a mano porque el modelo
+         * la oculta (para que no salga en cada usuario serializado): el panel
+         * de aliados la lee para llevar al celador a «Crea tu clave».
+         *
+         * Solo para el personal de un conjunto (roles 5 y 6): a los demás
+         * no les aplica y su respuesta no cambia —las apps publicadas leen
+         * exactamente las claves de siempre—.
+         */
+        if (in_array((int) $u->rol, ComplexStaff::ROLES_DE_USUARIO, true)) {
+            $datos['must_change_password'] = (bool) $u->must_change_password;
+        }
 
         /*
          * LAS TRES RELACIONES PASAN POR SU PROPIO RESOURCE, que es lo que

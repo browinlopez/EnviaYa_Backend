@@ -98,6 +98,13 @@ class User extends Authenticatable implements Auditable, MustVerifyEmail
          * construye su respuesta campo por campo y `$hidden` no le afecta.
          */
         'area',
+        /*
+         * Oculta por lo mismo que `area`: es una columna nueva y no tiene por
+         * qué aparecer en cada respuesta que serialice un usuario (la reseña
+         * con su comprador, por ejemplo). La publica, a propósito, solo
+         * `UsuarioResource` —login y perfil—.
+         */
+        'must_change_password',
     ];
 
     protected $casts = [

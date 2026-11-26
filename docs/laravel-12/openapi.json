@@ -8202,6 +8202,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "clave.propia",
                     "conjunto",
                     "conjunto:dueno",
                     "cuenta.habilitada"
@@ -8233,6 +8234,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "clave.propia",
                     "conjunto",
                     "conjunto:dueno",
                     "cuenta.habilitada"
@@ -8300,6 +8302,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "clave.propia",
                     "conjunto",
                     "conjunto:dueno",
                     "cuenta.habilitada"
@@ -8348,6 +8351,9 @@
                                     },
                                     "phone": {
                                         "type": "string"
+                                    },
+                                    "password": {
+                                        "type": "string"
                                     }
                                 }
                             }
@@ -8355,6 +8361,50 @@
                     }
                 },
                 "x-form-request": "App\\Http\\Requests\\Conjunto\\CambiarCeladorRequest"
+            }
+        },
+        "/v1/conjunto/celadores/{id}/historial": {
+            "get": {
+                "operationId": "get_v1_conjunto_celadores_id_historial",
+                "tags": [
+                    "conjunto"
+                ],
+                "summary": "App\\Http\\Controllers\\Conjunto\\CeladoresController@historial",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "clave.propia",
+                    "conjunto",
+                    "conjunto:dueno",
+                    "cuenta.habilitada"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
             }
         },
         "/v1/conjunto/me": {
@@ -8368,6 +8418,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "clave.propia",
                     "conjunto",
                     "cuenta.habilitada"
                 ],
@@ -8400,6 +8451,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "clave.propia",
                     "conjunto",
                     "conjunto:dueno",
                     "cuenta.habilitada"
@@ -8454,6 +8506,9 @@
                                     },
                                     "require_authorization": {
                                         "type": "boolean"
+                                    },
+                                    "horas_alerta_adentro": {
+                                        "type": "integer"
                                     }
                                 },
                                 "required": [
@@ -8464,6 +8519,102 @@
                     }
                 },
                 "x-form-request": "App\\Http\\Requests\\Conjunto\\ActualizarMiConjuntoRequest"
+            }
+        },
+        "/v1/conjunto/perfil/cambio-de-forma": {
+            "get": {
+                "operationId": "get_v1_conjunto_perfil_cambio_de_forma",
+                "tags": [
+                    "conjunto"
+                ],
+                "summary": "App\\Http\\Controllers\\Conjunto\\SolicitudDeCambioController@ultima",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "clave.propia",
+                    "conjunto",
+                    "conjunto:dueno",
+                    "cuenta.habilitada"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    }
+                }
+            },
+            "post": {
+                "operationId": "post_v1_conjunto_perfil_cambio_de_forma",
+                "tags": [
+                    "conjunto"
+                ],
+                "summary": "App\\Http\\Controllers\\Conjunto\\SolicitudDeCambioController@solicitar",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "clave.propia",
+                    "conjunto",
+                    "conjunto:dueno",
+                    "cuenta.habilitada",
+                    "throttle:5,10"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    },
+                    "422": {
+                        "description": "Validacion fallida."
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "towers_count": {
+                                        "type": "integer"
+                                    },
+                                    "apartments_per_tower": {
+                                        "type": "integer"
+                                    },
+                                    "note": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "towers_count",
+                                    "apartments_per_tower"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Conjunto\\SolicitarCambioDeFormaRequest"
             }
         },
         "/v1/conjunto/perfil/foto": {
@@ -8477,6 +8628,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "clave.propia",
                     "conjunto",
                     "conjunto:dueno",
                     "cuenta.habilitada"
@@ -8533,6 +8685,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "clave.propia",
                     "conjunto",
                     "cuenta.habilitada"
                 ],
@@ -8565,6 +8718,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "clave.propia",
                     "conjunto",
                     "cuenta.habilitada"
                 ],
@@ -8597,6 +8751,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "clave.propia",
                     "conjunto",
                     "cuenta.habilitada"
                 ],
@@ -8643,6 +8798,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "clave.propia",
                     "conjunto",
                     "cuenta.habilitada",
                     "throttle:40,1",
@@ -8699,6 +8855,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "clave.propia",
                     "conjunto",
                     "cuenta.habilitada"
                 ],
@@ -8786,6 +8943,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "clave.propia",
                     "conjunto",
                     "conjunto:dueno",
                     "cuenta.habilitada"
@@ -8819,6 +8977,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "clave.propia",
                     "conjunto",
                     "conjunto:dueno",
                     "cuenta.habilitada"
@@ -8852,6 +9011,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "clave.propia",
                     "conjunto",
                     "conjunto:dueno",
                     "cuenta.habilitada"
@@ -8885,6 +9045,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "clave.propia",
                     "conjunto",
                     "conjunto:dueno",
                     "cuenta.habilitada"
@@ -8918,7 +9079,151 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "clave.propia",
                     "conjunto",
+                    "cuenta.habilitada"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    }
+                }
+            }
+        },
+        "/v1/conjunto/turno": {
+            "get": {
+                "operationId": "get_v1_conjunto_turno",
+                "tags": [
+                    "conjunto"
+                ],
+                "summary": "App\\Http\\Controllers\\Conjunto\\TurnosController@mio",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "clave.propia",
+                    "conjunto",
+                    "cuenta.habilitada"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    }
+                }
+            }
+        },
+        "/v1/conjunto/turno/iniciar": {
+            "post": {
+                "operationId": "post_v1_conjunto_turno_iniciar",
+                "tags": [
+                    "conjunto"
+                ],
+                "summary": "App\\Http\\Controllers\\Conjunto\\TurnosController@iniciar",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "clave.propia",
+                    "conjunto",
+                    "cuenta.habilitada",
+                    "throttle:20,1"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    },
+                    "422": {
+                        "description": "Validacion fallida."
+                    }
+                },
+                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+            }
+        },
+        "/v1/conjunto/turno/terminar": {
+            "post": {
+                "operationId": "post_v1_conjunto_turno_terminar",
+                "tags": [
+                    "conjunto"
+                ],
+                "summary": "App\\Http\\Controllers\\Conjunto\\TurnosController@terminar",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "clave.propia",
+                    "conjunto",
+                    "cuenta.habilitada",
+                    "throttle:20,1"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    },
+                    "422": {
+                        "description": "Validacion fallida."
+                    }
+                },
+                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+            }
+        },
+        "/v1/conjunto/turnos": {
+            "get": {
+                "operationId": "get_v1_conjunto_turnos",
+                "tags": [
+                    "conjunto"
+                ],
+                "summary": "App\\Http\\Controllers\\Conjunto\\TurnosController@index",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "clave.propia",
+                    "conjunto",
+                    "conjunto:dueno",
                     "cuenta.habilitada"
                 ],
                 "security": [

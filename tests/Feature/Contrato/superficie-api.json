@@ -2123,6 +2123,7 @@
             "api",
             "audit.api",
             "auth:sanctum",
+            "clave.propia",
             "conjunto",
             "conjunto:dueno",
             "cuenta.habilitada"
@@ -2136,6 +2137,7 @@
             "api",
             "audit.api",
             "auth:sanctum",
+            "clave.propia",
             "conjunto",
             "conjunto:dueno",
             "cuenta.habilitada"
@@ -2149,6 +2151,21 @@
             "api",
             "audit.api",
             "auth:sanctum",
+            "clave.propia",
+            "conjunto",
+            "conjunto:dueno",
+            "cuenta.habilitada"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/conjunto/celadores/{id}/historial",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "clave.propia",
             "conjunto",
             "conjunto:dueno",
             "cuenta.habilitada"
@@ -2162,6 +2179,7 @@
             "api",
             "audit.api",
             "auth:sanctum",
+            "clave.propia",
             "conjunto",
             "cuenta.habilitada"
         ]
@@ -2174,9 +2192,39 @@
             "api",
             "audit.api",
             "auth:sanctum",
+            "clave.propia",
             "conjunto",
             "conjunto:dueno",
             "cuenta.habilitada"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/conjunto/perfil/cambio-de-forma",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "clave.propia",
+            "conjunto",
+            "conjunto:dueno",
+            "cuenta.habilitada"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/conjunto/perfil/cambio-de-forma",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "clave.propia",
+            "conjunto",
+            "conjunto:dueno",
+            "cuenta.habilitada",
+            "throttle:5,10"
         ]
     },
     {
@@ -2187,6 +2235,7 @@
             "api",
             "audit.api",
             "auth:sanctum",
+            "clave.propia",
             "conjunto",
             "conjunto:dueno",
             "cuenta.habilitada"
@@ -2200,6 +2249,7 @@
             "api",
             "audit.api",
             "auth:sanctum",
+            "clave.propia",
             "conjunto",
             "cuenta.habilitada"
         ]
@@ -2212,6 +2262,7 @@
             "api",
             "audit.api",
             "auth:sanctum",
+            "clave.propia",
             "conjunto",
             "cuenta.habilitada"
         ]
@@ -2224,6 +2275,7 @@
             "api",
             "audit.api",
             "auth:sanctum",
+            "clave.propia",
             "conjunto",
             "cuenta.habilitada"
         ]
@@ -2236,6 +2288,7 @@
             "api",
             "audit.api",
             "auth:sanctum",
+            "clave.propia",
             "conjunto",
             "cuenta.habilitada",
             "throttle:40,1",
@@ -2250,6 +2303,7 @@
             "api",
             "audit.api",
             "auth:sanctum",
+            "clave.propia",
             "conjunto",
             "cuenta.habilitada"
         ]
@@ -2262,6 +2316,7 @@
             "api",
             "audit.api",
             "auth:sanctum",
+            "clave.propia",
             "conjunto",
             "conjunto:dueno",
             "cuenta.habilitada"
@@ -2275,6 +2330,7 @@
             "api",
             "audit.api",
             "auth:sanctum",
+            "clave.propia",
             "conjunto",
             "conjunto:dueno",
             "cuenta.habilitada"
@@ -2288,6 +2344,7 @@
             "api",
             "audit.api",
             "auth:sanctum",
+            "clave.propia",
             "conjunto",
             "conjunto:dueno",
             "cuenta.habilitada"
@@ -2301,6 +2358,7 @@
             "api",
             "audit.api",
             "auth:sanctum",
+            "clave.propia",
             "conjunto",
             "conjunto:dueno",
             "cuenta.habilitada"
@@ -2314,7 +2372,63 @@
             "api",
             "audit.api",
             "auth:sanctum",
+            "clave.propia",
             "conjunto",
+            "cuenta.habilitada"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/conjunto/turno",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "clave.propia",
+            "conjunto",
+            "cuenta.habilitada"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/conjunto/turno/iniciar",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "clave.propia",
+            "conjunto",
+            "cuenta.habilitada",
+            "throttle:20,1"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/conjunto/turno/terminar",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "clave.propia",
+            "conjunto",
+            "cuenta.habilitada",
+            "throttle:20,1"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/conjunto/turnos",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "clave.propia",
+            "conjunto",
+            "conjunto:dueno",
             "cuenta.habilitada"
         ]
     },
