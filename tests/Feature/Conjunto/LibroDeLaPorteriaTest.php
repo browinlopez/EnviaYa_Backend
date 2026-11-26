@@ -41,7 +41,8 @@ test('el celador ve cedula y telefono con solo los cuatro ultimos', function () 
     expect($visita['visitor_document'])->toBe('••••5678')
         ->and($visita['visitor_phone'])->toBe('••••4321')
         ->and($visita['visitor_name'])->toBe('Marta Robles')
-        ->and($domiciliario['document'])->toBe('••••5678');
+        ->and($domiciliario['document'])->toBe('••••5678')
+        ->and($domiciliario['domiciliary_phone'])->toStartWith('••••');
 
     // Quién sigue adentro, igual.
     $adentro = collect($this->getJson('/v1/conjunto/porteria/adentro')->assertOk()->json('data'));

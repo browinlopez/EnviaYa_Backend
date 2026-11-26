@@ -272,6 +272,7 @@ class PorteriaController extends Controller
                 // el registro de una entrada pasada cambiaría solo.
                 'e.orders',
                 'u.name as domiciliary_name', 'd.document',
+                'u.phone as domiciliary_phone',
                 'c.name as registered_by_name',
                 'x.name as exit_registered_by_name',
             ]);
@@ -290,6 +291,7 @@ class PorteriaController extends Controller
                 $f->visitor_document = Enmascarar::ultimos4($f->visitor_document);
                 $f->visitor_phone = Enmascarar::ultimos4($f->visitor_phone);
                 $f->document = Enmascarar::ultimos4($f->document);
+                $f->domiciliary_phone = Enmascarar::ultimos4($f->domiciliary_phone);
 
                 return $f;
             });
