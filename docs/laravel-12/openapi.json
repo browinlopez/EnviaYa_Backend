@@ -13680,6 +13680,14 @@
                                             "semana",
                                             "mes"
                                         ]
+                                    },
+                                    "desde": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "hasta": {
+                                        "type": "string",
+                                        "format": "date-time"
                                     }
                                 },
                                 "required": [

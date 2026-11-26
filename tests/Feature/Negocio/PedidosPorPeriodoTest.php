@@ -75,3 +75,16 @@ test('un periodo que no existe se rechaza', function () {
 
     $this->getJson('/v1/negocio/pedidos?periodo=siglo')->assertStatus(422);
 });
+
+test('un rango a mano trae lo de esos días, y lo programado para ellos', function () {
+    $n = negocioConPedidos();
+    Sanctum::actingAs($n['user']);
+
+    $manana = now()->addDay()->toDateString();
+    $ids = collect($this->getJson("/v1/negocio/pedidos?desde={$manana}&hasta={$manana}")->assertOk()->json('orders'))
+        ->pluck('order_id')->all();
+
+    expect($ids)->toContain($n['programadoManana'])->not->toContain($n['hoy']);
+
+    $this->getJson('/v1/negocio/pedidos?desde=2026-11-10&hasta=2026-11-01')->assertStatus(422);
+});

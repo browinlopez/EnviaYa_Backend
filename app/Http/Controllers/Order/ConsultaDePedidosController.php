@@ -118,6 +118,14 @@ class ConsultaDePedidosController extends Controller
             default => null,
         };
 
+        // Un rango a mano manda sobre el periodo: del inicio de `desde` al
+        // final de `hasta` (o de ese mismo día si no se dice).
+        if ($request->filled('desde')) {
+            $desde = \Illuminate\Support\Carbon::parse($request->input('desde'))->startOfDay();
+            $hasta = \Illuminate\Support\Carbon::parse($request->input('hasta') ?? $request->input('desde'))
+                ->addDay()->startOfDay();
+        }
+
         $orders = OrdersSales::where('busines_id', $business->busines_id)
             ->confirmados()
             ->where(function ($q) use ($desde, $hasta) {
@@ -140,9 +148,9 @@ class ConsultaDePedidosController extends Controller
                     }
                 })
                     ->orWhere(fn ($q2) => $q2->where('state', OrdersSales::ENTREGADO)
-                        ->where($this->cerradoDesde('delivery_date', $desde)))
+                        ->where($this->cerradoDesde('delivery_date', $desde, $hasta)))
                     ->orWhere(fn ($q2) => $q2->where('state', OrdersSales::CANCELADO)
-                        ->where($this->cerradoDesde('updated_at', $desde)));
+                        ->where($this->cerradoDesde('updated_at', $desde, $hasta)));
             })
             // La lista la declara el presentador, que es quien las lee: esta
             // copia se habia quedado sin `domiciliary.user` y cargaba el
@@ -554,10 +562,10 @@ class ConsultaDePedidosController extends Controller
     }
 
     /** Cerrado desde `$desde` (o desde hoy, si no se dice) hasta ahora. */
-    private function cerradoDesde(string $columna, $desde): callable
+    private function cerradoDesde(string $columna, $desde, $hasta = null): callable
     {
         $desde = $desde ?? now()->startOfDay();
-        $hasta = now()->addDay()->startOfDay();
+        $hasta = $hasta ?? now()->addDay()->startOfDay();
 
         return function ($q) use ($columna, $desde, $hasta) {
             $q->where(fn ($r) => $r->where($columna, '>=', $desde)
