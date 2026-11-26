@@ -121,8 +121,8 @@ class ConsultaDePedidosController extends Controller
         // Un rango a mano manda sobre el periodo: del inicio de `desde` al
         // final de `hasta` (o de ese mismo día si no se dice).
         if ($request->filled('desde')) {
-            $desde = \Illuminate\Support\Carbon::parse($request->input('desde'))->startOfDay();
-            $hasta = \Illuminate\Support\Carbon::parse($request->input('hasta') ?? $request->input('desde'))
+            $desde = Carbon::parse($request->input('desde'))->startOfDay();
+            $hasta = Carbon::parse($request->input('hasta') ?? $request->input('desde'))
                 ->addDay()->startOfDay();
         }
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Resources\Pedido;
 
 use App\Models\Order\OrdersSales;
+use App\Support\ProductTypeSchema;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -101,7 +102,7 @@ class PedidoDeLaAppResource extends JsonResource
             // compatibilidad): una consulta por tipo, no por renglón.
             ...array_map(
                 fn ($r) => "details.product.{$r}",
-                \App\Support\ProductTypeSchema::allRelations(),
+                ProductTypeSchema::allRelations(),
             ),
             'buyer.user',
             'promotions',

@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Negocio;
 
-use App\Support\UnidadDeVenta;
-use App\Models\Product\ProductGroup;
-use App\Services\MediaService;
-use App\Support\ProductTypeSchema;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Negocio\ActualizarProductoRequest;
 use App\Http\Requests\Negocio\AgregarProductoRequest;
@@ -16,7 +12,11 @@ use App\Http\Requests\Negocio\PreciosEnLoteRequest;
 use App\Http\Resources\Producto\ProductoDeLaTiendaResource;
 use App\Models\Product\Product;
 use App\Models\Product\ProductBusiness;
+use App\Models\Product\ProductGroup;
 use App\Services\CatalogoDeProductos;
+use App\Services\MediaService;
+use App\Support\ProductTypeSchema;
+use App\Support\UnidadDeVenta;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
