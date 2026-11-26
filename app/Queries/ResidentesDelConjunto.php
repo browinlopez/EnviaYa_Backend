@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Queries;
 
+use App\Support\Like;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -54,8 +55,9 @@ class ResidentesDelConjunto
 
         if ($buscar) {
             $consulta->where(function ($q) use ($buscar) {
-                $q->where('u.name', 'like', "%{$buscar}%")
-                    ->orWhere('ua.apartment', 'like', "%{$buscar}%");
+                // Escapado: un `%` o un `_` del buscador no son comodines.
+                Like::contiene($q, 'u.name', $buscar);
+                Like::contiene($q, 'ua.apartment', $buscar, 'or');
             });
         }
 

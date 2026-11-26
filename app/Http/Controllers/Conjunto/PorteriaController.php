@@ -8,10 +8,13 @@ use App\Events\CodigoDeAccesoUsado;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Conjunto\VerificarEnPorteriaRequest;
 use App\Http\Resources\Domiciliario\DomiciliarioEnLaPorteriaResource;
+use App\Models\Conjunto\ComplexStaff;
 use App\Models\Domiciliary;
 use App\Services\AccesoAlConjunto;
 use App\Services\PulsoDelConjunto;
+use App\Support\Enmascarar;
 use App\Support\FiltroDeFechas;
+use App\Support\Like;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -166,10 +169,11 @@ class PorteriaController extends Controller
         if ($buscar = trim((string) $request->query('search'))) {
             $consulta->where(function ($q) use ($buscar) {
                 // Las visitas también se buscan: el libro es uno solo.
-                $q->where('u.name', 'like', "%{$buscar}%")
-                    ->orWhere('d.document', 'like', "%{$buscar}%")
-                    ->orWhere('e.visitor_name', 'like', "%{$buscar}%")
-                    ->orWhere('e.visitor_document', 'like', "%{$buscar}%");
+                // Escapado: un `%` o un `_` del buscador no son comodines.
+                Like::contiene($q, 'u.name', $buscar);
+                Like::contiene($q, 'd.document', $buscar, 'or');
+                Like::contiene($q, 'e.visitor_name', $buscar, 'or');
+                Like::contiene($q, 'e.visitor_document', $buscar, 'or');
             });
         }
 
@@ -230,6 +234,25 @@ class PorteriaController extends Controller
                 'c.name as registered_by_name',
                 'x.name as exit_registered_by_name',
             ]);
+
+        /*
+         * EL CELADOR VE LOS DATOS ENMASCARADOS.
+         *
+         * El libro guarda cédula y teléfono de cada visitante y la cédula de
+         * cada domiciliario. Al administrador le hacen falta completos —es
+         * quien responde por el registro—; al celador le basta con los cuatro
+         * últimos para reconocer a quien tiene delante, y así el turno de
+         * noche no se lleva en el teléfono un directorio de todo el que pasó.
+         */
+        if ($request->attributes->get('complex_role') !== ComplexStaff::DUENO) {
+            $filas->transform(function ($f) {
+                $f->visitor_document = Enmascarar::ultimos4($f->visitor_document);
+                $f->visitor_phone = Enmascarar::ultimos4($f->visitor_phone);
+                $f->document = Enmascarar::ultimos4($f->document);
+
+                return $f;
+            });
+        }
 
         return response()->json(['data' => $filas]);
     }
