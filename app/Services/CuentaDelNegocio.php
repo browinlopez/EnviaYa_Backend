@@ -85,7 +85,17 @@ class CuentaDelNegocio
             ->sum('comision_pasarela');
         $ventas = $ventasApp + $ventasMostrador;
         $costo += $costoMostrador;
-        [$gastos, $detalle] = $this->gastos($negocio, $desde, $hasta);
+        /*
+         * LOS GASTOS FIJOS, HASTA HOY. Las ventas solo existen hasta hoy; si los
+         * gastos se cobraban por el periodo entero, un jueves temprano la semana
+         * salía en pérdida aunque fuera buena. En un periodo ya cerrado no cambia
+         * nada: el tope es su propio final.
+         */
+        $hoy = CarbonImmutable::now()->endOfDay();
+        $hastaGastos = $hasta->gt($hoy) ? $hoy : $hasta;
+        [$gastos, $detalle] = $hastaGastos->lt($desde)
+            ? [0.0, []]
+            : $this->gastos($negocio, $desde, $hastaGastos);
 
         $margen = $ventas - $costo;
         $queda = $margen - $comision - $gastos;
@@ -94,6 +104,8 @@ class CuentaDelNegocio
             'periodo' => $periodo,
             'desde' => $desde->toDateString(),
             'hasta' => $hasta->toDateString(),
+            // Hasta qué día se cuentan los gastos fijos (hoy, si el periodo sigue abierto).
+            'gastos_hasta' => $hastaGastos->toDateString(),
             'pedidos' => $pedidos->count(),
             'ventas' => round($ventas, 2),
             // De dónde salió: la app y el mostrador.
