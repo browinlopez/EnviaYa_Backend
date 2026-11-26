@@ -13,6 +13,9 @@ use App\Models\Rol;
 use App\Models\User;
 use Laravel\Sanctum\Sanctum;
 
+/** Todo lo que cuelga de `/inversionista`, sin `me`. */
+const INV_RUTAS = ['opciones', 'resumen', 'negocios', 'expansion', 'usuarios', 'operacion', 'ingresos', 'informe'];
+
 function invCuenta(int $rol, bool $habilitada = true): User
 {
     $nombres = [1 => 'comprador', 2 => 'tendero', 3 => 'domiciliario', 4 => 'admin', 5 => 'dueno_conjunto', 6 => 'celador', 7 => 'inversionista'];
@@ -33,23 +36,37 @@ test('el inversionista entra a su ambito con la forma de los otros', function ()
         ->assertExactJson([
             'area' => ['name' => "VeciPa'Ya"],
             'role' => 'inversionista',
-            'permissions' => ['tablero' => ['view' => true, 'manage' => false]],
+            'permissions' => array_fill_keys(
+                ['resumen', 'negocios', 'expansion', 'usuarios', 'operacion', 'ingresos', 'informes'],
+                ['view' => true, 'manage' => false],
+            ),
             'stats' => [],
         ]);
 
-    $this->getJson('/v1/inversionista/tablero')->assertOk()
-        ->assertJsonStructure(['periodo', 'filtros', 'cifras', 'por_tipo', 'meses', 'por_ciudad', 'opciones']);
+    foreach (['resumen', 'negocios', 'expansion', 'usuarios', 'operacion', 'ingresos'] as $modulo) {
+        $this->getJson('/v1/inversionista/'.$modulo)->assertOk()->assertJsonStructure(['periodo', 'filtros']);
+    }
+    $this->getJson('/v1/inversionista/opciones')->assertOk()->assertJsonStructure(['ciudades', 'tipos']);
 });
 
-test('sin sesion no hay tablero', function () {
-    $this->getJson('/v1/inversionista/tablero')->assertUnauthorized();
+test('sin sesion no hay ningun modulo', function () {
+    foreach (['me', ...INV_RUTAS] as $ruta) {
+        $this->getJson('/v1/inversionista/'.$ruta)->assertUnauthorized();
+    }
 });
 
-test('ningun otro rol entra al tablero', function (int $rol) {
+test('el tablero de antes ya no existe: se partio en modulos', function () {
+    Sanctum::actingAs(invCuenta(7));
+
+    $this->getJson('/v1/inversionista/tablero')->assertNotFound();
+});
+
+test('ningun otro rol entra a ningun modulo', function (int $rol) {
     Sanctum::actingAs(invCuenta($rol));
 
-    $this->getJson('/v1/inversionista/me')->assertForbidden();
-    $this->getJson('/v1/inversionista/tablero')->assertForbidden();
+    foreach (['me', ...INV_RUTAS] as $ruta) {
+        $this->getJson('/v1/inversionista/'.$ruta)->assertForbidden();
+    }
 })->with([
     'comprador' => 1,
     'tendero' => 2,
@@ -71,15 +88,32 @@ test('el inversionista no entra al panel del negocio ni al del conjunto', functi
 test('una cuenta de inversionista deshabilitada no entra', function () {
     Sanctum::actingAs(invCuenta(7, habilitada: false));
 
-    $this->getJson('/v1/inversionista/tablero')
-        ->assertForbidden()
-        ->assertJsonPath('reason', 'account_disabled');
+    foreach (INV_RUTAS as $ruta) {
+        $this->getJson('/v1/inversionista/'.$ruta)
+            ->assertForbidden()
+            ->assertJsonPath('reason', 'account_disabled');
+    }
 });
 
 test('los filtros mal escritos se rechazan con 422', function () {
     Sanctum::actingAs(invCuenta(7));
 
-    $this->getJson('/v1/inversionista/tablero?desde=ayer-no&municipality_id=abc')
+    foreach (['resumen', 'negocios', 'expansion', 'usuarios', 'operacion', 'ingresos', 'informe'] as $modulo) {
+        $this->getJson('/v1/inversionista/'.$modulo.'?desde=ayer-no&municipality_id=abc')
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['desde', 'municipality_id']);
+    }
+});
+
+test('una ventana de mas de 366 dias se rechaza en vez de recortarse callada', function () {
+    Sanctum::actingAs(invCuenta(7));
+
+    $this->getJson('/v1/inversionista/resumen?desde=2025-01-01&hasta=2026-11-20')
         ->assertStatus(422)
-        ->assertJsonValidationErrors(['desde', 'municipality_id']);
+        ->assertJsonValidationErrors(['hasta']);
+
+    // Un año justo, sí (y al revés se endereza, como en los reportes).
+    $this->getJson('/v1/inversionista/resumen?desde=2026-11-20&hasta=2025-11-20')->assertOk()
+        ->assertJsonPath('periodo.dias', 366);
+    $this->getJson('/v1/inversionista/informe?formato=docx')->assertStatus(422)->assertJsonValidationErrors(['formato']);
 });

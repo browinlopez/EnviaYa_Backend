@@ -587,14 +587,26 @@ Route::middleware(['auth:sanctum', 'cuenta.habilitada', 'audit.api'])->group(fun
      *
      * Puerta propia (`inversionista`), aparte de `negocio` y `conjunto`: mira
      * la plataforma entera y solo en cifras agregadas. Sin nombres, teléfonos
-     * ni pedidos sueltos: ver `TableroDelInversionista`.
+     * ni pedidos sueltos: ver `App\Services\Inversionista`.
      *
      * Queda sujeta al modo de mantenimiento como las otras dos secciones del
      * panel (`AppEnMantenimiento` no la exime).
+     *
+     * Un endpoint por módulo del menú, todos con los mismos filtros, más las
+     * opciones de la barra de filtros y la descarga del informe.
      */
     Route::prefix('inversionista')->middleware('inversionista')->group(function () {
         Route::get('me', [TableroDelInversionistaController::class, 'mio']);
-        Route::get('tablero', [TableroDelInversionistaController::class, 'tablero']);
+        Route::get('opciones', [TableroDelInversionistaController::class, 'opciones']);
+        Route::get('resumen', [TableroDelInversionistaController::class, 'resumen']);
+        Route::get('negocios', [TableroDelInversionistaController::class, 'negocios']);
+        Route::get('expansion', [TableroDelInversionistaController::class, 'expansion']);
+        Route::get('usuarios', [TableroDelInversionistaController::class, 'usuarios']);
+        Route::get('operacion', [TableroDelInversionistaController::class, 'operacion']);
+        Route::get('ingresos', [TableroDelInversionistaController::class, 'ingresos']);
+        // El informe arma los seis módulos de una vez: va con freno, como las
+        // otras descargas.
+        Route::get('informe', [TableroDelInversionistaController::class, 'informe'])->middleware('throttle:10,1');
     });
 
     /*

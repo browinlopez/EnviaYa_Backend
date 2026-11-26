@@ -20,7 +20,7 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * No deja nada puesto en la petición: el inversionista no tiene un registro
  * propio que acotar. Lo que lo protege es lo que devuelve el servicio —solo
- * cifras agregadas, ver `TableroDelInversionista`—, no un filtro por fila.
+ * cifras agregadas, ver `App\Services\Inversionista`—, no un filtro por fila.
  *
  * Uso: `->middleware('inversionista')`.
  */

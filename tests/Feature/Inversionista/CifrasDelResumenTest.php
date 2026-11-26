@@ -1,7 +1,7 @@
 <?php
 
 /**
- * LAS CIFRAS DEL TABLERO DEL INVERSIONISTA.
+ * LAS CIFRAS DEL RESUMEN Y DEL AVANCE POR CIUDAD DEL INVERSIONISTA.
  *
  * Con un escenario sembrado a mano donde cada número se puede contar con el
  * dedo: tres ciudades más «Sin ciudad», tres oficios, pedidos entregados y
@@ -100,18 +100,27 @@ function invEscenario(): array
     return compact('baq', 'sol', 'cali', 'tienda', 'farmacia', 'restaurante', 'n5');
 }
 
-function invTablero(array $filtros = []): array
+function invModulo(string $modulo, array $filtros = []): array
 {
     $q = http_build_query(['desde' => '2026-11-01', 'hasta' => '2026-11-20'] + $filtros);
 
-    return test()->getJson('/v1/inversionista/tablero?'.$q)->assertOk()->json();
+    return test()->getJson('/v1/inversionista/'.$modulo.'?'.$q)->assertOk()->json();
+}
+
+/** Lo que antes devolvía el tablero entero: el resumen y el avance por ciudad. */
+function invResumenYCiudades(array $filtros = []): array
+{
+    return invModulo('resumen', $filtros) + [
+        'por_ciudad' => invModulo('expansion', $filtros)['por_ciudad'],
+        'opciones' => test()->getJson('/v1/inversionista/opciones')->assertOk()->json(),
+    ];
 }
 
 afterEach(fn () => Carbon::setTestNow());
 
 test('las cifras de arriba solo cuentan lo entregado y pagado', function () {
     invEscenario();
-    $t = invTablero();
+    $t = invResumenYCiudades();
 
     expect($t['periodo'])->toMatchArray([
         'desde' => '2026-11-01', 'hasta' => '2026-11-20', 'dias' => 20,
@@ -145,7 +154,7 @@ test('el reparto por tipo usa el nombre del panel y no se filtra por tipo', func
     $e = invEscenario();
 
     foreach ([[], ['tipo' => $e['tienda']]] as $filtros) {
-        $porTipo = collect(invTablero($filtros)['por_tipo'])->keyBy('clave');
+        $porTipo = collect(invResumenYCiudades($filtros)['por_tipo'])->keyBy('clave');
 
         expect($porTipo->keys()->all())->toBe(['tienda', 'drogueria', 'restaurante'])
             ->and($porTipo['drogueria']['nombre'])->toBe('Droguería')
@@ -159,7 +168,7 @@ test('el reparto por tipo usa el nombre del panel y no se filtra por tipo', func
 
 test('el filtro de tipo recorta las cifras de arriba', function () {
     $e = invEscenario();
-    $c = invTablero(['tipo' => $e['tienda']])['cifras'];
+    $c = invResumenYCiudades(['tipo' => $e['tienda']])['cifras'];
 
     expect($c['pedidos']['valor'])->toBe(3)
         ->and((float) $c['ventas']['valor'])->toBe(35000.0)
@@ -168,7 +177,7 @@ test('el filtro de tipo recorta las cifras de arriba', function () {
 
 test('el avance por ciudad lleva la fila Sin ciudad al final', function () {
     invEscenario();
-    $ciudades = invTablero()['por_ciudad'];
+    $ciudades = invResumenYCiudades()['por_ciudad'];
 
     expect(array_column($ciudades, 'ciudad'))->toBe(['Barranquilla', 'Soledad', 'Cali', 'Sin ciudad']);
 
@@ -194,7 +203,7 @@ test('el avance por ciudad lleva la fila Sin ciudad al final', function () {
 
 test('con una ciudad elegida todo se acota a ella y no sale Sin ciudad', function () {
     $e = invEscenario();
-    $t = invTablero(['municipality_id' => $e['baq']]);
+    $t = invResumenYCiudades(['municipality_id' => $e['baq']]);
 
     expect(array_column($t['por_ciudad'], 'ciudad'))->toBe(['Barranquilla'])
         ->and($t['cifras']['pedidos']['valor'])->toBe(3)
@@ -208,7 +217,7 @@ test('con una ciudad elegida todo se acota a ella y no sale Sin ciudad', functio
 
 test('la serie mensual son doce meses con su variacion', function () {
     invEscenario();
-    $meses = collect(invTablero()['meses'])->keyBy('mes');
+    $meses = collect(invResumenYCiudades()['meses'])->keyBy('mes');
 
     expect($meses)->toHaveCount(12)
         ->and($meses->keys()->first())->toBe('2025-12')
@@ -231,7 +240,7 @@ test('la serie mensual son doce meses con su variacion', function () {
 
 test('la respuesta no trae ni un dato de una persona ni de un pedido', function () {
     invEscenario();
-    $t = invTablero();
+    $t = invResumenYCiudades();
     $crudo = json_encode($t, JSON_UNESCAPED_UNICODE);
 
     foreach ([
