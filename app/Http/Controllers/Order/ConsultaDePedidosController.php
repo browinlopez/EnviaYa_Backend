@@ -527,7 +527,8 @@ class ConsultaDePedidosController extends Controller
     }
 
     /**
-     * «Se cerró hoy», mirando esa columna y cayendo a `sale_date` si está vacía.
+     * Cerrado desde `$desde` (o desde hoy, si no se dice) hasta `$hasta`,
+     * mirando esa columna y cayendo a `sale_date` si está vacía.
      *
      * SUSTITUYE A `whereDate(DB::raw('COALESCE($columna, sale_date)'), hoy)`,
      * que es lo que había, y la reescritura importa tanto como los índices que
@@ -556,12 +557,6 @@ class ConsultaDePedidosController extends Controller
      * `delivery_date` cuenta por su `sale_date`, igual que antes. Va dentro de
      * su propio grupo para que el `OR` no se escape del `AND state = 4`.
      */
-    private function cerradoHoy(string $columna): callable
-    {
-        return $this->cerradoDesde($columna, null);
-    }
-
-    /** Cerrado desde `$desde` (o desde hoy, si no se dice) hasta ahora. */
     private function cerradoDesde(string $columna, $desde, $hasta = null): callable
     {
         $desde = $desde ?? now()->startOfDay();
