@@ -13228,7 +13228,26 @@
                         }
                     }
                 ],
-                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "file": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "required": [
+                                    "file"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Negocio\\SubirFotoDeProductoRequest"
             }
         },
         "/v1/negocio/productos/{id}/variantes": {
@@ -13274,7 +13293,35 @@
                         }
                     }
                 ],
-                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "variante": {
+                                        "type": "string"
+                                    },
+                                    "price": {
+                                        "type": "number"
+                                    },
+                                    "amount": {
+                                        "type": "number"
+                                    },
+                                    "variante_actual": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "variante",
+                                    "price"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Negocio\\CrearVarianteRequest"
             }
         },
         "/v1/negocio/promociones": {
