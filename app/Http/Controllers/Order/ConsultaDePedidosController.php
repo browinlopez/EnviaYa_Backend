@@ -111,14 +111,32 @@ class ConsultaDePedidosController extends Controller
             'mes' => now()->startOfMonth(),
             default => null,
         };
+        $hasta = match ($request->input('periodo')) {
+            'hoy' => now()->addDay()->startOfDay(),
+            'semana' => now()->endOfWeek()->addSecond(),
+            'mes' => now()->endOfMonth()->addSecond(),
+            default => null,
+        };
 
         $orders = OrdersSales::where('busines_id', $business->busines_id)
             ->confirmados()
-            ->where(function ($q) use ($desde) {
-                $q->where(function ($a) use ($desde) {
+            ->where(function ($q) use ($desde, $hasta) {
+                $q->where(function ($a) use ($desde, $hasta) {
                     $a->whereIn('state', OrdersSales::ACTIVOS);
                     if ($desde) {
-                        $a->where('sale_date', '>=', $desde);
+                        /*
+                         * De otros días solo entran los PROGRAMADOS para este
+                         * periodo: uno hecho el lunes para el miércoles sale
+                         * el miércoles, y uno hecho hoy para mañana no sale
+                         * hoy. Lo demás, por el día en que se pidió.
+                         */
+                        $a->where(fn ($r) => $r
+                            ->where(fn ($s) => $s->where('is_scheduled', false)
+                                ->where('sale_date', '>=', $desde)
+                                ->where('sale_date', '<', $hasta))
+                            ->orWhere(fn ($s) => $s->where('is_scheduled', true)
+                                ->where('delivery_date', '>=', $desde)
+                                ->where('delivery_date', '<', $hasta)));
                     }
                 })
                     ->orWhere(fn ($q2) => $q2->where('state', OrdersSales::ENTREGADO)

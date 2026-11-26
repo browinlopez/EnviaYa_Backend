@@ -21,9 +21,10 @@ function negocioConPedidos(): array
 
     $comprador = User::factory()->create(['rol' => 1]);
     $buyer = DB::table('buyer')->insertGetId(['user_id' => $comprador->user_id, 'qualification' => 0, 'state' => 1]);
-    $pedido = fn ($fecha) => DB::table('orderssales')->insertGetId([
+    $pedido = fn ($fecha, $programadoPara = null) => DB::table('orderssales')->insertGetId([
         'buyer_id' => $buyer, 'busines_id' => $negocio, 'subtotal' => 10000, 'domicilio' => 0,
         'total' => 10000, 'sale_date' => $fecha, 'state' => 1, 'payment_state' => 'paid',
+        'is_scheduled' => $programadoPara !== null, 'delivery_date' => $programadoPara,
     ], 'orderSales_id');
 
     return [
@@ -31,6 +32,10 @@ function negocioConPedidos(): array
         'negocio' => $negocio,
         'hoy' => $pedido(now()),
         'viejo' => $pedido(now()->subMonths(2)),
+        // Hecho hace tres días, programado para hoy: sí sale hoy.
+        'programadoHoy' => $pedido(now()->subDays(3), now()->setTime(18, 0)),
+        // Hecho hoy, programado para mañana: hoy no.
+        'programadoManana' => $pedido(now(), now()->addDay()->setTime(12, 0)),
     ];
 }
 
@@ -42,6 +47,16 @@ test('con periodo hoy, el pedido abierto de hace dos meses no sale', function ()
         ->pluck('order_id')->all();
 
     expect($ids)->toContain($n['hoy'])->not->toContain($n['viejo']);
+});
+
+test('de otros días, en hoy solo salen los programados para hoy', function () {
+    $n = negocioConPedidos();
+    Sanctum::actingAs($n['user']);
+
+    $ids = collect($this->getJson('/v1/negocio/pedidos?periodo=hoy')->assertOk()->json('orders'))
+        ->pluck('order_id')->all();
+
+    expect($ids)->toContain($n['programadoHoy'])->not->toContain($n['programadoManana']);
 });
 
 test('sin periodo, como siempre: todo lo abierto', function () {
