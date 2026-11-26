@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\AppEnMantenimiento;
 use App\Http\Middleware\AuditApiRequest;
+use App\Http\Middleware\CuentaHabilitada;
 use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsureBusinessOwner;
 use App\Http\Middleware\EnsureCategoryAccess;
@@ -82,6 +83,9 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'audit.api' => AuditApiRequest::class,
+            // Una cuenta deshabilitada no sigue entrando con su token: va en el
+            // grupo `auth:sanctum` entero, junto a `audit.api`.
+            'cuenta.habilitada' => CuentaHabilitada::class,
             // Puerta del API de superadministración (rol 4). El panel de React
             // ya filtra en el cliente, pero eso no es una defensa.
             'admin' => EnsureAdmin::class,

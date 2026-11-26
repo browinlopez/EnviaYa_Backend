@@ -286,8 +286,11 @@ Route::post('app/errores', ErroresDeLaAppController::class)
 | audit.api registra cada escritura (POST/PUT/PATCH/DELETE) en
 | storage/logs/audit-*.log con usuario, ruta, resultado e IP. Los cambios
 | de datos además quedan en la tabla `audits` (auditoría de modelos).
+|
+| cuenta.habilitada rechaza (403, reason account_disabled) a quien tenga
+| `user.state` = 0 y le borra el token: antes solo se miraba al iniciar sesión.
 */
-Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
+Route::middleware(['auth:sanctum', 'cuenta.habilitada', 'audit.api'])->group(function () {
     /*
      * AYUDA: radicar un PQRS desde la app.
      *
