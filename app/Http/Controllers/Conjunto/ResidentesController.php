@@ -149,12 +149,21 @@ class ResidentesController extends Controller
         ]);
     }
 
-    /** La ventana de los domicilios: los últimos 30 días o este mes. */
+    /**
+     * La ventana de los domicilios: los últimos 7, 30 o 90 días, o este mes.
+     * Cualquier otro valor cae en 30 días: nunca se calcula sobre un rango
+     * que el cliente invente.
+     */
     private function ventana(Request $request): array
     {
-        return $request->query('ventana') === 'mes'
-            ? [CarbonImmutable::now()->startOfMonth(), 'mes']
-            : [CarbonImmutable::now()->subDays(29)->startOfDay(), '30'];
+        $hoy = CarbonImmutable::now();
+
+        return match ((string) $request->query('ventana', '30')) {
+            'mes' => [$hoy->startOfMonth(), 'mes'],
+            '7' => [$hoy->subDays(6)->startOfDay(), '7'],
+            '90' => [$hoy->subDays(89)->startOfDay(), '90'],
+            default => [$hoy->subDays(29)->startOfDay(), '30'],
+        };
     }
 
     /*
