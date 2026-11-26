@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Resources\Producto;
 
 use App\Support\CategoriaDelNegocio;
+use App\Support\ProductTypeSchema;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -50,6 +51,8 @@ class ProductoDeLaTiendaResource extends JsonResource
     public function __construct(
         object $productoDeLaTienda,
         private readonly int $otrasTiendas,
+        /** El tipo de negocio, para los datos propios de su tipo. */
+        private readonly ?int $tipoDeNegocio = null,
     ) {
         parent::__construct($productoDeLaTienda);
     }
@@ -92,6 +95,16 @@ class ProductoDeLaTiendaResource extends JsonResource
             'qualification' => $pb->qualification !== null ? (float) $pb->qualification : null,
             // Cuantas tiendas MAS lo venden.
             'compartido' => $this->otrasTiendas,
+            /*
+             * Lo propio del TIPO de negocio (registro INVIMA y fórmula en una
+             * droguería; minutos de preparación y alérgenos en un
+             * restaurante), con su etiqueta y ya en texto: lo mismo que ve el
+             * comprador en la ficha. Es del catálogo compartido, así que el
+             * panel lo muestra pero no lo edita producto por producto.
+             */
+            'detalles' => $this->tipoDeNegocio !== null
+                ? ProductTypeSchema::detallesParaElComprador($this->tipoDeNegocio, $p)
+                : [],
         ];
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Negocio;
 
+use App\Support\ProductTypeSchema;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Negocio\ActualizarProductoRequest;
 use App\Http\Requests\Negocio\AgregarProductoRequest;
@@ -74,7 +75,14 @@ class ProductosDelNegocioController extends Controller
     {
         $businessId = (int) $request->attributes->get('busines_id');
 
-        $filas = ProductBusiness::with('product.category')
+        $tipo = (int) DB::table('business')->where('busines_id', $businessId)->value('type');
+        $relacion = ProductTypeSchema::relation($tipo);
+
+        // La fila de su tipo de una vez: si no, una consulta por producto.
+        $filas = ProductBusiness::with(array_filter([
+            'product.category',
+            $relacion ? "product.{$relacion}" : null,
+        ]))
             ->where('busines_id', $businessId)
             ->get();
 
@@ -88,6 +96,7 @@ class ProductosDelNegocioController extends Controller
                 $pb,
                 // Cuantas tiendas MAS lo venden: el contador trae el total.
                 otrasTiendas: max(0, (int) ($compartidos[$pb->product->products_id] ?? 1) - 1),
+                tipoDeNegocio: $tipo ?: null,
             ))->resolve())
             ->sortBy('name')
             ->values();
