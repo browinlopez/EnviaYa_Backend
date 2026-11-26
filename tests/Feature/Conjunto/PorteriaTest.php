@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Conjunto\ComplexShift;
 use App\Models\Conjunto\ComplexStaff;
 use App\Models\Rol;
 use App\Models\User;
@@ -554,6 +555,8 @@ test('la verificacion tambien tiene limite por CONJUNTO, repartido entre celador
             'user_id' => $u->user_id, 'complex_id' => $c['complexId'],
             'role' => ComplexStaff::CELADOR, 'state' => true,
         ]);
+        // En turno: sin turno no verifica a nadie.
+        ComplexShift::create(['complex_id' => $c['complexId'], 'user_id' => $u->user_id, 'started_at' => now()]);
 
         return $u;
     });

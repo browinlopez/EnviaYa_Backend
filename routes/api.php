@@ -611,7 +611,7 @@ Route::middleware(['auth:sanctum', 'cuenta.habilitada', 'audit.api'])->group(fun
         // por celador y por CONJUNTO (`porteria-conjunto`, en AppServiceProvider),
         // para que repartir el intento entre varias cuentas no lo multiplique.
         Route::post('porteria/verificar', [PorteriaController::class, 'verificar'])
-            ->middleware(['throttle:40,1', 'throttle:porteria-conjunto']);
+            ->middleware(['throttle:40,1', 'throttle:porteria-conjunto', 'en.turno']);
         Route::get('porteria/entradas', [PorteriaController::class, 'entradas']);
 
         /*
@@ -625,8 +625,8 @@ Route::middleware(['auth:sanctum', 'cuenta.habilitada', 'audit.api'])->group(fun
          * Las registra el CELADOR, que es quien esta en la puerta, asi que no
          * llevan `conjunto:dueno`.
          */
-        Route::post('porteria/visitantes', [VisitantesController::class, 'registrar']);
-        Route::put('porteria/entradas/{id}/salida', [VisitantesController::class, 'salida']);
+        Route::post('porteria/visitantes', [VisitantesController::class, 'registrar'])->middleware('en.turno');
+        Route::put('porteria/entradas/{id}/salida', [VisitantesController::class, 'salida'])->middleware('en.turno');
         Route::get('porteria/adentro', [VisitantesController::class, 'adentro']);
 
         // Los celadores los administra el dueño, no el equipo interno: es

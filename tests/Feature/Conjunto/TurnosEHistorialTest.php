@@ -23,7 +23,7 @@ function celadorDelDueno(array $c, string $nombre = 'Ramiro'): array
 /* ------------------------------ TURNOS ------------------------------ */
 
 test('el celador abre su turno y no puede abrir otro encima', function () {
-    $c = conjuntoConPersonal(ComplexStaff::CELADOR);
+    $c = conjuntoConPersonal(ComplexStaff::CELADOR, enTurno: false);
     Sanctum::actingAs($c['user']);
 
     $this->getJson('/v1/conjunto/turno')->assertOk()->assertJsonPath('data', null);
@@ -37,7 +37,7 @@ test('el celador abre su turno y no puede abrir otro encima', function () {
 });
 
 test('terminar cierra el turno y sin turno abierto responde 422', function () {
-    $c = conjuntoConPersonal(ComplexStaff::CELADOR);
+    $c = conjuntoConPersonal(ComplexStaff::CELADOR, enTurno: false);
     Sanctum::actingAs($c['user']);
 
     $this->postJson('/v1/conjunto/turno/terminar')->assertStatus(422);

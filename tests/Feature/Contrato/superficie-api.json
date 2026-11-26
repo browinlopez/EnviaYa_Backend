@@ -2277,7 +2277,8 @@
             "auth:sanctum",
             "clave.propia",
             "conjunto",
-            "cuenta.habilitada"
+            "cuenta.habilitada",
+            "en.turno"
         ]
     },
     {
@@ -2291,6 +2292,7 @@
             "clave.propia",
             "conjunto",
             "cuenta.habilitada",
+            "en.turno",
             "throttle:40,1",
             "throttle:porteria-conjunto"
         ]
@@ -2305,7 +2307,8 @@
             "auth:sanctum",
             "clave.propia",
             "conjunto",
-            "cuenta.habilitada"
+            "cuenta.habilitada",
+            "en.turno"
         ]
     },
     {
