@@ -115,6 +115,8 @@ class UserController extends Controller
         }
 
         $user->password = Hash::make($request->password);
+        // Con la suya puesta, la clave provisional del celador deja de serlo.
+        $user->must_change_password = false;
         $user->save();
 
         // Se cierran las demás sesiones: si la contraseña se cambió porque

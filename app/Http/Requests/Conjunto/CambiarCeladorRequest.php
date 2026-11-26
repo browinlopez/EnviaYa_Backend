@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Conjunto;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules\Password;
 
 /**
  * Corregir un celador, o darlo de baja con `state`.
@@ -27,6 +28,8 @@ class CambiarCeladorRequest extends FormRequest
             'state' => 'sometimes|boolean',
             'name' => 'sometimes|string|max:255',
             'phone' => 'sometimes|nullable|string|max:20',
+            // Restablecer la clave: queda provisional hasta que él ponga la suya.
+            'password' => ['sometimes', Password::min(8)],
         ];
     }
 }

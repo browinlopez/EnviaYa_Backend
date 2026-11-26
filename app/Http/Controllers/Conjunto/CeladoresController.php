@@ -43,11 +43,14 @@ class CeladoresController extends Controller
                 ->get([
                     'complex_staff.id', 'complex_staff.state',
                     'u.user_id', 'u.name', 'u.email', 'u.phone',
+                    // Si todavía entra con la clave que le dio la administración.
+                    'u.must_change_password',
                 ])
                 ->map(function ($c) use ($libro) {
                     $l = $libro[$c->user_id] ?? null;
                     $c->entradas = (int) ($l->entradas ?? 0);
                     $c->ultima_entrada = $l->ultima ?? null;
+                    $c->must_change_password = (bool) $c->must_change_password;
 
                     return $c;
                 }),
@@ -85,6 +88,13 @@ class CeladoresController extends Controller
                 // a que alguien abra un enlace.
                 'email_verified_at' => now(),
             ]);
+
+            /*
+             * La clave la escribió el administrador: la conocen los dos. Hasta
+             * que el celador ponga la suya no pasa de «Crea tu clave».
+             * Fuera de `create` porque no es un dato que se acepte del cuerpo.
+             */
+            $user->forceFill(['must_change_password' => true])->save();
 
             ComplexStaff::create([
                 'user_id' => $user->user_id,
@@ -137,8 +147,25 @@ class CeladoresController extends Controller
             $usuario->update(array_intersect_key($datos, ['name' => 1, 'phone' => 1]));
         }
 
+        /*
+         * RESTABLECER LA CLAVE. La nueva la conoce el administrador, así que
+         * vuelve a ser provisional, y se cierran sus sesiones: quien tuviera
+         * la anterior no sigue adentro.
+         */
+        if ($usuario && array_key_exists('password', $datos)) {
+            $usuario->forceFill([
+                'password' => Hash::make($datos['password']),
+                'must_change_password' => true,
+            ])->save();
+            $usuario->tokens()->delete();
+        }
+
         if (! array_key_exists('state', $datos)) {
-            return response()->json(['message' => 'Datos del celador guardados.']);
+            return response()->json([
+                'message' => array_key_exists('password', $datos)
+                    ? 'Clave restablecida. Al entrar tendrá que crear la suya.'
+                    : 'Datos del celador guardados.',
+            ]);
         }
 
         $ficha->state = $datos['state'];

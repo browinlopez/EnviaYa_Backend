@@ -214,6 +214,14 @@ test('el celador creado puede entrar y usar la porteria', function () {
         'password' => 'ClaveDePrueba1*',
     ])->assertOk();
 
+    // Primero pone su clave: la que le dio el administrador es provisional.
+    Sanctum::actingAs(User::where('email', 'pedro@ejemplo.test')->first());
+    $this->putJson('/v1/users/password', [
+        'current_password' => 'ClaveDePrueba1*',
+        'password' => 'MiClavePropia9#',
+        'password_confirmation' => 'MiClavePropia9#',
+    ])->assertOk();
+
     Sanctum::actingAs(User::where('email', 'pedro@ejemplo.test')->first());
     $this->getJson('/v1/conjunto/porteria/entradas')->assertOk();
 });

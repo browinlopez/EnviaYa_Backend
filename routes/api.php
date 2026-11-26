@@ -587,7 +587,7 @@ Route::middleware(['auth:sanctum', 'cuenta.habilitada', 'audit.api'])->group(fun
      * ningún controlador de acá tiene que acordarse de acotar leyendo un
      * parámetro — que es justo como se filtran los datos de otro sin querer.
      */
-    Route::prefix('conjunto')->middleware('conjunto')->group(function () {
+    Route::prefix('conjunto')->middleware(['conjunto', 'clave.propia'])->group(function () {
         Route::get('me', [MiConjuntoController::class, 'mio']);
 
         // El tablero lo ven los dos: el celador también necesita saber cuánto

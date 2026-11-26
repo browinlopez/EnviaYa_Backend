@@ -85,6 +85,11 @@ class UsuarioResource extends JsonResource
         'policy_accepted_at',
         'policy_version',
         'policy_ip',
+        /*
+         * Añadida a propósito el 26 de noviembre: el panel de aliados la lee
+         * para llevar al celador a «Crea tu clave» antes de la portería.
+         */
+        'must_change_password',
         // Las que carga el login segun el rol. Sin estas tres, la app no sabe
         // a que pantalla llevar a la persona.
         'buyer',

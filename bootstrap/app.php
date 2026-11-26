@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\AppEnMantenimiento;
 use App\Http\Middleware\AuditApiRequest;
+use App\Http\Middleware\ClaveProvisional;
 use App\Http\Middleware\CuentaHabilitada;
 use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsureBusinessOwner;
@@ -97,6 +98,9 @@ return Application::configure(basePath: dirname(__DIR__))
             // edificios distintos y compartir la puerta ampliaría en silencio
             // quién llega a la administración de la plataforma.
             'conjunto' => EnsureComplexStaff::class,
+            // El celador con la clave que le dio el administrador no trabaja
+            // hasta que ponga la suya. Va detrás de `conjunto`.
+            'clave.propia' => ClaveProvisional::class,
             // Puerta del panel del tendero, hermana de la anterior. Deja puesto el
             // negocio de quien pide, ya comprobado contra la cadena de propiedad,
             // para que ningún controlador tenga que creerle un `business_id` al
