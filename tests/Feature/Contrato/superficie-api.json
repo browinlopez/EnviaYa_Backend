@@ -3043,6 +3043,17 @@
         ]
     },
     {
+        "verbo": "POST",
+        "uri": "v1/negocio/productos/{id}/variantes",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "negocio"
+        ]
+    },
+    {
         "verbo": "GET",
         "uri": "v1/negocio/promociones",
         "nombre": null,

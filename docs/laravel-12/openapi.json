@@ -12602,6 +12602,9 @@
                                     },
                                     "state": {
                                         "type": "boolean"
+                                    },
+                                    "variante": {
+                                        "type": "string"
                                     }
                                 }
                             }
@@ -12618,6 +12621,51 @@
                     "negocio"
                 ],
                 "summary": "App\\Http\\Controllers\\Negocio\\ProductosDelNegocioController@subirFoto",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "negocio"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    },
+                    "422": {
+                        "description": "Validacion fallida."
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+            }
+        },
+        "/v1/negocio/productos/{id}/variantes": {
+            "post": {
+                "operationId": "post_v1_negocio_productos_id_variantes",
+                "tags": [
+                    "negocio"
+                ],
+                "summary": "App\\Http\\Controllers\\Negocio\\ProductosDelNegocioController@crearVariante",
                 "x-middleware": [
                     "api",
                     "audit.api",

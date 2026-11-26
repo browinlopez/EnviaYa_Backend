@@ -95,6 +95,12 @@ class ProductoDeLaTiendaResource extends JsonResource
             'qualification' => $pb->qualification !== null ? (float) $pb->qualification : null,
             // Cuantas tiendas MAS lo venden.
             'compartido' => $this->otrasTiendas,
+            // Sus presentaciones: las que comparten `group_id` son el mismo
+            // producto en otro tamaño o porción, y la app las junta en una
+            // sola tarjeta para elegir.
+            'group_id' => $p->group_id !== null ? (int) $p->group_id : null,
+            'variante' => $p->variante,
+            'grupo' => $p->group?->name,
             /*
              * Lo propio del TIPO de negocio (registro INVIMA y fórmula en una
              * droguería; minutos de preparación y alérgenos en un

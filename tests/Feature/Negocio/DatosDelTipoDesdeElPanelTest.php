@@ -100,3 +100,49 @@ test('un dato con la forma equivocada se rechaza junto a su campo', function () 
         ->assertStatus(422)
         ->assertJsonValidationErrors('minutos_preparacion');
 });
+
+test('un restaurante arma las presentaciones de su plato', function () {
+    $r = restauranteDelPanel();
+    $id = platoEn($r['negocio'], 'Sancocho de gallina');
+    Sanctum::actingAs($r['user']);
+    $h = ['X-Negocio' => $r['negocio']];
+
+    $this->putJson("/v1/negocio/productos/{$id}", ['allergens' => 'Ninguno'], $h)->assertOk();
+
+    $nueva = $this->postJson("/v1/negocio/productos/{$id}/variantes", [
+        'variante' => 'Familiar', 'price' => 45000, 'variante_actual' => 'Personal',
+    ], $h)->assertCreated()->json('data.products_id');
+
+    $base = Product::find($id);
+    $copia = Product::find($nueva);
+    expect($base->group_id)->not->toBeNull()
+        ->and($copia->group_id)->toBe($base->group_id)
+        ->and($base->variante)->toBe('Personal')
+        ->and($copia->variante)->toBe('Familiar')
+        ->and($copia->name)->toBe('Sancocho de gallina Familiar')
+        ->and(DB::table('restaurant_products')->where('products_id', $nueva)->value('allergens'))->toBe('Ninguno')
+        ->and((float) ProductBusiness::where('products_id', $nueva)->value('price'))->toBe(45000.0);
+
+    // La misma etiqueta dos veces, no.
+    $this->postJson("/v1/negocio/productos/{$id}/variantes", ['variante' => 'familiar', 'price' => 1], $h)
+        ->assertStatus(422)->assertJsonValidationErrors('variante');
+
+    // El listado trae el grupo para juntarlas.
+    $lista = collect($this->getJson('/v1/negocio/productos', $h)->json('data'));
+    expect($lista->where('group_id', $base->group_id)->count())->toBe(2);
+});
+
+test('a lo que venden otros negocios no se le arman presentaciones', function () {
+    $r = restauranteDelPanel();
+    $otro = restauranteDelPanel('El Vecino');
+    $id = platoEn($r['negocio'], 'Gaseosa');
+    ProductBusiness::create([
+        'busines_id' => $otro['negocio'], 'products_id' => $id,
+        'price' => 3500, 'amount' => 5, 'qualification' => 0,
+    ]);
+    Sanctum::actingAs($r['user']);
+
+    $this->postJson("/v1/negocio/productos/{$id}/variantes", ['variante' => 'Grande', 'price' => 5000], ['X-Negocio' => $r['negocio']])
+        ->assertStatus(422);
+    expect(Product::find($id)->group_id)->toBeNull();
+});

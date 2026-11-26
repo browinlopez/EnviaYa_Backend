@@ -53,6 +53,9 @@ class ActualizarProductoRequest extends FormRequest
             'description' => 'nullable|string',
             'category_id' => 'nullable|integer|exists:category,category_id',
             'state' => 'nullable|boolean',
+            // La etiqueta de esta presentación dentro de su grupo
+            // («Personal», «Familiar»). Solo en lo que es de este negocio.
+            'variante' => 'nullable|string|max:40',
         ]);
     }
 

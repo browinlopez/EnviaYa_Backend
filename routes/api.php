@@ -784,6 +784,7 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
 
         Route::put('productos/{id}', [ProductosDelNegocioController::class, 'update']);
         Route::post('productos/{id}/foto', [ProductosDelNegocioController::class, 'subirFoto']);
+        Route::post('productos/{id}/variantes', [ProductosDelNegocioController::class, 'crearVariante']);
         Route::delete('productos/{id}', [ProductosDelNegocioController::class, 'quitar']);
 
         Route::get('domiciliarios', [DomiciliaryController::class, 'listDomiciliariesByBusiness']);
