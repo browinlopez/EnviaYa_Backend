@@ -381,6 +381,23 @@ class ConjuntoVillaCarolinaDemoSeeder extends Seeder
         }
 
         $this->siguenAdentro();
+        $this->porLlegar();
+    }
+
+    /**
+     * Cada domiciliario de la demostración trae ahora mismo un pedido en
+     * camino hacia el conjunto, sin haber entrado: así cualquiera de sus
+     * cédulas pasa en la portería y se puede probar «Puede pasar».
+     */
+    private function porLlegar(): void
+    {
+        $domis = array_values(array_unique(array_merge(...array_column(self::NEGOCIOS, 'domis'))));
+
+        foreach ($domis as $domi) {
+            $negocio = array_key_first(array_filter(self::NEGOCIOS, fn ($n) => in_array($domi, $n['domis'], true)));
+            $llega = $this->ahora->addMinutes(mt_rand(3, 9));
+            $this->pedido($negocio, $domi, $llega, $llega->addMinutes(10), true);
+        }
     }
 
     /** Que hoy haya gente adentro, sea la hora que sea: dos domiciliarios y dos visitas. */
@@ -784,5 +801,8 @@ class ConjuntoVillaCarolinaDemoSeeder extends Seeder
             ['Pedidos de los residentes', DB::table('orderssales')->whereIn('buyer_id', array_column($this->residentes, 'buyer_id'))->count()],
         ]);
         $this->command?->line('Celadores: '.implode(', ', array_column(self::CELADORES, 0)).' (clave: SEED_PASSWORD).');
+        $this->command?->line('Cédulas que pasan en la portería (pedido en camino): '.DB::table('domiciliary')
+            ->whereIn('domiciliary_id', array_merge(...array_column(self::NEGOCIOS, 'domis')))
+            ->pluck('document')->implode(', ').'.');
     }
 }
