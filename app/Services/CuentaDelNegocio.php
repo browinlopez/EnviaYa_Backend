@@ -42,6 +42,30 @@ class CuentaDelNegocio
             ? [$dia->startOfWeek(), $dia->endOfWeek()]
             : [$dia->startOfMonth(), $dia->endOfMonth()];
 
+        return $this->cuenta($negocio, $periodo, $desde, $hasta);
+    }
+
+    /**
+     * La misma cuenta entre dos días cualesquiera (el calendario del panel:
+     * hoy, esta semana, un rango a mano). Los gastos fijos cuentan por los
+     * días del rango que caen en cada mes.
+     *
+     * @return array<string, mixed>
+     */
+    public function entre(int $negocio, CarbonInterface $desde, CarbonInterface $hasta): array
+    {
+        return $this->cuenta(
+            $negocio,
+            'rango',
+            CarbonImmutable::instance($desde)->startOfDay(),
+            CarbonImmutable::instance($hasta)->endOfDay(),
+        );
+    }
+
+    /** @return array<string, mixed> */
+    private function cuenta(int $negocio, string $periodo, CarbonImmutable $desde, CarbonImmutable $hasta): array
+    {
+
         $pedidos = OrdersSales::where('busines_id', $negocio)
             ->where('state', OrdersSales::ENTREGADO)
             ->whereBetween('delivery_date', [$desde, $hasta])

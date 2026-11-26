@@ -128,3 +128,28 @@ it('un gasto nuevo se crea con el nombre del tipo si no se le da uno', function 
         ->assertCreated()
         ->assertJsonPath('nombre', 'Gas');
 });
+
+it('saca la cuenta entre dos días cualesquiera: el calendario del panel', function () {
+    $e = tiendaConVentas();
+    GastoDelNegocio::create([
+        'busines_id' => $e['businessId'], 'tipo' => 'arriendo', 'nombre' => 'Arriendo',
+        'monto' => 300000, 'frecuencia' => 'mensual', 'desde' => '2026-11-01',
+    ]);
+    Sanctum::actingAs($e['tendero']);
+
+    // Del 21 al 26 de noviembre: la venta del 24 entra; el fijo, 6 de 30 días.
+    $r = $this->getJson('/v1/negocio/cuanto-te-queda?desde=2026-11-21&hasta=2026-11-26')->assertOk();
+    expect($r->json('periodo'))->toBe('rango')
+        ->and($r->json('desde'))->toBe('2026-11-21')
+        ->and($r->json('hasta'))->toBe('2026-11-26')
+        ->and((float) $r->json('ventas'))->toBe(15000.0)
+        ->and((float) $r->json('gastos'))->toBe(60000.0);
+
+    // Un rango sin la venta no la cuenta.
+    $vacio = $this->getJson('/v1/negocio/cuanto-te-queda?desde=2026-11-25&hasta=2026-11-26')->assertOk();
+    expect($vacio->json('pedidos'))->toBe(0);
+
+    // Al revés, o con una sola punta, no se acepta.
+    $this->getJson('/v1/negocio/cuanto-te-queda?desde=2026-11-26&hasta=2026-11-21')->assertUnprocessable();
+    $this->getJson('/v1/negocio/cuanto-te-queda?desde=2026-11-26')->assertUnprocessable();
+});
