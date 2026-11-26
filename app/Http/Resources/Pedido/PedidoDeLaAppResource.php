@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Resources\Pedido;
 
 use App\Models\Order\OrdersSales;
+use App\Support\ProductTypeSchema;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -97,6 +98,12 @@ class PedidoDeLaAppResource extends JsonResource
              * productos costaba diez consultas de más.
              */
             'details.product.category',
+            // Los datos del oficio de cada producto (fórmula, cocina,
+            // compatibilidad): una consulta por tipo, no por renglón.
+            ...array_map(
+                fn ($r) => "details.product.{$r}",
+                ProductTypeSchema::allRelations(),
+            ),
             'buyer.user',
             'promotions',
             'payments',
@@ -325,7 +332,10 @@ class PedidoDeLaAppResource extends JsonResource
                 'user_id' => $order->domiciliary->user->user_id,
             ] : null,
             'details' => $order->details->map(
-                fn ($detail) => (new RenglonDelPedidoResource($detail))->resolve()
+                fn ($detail) => (new RenglonDelPedidoResource(
+                    $detail,
+                    $order->business?->type !== null ? (int) $order->business->type : null,
+                ))->resolve()
             ),
             'promotions' => $order->promotions,
             /*

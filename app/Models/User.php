@@ -66,6 +66,9 @@ class User extends Authenticatable implements Auditable, MustVerifyEmail
         'policy_accepted_at',
         'policy_version',
         'policy_ip',
+        // La clave provisional del celador: la enciende quien se la entrega y
+        // la apaga él al poner la suya.
+        'must_change_password',
     ];
 
     /*
@@ -95,10 +98,18 @@ class User extends Authenticatable implements Auditable, MustVerifyEmail
          * construye su respuesta campo por campo y `$hidden` no le afecta.
          */
         'area',
+        /*
+         * Oculta por lo mismo que `area`: es una columna nueva y no tiene por
+         * qué aparecer en cada respuesta que serialice un usuario (la reseña
+         * con su comprador, por ejemplo). La publica, a propósito, solo
+         * `UsuarioResource` —login y perfil—.
+         */
+        'must_change_password',
     ];
 
     protected $casts = [
         'state' => 'boolean',
+        'must_change_password' => 'boolean',
         /*
          * `decimal(3,2)`: MySQL la devuelve como cadena y SQLite como número.
          * Sin molde, el tipo de este campo en la respuesta dependía del motor.

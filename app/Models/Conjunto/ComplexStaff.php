@@ -16,6 +16,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * endpoint del panel de aliados saca el conjunto de acá, tomado de la sesión, y
  * NUNCA de un parámetro de la petición: con un identificador en la URL,
  * cualquier dueño podría mirar el conjunto del vecino cambiando un número.
+ *
+ * Las propiedades de abajo no son columnas de `complex_staff`: las agrega la
+ * lista de celadores (CeladoresController) a cada fila, desde el join con
+ * `user` y desde el libro y los turnos.
+ *
+ * @property bool $must_change_password
+ * @property string|null $en_turno_desde
  */
 class ComplexStaff extends Audit
 {

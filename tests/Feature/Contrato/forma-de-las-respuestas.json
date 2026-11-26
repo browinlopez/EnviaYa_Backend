@@ -78,6 +78,7 @@
             "orders[].details[].amount": "int",
             "orders[].details[].category": "null",
             "orders[].details[].description": "null",
+            "orders[].details[].detalles": "array",
             "orders[].details[].image": "null",
             "orders[].details[].line_total": "null",
             "orders[].details[].name": "string",

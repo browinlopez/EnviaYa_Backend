@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Conjunto\ComplexShift;
 use App\Models\Conjunto\ComplexStaff;
 use App\Models\Rol;
 use App\Models\User;
@@ -212,6 +213,14 @@ test('el celador creado puede entrar y usar la porteria', function () {
     $this->postJson('/v1/login', [
         'email' => 'pedro@ejemplo.test',
         'password' => 'ClaveDePrueba1*',
+    ])->assertOk();
+
+    // Primero pone su clave: la que le dio el administrador es provisional.
+    Sanctum::actingAs(User::where('email', 'pedro@ejemplo.test')->first());
+    $this->putJson('/v1/users/password', [
+        'current_password' => 'ClaveDePrueba1*',
+        'password' => 'MiClavePropia9#',
+        'password_confirmation' => 'MiClavePropia9#',
     ])->assertOk();
 
     Sanctum::actingAs(User::where('email', 'pedro@ejemplo.test')->first());
@@ -479,9 +488,97 @@ test('sin pedidos aqui no se entrega el telefono ni el historial del domiciliari
         ->assertJsonPath('allowed', false);
 
     // Cualquier cédula escrita en la puerta no puede volverse una guía de
-    // teléfonos de domiciliarios sin relación con el edificio.
-    expect($r->json('domiciliary'))->toHaveKeys(['domiciliary_id', 'name'])
-        ->and($r->json('domiciliary'))->not->toHaveKeys(['phone', 'historial', 'document']);
+    // domiciliarios sin relación con el edificio: ni teléfono, ni nombre.
+    expect($r->json('reason'))->toBe('sin_pedidos')
+        ->and($r->json())->not->toHaveKey('domiciliary');
+});
+
+test('una cedula sin pedidos aqui no revela de quien es', function () {
+    $c = conjuntoConPersonal();
+    repartidorConPedidoEn(null, '1090777666');
+
+    Sanctum::actingAs($c['user']);
+
+    $r = $this->postJson('/v1/conjunto/porteria/verificar', ['document' => '1090777666'])
+        ->assertOk()
+        ->assertJsonPath('allowed', false)
+        ->assertJsonPath('reason', 'sin_pedidos');
+
+    expect($r->json())->toHaveKeys(['message', 'allowed', 'reason'])
+        ->and($r->json())->not->toHaveKey('domiciliary');
+});
+
+test('un domiciliario desactivado no entra aunque lleve pedidos al conjunto', function () {
+    $c = conjuntoConPersonal();
+    $domi = repartidorConPedidoEn($c['complexId'], '1090444333');
+
+    DB::table('domiciliary')->where('domiciliary_id', $domi->domiciliary_id)->update(['state' => 0]);
+
+    Sanctum::actingAs($c['user']);
+
+    $r = $this->postJson('/v1/conjunto/porteria/verificar', ['document' => '1090444333'])
+        ->assertOk()
+        ->assertJsonPath('allowed', false)
+        ->assertJsonPath('reason', 'domiciliario_inactivo');
+
+    expect($r->json())->not->toHaveKeys(['domiciliary', 'orders'])
+        ->and(DB::table('complex_entries')->count())->toBe(0);
+});
+
+test('tampoco entra si su cuenta de usuario esta deshabilitada', function () {
+    $c = conjuntoConPersonal();
+    $domi = repartidorConPedidoEn($c['complexId']);
+    DB::table('user')->where('user_id', $domi->user_id)->update(['state' => 0]);
+
+    $codigo = app(AccesoAlConjunto::class)->generar($domi)['code'];
+
+    Sanctum::actingAs($c['user']);
+
+    $this->postJson('/v1/conjunto/porteria/verificar', ['code' => $codigo])
+        ->assertOk()
+        ->assertJsonPath('reason', 'domiciliario_inactivo');
+
+    expect(DB::table('complex_entries')->count())->toBe(0);
+});
+
+test('la verificacion tambien tiene limite por CONJUNTO, repartido entre celadores', function () {
+    /*
+     * El tope de 40/min es por usuario: con varios celadores el mismo
+     * edificio probaba cédulas al ritmo de 40 por cuenta. El del conjunto
+     * suma a todos.
+     */
+    $c = conjuntoConPersonal();
+
+    $celadores = collect(range(1, 4))->map(function () use ($c) {
+        $u = User::factory()->create(['rol' => 6]);
+        ComplexStaff::create([
+            'user_id' => $u->user_id, 'complex_id' => $c['complexId'],
+            'role' => ComplexStaff::CELADOR, 'state' => true,
+        ]);
+        // En turno: sin turno no verifica a nadie.
+        ComplexShift::create(['complex_id' => $c['complexId'], 'user_id' => $u->user_id, 'started_at' => now()]);
+
+        return $u;
+    });
+
+    // 4 celadores × 30 = 120: ninguno llega a su tope personal de 40.
+    foreach ($celadores as $u) {
+        Sanctum::actingAs($u);
+        for ($i = 0; $i < 30; $i++) {
+            $this->postJson('/v1/conjunto/porteria/verificar', ['document' => (string) (80000000 + $i)])
+                ->assertStatus(404);
+        }
+    }
+
+    Sanctum::actingAs($c['user']);
+    $this->postJson('/v1/conjunto/porteria/verificar', ['document' => '81111111'])
+        ->assertStatus(429);
+
+    // Otro conjunto no paga el tope de este.
+    $otro = conjuntoConPersonal();
+    Sanctum::actingAs($otro['user']);
+    $this->postJson('/v1/conjunto/porteria/verificar', ['document' => '81111111'])
+        ->assertStatus(404);
 });
 
 test('la verificacion tiene limite por minuto', function () {

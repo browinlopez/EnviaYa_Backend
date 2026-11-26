@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Exports\Comercials;
 
+use App\Exports\Compartido\SinFormulas;
 use App\Models\Business;
 use App\Models\Order\OrdersSales;
 use Maatwebsite\Excel\Concerns\FromArray;
@@ -11,7 +12,7 @@ use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class ResumenSheet implements FromArray, WithStyles, WithTitle
+class ResumenSheet extends SinFormulas implements FromArray, WithStyles, WithTitle
 {
     protected $start;
 

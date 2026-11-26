@@ -99,21 +99,58 @@ class ConsultaDePedidosController extends Controller
          * le pagaron y si hace falta el comprobante. El resto vive en el
          * historial, que tiene su propia pantalla y su filtro de fechas.
          */
+        /*
+         * CON PERIODO (el panel), todo se acota a él: lo que entró desde el
+         * inicio del día, de la semana o del mes, y lo cerrado en ese mismo
+         * rango. Así el tablero no acumula pedidos viejos. Sin periodo (la
+         * app), lo de siempre: lo abierto entero y lo cerrado de hoy.
+         */
+        $desde = match ($request->input('periodo')) {
+            'hoy' => now()->startOfDay(),
+            'semana' => now()->startOfWeek(),
+            'mes' => now()->startOfMonth(),
+            default => null,
+        };
+        $hasta = match ($request->input('periodo')) {
+            'hoy' => now()->addDay()->startOfDay(),
+            'semana' => now()->endOfWeek()->addSecond(),
+            'mes' => now()->endOfMonth()->addSecond(),
+            default => null,
+        };
+
+        // Un rango a mano manda sobre el periodo: del inicio de `desde` al
+        // final de `hasta` (o de ese mismo día si no se dice).
+        if ($request->filled('desde')) {
+            $desde = Carbon::parse($request->input('desde'))->startOfDay();
+            $hasta = Carbon::parse($request->input('hasta') ?? $request->input('desde'))
+                ->addDay()->startOfDay();
+        }
+
         $orders = OrdersSales::where('busines_id', $business->busines_id)
             ->confirmados()
-            ->where(function ($q) {
-                $q->whereIn('state', OrdersSales::ACTIVOS)
-                  /*
-                   * Los cerrados, por el día en que SE CERRARON y no por el
-                   * día en que se pidieron: uno pedido a las 23:50 y
-                   * entregado a las 00:20 es de hoy y no aparecía. El
-                   * entregado tiene su fecha; el cancelado, la de su último
-                   * cambio.
-                   */
+            ->where(function ($q) use ($desde, $hasta) {
+                $q->where(function ($a) use ($desde, $hasta) {
+                    $a->whereIn('state', OrdersSales::ACTIVOS);
+                    if ($desde) {
+                        /*
+                         * De otros días solo entran los PROGRAMADOS para este
+                         * periodo: uno hecho el lunes para el miércoles sale
+                         * el miércoles, y uno hecho hoy para mañana no sale
+                         * hoy. Lo demás, por el día en que se pidió.
+                         */
+                        $a->where(fn ($r) => $r
+                            ->where(fn ($s) => $s->where('is_scheduled', false)
+                                ->where('sale_date', '>=', $desde)
+                                ->where('sale_date', '<', $hasta))
+                            ->orWhere(fn ($s) => $s->where('is_scheduled', true)
+                                ->where('delivery_date', '>=', $desde)
+                                ->where('delivery_date', '<', $hasta)));
+                    }
+                })
                     ->orWhere(fn ($q2) => $q2->where('state', OrdersSales::ENTREGADO)
-                        ->where($this->cerradoHoy('delivery_date')))
+                        ->where($this->cerradoDesde('delivery_date', $desde, $hasta)))
                     ->orWhere(fn ($q2) => $q2->where('state', OrdersSales::CANCELADO)
-                        ->where($this->cerradoHoy('updated_at')));
+                        ->where($this->cerradoDesde('updated_at', $desde, $hasta)));
             })
             // La lista la declara el presentador, que es quien las lee: esta
             // copia se habia quedado sin `domiciliary.user` y cargaba el
@@ -490,7 +527,8 @@ class ConsultaDePedidosController extends Controller
     }
 
     /**
-     * «Se cerró hoy», mirando esa columna y cayendo a `sale_date` si está vacía.
+     * Cerrado desde `$desde` (o desde hoy, si no se dice) hasta `$hasta`,
+     * mirando esa columna y cayendo a `sale_date` si está vacía.
      *
      * SUSTITUYE A `whereDate(DB::raw('COALESCE($columna, sale_date)'), hoy)`,
      * que es lo que había, y la reescritura importa tanto como los índices que
@@ -519,10 +557,10 @@ class ConsultaDePedidosController extends Controller
      * `delivery_date` cuenta por su `sale_date`, igual que antes. Va dentro de
      * su propio grupo para que el `OR` no se escape del `AND state = 4`.
      */
-    private function cerradoHoy(string $columna): callable
+    private function cerradoDesde(string $columna, $desde, $hasta = null): callable
     {
-        $desde = now()->startOfDay();
-        $hasta = now()->addDay()->startOfDay();
+        $desde = $desde ?? now()->startOfDay();
+        $hasta = $hasta ?? now()->addDay()->startOfDay();
 
         return function ($q) use ($columna, $desde, $hasta) {
             $q->where(fn ($r) => $r->where($columna, '>=', $desde)

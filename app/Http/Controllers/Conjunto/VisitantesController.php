@@ -6,7 +6,11 @@ namespace App\Http\Controllers\Conjunto;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Conjunto\RegistrarVisitanteRequest;
+use App\Models\Buyer\ResidentialComplex;
+use App\Models\Conjunto\ComplexEntry;
+use App\Models\Conjunto\ComplexStaff;
 use App\Services\PulsoDelConjunto;
+use App\Support\Enmascarar;
 use App\Support\FiltroDeFechas;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -102,7 +106,7 @@ class VisitantesController extends Controller
     {
         $complexId = (int) $request->attributes->get('complex_id');
 
-        $entrada = DB::table('complex_entries')
+        $entrada = ComplexEntry::query()
             ->where('id', $id)
             ->where('complex_id', $complexId)
             ->first();
@@ -125,11 +129,12 @@ class VisitantesController extends Controller
             ], 409);
         }
 
-        DB::table('complex_entries')->where('id', $id)->update([
-            'exited_at' => now(),
+        // Por el modelo y no con `DB::table`: así la salida queda en `audits`
+        // con su valor anterior y el nuevo (ver `ComplexEntry`).
+        $entrada->forceFill([
+            'exited_at' => now()->toDateTimeString(),
             'exit_registered_by' => $request->user()->user_id,
-            'updated_at' => now(),
-        ]);
+        ])->save();
 
         return response()->json(['message' => 'Salida registrada.']);
     }
@@ -138,6 +143,17 @@ class VisitantesController extends Controller
     public function adentro(Request $request)
     {
         $complexId = (int) $request->attributes->get('complex_id');
+        $enmascarar = $request->attributes->get('complex_role') !== ComplexStaff::DUENO;
+
+        /*
+         * QUIEN LLEVA DEMASIADO. Pasadas las horas de alerta del conjunto (4
+         * si no fijó otras) la entrada sale con `demorado: true` y cuántos
+         * minutos lleva: un domiciliario que entró hace cinco horas o se fue
+         * sin que nadie le marcara la salida o sigue adentro sin razón, y las
+         * dos cosas hay que mirarlas.
+         */
+        $horas = ResidentialComplex::horasDeAlerta($complexId);
+        $ahora = now();
 
         $filas = DB::table('complex_entries as e')
             ->where('e.complex_id', $complexId)
@@ -160,13 +176,26 @@ class VisitantesController extends Controller
                 DB::raw('COALESCE(u.name, e.visitor_name) as nombre'),
                 DB::raw('COALESCE(d.document, e.visitor_document) as documento'),
             ])
-            ->map(function ($e) {
+            ->map(function ($e) use ($enmascarar, $horas, $ahora) {
                 $e->destino = PulsoDelConjunto::destinoDe($e);
                 unset($e->orders);
+
+                $e->minutos_adentro = max(0, (int) floor(($ahora->getTimestamp() - strtotime((string) $e->created_at)) / 60));
+                $e->demorado = $e->minutos_adentro >= $horas * 60;
+
+                // Lo mismo que en el libro de entradas: el celador ve los
+                // cuatro últimos, el administrador el dato completo.
+                if ($enmascarar) {
+                    $e->documento = Enmascarar::ultimos4($e->documento);
+                }
 
                 return $e;
             });
 
-        return response()->json(['data' => $filas]);
+        return response()->json([
+            'data' => $filas,
+            'horas_alerta' => $horas,
+            'demorados' => $filas->where('demorado', true)->count(),
+        ]);
     }
 }

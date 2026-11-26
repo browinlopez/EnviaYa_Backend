@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Exports\Financial;
 
+use App\Exports\Compartido\SinFormulas;
 use App\Models\Payment\Payment;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\FromCollection;
@@ -12,7 +13,7 @@ use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class OrdersDetailSheet implements FromCollection, WithHeadings, WithStyles, WithTitle
+class OrdersDetailSheet extends SinFormulas implements FromCollection, WithHeadings, WithStyles, WithTitle
 {
     protected $business_id;
 

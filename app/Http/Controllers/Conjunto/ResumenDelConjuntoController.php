@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Conjunto;
 
 use App\Exports\Conjunto\ReporteDelConjuntoExport;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Conjunto\VentanaDelConjuntoRequest;
 use App\Services\PulsoDelConjunto;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
@@ -45,7 +46,7 @@ class ResumenDelConjuntoController extends Controller
      * pedidos llegaron a la torre 4, no quién pidió qué. Son datos personales
      * de terceros y la relación de cada vecino es con la plataforma.
      */
-    public function reporte(Request $request)
+    public function reporte(VentanaDelConjuntoRequest $request)
     {
         $complexId = (int) $request->attributes->get('complex_id');
 
@@ -56,7 +57,7 @@ class ResumenDelConjuntoController extends Controller
         );
     }
 
-    public function excel(Request $request)
+    public function excel(VentanaDelConjuntoRequest $request)
     {
         $complexId = (int) $request->attributes->get('complex_id');
 
@@ -84,7 +85,7 @@ class ResumenDelConjuntoController extends Controller
      * petición se cae por tiempo en vez de decir que el rango es demasiado
      * grande.
      */
-    private function ventana(Request $request): array
+    private function ventana(VentanaDelConjuntoRequest $request): array
     {
         $hoy = CarbonImmutable::today();
 

@@ -33,10 +33,21 @@ class CuantoTeQuedaController extends Controller
         return (int) $request->attributes->get('busines_id');
     }
 
-    /** GET negocio/cuanto-te-queda?periodo=mes|semana&fecha=YYYY-MM-DD */
+    /**
+     * GET negocio/cuanto-te-queda?periodo=mes|semana&fecha=YYYY-MM-DD
+     *  o  negocio/cuanto-te-queda?desde=YYYY-MM-DD&hasta=YYYY-MM-DD
+     */
     public function cuenta(CuentaDelNegocioRequest $request, CuentaDelNegocio $cuenta): JsonResponse
     {
         $datos = $request->validated();
+
+        if (isset($datos['desde'], $datos['hasta'])) {
+            return response()->json($cuenta->entre(
+                $this->negocio($request),
+                Carbon::parse($datos['desde']),
+                Carbon::parse($datos['hasta']),
+            ));
+        }
 
         return response()->json($cuenta->para(
             $this->negocio($request),

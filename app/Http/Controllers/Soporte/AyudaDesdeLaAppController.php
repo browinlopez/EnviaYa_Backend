@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Soporte\RadicarPqrsRequest;
 use App\Models\Operacion\Pqrs;
 use App\Models\Order\OrdersSales;
+use App\Services\RadicacionDePqrs;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -29,7 +30,7 @@ use Illuminate\Support\Facades\DB;
  */
 class AyudaDesdeLaAppController extends Controller
 {
-    public function store(RadicarPqrsRequest $request)
+    public function store(RadicarPqrsRequest $request, RadicacionDePqrs $radicacion)
     {
         $datos = $request->validated();
 
@@ -62,26 +63,17 @@ class AyudaDesdeLaAppController extends Controller
             }
         }
 
-        $prioridad = $datos['type'] === 'reclamo' ? 'alta' : 'media';
-
-        $pqrs = Pqrs::create([
-            'code' => Pqrs::siguienteRadicado(),
+        // El radicado, la prioridad y el plazo: `RadicacionDePqrs`, el mismo
+        // camino que usan las solicitudes que nacen de una pantalla.
+        $pqrs = $radicacion->radicar($usuario, [
             'type' => $datos['type'],
-            'channel' => 'app',
-            'priority' => $prioridad,
-            'user_id' => $usuario->user_id,
             'order_id' => $pedido?->orderSales_id,
             // Con el pedido delante, el caso ya sabe a qué tienda y a qué
             // domiciliario mirar: es la mitad del trabajo de quien lo atienda.
             'business_id' => $pedido?->busines_id,
             'domiciliary_id' => $pedido?->domiciliary_id,
-            'contact_name' => $usuario->name,
-            'contact_email' => $usuario->email,
-            'contact_phone' => $usuario->phone,
             'subject' => $datos['subject'],
             'description' => $datos['description'],
-            'state' => 0,
-            'due_at' => now()->addDays(Pqrs::PLAZOS[$prioridad]),
         ]);
 
         return response()->json([

@@ -17,16 +17,35 @@
 # Las vistas Blade que quedan —verificación de correo, recuperar contraseña,
 # el PDF del acuerdo— usan @vite, así que hay que compilarlas aunque el panel
 # viva en otro proyecto.
-FROM node:20-alpine AS node-builder
+#
+# CON PNPM, NO CON NPM.
+#
+# El proyecto pasó a pnpm (package.json fija `packageManager: pnpm@11.5.2`) y
+# package-lock.json se borró; este archivo seguía copiándolo y el despliegue
+# reventaba con «"/package-lock.json": not found». Ahora se copia el lock de
+# pnpm y también pnpm-workspace.yaml: ahí está `allowBuilds`, sin el cual pnpm
+# bloquea los scripts de instalación de esbuild y @tailwindcss/oxide —los que
+# bajan su binario nativo— y Vite no compila.
+#
+# Node 22 y no 20: pnpm 11 exige Node >= 22.13 (y Node 20 dejó de recibir
+# parches en abril de 2026). pnpm se instala con npm y con la versión exacta
+# del packageManager, en vez de corepack, cuyas firmas caducadas han tumbado
+# builds en imágenes de Node que no se actualizan al día.
+FROM node:22-alpine AS node-builder
 WORKDIR /app
 
-COPY package.json package-lock.json ./
+RUN npm install -g pnpm@11.5.2
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Acá hubo un `--mount=type=cache` para la caché de npm, y se quitó después de
 # medirlo: con la caché tibia `npm ci` tardaba 7,7 s y sin ella 10,2 s. Dos
 # segundos y medio no pagan atar el despliegue a BuildKit, porque con el
 # constructor clásico esa sintaxis no falla en silencio: revienta el build.
-RUN npm ci
+#
+# `--frozen-lockfile`: lo mismo que hacía `npm ci`. Si package.json y el lock
+# no coinciden, falla aquí en vez de instalar otras versiones en silencio.
+RUN pnpm install --frozen-lockfile
 
 # SOLO LO QUE VITE MIRA, Y NO EL REPOSITORIO ENTERO.
 #
@@ -38,7 +57,7 @@ RUN npm ci
 COPY vite.config.js tailwind.config.js postcss.config.js ./
 COPY resources ./resources
 
-RUN npm run build
+RUN pnpm run build
 
 # =========================
 # Etapa 2: PHP con sus extensiones

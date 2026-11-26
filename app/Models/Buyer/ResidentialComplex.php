@@ -6,6 +6,7 @@ namespace App\Models\Buyer;
 
 use App\Models\Audit\Audit;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 class ResidentialComplex extends Audit
 {
@@ -25,6 +26,20 @@ class ResidentialComplex extends Audit
      * consultas y sólo uno de los dos caminos pasa por aquí.
      */
     public $timestamps = true;
+
+    /** Horas adentro a partir de las cuales una entrada sin salida es «demorada». */
+    public const HORAS_ALERTA_ADENTRO = 4;
+
+    /**
+     * Las horas de alerta de ese conjunto: las suyas o, si no las fijó, las
+     * de la plataforma.
+     */
+    public static function horasDeAlerta(int $complexId): int
+    {
+        $horas = DB::table('residential_complexes')->where('complex_id', $complexId)->value('horas_alerta_adentro');
+
+        return $horas ? (int) $horas : self::HORAS_ALERTA_ADENTRO;
+    }
 
     protected $fillable = [
         'name',

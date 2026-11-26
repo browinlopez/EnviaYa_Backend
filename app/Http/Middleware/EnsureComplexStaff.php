@@ -8,6 +8,7 @@ use App\Models\Conjunto\ComplexStaff;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -56,11 +57,44 @@ class EnsureComplexStaff
             ], 403);
         }
 
+        /*
+         * LA CUENTA DESHABILITADA, EN CADA PETICIÓN.
+         *
+         * `user.state` solo se miraba al iniciar sesión, y los tokens de
+         * Sanctum no caducan solos: a quien se deshabilitaba desde el panel
+         * le seguía valiendo el token que ya tenía.
+         */
+        if (! $usuario->state) {
+            return response()->json([
+                'message' => 'Tu cuenta está deshabilitada. Comunícate con el administrador.',
+                'reason' => 'account_disabled',
+            ], 403);
+        }
+
         $ficha = ComplexStaff::de((int) $usuario->user_id);
 
         if (! $ficha) {
             return response()->json([
                 'message' => 'Esta sección es para el personal de un conjunto.',
+            ], 403);
+        }
+
+        /*
+         * EL CONJUNTO TAMBIÉN TIENE QUE ESTAR ACTIVO.
+         *
+         * Desactivarlo desde el panel interno no toca `complex_staff`, así que
+         * mirando solo la ficha su personal seguía registrando entradas y
+         * bajando reportes de un edificio que la plataforma ya dio de baja.
+         */
+        $activo = DB::table('residential_complexes')
+            ->where('complex_id', $ficha->complex_id)
+            ->where('state', 1)
+            ->exists();
+
+        if (! $activo) {
+            return response()->json([
+                'message' => 'Este conjunto está desactivado en la plataforma. Comunícate con el equipo de VeciPa\'Ya.',
+                'reason' => 'complex_disabled',
             ], 403);
         }
 

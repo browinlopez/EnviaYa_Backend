@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Conjunto\ComplexShift;
 use App\Models\Conjunto\ComplexStaff;
 use App\Models\Domiciliary;
 use App\Models\Payment\Payment;
@@ -395,7 +396,12 @@ function pedidoCancelable(int $metodo = 1, bool $cobrado = false): array
  * function». Lo mismo al correr ese archivo suelto para arreglar algo.
  */
 
-function conjuntoConPersonal(string $rol = ComplexStaff::CELADOR): array
+/**
+ * Un conjunto con una persona de su personal. El celador sale con el turno
+ * iniciado (`$enTurno`): sin turno no puede dejar pasar a nadie, y casi
+ * todas las pruebas de la portería dan eso por hecho.
+ */
+function conjuntoConPersonal(string $rol = ComplexStaff::CELADOR, bool $enTurno = true): array
 {
     foreach ([5 => 'dueno_conjunto', 6 => 'celador'] as $id => $nombre) {
         Rol::firstOrCreate(['rol_id' => $id], ['name' => $nombre, 'guard_name' => 'web']);
@@ -416,6 +422,12 @@ function conjuntoConPersonal(string $rol = ComplexStaff::CELADOR): array
         'role' => $rol,
         'state' => true,
     ]);
+
+    if ($rol === ComplexStaff::CELADOR && $enTurno) {
+        ComplexShift::create([
+            'complex_id' => $complexId, 'user_id' => $user->user_id, 'started_at' => now()->subHour(),
+        ]);
+    }
 
     return compact('complexId', 'user');
 }

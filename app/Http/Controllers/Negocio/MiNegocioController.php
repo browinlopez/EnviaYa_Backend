@@ -67,6 +67,10 @@ class MiNegocioController extends Controller
             'businesses' => $negocios->map(fn ($b) => [
                 'busines_id' => (int) $b->busines_id,
                 'name' => $b->name,
+                // El tipo (1 tienda, 2 droguería, 3 restaurante, 4 repuestos):
+                // el selector pone el icono de cada uno y el panel habla como
+                // ese negocio («otra droguería», «la carta»).
+                'type' => (int) ($b->type ?? 1),
                 'logo' => $b->logo,
                 'state' => (int) $b->state,
                 // Para que el selector de local pueda marcar el que está en

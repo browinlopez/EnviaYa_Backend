@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Support\ExtensionSegura;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -215,7 +216,8 @@ class MediaService
         // el bucket, con marca de tiempo y azar para que dos subidas del mismo
         // archivo no se pisen.
         $base = Str::slug(pathinfo($archivo->getClientOriginalName(), PATHINFO_FILENAME), '-');
-        $ext = strtolower($archivo->getClientOriginalExtension() ?: $archivo->guessExtension() ?: 'bin');
+        // Del contenido y no del nombre: ver `ExtensionSegura`.
+        $ext = ExtensionSegura::de($archivo, 'bin');
         $final = now()->format('Ymd-His').'-'.Str::lower(Str::random(6)).'-'.($base ?: 'archivo').'.'.$ext;
 
         $key = $this->carpeta($entidad, $codigo, $nombre).'/'.$tipo.'/'.$final;

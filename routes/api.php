@@ -53,6 +53,8 @@ use App\Http\Controllers\Conjunto\MiConjuntoController;
 use App\Http\Controllers\Conjunto\PorteriaController;
 use App\Http\Controllers\Conjunto\ResidentesController;
 use App\Http\Controllers\Conjunto\ResumenDelConjuntoController;
+use App\Http\Controllers\Conjunto\SolicitudDeCambioController;
+use App\Http\Controllers\Conjunto\TurnosController;
 use App\Http\Controllers\Conjunto\VisitantesController;
 use App\Http\Controllers\DeviceTokenController;
 use App\Http\Controllers\Domiciliary\ContratoDelDomiciliarioController;
@@ -286,8 +288,11 @@ Route::post('app/errores', ErroresDeLaAppController::class)
 | audit.api registra cada escritura (POST/PUT/PATCH/DELETE) en
 | storage/logs/audit-*.log con usuario, ruta, resultado e IP. Los cambios
 | de datos además quedan en la tabla `audits` (auditoría de modelos).
+|
+| cuenta.habilitada rechaza (403, reason account_disabled) a quien tenga
+| `user.state` = 0 y le borra el token: antes solo se miraba al iniciar sesión.
 */
-Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
+Route::middleware(['auth:sanctum', 'cuenta.habilitada', 'audit.api'])->group(function () {
     /*
      * AYUDA: radicar un PQRS desde la app.
      *
@@ -584,7 +589,7 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
      * ningún controlador de acá tiene que acordarse de acotar leyendo un
      * parámetro — que es justo como se filtran los datos de otro sin querer.
      */
-    Route::prefix('conjunto')->middleware('conjunto')->group(function () {
+    Route::prefix('conjunto')->middleware(['conjunto', 'clave.propia'])->group(function () {
         Route::get('me', [MiConjuntoController::class, 'mio']);
 
         // El tablero lo ven los dos: el celador también necesita saber cuánto
@@ -602,9 +607,11 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
             ->middleware('conjunto:dueno');
 
         // Con límite propio: una portería real verifica unas pocas personas
-        // por minuto, y sin tope se podían probar cédulas en serie.
+        // por minuto, y sin tope se podían probar cédulas en serie. Dos topes:
+        // por celador y por CONJUNTO (`porteria-conjunto`, en AppServiceProvider),
+        // para que repartir el intento entre varias cuentas no lo multiplique.
         Route::post('porteria/verificar', [PorteriaController::class, 'verificar'])
-            ->middleware('throttle:40,1');
+            ->middleware(['throttle:40,1', 'throttle:porteria-conjunto', 'en.turno']);
         Route::get('porteria/entradas', [PorteriaController::class, 'entradas']);
 
         /*
@@ -618,8 +625,8 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
          * Las registra el CELADOR, que es quien esta en la puerta, asi que no
          * llevan `conjunto:dueno`.
          */
-        Route::post('porteria/visitantes', [VisitantesController::class, 'registrar']);
-        Route::put('porteria/entradas/{id}/salida', [VisitantesController::class, 'salida']);
+        Route::post('porteria/visitantes', [VisitantesController::class, 'registrar'])->middleware('en.turno');
+        Route::put('porteria/entradas/{id}/salida', [VisitantesController::class, 'salida'])->middleware('en.turno');
         Route::get('porteria/adentro', [VisitantesController::class, 'adentro']);
 
         // Los celadores los administra el dueño, no el equipo interno: es
@@ -635,12 +642,32 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
             ->middleware('conjunto:dueno');
         Route::post('perfil/foto', [MiConjuntoController::class, 'subirFoto'])
             ->middleware('conjunto:dueno');
+        // Las torres y los apartamentos no se cambian desde aquí: se PIDEN.
+        // Radica un PQRS de petición y deja la solicitud «en revisión».
+        Route::get('perfil/cambio-de-forma', [SolicitudDeCambioController::class, 'ultima'])
+            ->middleware('conjunto:dueno');
+        Route::post('perfil/cambio-de-forma', [SolicitudDeCambioController::class, 'solicitar'])
+            ->middleware(['conjunto:dueno', 'throttle:5,10']);
 
         Route::get('celadores', [CeladoresController::class, 'celadores'])
             ->middleware('conjunto:dueno');
         Route::post('celadores', [CeladoresController::class, 'crearCelador'])
             ->middleware('conjunto:dueno');
         Route::put('celadores/{id}', [CeladoresController::class, 'cambiarCelador'])
+            ->middleware('conjunto:dueno');
+        // Lo que hizo un celador: entradas, salidas, turnos, alta y bajas.
+        Route::get('celadores/{id}/historial', [CeladoresController::class, 'historial'])
+            ->middleware('conjunto:dueno')->whereNumber('id');
+
+        /*
+         * LOS TURNOS. El celador abre y cierra el suyo (uno abierto como
+         * mucho); el administrador ve quién está en la puerta y los turnos
+         * recientes.
+         */
+        Route::get('turno', [TurnosController::class, 'mio']);
+        Route::post('turno/iniciar', [TurnosController::class, 'iniciar'])->middleware('throttle:20,1');
+        Route::post('turno/terminar', [TurnosController::class, 'terminar'])->middleware('throttle:20,1');
+        Route::get('turnos', [TurnosController::class, 'index'])
             ->middleware('conjunto:dueno');
     });
 
@@ -783,6 +810,8 @@ Route::middleware(['auth:sanctum', 'audit.api'])->group(function () {
         Route::get('productos/cargas/{id}', [CargaDeCatalogoController::class, 'ver']);
 
         Route::put('productos/{id}', [ProductosDelNegocioController::class, 'update']);
+        Route::post('productos/{id}/foto', [ProductosDelNegocioController::class, 'subirFoto']);
+        Route::post('productos/{id}/variantes', [ProductosDelNegocioController::class, 'crearVariante']);
         Route::delete('productos/{id}', [ProductosDelNegocioController::class, 'quitar']);
 
         Route::get('domiciliarios', [DomiciliaryController::class, 'listDomiciliariesByBusiness']);

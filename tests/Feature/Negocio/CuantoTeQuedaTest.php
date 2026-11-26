@@ -56,8 +56,8 @@ it('saca la cuenta del mes: ventas, costo, comisión, gastos y lo que queda', fu
         ->and($c['costo_de_lo_vendido'])->toBe(11100.0)  // 2×1.800 + 3×2.500
         ->and($c['margen'])->toBe(3900.0)
         ->and($c['comision'])->toBe(450.0)
-        ->and($c['gastos'])->toBe(3000.0)
-        ->and($c['queda'])->toBe(450.0)
+        ->and($c['gastos'])->toBe(2400.0)   // el mes va al 24: 24 de 30 días
+        ->and($c['queda'])->toBe(1050.0)
         ->and($c['sin_costo']['lineas'])->toBe(1)
         ->and($c['sin_costo']['productos'][0]['nombre'])->toBe('Sal');
 });
@@ -71,8 +71,8 @@ it('en una semana, el fijo del mes cuenta por los días que caen en ella', funct
 
     $c = app(CuentaDelNegocio::class)->para($e['businessId'], 'semana', now());
 
-    // Semana del 23 al 29 de noviembre: 7 de 30 días.
-    expect($c['gastos'])->toBe(70000.0);
+    // Semana del 23 al 29 de noviembre, pero es el 24: el fijo cuenta 2 de 30 días.
+    expect($c['gastos'])->toBe(20000.0);
 });
 
 it('el valor de un mes concreto manda sobre el de siempre', function () {
@@ -89,7 +89,8 @@ it('el valor de un mes concreto manda sobre el de siempre', function () {
         ->assertJsonPath('monto_este_mes', 95000);
 
     $c = app(CuentaDelNegocio::class)->para($e['businessId'], 'mes', now());
-    expect($c['gastos'])->toBe(95000.0);
+    // 95.000 este mes, contado hasta hoy: 24 de 30 días.
+    expect($c['gastos'])->toBe(76000.0);
 });
 
 it('los costos se listan con los más vendidos primero y se guardan en lote', function () {
@@ -127,4 +128,46 @@ it('un gasto nuevo se crea con el nombre del tipo si no se le da uno', function 
     $this->postJson('/v1/negocio/gastos', ['tipo' => 'gas', 'monto' => 45000, 'frecuencia' => 'mensual'])
         ->assertCreated()
         ->assertJsonPath('nombre', 'Gas');
+});
+
+it('saca la cuenta entre dos días cualesquiera: el calendario del panel', function () {
+    $e = tiendaConVentas();
+    GastoDelNegocio::create([
+        'busines_id' => $e['businessId'], 'tipo' => 'arriendo', 'nombre' => 'Arriendo',
+        'monto' => 300000, 'frecuencia' => 'mensual', 'desde' => '2026-11-01',
+    ]);
+    Sanctum::actingAs($e['tendero']);
+
+    // Del 21 al 26 de noviembre: la venta del 24 entra; el fijo, del 21 al 24 (hoy): 4 de 30 días.
+    $r = $this->getJson('/v1/negocio/cuanto-te-queda?desde=2026-11-21&hasta=2026-11-26')->assertOk();
+    expect($r->json('periodo'))->toBe('rango')
+        ->and($r->json('desde'))->toBe('2026-11-21')
+        ->and($r->json('hasta'))->toBe('2026-11-26')
+        ->and((float) $r->json('ventas'))->toBe(15000.0)
+        ->and((float) $r->json('gastos'))->toBe(40000.0);
+
+    // Un rango sin la venta no la cuenta.
+    $vacio = $this->getJson('/v1/negocio/cuanto-te-queda?desde=2026-11-25&hasta=2026-11-26')->assertOk();
+    expect($vacio->json('pedidos'))->toBe(0);
+
+    // Al revés, o con una sola punta, no se acepta.
+    $this->getJson('/v1/negocio/cuanto-te-queda?desde=2026-11-26&hasta=2026-11-21')->assertUnprocessable();
+    $this->getJson('/v1/negocio/cuanto-te-queda?desde=2026-11-26')->assertUnprocessable();
+});
+
+it('un periodo ya cerrado cuenta el fijo entero; el que sigue abierto, solo hasta hoy', function () {
+    $e = tiendaConVentas(); // hoy: 24 de noviembre
+    GastoDelNegocio::create([
+        'busines_id' => $e['businessId'], 'tipo' => 'arriendo', 'nombre' => 'Arriendo',
+        'monto' => 300000, 'frecuencia' => 'mensual', 'desde' => '2026-10-01',
+    ]);
+    $cuenta = app(CuentaDelNegocio::class);
+
+    $octubre = $cuenta->para($e['businessId'], 'mes', Carbon::parse('2026-10-15'));
+    $noviembre = $cuenta->para($e['businessId'], 'mes', now());
+
+    expect($octubre['gastos'])->toBe(300000.0)
+        ->and($octubre['gastos_hasta'])->toBe('2026-10-31')
+        ->and($noviembre['gastos'])->toBe(240000.0)
+        ->and($noviembre['gastos_hasta'])->toBe('2026-11-24');
 });

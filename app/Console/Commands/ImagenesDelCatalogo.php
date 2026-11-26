@@ -59,7 +59,8 @@ class ImagenesDelCatalogo extends Command
                             {--aplicar : Descargar y subir de verdad}
                             {--carpeta= : Subir desde una carpeta del disco en vez de internet}
                             {--limite=0 : Cuántos productos tocar como mucho}
-                            {--negocio= : Sólo los productos que vende este negocio}';
+                            {--negocio= : Sólo los productos que vende este negocio}
+                            {--buscar : Buscarle foto por nombre a lo que no tiene ninguna}';
 
     protected $description = 'Trae las imágenes del catálogo a R2 y reescribe products.image';
 
@@ -76,6 +77,13 @@ class ImagenesDelCatalogo extends Command
      * hora.
      */
     private const CONECTAR = 3;
+
+    /** Las tres bases abiertas, en orden de probabilidad. */
+    private const FUENTES = [
+        'https://world.openfoodfacts.org/cgi/search.pl',
+        'https://world.openbeautyfacts.org/cgi/search.pl',
+        'https://world.openproductsfacts.org/cgi/search.pl',
+    ];
 
     /** Lo que se acepta. Un SVG puede traer JavaScript dentro. */
     private const TIPOS = [
@@ -102,6 +110,10 @@ class ImagenesDelCatalogo extends Command
         }
 
         $publico = rtrim((string) config('filesystems.disks.r2.url'), '/');
+
+        if ($this->option('buscar')) {
+            $this->buscarPorNombre($aplicar);
+        }
 
         $productos = $this->productos($publico, $carpeta !== null);
 
@@ -182,6 +194,162 @@ class ImagenesDelCatalogo extends Command
     }
 
     /* ------------------------------------------------------------------ */
+
+    /**
+     * LE BUSCA FOTO, POR NOMBRE, A LO QUE NO TIENE NINGUNA.
+     *
+     * El camino normal de este comando MUEVE fotos: baja la que el
+     * producto ya tiene apuntada y la sube a R2. No sirve para un producto
+     * que nunca tuvo ninguna, que es el caso de todo lo que se sembró a
+     * mano: «Acetaminofén 500 mg» no tiene código de barras ni foto, y
+     * nunca las va a tener por ese camino.
+     *
+     * Esto pregunta a las bases abiertas POR EL NOMBRE. Medido: de
+     * «acetaminofén» salen cinco con foto, de «vick vaporub» tres, de
+     * «loratadina» cinco.
+     *
+     * --------------------------------------------------------------
+     * Y EXIGE QUE SE PAREZCAN, QUE ES LO DELICADO.
+     *
+     * Una búsqueda devuelve lo que la fuente crea parecido, y ponerle a un
+     * acetaminofén la foto de otra cosa es peor que dejarlo sin foto: el
+     * vecino pide lo que ve. Así que el resultado tiene que CONTENER la
+     * palabra clave del nuestro --la más larga, que es la que identifica--
+     * comparando sin tildes ni mayúsculas.
+     *
+     * Con eso, «Acetaminofén 500 mg» acepta «ACETAMINOFEN» y rechaza
+     * «Dolex Gripa», aunque la fuente los devuelva juntos.
+     */
+    private function buscarPorNombre(bool $aplicar): void
+    {
+        $sinFoto = DB::table('products')
+            ->where('state', 1)
+            ->where(fn ($q) => $q->whereNull('image')->orWhere('image', ''))
+            ->when($this->option('negocio'), fn ($q) => $q->whereIn(
+                'products_id',
+                DB::table('products_business')
+                    ->where('busines_id', (int) $this->option('negocio'))
+                    ->select('products_id'),
+            ))
+            ->orderBy('products_id')
+            ->get(['products_id', 'name']);
+
+        if ($sinFoto->isEmpty()) {
+            return;
+        }
+
+        $this->line("Buscando foto por nombre para {$sinFoto->count()} productos");
+
+        $hallados = 0;
+
+        foreach ($sinFoto as $p) {
+            $url = $this->fotoDe($p->name);
+
+            if ($url === null) {
+                $this->line(sprintf('  - %-50s sin foto en la fuente', mb_substr($p->name, 0, 50)));
+
+                continue;
+            }
+
+            $hallados++;
+            $this->line(sprintf('  + %-50s encontrada', mb_substr($p->name, 0, 50)));
+
+            if ($aplicar) {
+                /* Se guarda la URL de la fuente; el resto del comando la
+                   baja y la sube a R2 como con cualquier otra. */
+                DB::table('products')
+                    ->where('products_id', $p->products_id)
+                    ->update(['image' => $url]);
+            }
+        }
+
+        $this->line("  {$hallados} encontradas");
+        $this->newLine();
+    }
+
+    /** La foto de la fuente para ese nombre, si alguna se le parece. */
+    private function fotoDe(string $nombre): ?string
+    {
+        $clave = $this->palabraClave($nombre);
+
+        if ($clave === null) {
+            return null;
+        }
+
+        foreach (self::FUENTES as $fuente) {
+            try {
+                $r = Http::connectTimeout(self::CONECTAR)
+                    ->timeout(self::ESPERA)
+                    ->withHeaders(['User-Agent' => 'VeciPaYa/1.0'])
+                    ->get($fuente, [
+                        /* Por la palabra clave y NO por el nombre entero.
+                           «Loratadina 10 mg» no encuentra nada porque el «10
+                           mg» estrecha la busqueda; «loratadina» a secas
+                           devuelve cinco con foto. */
+                        'search_terms' => $clave,
+                        'languages_tags_en' => 'spanish',
+                        'fields' => 'product_name,product_name_es,image_front_url',
+                        'json' => 1,
+                        'page_size' => 20,
+                    ]);
+
+                if (! $r->successful()) {
+                    continue;
+                }
+
+                foreach ($r->json('products') ?? [] as $c) {
+                    $suyo = (string) (($c['product_name_es'] ?? '') ?: ($c['product_name'] ?? ''));
+
+                    if (empty($c['image_front_url']) || $suyo === '') {
+                        continue;
+                    }
+
+                    if (str_contains($this->plano($suyo), $clave)) {
+                        return $c['image_front_url'];
+                    }
+                }
+            } catch (\Throwable $e) {
+                continue;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * La palabra que identifica al producto: la PRIMERA larga del nombre.
+     *
+     * La primera y no la más larga, que era el error. En «Buscapina
+     * compuesta» las dos miden nueve letras y ganaba «compuesta», así que el
+     * candidato «Buscapina comp NF x 10» se rechazaba por no contenerla.
+     *
+     * En el nombre de un producto, lo que lo identifica va delante:
+     * «Loratadina 10 mg», «Acetaminofén jarabe infantil», «Vick VapoRub». Lo
+     * de después es la presentación.
+     *
+     * Cinco letras como mínimo: con menos se acepta cualquier cosa.
+     */
+    private function palabraClave(string $nombre): ?string
+    {
+        $palabras = preg_split('/[^\p{L}]+/u', $this->plano($nombre), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        foreach ($palabras as $palabra) {
+            if (mb_strlen($palabra) >= 5) {
+                return $palabra;
+            }
+        }
+
+        return null;
+    }
+
+    /** Sin tildes y en minúsculas, para poder comparar. */
+    private function plano(string $t): string
+    {
+        return strtr(mb_strtolower($t), [
+            'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u',
+            'ñ' => 'n', 'ü' => 'u',
+        ]);
+    }
 
     /**
      * Los que hay que tocar.

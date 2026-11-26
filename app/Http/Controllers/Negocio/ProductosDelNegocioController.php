@@ -8,11 +8,17 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Negocio\ActualizarProductoRequest;
 use App\Http\Requests\Negocio\AgregarProductoRequest;
 use App\Http\Requests\Negocio\CopiarSurtidoRequest;
+use App\Http\Requests\Negocio\CrearVarianteRequest;
 use App\Http\Requests\Negocio\PreciosEnLoteRequest;
+use App\Http\Requests\Negocio\SubirFotoDeProductoRequest;
 use App\Http\Resources\Producto\ProductoDeLaTiendaResource;
 use App\Models\Product\Product;
 use App\Models\Product\ProductBusiness;
+use App\Models\Product\ProductGroup;
 use App\Services\CatalogoDeProductos;
+use App\Services\MediaService;
+use App\Support\ProductTypeSchema;
+use App\Support\UnidadDeVenta;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -74,7 +80,15 @@ class ProductosDelNegocioController extends Controller
     {
         $businessId = (int) $request->attributes->get('busines_id');
 
-        $filas = ProductBusiness::with('product.category')
+        $tipo = (int) DB::table('business')->where('busines_id', $businessId)->value('type');
+        $relacion = ProductTypeSchema::relation($tipo);
+
+        // La fila de su tipo de una vez: si no, una consulta por producto.
+        $filas = ProductBusiness::with(array_filter([
+            'product.category',
+            'product.group',
+            $relacion ? "product.{$relacion}" : null,
+        ]))
             ->where('busines_id', $businessId)
             ->get();
 
@@ -88,11 +102,209 @@ class ProductosDelNegocioController extends Controller
                 $pb,
                 // Cuantas tiendas MAS lo venden: el contador trae el total.
                 otrasTiendas: max(0, (int) ($compartidos[$pb->product->products_id] ?? 1) - 1),
+                tipoDeNegocio: $tipo ?: null,
             ))->resolve())
             ->sortBy('name')
             ->values();
 
         return response()->json(['data' => $productos]);
+    }
+
+    /**
+     * La foto de un producto que solo vende este negocio.
+     *
+     * Un restaurante tiene su carta propia: sus platos no los vende nadie
+     * más y la foto la pone él. Lo del catálogo compartido no se toca desde
+     * una tienda —la foto de la Coca-Cola es la de todas—, así que ahí se
+     * responde lo mismo que al nombre.
+     */
+    public function subirFoto(SubirFotoDeProductoRequest $request, int $id, MediaService $medios)
+    {
+        // Que sea del negocio y que nadie más lo venda lo comprueba el
+        // FormRequest, antes de mirar el archivo y con las mismas respuestas.
+        if (! $medios->configurado()) {
+            return response()->json([
+                'message' => 'El almacenamiento de archivos no está configurado en el servidor.',
+            ], 503);
+        }
+
+        try {
+            $archivo = $medios->subir(
+                'productos',
+                $id,
+                Product::where('products_id', $id)->value('name'),
+                $request->file('file'),
+                'logo',
+                $request->user()->user_id,
+            );
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'message' => 'Foto actualizada.',
+            'image' => $archivo['url'] ?? null,
+        ]);
+    }
+
+    /**
+     * Otra presentación de un producto que solo vende este negocio: la
+     * porción familiar del sancocho, el chicharrón por media libra.
+     *
+     * Copia el producto —categoría, foto, descripción, los datos de su tipo y
+     * cómo se vende— con su propia etiqueta y su propio precio, y junta los
+     * dos en un grupo (`product_groups`): la app los enseña en una sola
+     * tarjeta para elegir. Si el producto todavía no tenía grupo, se crea y
+     * él queda con la etiqueta que diga `variante_actual` («Personal»).
+     *
+     * Lo del catálogo compartido no: sus grupos los arma el equipo, y una
+     * tienda no puede meterle presentaciones a lo que venden las demás.
+     */
+    public function crearVariante(CrearVarianteRequest $request, int $id)
+    {
+        $datos = $request->validated();
+        $businessId = (int) $request->attributes->get('busines_id');
+        $tipo = (int) ($request->attributes->get('negocio')->type ?? 0);
+
+        $pb = ProductBusiness::where('products_id', $id)
+            ->where('busines_id', $businessId)
+            ->first();
+
+        if (! $pb) {
+            return response()->json(['message' => 'Ese producto no es de tu negocio.'], 404);
+        }
+
+        $otras = ProductBusiness::where('products_id', $id)
+            ->where('busines_id', '!=', $businessId)
+            ->count();
+
+        if ($otras > 0) {
+            return response()->json([
+                'message' => 'Otros negocios venden este mismo producto: sus presentaciones las arma el equipo en el catálogo general.',
+            ], 422);
+        }
+
+        $producto = Product::with(array_filter(['group', ProductTypeSchema::relation($tipo)]))->find($id);
+        $etiqueta = trim($datos['variante']);
+
+        // Dos presentaciones con la misma etiqueta serían el mismo botón dos veces.
+        if ($producto->group_id) {
+            $repetida = Product::where('group_id', $producto->group_id)
+                ->whereRaw('LOWER(variante) = ?', [mb_strtolower($etiqueta)])
+                ->exists();
+            if ($repetida) {
+                return response()->json([
+                    'message' => "Ya tienes una presentación «{$etiqueta}».",
+                    'errors' => ['variante' => ["Ya tienes una presentación «{$etiqueta}»."]],
+                ], 422);
+            }
+        }
+
+        $nueva = DB::transaction(function () use ($producto, $pb, $datos, $etiqueta, $businessId, $tipo) {
+            if (! $producto->group_id) {
+                $grupo = ProductGroup::create([
+                    'name' => $producto->name,
+                    'brand' => $producto->brand,
+                    'category_id' => $producto->category_id,
+                    'image' => $producto->image,
+                    'description' => $producto->description,
+                    'origen' => 'tendero',
+                ]);
+                $producto->fill([
+                    'group_id' => $grupo->group_id,
+                    'variante' => trim((string) ($datos['variante_actual'] ?? '')) ?: 'Normal',
+                ])->save();
+            }
+
+            $grupoNombre = ProductGroup::where('group_id', $producto->group_id)->value('name') ?? $producto->name;
+
+            $copia = Product::create([
+                'name' => "{$grupoNombre} {$etiqueta}",
+                'description' => $producto->description,
+                'brand' => $producto->brand,
+                'category_id' => $producto->category_id,
+                'image' => $producto->image,
+                'content' => $producto->content,
+                'presentation' => $producto->presentation,
+                'requiere_frio' => (bool) $producto->requiere_frio,
+                'state' => 1,
+                'origen' => 'tendero',
+                'busines_id_propietario' => $businessId,
+                'en_catalogo_general' => false,
+                'group_id' => $producto->group_id,
+                'variante' => $etiqueta,
+            ]);
+
+            // Lo de su tipo también: la porción familiar tiene los mismos
+            // alérgenos que la personal.
+            $relacion = ProductTypeSchema::relation($tipo);
+            $modelo = ProductTypeSchema::model($tipo);
+            if ($relacion && $modelo && $producto->{$relacion}) {
+                $modelo::create(array_merge(
+                    $producto->{$relacion}->only(ProductTypeSchema::fieldNames($tipo)),
+                    ['products_id' => $copia->products_id],
+                ));
+            }
+
+            $mide = UnidadDeVenta::esPeso($pb->sale_unit ?? 'unidad');
+
+            return ProductBusiness::create([
+                'busines_id' => $businessId,
+                'products_id' => $copia->products_id,
+                'category_id' => $pb->category_id,
+                'price' => (float) $datos['price'],
+                'sale_unit' => $pb->sale_unit ?? 'unidad',
+                'por_valor' => (bool) $pb->por_valor,
+                'min_qty' => $pb->min_qty,
+                'step_qty' => $pb->step_qty,
+                'amount' => $mide ? 0 : (int) ($datos['amount'] ?? $pb->amount ?? 0),
+                'stock_weight' => $mide ? (float) ($datos['amount'] ?? $pb->stock_weight ?? 0) : 0,
+                'qualification' => 0,
+            ]);
+        });
+
+        return response()->json([
+            'message' => "Listo: «{$etiqueta}» ya se puede pedir.",
+            'data' => ['products_id' => (int) $nueva->products_id],
+        ], 201);
+    }
+
+    /**
+     * El grupo de presentaciones de un producto propio: renombrarlo o sacar
+     * este producto de él.
+     *
+     * Solo se toca un grupo que armó el negocio (`origen` tendero): los del
+     * catálogo general los revisa el equipo. Si al salir uno queda un solo
+     * miembro, el grupo ya no agrupa nada y se deshace, para que la app no
+     * enseñe un selector con una sola opción.
+     */
+    private function ajustarGrupo(int $id, array $datos): void
+    {
+        $producto = Product::find($id);
+        if (! $producto?->group_id) {
+            return;
+        }
+
+        $grupo = ProductGroup::find($producto->group_id);
+        if (! $grupo || $grupo->origen !== 'tendero') {
+            return;
+        }
+
+        if (! empty($datos['grupo'])) {
+            $grupo->fill(['name' => trim($datos['grupo'])])->save();
+        }
+
+        if (! empty($datos['sin_grupo'])) {
+            $producto->fill(['group_id' => null, 'variante' => null])->save();
+
+            $quedan = Product::where('group_id', $grupo->group_id)->get();
+            if ($quedan->count() <= 1) {
+                foreach ($quedan as $ultimo) {
+                    $ultimo->fill(['group_id' => null, 'variante' => null])->save();
+                }
+                $grupo->delete();
+            }
+        }
     }
 
     public function update(ActualizarProductoRequest $request, int $id)
@@ -118,9 +330,29 @@ class ProductosDelNegocioController extends Controller
             ->where('busines_id', '!=', $businessId)
             ->count();
 
-        $tocaCompartido = array_intersect(
-            array_keys(array_filter($datos, fn ($v) => $v !== null)),
-            ['name', 'description', 'category_id', 'state'],
+        $negocio = $request->attributes->get('negocio');
+        $tipo = (int) ($negocio->type ?? 0);
+
+        /*
+         * Lo propio del producto que llegó en la petición: los comunes
+         * (contenido, presentación, frío) y los de su tipo de negocio. Se
+         * mira si LLEGARON (`array_key_exists`) y no si traen valor: mandar
+         * null es borrarlo, y un «vegano: false» también es un cambio.
+         */
+        $camposComunes = ProductTypeSchema::camposComunes();
+        $camposDelTipo = $tipo && ProductTypeSchema::has($tipo)
+            ? ProductTypeSchema::fieldNames($tipo)
+            : [];
+        $comunes = array_intersect_key($datos, array_flip($camposComunes));
+        $delTipo = array_intersect_key($datos, array_flip($camposDelTipo));
+
+        $tocaCompartido = array_merge(
+            array_intersect(
+                array_keys(array_filter($datos, fn ($v) => $v !== null)),
+                ['name', 'description', 'category_id', 'state', 'variante', 'grupo', 'sin_grupo'],
+            ),
+            array_keys($comunes),
+            array_keys($delTipo),
         );
 
         if ($otras > 0 && $tocaCompartido) {
@@ -133,7 +365,7 @@ class ProductosDelNegocioController extends Controller
             ], 422);
         }
 
-        DB::transaction(function () use ($datos, $pb, $id, $otras) {
+        DB::transaction(function () use ($datos, $pb, $id, $otras, $comunes, $delTipo, $tipo) {
             $deLaTienda = array_filter(
                 [
                     'price' => $datos['price'] ?? null,
@@ -162,9 +394,13 @@ class ProductosDelNegocioController extends Controller
                         'description' => $datos['description'] ?? null,
                         'category_id' => $datos['category_id'] ?? null,
                         'state' => $datos['state'] ?? null,
+                        'variante' => isset($datos['variante']) ? trim($datos['variante']) : null,
                     ],
                     fn ($v) => $v !== null,
                 );
+
+                // Contenido, presentación y frío viven en `products`.
+                $delProducto = array_merge($delProducto, $comunes);
 
                 if ($delProducto) {
                     /*
@@ -185,6 +421,21 @@ class ProductosDelNegocioController extends Controller
                         $producto->fill($delProducto)->save();
                     }
                 }
+
+                /*
+                 * Lo de su tipo va en la tabla de su tipo (restaurant_products,
+                 * pharmacy_products…), una fila por producto: si no la tenía,
+                 * se crea. Es lo que deja a un restaurante llevar su carta
+                 * completa —alérgenos, preparación, acompañamientos— sin
+                 * subir un archivo.
+                 */
+                $modelo = $tipo ? ProductTypeSchema::model($tipo) : null;
+
+                if ($delTipo && $modelo) {
+                    $modelo::updateOrCreate(['products_id' => $id], $delTipo);
+                }
+
+                $this->ajustarGrupo($id, $datos);
             }
         });
 

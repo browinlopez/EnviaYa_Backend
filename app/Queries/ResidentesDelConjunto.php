@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Queries;
 
+use App\Support\Like;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -54,8 +55,9 @@ class ResidentesDelConjunto
 
         if ($buscar) {
             $consulta->where(function ($q) use ($buscar) {
-                $q->where('u.name', 'like', "%{$buscar}%")
-                    ->orWhere('ua.apartment', 'like', "%{$buscar}%");
+                // Escapado: un `%` o un `_` del buscador no son comodines.
+                Like::contiene($q, 'u.name', $buscar);
+                Like::contiene($q, 'ua.apartment', $buscar, 'or');
             });
         }
 
@@ -105,7 +107,7 @@ class ResidentesDelConjunto
      *
      * @return array<string, array{n:int, ultimo:?string}>
      */
-    public function domiciliosPorPuerta(int $complexId, CarbonImmutable $desde): array
+    public function domiciliosPorPuerta(int $complexId, CarbonImmutable $desde, ?CarbonImmutable $hasta = null): array
     {
         $puertas = [];
 
@@ -113,6 +115,9 @@ class ResidentesDelConjunto
             ->where('complex_id', $complexId)
             ->where('kind', 'domiciliario')
             ->where('created_at', '>=', $desde)
+            // Con fin solo las ventanas cerradas («el mes pasado»); las
+            // demás llegan hasta ahora.
+            ->when($hasta, fn ($q) => $q->where('created_at', '<=', $hasta))
             ->select(['id', 'orders', 'created_at'])
             ->chunkById(500, function ($entradas) use (&$puertas) {
                 foreach ($entradas as $e) {

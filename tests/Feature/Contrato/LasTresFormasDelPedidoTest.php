@@ -158,7 +158,7 @@ it('el comprador YA NO recibe lo que gana el domiciliario, ni su correo', functi
     expect($publicado)->toHaveKey('total');
 });
 
-it('el renglon publica trece claves, y las cinco ultimas son las del peso', function () {
+it('el renglon publica catorce claves: las del peso y, al final, los detalles del oficio', function () {
     $p = new Product;
     $p->setRawAttributes([
         'products_id' => 7,
@@ -187,7 +187,11 @@ it('el renglon publica trece claves, y las cinco ultimas son las del peso', func
         // Las del peso. Están al final y en este orden en las dos pantallas
         // porque ahora son una sola lista.
         'sale_unit', 'pedido_por', 'qty_requested', 'qty_final', 'line_total',
+        // Lo que el oficio necesita al armar: fórmula, cocina, compatibilidad.
+        // Sin tipo de negocio sale vacío.
+        'detalles',
     ]);
+    expect((new RenglonDelPedidoResource($d))->resolve()['detalles'])->toBe([]);
 
     /* `qty_requested` y `qty_final` salen tal cual, sin juzgar el desvío: eso
        es de `PesajeDelPedidoController`, que tiene el tope configurado. Un

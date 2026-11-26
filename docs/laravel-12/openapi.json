@@ -37,6 +37,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:areas,gestionar"
                 ],
                 "security": [
@@ -67,6 +68,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:areas,gestionar"
                 ],
                 "security": [
@@ -130,6 +132,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:areas,gestionar"
                 ],
                 "security": [
@@ -162,6 +165,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:areas,gestionar"
                 ],
                 "security": [
@@ -230,6 +234,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:areas,gestionar"
                 ],
                 "security": [
@@ -274,6 +279,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:areas,gestionar"
                 ],
                 "security": [
@@ -320,6 +326,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:auditoria"
                 ],
                 "security": [
@@ -352,6 +359,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:negocios"
                 ],
                 "security": [
@@ -382,6 +390,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:negocios,gestionar"
                 ],
                 "security": [
@@ -472,6 +481,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:negocios"
                 ],
                 "security": [
@@ -512,6 +522,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:negocios,gestionar"
                 ],
                 "security": [
@@ -558,6 +569,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:negocios,gestionar"
                 ],
                 "security": [
@@ -602,6 +614,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:negocios"
                 ],
                 "security": [
@@ -642,6 +655,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:negocios,gestionar"
                 ],
                 "security": [
@@ -688,6 +702,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:efectivo"
                 ],
                 "security": [
@@ -720,6 +735,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:efectivo"
                 ],
                 "security": [
@@ -752,6 +768,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:efectivo,gestionar"
                 ],
                 "security": [
@@ -823,7 +840,8 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
-                    "categorias"
+                    "categorias",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -883,7 +901,8 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
-                    "categorias"
+                    "categorias",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -913,7 +932,8 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
-                    "categorias"
+                    "categorias",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -988,7 +1008,8 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
-                    "categorias"
+                    "categorias",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -1069,6 +1090,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:chats"
                 ],
                 "security": [
@@ -1101,6 +1123,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:chats"
                 ],
                 "security": [
@@ -1143,6 +1166,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:conjuntos"
                 ],
                 "security": [
@@ -1173,6 +1197,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:conjuntos,gestionar"
                 ],
                 "security": [
@@ -1273,6 +1298,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:conjuntos,gestionar"
                 ],
                 "security": [
@@ -1317,6 +1343,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:conjuntos,gestionar"
                 ],
                 "security": [
@@ -1424,6 +1451,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:conjuntos,gestionar"
                 ],
                 "security": [
@@ -1470,6 +1498,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:conjuntos"
                 ],
                 "security": [
@@ -1512,6 +1541,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:domiciliarios"
                 ],
                 "security": [
@@ -1542,6 +1572,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:domiciliarios,gestionar"
                 ],
                 "security": [
@@ -1612,6 +1643,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:domiciliarios"
                 ],
                 "security": [
@@ -1652,6 +1684,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:domiciliarios,gestionar"
                 ],
                 "security": [
@@ -1698,6 +1731,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:domiciliarios,gestionar"
                 ],
                 "security": [
@@ -1769,6 +1803,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:fallos"
                 ],
                 "security": [
@@ -1801,6 +1836,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:fallos"
                 ],
                 "security": [
@@ -1833,6 +1869,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:facturas"
                 ],
                 "security": [
@@ -1865,6 +1902,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:facturas,gestionar"
                 ],
                 "security": [
@@ -1926,6 +1964,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:facturas,gestionar"
                 ],
                 "security": [
@@ -1962,6 +2001,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:facturas"
                 ],
                 "security": [
@@ -2004,6 +2044,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:facturas,gestionar"
                 ],
                 "security": [
@@ -2068,6 +2109,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:facturas"
                 ],
                 "security": [
@@ -2109,7 +2151,8 @@
                     "admin",
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -2141,6 +2184,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:marketing.anunciantes"
                 ],
                 "security": [
@@ -2171,6 +2215,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:marketing.anunciantes,gestionar"
                 ],
                 "security": [
@@ -2247,6 +2292,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:marketing.anunciantes,gestionar"
                 ],
                 "security": [
@@ -2291,6 +2337,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:marketing.anunciantes,gestionar"
                 ],
                 "security": [
@@ -2337,6 +2384,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:marketing.banners"
                 ],
                 "security": [
@@ -2367,6 +2415,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:marketing.banners,gestionar"
                 ],
                 "security": [
@@ -2497,6 +2546,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:marketing.banners,gestionar"
                 ],
                 "security": [
@@ -2541,6 +2591,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:marketing.banners"
                 ],
                 "security": [
@@ -2581,6 +2632,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:marketing.banners,gestionar"
                 ],
                 "security": [
@@ -2627,6 +2679,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:marketing.banners"
                 ],
                 "security": [
@@ -2669,6 +2722,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:marketing.campanas"
                 ],
                 "security": [
@@ -2699,6 +2753,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:marketing.campanas,gestionar"
                 ],
                 "security": [
@@ -2784,6 +2839,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:marketing.campanas,gestionar"
                 ],
                 "security": [
@@ -2828,6 +2884,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:marketing.campanas,gestionar"
                 ],
                 "security": [
@@ -2874,6 +2931,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:marketing.cupones"
                 ],
                 "security": [
@@ -2904,6 +2962,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:marketing.cupones,gestionar"
                 ],
                 "security": [
@@ -3007,6 +3066,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:marketing.cupones,gestionar"
                 ],
                 "security": [
@@ -3051,6 +3111,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:marketing.cupones,gestionar"
                 ],
                 "security": [
@@ -3097,6 +3158,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:marketing.cupones"
                 ],
                 "security": [
@@ -3139,6 +3201,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:marketing.destacados"
                 ],
                 "security": [
@@ -3169,6 +3232,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:marketing.destacados,gestionar"
                 ],
                 "security": [
@@ -3250,6 +3314,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:marketing.destacados,gestionar"
                 ],
                 "security": [
@@ -3294,6 +3359,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:marketing.destacados,gestionar"
                 ],
                 "security": [
@@ -3340,6 +3406,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:marketing"
                 ],
                 "security": [
@@ -3372,6 +3439,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:marketing.notificaciones"
                 ],
                 "security": [
@@ -3402,6 +3470,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:marketing.notificaciones,gestionar"
                 ],
                 "security": [
@@ -3486,6 +3555,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:marketing.notificaciones"
                 ],
                 "security": [
@@ -3540,6 +3610,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:marketing.notificaciones,gestionar"
                 ],
                 "security": [
@@ -3586,6 +3657,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:marketing.notificaciones,gestionar"
                 ],
                 "security": [
@@ -3632,6 +3704,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:marketing.notificaciones,gestionar"
                 ],
                 "security": [
@@ -3677,7 +3750,8 @@
                     "admin",
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -3709,6 +3783,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "medios"
                 ],
                 "security": [
@@ -3761,6 +3836,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "medios"
                 ],
                 "security": [
@@ -3809,6 +3885,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "medios"
                 ],
                 "security": [
@@ -3863,6 +3940,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "medios"
                 ],
                 "security": [
@@ -3917,6 +3995,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:ordenes"
                 ],
                 "security": [
@@ -3949,6 +4028,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:ordenes"
                 ],
                 "security": [
@@ -3991,6 +4071,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:panel"
                 ],
                 "security": [
@@ -4023,6 +4104,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:propietarios"
                 ],
                 "security": [
@@ -4053,6 +4135,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:propietarios,gestionar"
                 ],
                 "security": [
@@ -4147,6 +4230,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:propietarios"
                 ],
                 "security": [
@@ -4179,6 +4263,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:propietarios,gestionar"
                 ],
                 "security": [
@@ -4225,6 +4310,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:pagos"
                 ],
                 "security": [
@@ -4257,6 +4343,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:pqrs"
                 ],
                 "security": [
@@ -4287,6 +4374,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:pqrs,gestionar"
                 ],
                 "security": [
@@ -4399,6 +4487,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:pqrs"
                 ],
                 "security": [
@@ -4439,6 +4528,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:pqrs,gestionar"
                 ],
                 "security": [
@@ -4514,6 +4604,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:pqrs,gestionar"
                 ],
                 "security": [
@@ -4581,6 +4672,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:productos"
                 ],
                 "security": [
@@ -4611,6 +4703,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:productos,gestionar"
                 ],
                 "security": [
@@ -4683,6 +4776,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:productos"
                 ],
                 "security": [
@@ -4715,6 +4809,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:productos"
                 ],
                 "security": [
@@ -4755,6 +4850,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:productos,gestionar"
                 ],
                 "security": [
@@ -4801,6 +4897,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:productos,gestionar"
                 ],
                 "security": [
@@ -4865,6 +4962,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:reportes"
                 ],
                 "security": [
@@ -4897,6 +4995,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:reportes"
                 ],
                 "security": [
@@ -4939,6 +5038,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:reportes"
                 ],
                 "security": [
@@ -4981,6 +5081,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:resenas,gestionar"
                 ],
                 "security": [
@@ -5042,6 +5143,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:resenas"
                 ],
                 "security": [
@@ -5074,6 +5176,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:resenas,gestionar"
                 ],
                 "security": [
@@ -5139,6 +5242,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "throttle:20,1"
                 ],
                 "security": [
@@ -5167,6 +5271,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "throttle:20,1"
                 ],
                 "security": [
@@ -5199,6 +5304,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "throttle:20,1"
                 ],
                 "security": [
@@ -5241,6 +5347,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "throttle:20,1"
                 ],
                 "security": [
@@ -5289,6 +5396,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "throttle:20,1"
                 ],
                 "security": [
@@ -5321,6 +5429,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "throttle:20,1"
                 ],
                 "security": [
@@ -5371,6 +5480,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "throttle:20,1"
                 ],
                 "security": [
@@ -5404,6 +5514,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:ajustes"
                 ],
                 "security": [
@@ -5434,6 +5545,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:ajustes,gestionar"
                 ],
                 "security": [
@@ -5494,6 +5606,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:ajustes,gestionar"
                 ],
                 "security": [
@@ -5548,6 +5661,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:liquidaciones"
                 ],
                 "security": [
@@ -5578,6 +5692,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:liquidaciones,gestionar"
                 ],
                 "security": [
@@ -5650,6 +5765,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:liquidaciones,gestionar"
                 ],
                 "security": [
@@ -5694,6 +5810,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:liquidaciones"
                 ],
                 "security": [
@@ -5734,6 +5851,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:liquidaciones,gestionar"
                 ],
                 "security": [
@@ -5801,6 +5919,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:solicitudes"
                 ],
                 "security": [
@@ -5833,6 +5952,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:solicitudes"
                 ],
                 "security": [
@@ -5873,6 +5993,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:solicitudes,gestionar"
                 ],
                 "security": [
@@ -5940,6 +6061,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:solicitudes"
                 ],
                 "security": [
@@ -5982,6 +6104,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:sst.documentos"
                 ],
                 "security": [
@@ -6012,6 +6135,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:sst.documentos,gestionar"
                 ],
                 "security": [
@@ -6100,6 +6224,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:sst.documentos,gestionar"
                 ],
                 "security": [
@@ -6144,6 +6269,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:sst.documentos,gestionar"
                 ],
                 "security": [
@@ -6190,6 +6316,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:sst.incidentes"
                 ],
                 "security": [
@@ -6220,6 +6347,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:sst.incidentes,gestionar"
                 ],
                 "security": [
@@ -6322,6 +6450,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:sst.incidentes,gestionar"
                 ],
                 "security": [
@@ -6368,6 +6497,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:ajustes"
                 ],
                 "security": [
@@ -6400,6 +6530,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:usuarios"
                 ],
                 "security": [
@@ -6430,6 +6561,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:usuarios,gestionar"
                 ],
                 "security": [
@@ -6466,6 +6598,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:usuarios"
                 ],
                 "security": [
@@ -6506,6 +6639,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:usuarios,gestionar"
                 ],
                 "security": [
@@ -6552,6 +6686,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "modulo:usuarios,gestionar"
                 ],
                 "security": [
@@ -6786,7 +6921,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -6812,6 +6948,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "throttle:5,10"
                 ],
                 "security": [
@@ -6878,7 +7015,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -6907,7 +7045,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -6938,7 +7077,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -6969,7 +7109,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -7006,7 +7147,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -7059,7 +7201,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -7112,7 +7255,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -7162,6 +7306,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -7192,7 +7337,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -7245,7 +7391,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -7272,7 +7419,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -7325,7 +7473,8 @@
                     "admin",
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -7406,7 +7555,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -7433,7 +7583,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -7515,7 +7666,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -7581,7 +7733,8 @@
                     "admin",
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -7640,7 +7793,8 @@
                     "admin",
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -7693,7 +7847,8 @@
                     "admin",
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -7754,7 +7909,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -7806,7 +7962,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -7866,7 +8023,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -7922,7 +8080,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -8043,8 +8202,10 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "clave.propia",
                     "conjunto",
-                    "conjunto:dueno"
+                    "conjunto:dueno",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -8073,8 +8234,10 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "clave.propia",
                     "conjunto",
-                    "conjunto:dueno"
+                    "conjunto:dueno",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -8139,8 +8302,10 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "clave.propia",
                     "conjunto",
-                    "conjunto:dueno"
+                    "conjunto:dueno",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -8186,6 +8351,9 @@
                                     },
                                     "phone": {
                                         "type": "string"
+                                    },
+                                    "password": {
+                                        "type": "string"
                                     }
                                 }
                             }
@@ -8193,6 +8361,50 @@
                     }
                 },
                 "x-form-request": "App\\Http\\Requests\\Conjunto\\CambiarCeladorRequest"
+            }
+        },
+        "/v1/conjunto/celadores/{id}/historial": {
+            "get": {
+                "operationId": "get_v1_conjunto_celadores_id_historial",
+                "tags": [
+                    "conjunto"
+                ],
+                "summary": "App\\Http\\Controllers\\Conjunto\\CeladoresController@historial",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "clave.propia",
+                    "conjunto",
+                    "conjunto:dueno",
+                    "cuenta.habilitada"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
             }
         },
         "/v1/conjunto/me": {
@@ -8206,7 +8418,9 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
-                    "conjunto"
+                    "clave.propia",
+                    "conjunto",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -8237,8 +8451,10 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "clave.propia",
                     "conjunto",
-                    "conjunto:dueno"
+                    "conjunto:dueno",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -8290,6 +8506,9 @@
                                     },
                                     "require_authorization": {
                                         "type": "boolean"
+                                    },
+                                    "horas_alerta_adentro": {
+                                        "type": "integer"
                                     }
                                 },
                                 "required": [
@@ -8300,6 +8519,102 @@
                     }
                 },
                 "x-form-request": "App\\Http\\Requests\\Conjunto\\ActualizarMiConjuntoRequest"
+            }
+        },
+        "/v1/conjunto/perfil/cambio-de-forma": {
+            "get": {
+                "operationId": "get_v1_conjunto_perfil_cambio_de_forma",
+                "tags": [
+                    "conjunto"
+                ],
+                "summary": "App\\Http\\Controllers\\Conjunto\\SolicitudDeCambioController@ultima",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "clave.propia",
+                    "conjunto",
+                    "conjunto:dueno",
+                    "cuenta.habilitada"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    }
+                }
+            },
+            "post": {
+                "operationId": "post_v1_conjunto_perfil_cambio_de_forma",
+                "tags": [
+                    "conjunto"
+                ],
+                "summary": "App\\Http\\Controllers\\Conjunto\\SolicitudDeCambioController@solicitar",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "clave.propia",
+                    "conjunto",
+                    "conjunto:dueno",
+                    "cuenta.habilitada",
+                    "throttle:5,10"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    },
+                    "422": {
+                        "description": "Validacion fallida."
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "towers_count": {
+                                        "type": "integer"
+                                    },
+                                    "apartments_per_tower": {
+                                        "type": "integer"
+                                    },
+                                    "note": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "towers_count",
+                                    "apartments_per_tower"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Conjunto\\SolicitarCambioDeFormaRequest"
             }
         },
         "/v1/conjunto/perfil/foto": {
@@ -8313,8 +8628,10 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "clave.propia",
                     "conjunto",
-                    "conjunto:dueno"
+                    "conjunto:dueno",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -8368,7 +8685,9 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
-                    "conjunto"
+                    "clave.propia",
+                    "conjunto",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -8399,7 +8718,9 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
-                    "conjunto"
+                    "clave.propia",
+                    "conjunto",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -8430,7 +8751,10 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
-                    "conjunto"
+                    "clave.propia",
+                    "conjunto",
+                    "cuenta.habilitada",
+                    "en.turno"
                 ],
                 "security": [
                     {
@@ -8475,8 +8799,12 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "clave.propia",
                     "conjunto",
-                    "throttle:40,1"
+                    "cuenta.habilitada",
+                    "en.turno",
+                    "throttle:40,1",
+                    "throttle:porteria-conjunto"
                 ],
                 "security": [
                     {
@@ -8529,7 +8857,10 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
-                    "conjunto"
+                    "clave.propia",
+                    "conjunto",
+                    "cuenta.habilitada",
+                    "en.turno"
                 ],
                 "security": [
                     {
@@ -8615,8 +8946,10 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "clave.propia",
                     "conjunto",
-                    "conjunto:dueno"
+                    "conjunto:dueno",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -8647,8 +8980,10 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "clave.propia",
                     "conjunto",
-                    "conjunto:dueno"
+                    "conjunto:dueno",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -8679,8 +9014,10 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "clave.propia",
                     "conjunto",
-                    "conjunto:dueno"
+                    "conjunto:dueno",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -8711,8 +9048,10 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "clave.propia",
                     "conjunto",
-                    "conjunto:dueno"
+                    "conjunto:dueno",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -8743,7 +9082,152 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "clave.propia",
+                    "conjunto",
+                    "cuenta.habilitada"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    }
+                }
+            }
+        },
+        "/v1/conjunto/turno": {
+            "get": {
+                "operationId": "get_v1_conjunto_turno",
+                "tags": [
                     "conjunto"
+                ],
+                "summary": "App\\Http\\Controllers\\Conjunto\\TurnosController@mio",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "clave.propia",
+                    "conjunto",
+                    "cuenta.habilitada"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    }
+                }
+            }
+        },
+        "/v1/conjunto/turno/iniciar": {
+            "post": {
+                "operationId": "post_v1_conjunto_turno_iniciar",
+                "tags": [
+                    "conjunto"
+                ],
+                "summary": "App\\Http\\Controllers\\Conjunto\\TurnosController@iniciar",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "clave.propia",
+                    "conjunto",
+                    "cuenta.habilitada",
+                    "throttle:20,1"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    },
+                    "422": {
+                        "description": "Validacion fallida."
+                    }
+                },
+                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+            }
+        },
+        "/v1/conjunto/turno/terminar": {
+            "post": {
+                "operationId": "post_v1_conjunto_turno_terminar",
+                "tags": [
+                    "conjunto"
+                ],
+                "summary": "App\\Http\\Controllers\\Conjunto\\TurnosController@terminar",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "clave.propia",
+                    "conjunto",
+                    "cuenta.habilitada",
+                    "throttle:20,1"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    },
+                    "422": {
+                        "description": "Validacion fallida."
+                    }
+                },
+                "x-cuerpo": "no documentado: valida en linea, ver EXCEPCIONES.md"
+            }
+        },
+        "/v1/conjunto/turnos": {
+            "get": {
+                "operationId": "get_v1_conjunto_turnos",
+                "tags": [
+                    "conjunto"
+                ],
+                "summary": "App\\Http\\Controllers\\Conjunto\\TurnosController@index",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "clave.propia",
+                    "conjunto",
+                    "conjunto:dueno",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -8773,7 +9257,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -8800,7 +9285,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -8837,7 +9323,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -8884,7 +9371,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -8948,7 +9436,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -8979,7 +9468,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -9006,7 +9496,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -9031,7 +9522,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -9092,7 +9584,8 @@
                     "admin",
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -9168,7 +9661,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -9199,7 +9693,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -9248,7 +9743,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -9275,7 +9771,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -9302,7 +9799,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -9337,7 +9835,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -9397,7 +9896,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -9438,7 +9938,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -9506,7 +10007,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -9568,7 +10070,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -9595,7 +10098,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -9641,7 +10145,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -9709,7 +10214,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -9758,7 +10264,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -9899,7 +10406,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -9931,6 +10439,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -9962,6 +10471,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -10003,6 +10513,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -10072,6 +10583,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio",
                     "throttle:5,10"
                 ],
@@ -10147,6 +10659,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -10178,6 +10691,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -10221,6 +10735,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -10266,6 +10781,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -10295,6 +10811,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -10351,6 +10868,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -10382,6 +10900,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -10445,6 +10964,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -10515,6 +11035,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -10556,6 +11077,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -10605,6 +11127,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -10636,6 +11159,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -10665,6 +11189,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio",
                     "throttle:30,1"
                 ],
@@ -10701,6 +11226,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio",
                     "throttle:30,1"
                 ],
@@ -10733,6 +11259,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -10764,6 +11291,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -10807,6 +11335,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -10848,6 +11377,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -10893,6 +11423,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -10942,6 +11473,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -10973,6 +11505,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -11018,6 +11551,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -11047,6 +11581,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -11115,6 +11650,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -11158,6 +11694,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -11224,6 +11761,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -11255,6 +11793,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -11286,6 +11825,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -11315,6 +11855,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -11389,6 +11930,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -11443,6 +11985,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -11500,6 +12043,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -11531,6 +12075,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -11597,6 +12142,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -11628,6 +12174,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -11688,6 +12235,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -11751,6 +12299,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -11792,6 +12341,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -11837,6 +12387,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -11882,6 +12433,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -11923,6 +12475,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -11952,6 +12505,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -12035,6 +12589,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -12064,6 +12619,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -12121,6 +12677,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -12152,6 +12709,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -12193,6 +12751,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -12246,6 +12805,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -12277,6 +12837,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -12333,6 +12894,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -12409,6 +12971,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -12466,6 +13029,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -12509,6 +13073,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -12547,6 +13112,15 @@
                             "schema": {
                                 "type": "object",
                                 "properties": {
+                                    "content": {
+                                        "type": "string"
+                                    },
+                                    "presentation": {
+                                        "type": "string"
+                                    },
+                                    "requiere_frio": {
+                                        "type": "boolean"
+                                    },
                                     "price": {
                                         "type": "number"
                                     },
@@ -12593,6 +13167,15 @@
                                     },
                                     "state": {
                                         "type": "boolean"
+                                    },
+                                    "variante": {
+                                        "type": "string"
+                                    },
+                                    "grupo": {
+                                        "type": "string"
+                                    },
+                                    "sin_grupo": {
+                                        "type": "boolean"
                                     }
                                 }
                             }
@@ -12600,6 +13183,145 @@
                     }
                 },
                 "x-form-request": "App\\Http\\Requests\\Negocio\\ActualizarProductoRequest"
+            }
+        },
+        "/v1/negocio/productos/{id}/foto": {
+            "post": {
+                "operationId": "post_v1_negocio_productos_id_foto",
+                "tags": [
+                    "negocio"
+                ],
+                "summary": "App\\Http\\Controllers\\Negocio\\ProductosDelNegocioController@subirFoto",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "cuenta.habilitada",
+                    "negocio"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    },
+                    "422": {
+                        "description": "Validacion fallida."
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "file": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "required": [
+                                    "file"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Negocio\\SubirFotoDeProductoRequest"
+            }
+        },
+        "/v1/negocio/productos/{id}/variantes": {
+            "post": {
+                "operationId": "post_v1_negocio_productos_id_variantes",
+                "tags": [
+                    "negocio"
+                ],
+                "summary": "App\\Http\\Controllers\\Negocio\\ProductosDelNegocioController@crearVariante",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "cuenta.habilitada",
+                    "negocio"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    },
+                    "422": {
+                        "description": "Validacion fallida."
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "variante": {
+                                        "type": "string"
+                                    },
+                                    "price": {
+                                        "type": "number"
+                                    },
+                                    "amount": {
+                                        "type": "number"
+                                    },
+                                    "variante_actual": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "variante",
+                                    "price"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Negocio\\CrearVarianteRequest"
             }
         },
         "/v1/negocio/promociones": {
@@ -12613,6 +13335,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -12642,6 +13365,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -12728,6 +13452,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -12771,6 +13496,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -12867,6 +13593,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -12898,6 +13625,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -12929,6 +13657,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -12958,6 +13687,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -13025,6 +13755,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -13070,6 +13801,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "negocio"
                 ],
                 "security": [
@@ -13110,7 +13842,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -13167,7 +13900,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -13397,6 +14131,9 @@
                                                                     "type": "string",
                                                                     "nullable": true
                                                                 },
+                                                                "detalles": {
+                                                                    "type": "object"
+                                                                },
                                                                 "image": {
                                                                     "type": "string",
                                                                     "nullable": true
@@ -13561,6 +14298,22 @@
                                 "properties": {
                                     "business_id": {
                                         "type": "integer"
+                                    },
+                                    "periodo": {
+                                        "type": "string",
+                                        "enum": [
+                                            "hoy",
+                                            "semana",
+                                            "mes"
+                                        ]
+                                    },
+                                    "desde": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "hasta": {
+                                        "type": "string",
+                                        "format": "date-time"
                                     }
                                 },
                                 "required": [
@@ -13583,7 +14336,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -13614,7 +14368,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -13678,7 +14433,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -13705,7 +14461,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -13966,7 +14723,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -14028,7 +14786,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -14077,7 +14836,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -14362,7 +15122,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -14399,7 +15160,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -14436,7 +15198,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -14492,7 +15255,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -14519,7 +15283,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -14550,7 +15315,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -14599,7 +15365,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -14626,7 +15393,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -14678,7 +15446,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -14705,7 +15474,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -14911,7 +15681,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -14960,7 +15731,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -15210,6 +15982,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "throttle:60,1"
                 ],
                 "security": [
@@ -15314,6 +16087,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "throttle:30,1"
                 ],
                 "security": [
@@ -15376,6 +16150,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "throttle:30,1"
                 ],
                 "security": [
@@ -15436,7 +16211,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -15485,7 +16261,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -15571,7 +16348,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -15630,7 +16408,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -15680,7 +16459,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -15707,7 +16487,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -15756,7 +16537,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {
@@ -15803,6 +16585,7 @@
                     "api",
                     "audit.api",
                     "auth:sanctum",
+                    "cuenta.habilitada",
                     "throttle:5,1"
                 ],
                 "security": [
@@ -15856,7 +16639,8 @@
                 "x-middleware": [
                     "api",
                     "audit.api",
-                    "auth:sanctum"
+                    "auth:sanctum",
+                    "cuenta.habilitada"
                 ],
                 "security": [
                     {

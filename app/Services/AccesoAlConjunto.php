@@ -101,6 +101,22 @@ class AccesoAlConjunto
         return Domiciliary::find($id);
     }
 
+    /**
+     * Si la plataforma lo retiró: la ficha de domiciliario apagada o la
+     * cuenta deshabilitada. Cualquiera de las dos cierra la puerta aunque
+     * lleve pedidos en camino.
+     */
+    public function estaDesactivado(Domiciliary $domiciliario): bool
+    {
+        if (! (int) $domiciliario->state) {
+            return true;
+        }
+
+        $cuenta = DB::table('user')->where('user_id', $domiciliario->user_id)->value('state');
+
+        return $cuenta !== null && ! (int) $cuenta;
+    }
+
     /** El domiciliario por su cédula, o null. */
     public function resolverCedula(string $cedula): ?Domiciliary
     {
