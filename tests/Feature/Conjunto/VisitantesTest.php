@@ -217,17 +217,14 @@ test('el dueno corrige la ficha pero no las torres ni la ubicacion', function ()
         ->and((int) $fila->towers_count)->toBe(4);
 });
 
-test('un celador ve la ficha del conjunto pero no la cambia', function () {
+test('el menu del celador es solo la porteria y las entradas, y no cambia la ficha', function () {
     $c = conjuntoConPersonal(ComplexStaff::CELADOR);
 
     Sanctum::actingAs($c['user']);
 
-    // La ve —las notas de portería son instrucciones que tiene que tener a la
-    // vista— pero cambiarlas es del administrador.
     $r = $this->getJson('/v1/conjunto/me')->assertOk();
 
-    expect($r->json('permissions.perfil.view'))->toBeTrue()
-        ->and($r->json('permissions.perfil.manage'))->toBeFalse();
+    expect(array_keys($r->json('permissions')))->toEqualCanonicalizing(['porteria', 'entradas']);
 
     $this->putJson('/v1/conjunto/perfil', ['name' => 'No deberia'])
         ->assertStatus(403);

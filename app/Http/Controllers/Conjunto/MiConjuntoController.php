@@ -35,24 +35,17 @@ class MiConjuntoController extends Controller
         ],
         ComplexStaff::CELADOR => [
             /*
-             * El celador registra entradas; no ve quién vive dónde, ni
-             * administra cuentas, ni tiene el histórico del edificio. Su
-             * trabajo es la puerta.
+             * El celador trabaja en la puerta y su menú es solo eso: la
+             * portería y el libro de entradas. No ve quién vive dónde, ni
+             * administra cuentas, ni tiene el histórico del edificio.
              *
-             * El resumen sí: necesita saber cuánto movimiento lleva el turno y
-             * a qué horas suele apretarse. Es lo mismo que tiene delante, en
-             * cifras.
+             * Antes tenía también el Resumen y Mi conjunto en modo lectura,
+             * pero le sobraban: lo que pasa hoy ya lo tiene en las cifras de
+             * la portería, y las notas de portería salen ahí mismo, junto al
+             * nombre del conjunto. Dos entradas de menú que no le servían.
              */
-            'resumen' => ['view' => true, 'manage' => false],
             'porteria' => ['view' => true, 'manage' => true],
             'entradas' => ['view' => true, 'manage' => false],
-            /*
-             * Ve la ficha del conjunto pero no la edita: las notas de portería
-             * son instrucciones que tiene que tener a la vista, y el nombre y
-             * el teléfono de la administración son a quién llamar cuando algo
-             * pasa en la puerta. Cambiarlos es del administrador.
-             */
-            'perfil' => ['view' => true, 'manage' => false],
         ],
     ];
 
