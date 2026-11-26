@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Exports\Conjunto;
 
+use App\Exports\Conjunto\Hojas\HojaCeladores;
 use App\Exports\Conjunto\Hojas\HojaConsolidado;
 use App\Exports\Conjunto\Hojas\HojaDomiciliarios;
 use App\Exports\Conjunto\Hojas\HojaEntradasPorDia;
@@ -24,17 +25,15 @@ use Maatwebsite\Excel\Events\BeforeWriting;
  * basta un `where` distinto para que el Excel traiga otra cosa parecida, y
  * eso no se nota hasta que alguien compara los dos en una reunión.
  *
- * Cinco hojas, ninguna con nombres de residentes: el reporte dice cuántos
+ * Seis hojas, ninguna con nombres de residentes: el reporte dice cuántos
  * pedidos llegaron a la torre 4, no quién pidió qué.
  *
  *   Consolidado       la que se imprime: cifras, resúmenes y tres gráficas
- *   Entradas por día  un renglón por día del periodo
+ *   Entradas por día  un renglón por día del periodo, con sus pedidos
  *   Identificación    QR, cédula y anotado a mano
  *   Por torre         pedidos por torre de entrega
  *   Domiciliarios     los que más entran
- *
- * No hay hoja de celadores: la pantalla no la tiene y el reporte no trae nada
- * que la pantalla no enseñe.
+ *   Celadores         qué registró cada uno (la tarjeta «Por celador»)
  */
 class ReporteDelConjuntoExport implements WithEvents, WithMultipleSheets, WithProperties
 {
@@ -53,6 +52,7 @@ class ReporteDelConjuntoExport implements WithEvents, WithMultipleSheets, WithPr
             new HojaIdentificacion($this->cifras),
             new HojaPorTorre($this->cifras),
             new HojaDomiciliarios($this->cifras),
+            new HojaCeladores($this->cifras),
         ];
     }
 

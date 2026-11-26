@@ -498,12 +498,26 @@ class PulsoDelConjunto
             ])->count();
 
         $porDia = $filas->groupBy(fn ($e) => substr((string) $e->created_at, 0, 10));
+
+        /*
+         * Los pedidos de cada día, junto a sus entradas: la pregunta del
+         * administrador es si la portería sube cuando sube lo que se pide.
+         * Los mismos pedidos que cuenta el resto del reporte (por dirección
+         * de entrega y con el pago confirmado).
+         */
+        $pedidosPorDia = $this->pedidos($complexId)
+            ->whereBetween('o.sale_date', [$desde->startOfDay(), $hasta->endOfDay()])
+            ->selectRaw(SqlPortable::soloFecha('o.sale_date').' as dia, COUNT(*) as total')
+            ->groupBy('dia')
+            ->pluck('total', 'dia');
+
         $serie = [];
         for ($d = $desde; $d->lessThanOrEqualTo($hasta); $d = $d->addDay()) {
             $serie[] = [
                 'dia' => $d->toDateString(),
                 'etiqueta' => $d->locale('es')->isoFormat('D MMM'),
                 'entradas' => isset($porDia[$d->toDateString()]) ? $porDia[$d->toDateString()]->count() : 0,
+                'pedidos' => (int) ($pedidosPorDia[$d->toDateString()] ?? 0),
             ];
         }
 
@@ -552,6 +566,80 @@ class PulsoDelConjunto
             'por_dia' => $serie,
             'por_torre' => collect($torres)->map(fn ($n, $t) => ['torre' => (string) $t, 'pedidos' => $n])->values(),
             'domiciliarios' => $quienes,
+            'por_celador' => $this->porCelador($complexId, $desde, $hasta),
         ];
+    }
+
+    /**
+     * QUÉ HIZO CADA CELADOR EN EL PERIODO.
+     *
+     * Todos los celadores del conjunto, también los que no registraron nada:
+     * un celador en cero es justo lo que el administrador viene a ver. Por
+     * cada uno, las entradas que anotó, la parte de los domiciliarios que
+     * dejó pasar con el QR (frente a la cédula, que es la puerta débil), las
+     * salidas que marcó y cuándo hizo algo por última vez —esta, sin
+     * importar el periodo: «hace tres semanas» es la noticia—.
+     *
+     * @return list<array{nombre: string, activo: bool, entradas: int, por_qr: ?float, salidas: int, ultima_actividad: ?string}>
+     */
+    public function porCelador(int $complexId, CarbonImmutable $desde, CarbonImmutable $hasta): array
+    {
+        $celadores = DB::table('complex_staff as cs')
+            ->join('user as u', 'u.user_id', '=', 'cs.user_id')
+            ->where('cs.complex_id', $complexId)
+            ->where('cs.role', ComplexStaff::CELADOR)
+            ->get(['u.user_id', 'u.name', 'cs.state']);
+
+        if ($celadores->isEmpty()) {
+            return [];
+        }
+
+        $ids = $celadores->pluck('user_id')->all();
+        $rango = [$desde->startOfDay(), $hasta->endOfDay()];
+
+        $registradas = $this->entradas($complexId)
+            ->whereIn('e.registered_by', $ids)
+            ->whereBetween('e.created_at', $rango)
+            ->groupBy('e.registered_by')
+            ->get([
+                'e.registered_by as quien',
+                DB::raw('COUNT(*) as entradas'),
+                DB::raw("SUM(CASE WHEN e.kind = 'domiciliario' THEN 1 ELSE 0 END) as domis"),
+                DB::raw("SUM(CASE WHEN e.kind = 'domiciliario' AND e.method = 'codigo' THEN 1 ELSE 0 END) as qr"),
+            ])->keyBy('quien');
+
+        $salidas = $this->entradas($complexId)
+            ->whereIn('e.exit_registered_by', $ids)
+            ->whereBetween('e.exited_at', $rango)
+            ->groupBy('e.exit_registered_by')
+            ->get(['e.exit_registered_by as quien', DB::raw('COUNT(*) as n')])
+            ->keyBy('quien');
+
+        $ultimaEntrada = $this->entradas($complexId)->whereIn('e.registered_by', $ids)
+            ->groupBy('e.registered_by')
+            ->selectRaw('e.registered_by as quien, MAX(e.created_at) as ultima')->pluck('ultima', 'quien');
+        $ultimaSalida = $this->entradas($complexId)->whereIn('e.exit_registered_by', $ids)
+            ->groupBy('e.exit_registered_by')
+            ->selectRaw('e.exit_registered_by as quien, MAX(e.exited_at) as ultima')->pluck('ultima', 'quien');
+
+        return $celadores
+            ->map(function ($c) use ($registradas, $salidas, $ultimaEntrada, $ultimaSalida) {
+                $r = $registradas[$c->user_id] ?? null;
+                $domis = (int) ($r->domis ?? 0);
+                $ultima = collect([$ultimaEntrada[$c->user_id] ?? null, $ultimaSalida[$c->user_id] ?? null])
+                    ->filter()->max();
+
+                return [
+                    'nombre' => (string) $c->name,
+                    'activo' => (bool) $c->state,
+                    'entradas' => (int) ($r->entradas ?? 0),
+                    'por_qr' => $domis ? round((int) $r->qr / $domis, 4) : null,
+                    'salidas' => (int) ($salidas[$c->user_id]->n ?? 0),
+                    'ultima_actividad' => $ultima ? (string) $ultima : null,
+                ];
+            })
+            ->sortBy([['entradas', 'desc'], ['salidas', 'desc'], ['nombre', 'asc']])
+            ->values()
+            ->all();
     }
 }

@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Conjunto\ComplexStaff;
+use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
@@ -56,8 +57,16 @@ function conjuntoConMovimiento(): array
         'business_name' => 'Tienda',
     ]]);
 
+    // Un celador que anotó las cuatro del primero y les marcó la salida.
+    $celador = User::factory()->create(['rol' => 6, 'name' => 'Ramiro Portero']);
+    ComplexStaff::create([
+        'user_id' => $celador->user_id, 'complex_id' => $c['complexId'],
+        'role' => ComplexStaff::CELADOR, 'state' => true,
+    ]);
+
     foreach (range(0, 3) as $i) {
         $entrada([
+            'registered_by' => $celador->user_id, 'exit_registered_by' => $celador->user_id,
             'domiciliary_id' => $domi->domiciliary_id, 'method' => 'codigo',
             'orders_count' => 1, 'orders' => $pedido('3', '502'),
             'created_at' => $hoy->subDays(2)->setTime(10, $i)->toDateTimeString(),
@@ -130,7 +139,7 @@ test('el excel trae las hojas en orden y tres graficas nativas en el consolidado
     $libro = bajarReporte($this, "desde={$desde->toDateString()}&hasta={$hasta->toDateString()}");
 
     expect($libro->getSheetNames())->toBe([
-        'Consolidado', 'Entradas por día', 'Identificación', 'Por torre', 'Domiciliarios',
+        'Consolidado', 'Entradas por día', 'Identificación', 'Por torre', 'Domiciliarios', 'Celadores',
     ]);
 
     $graficas = $libro->getSheetByName('Consolidado')->getChartCollection();
@@ -177,8 +186,24 @@ test('las cifras del excel son las mismas que las del json del mismo rango', fun
     // El detalle por día suma lo mismo que la serie del JSON, día por día.
     $porDia = $libro->getSheetByName('Entradas por día');
     foreach ($l['por_dia'] as $i => $d) {
-        expect($porDia->getCell('C'.(7 + $i))->getValue())->toBe($d['entradas']);
+        expect($porDia->getCell('C'.(7 + $i))->getValue())->toBe($d['entradas'])
+            // Y los pedidos de ese día, al lado.
+            ->and($porDia->getCell('D'.(7 + $i))->getValue())->toBe($d['pedidos']);
     }
+    expect($porDia->getCell('D6')->getValue())->toBe('Pedidos')
+        ->and(array_sum(array_column($l['por_dia'], 'pedidos')))->toBe(2);
+
+    // La hoja de celadores dice lo mismo que la tarjeta «Por celador».
+    $celadores = $libro->getSheetByName('Celadores');
+    foreach ($l['por_celador'] as $i => $p) {
+        expect($celadores->getCell('B'.(7 + $i))->getValue())->toBe($p['nombre'])
+            ->and($celadores->getCell('D'.(7 + $i))->getValue())->toBe($p['entradas'])
+            ->and($celadores->getCell('F'.(7 + $i))->getValue())->toBe($p['salidas']);
+    }
+    expect($l['por_celador'][0]['nombre'])->toBe('Ramiro Portero')
+        ->and($l['por_celador'][0]['entradas'])->toBe(4)
+        ->and($l['por_celador'][0]['salidas'])->toBe(4)
+        ->and($l['por_celador'][0]['por_qr'])->toEqual(1);
 
     // Las torres, en el mismo orden y con las mismas cuentas.
     $torres = $libro->getSheetByName('Por torre');

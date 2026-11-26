@@ -56,8 +56,11 @@ final class CifrasDelReporte
     /** Parte de TODAS las entradas que entró por QR, de 0 a 1; null sin entradas. */
     public readonly ?float $parteQr;
 
-    /** @var list<array{dia: string, etiqueta: string, entradas: int}> */
+    /** @var list<array{dia: string, etiqueta: string, entradas: int, pedidos: int}> */
     public readonly array $porDia;
+
+    /** Pedidos al conjunto en el periodo, sumando la serie por día. */
+    public readonly int $pedidosDelPeriodo;
 
     public readonly float $promedio;
 
@@ -71,6 +74,9 @@ final class CifrasDelReporte
 
     /** @var list<array{nombre: string, entradas: int, por_qr: float, minutos: ?int}> */
     public readonly array $domiciliarios;
+
+    /** @var list<array{nombre: string, activo: bool, entradas: int, por_qr: ?float, salidas: int, ultima_actividad: ?string}> */
+    public readonly array $celadores;
 
     public function __construct(array $datos, string $conjunto, ?CarbonImmutable $generado = null)
     {
@@ -107,7 +113,9 @@ final class CifrasDelReporte
             'dia' => (string) $d['dia'],
             'etiqueta' => (string) $d['etiqueta'],
             'entradas' => (int) $d['entradas'],
+            'pedidos' => (int) ($d['pedidos'] ?? 0),
         ], array_values(self::lista($l['por_dia'])));
+        $this->pedidosDelPeriodo = array_sum(array_column($this->porDia, 'pedidos'));
 
         $this->promedio = $this->entradas / max(count($this->porDia), 1);
 
@@ -132,6 +140,15 @@ final class CifrasDelReporte
             'por_qr' => (float) $d['por_qr'],
             'minutos' => $d['minutos'] === null ? null : (int) $d['minutos'],
         ], array_values(self::lista($l['domiciliarios'])));
+
+        $this->celadores = array_map(fn ($c) => [
+            'nombre' => (string) ($c['nombre'] ?? 'Sin nombre'),
+            'activo' => (bool) ($c['activo'] ?? true),
+            'entradas' => (int) $c['entradas'],
+            'por_qr' => $c['por_qr'] === null ? null : (float) $c['por_qr'],
+            'salidas' => (int) $c['salidas'],
+            'ultima_actividad' => $c['ultima_actividad'] ?? null,
+        ], array_values(self::lista($l['por_celador'] ?? [])));
     }
 
     /** El servicio devuelve colecciones; por JSON llegan como arreglos. Se aceptan las dos. */
