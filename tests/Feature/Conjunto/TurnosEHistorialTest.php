@@ -204,3 +204,27 @@ test('el administrador fija las horas de alerta y la ficha las devuelve', functi
     $this->putJson('/v1/conjunto/perfil', ['name' => 'Los Almendros', 'horas_alerta_adentro' => 48])
         ->assertStatus(422);
 });
+
+test('la lista de turnos se filtra por fechas y trae el resumen del rango', function () {
+    $c = conjuntoConPersonal(ComplexStaff::DUENO);
+    $cel = conjuntoConPersonal(ComplexStaff::CELADOR, enTurno: false);
+    DB::table('complex_staff')->where('user_id', $cel['user']->user_id)->update(['complex_id' => $c['complexId']]);
+
+    foreach ([['2026-11-20 06:00:00', '2026-11-20 14:00:00'], ['2026-11-22 06:00:00', '2026-11-22 10:30:00'], ['2026-10-01 06:00:00', '2026-10-01 14:00:00']] as [$i, $f]) {
+        DB::table('complex_shifts')->insert([
+            'complex_id' => $c['complexId'], 'user_id' => $cel['user']->user_id,
+            'started_at' => $i, 'ended_at' => $f, 'created_at' => $i, 'updated_at' => $f,
+        ]);
+    }
+
+    Sanctum::actingAs($c['user']);
+
+    $r = $this->getJson('/v1/conjunto/turnos?desde=2026-11-01&hasta=2026-11-30')->assertOk();
+
+    expect($r->json('data'))->toHaveCount(2)
+        ->and($r->json('resumen.turnos'))->toBe(2)
+        ->and($r->json('resumen.minutos'))->toBe(8 * 60 + 270)
+        ->and($r->json('resumen.abiertos'))->toBe(0);
+
+    $this->getJson('/v1/conjunto/turnos?desde=2026-11-30&hasta=2026-11-01')->assertStatus(422);
+});

@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Conjunto;
 use App\Http\Controllers\Controller;
 use App\Models\Conjunto\ComplexShift;
 use App\Models\Conjunto\ComplexStaff;
+use App\Support\FiltroDeFechas;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -100,14 +101,34 @@ class TurnosController extends Controller
      */
     public function index(Request $request)
     {
+        $request->validate([
+            'desde' => ['nullable', 'date_format:Y-m-d'],
+            'hasta' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:desde'],
+            'user_id' => ['nullable', 'integer'],
+        ]);
+
         $complexId = (int) $request->attributes->get('complex_id');
         $porPagina = min(100, max(1, (int) $request->query('per_page', 30)));
 
+        // Por el día en que EMPEZÓ el turno: el de la noche del lunes es del lunes.
         $consulta = DB::table('complex_shifts as s')
             ->where('s.complex_id', $complexId)
             ->join('user as u', 'u.user_id', '=', 's.user_id')
             ->when($request->boolean('abiertos'), fn ($q) => $q->whereNull('s.ended_at'))
-            ->when($request->query('user_id'), fn ($q, $id) => $q->where('s.user_id', (int) $id));
+            ->when($request->query('user_id'), fn ($q, $id) => $q->where('s.user_id', (int) $id))
+            ->when($request->query('desde'), fn ($q, $d) => FiltroDeFechas::desde($q, 's.started_at', $d))
+            ->when($request->query('hasta'), fn ($q, $d) => FiltroDeFechas::hasta($q, 's.started_at', $d));
+
+        /*
+         * El resumen del rango, sobre TODOS los turnos y no sobre la página:
+         * cuántos hubo, cuántas horas sumaron y quién está en la puerta ahora.
+         */
+        $todos = (clone $consulta)->get(['s.started_at', 's.ended_at']);
+        $minutos = $todos->sum(function ($t) {
+            $fin = $t->ended_at ? strtotime((string) $t->ended_at) : now()->getTimestamp();
+
+            return max(0, (int) floor(($fin - strtotime((string) $t->started_at)) / 60));
+        });
 
         $pagina = $consulta
             ->orderByRaw('s.ended_at IS NOT NULL')
@@ -116,6 +137,11 @@ class TurnosController extends Controller
 
         return response()->json([
             'data' => collect($pagina->items())->map(fn ($t) => $this->forma($t)),
+            'resumen' => [
+                'turnos' => $todos->count(),
+                'minutos' => $minutos,
+                'abiertos' => $todos->whereNull('ended_at')->count(),
+            ],
             'meta' => [
                 'page' => $pagina->currentPage(),
                 'per_page' => $pagina->perPage(),
