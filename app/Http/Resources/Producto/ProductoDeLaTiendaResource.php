@@ -102,6 +102,21 @@ class ProductoDeLaTiendaResource extends JsonResource
              * comprador en la ficha. Es del catálogo compartido, así que el
              * panel lo muestra pero no lo edita producto por producto.
              */
+            /*
+             * Los mismos datos, crudos, para EDITARLOS: un restaurante lleva
+             * su carta completa desde el panel. Solo se pueden cambiar si el
+             * producto es solo de este negocio (`compartido` en cero).
+             */
+            'datos_del_tipo' => $this->tipoDeNegocio !== null
+                ? array_merge(
+                    [
+                        'content' => $p->content,
+                        'presentation' => $p->presentation,
+                        'requiere_frio' => (bool) $p->requiere_frio,
+                    ],
+                    ProductTypeSchema::extraFor($this->tipoDeNegocio, $p) ?? [],
+                )
+                : null,
             'detalles' => $this->tipoDeNegocio !== null
                 ? ProductTypeSchema::detallesParaElComprador($this->tipoDeNegocio, $p)
                 : [],

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Negocio;
 
+use App\Services\MediaService;
 use App\Support\ProductTypeSchema;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Negocio\ActualizarProductoRequest;
@@ -104,6 +105,63 @@ class ProductosDelNegocioController extends Controller
         return response()->json(['data' => $productos]);
     }
 
+    /**
+     * La foto de un producto que solo vende este negocio.
+     *
+     * Un restaurante tiene su carta propia: sus platos no los vende nadie
+     * más y la foto la pone él. Lo del catálogo compartido no se toca desde
+     * una tienda —la foto de la Coca-Cola es la de todas—, así que ahí se
+     * responde lo mismo que al nombre.
+     */
+    public function subirFoto(Request $request, int $id, MediaService $medios)
+    {
+        $businessId = (int) $request->attributes->get('busines_id');
+
+        $pb = ProductBusiness::where('products_id', $id)
+            ->where('busines_id', $businessId)
+            ->first();
+
+        if (! $pb) {
+            return response()->json(['message' => 'Ese producto no es de tu negocio.'], 404);
+        }
+
+        $otras = ProductBusiness::where('products_id', $id)
+            ->where('busines_id', '!=', $businessId)
+            ->count();
+
+        if ($otras > 0) {
+            return response()->json([
+                'message' => 'Otros negocios venden este mismo producto: su foto es de todos y no se cambia desde acá.',
+            ], 422);
+        }
+
+        $request->validate(['file' => 'required|file|image|max:8192']);
+
+        if (! $medios->configurado()) {
+            return response()->json([
+                'message' => 'El almacenamiento de archivos no está configurado en el servidor.',
+            ], 503);
+        }
+
+        try {
+            $archivo = $medios->subir(
+                'productos',
+                $id,
+                Product::where('products_id', $id)->value('name'),
+                $request->file('file'),
+                'logo',
+                $request->user()->user_id,
+            );
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'message' => 'Foto actualizada.',
+            'image' => $archivo['url'] ?? null,
+        ]);
+    }
+
     public function update(ActualizarProductoRequest $request, int $id)
     {
         $businessId = (int) $request->attributes->get('busines_id');
@@ -127,9 +185,29 @@ class ProductosDelNegocioController extends Controller
             ->where('busines_id', '!=', $businessId)
             ->count();
 
-        $tocaCompartido = array_intersect(
-            array_keys(array_filter($datos, fn ($v) => $v !== null)),
-            ['name', 'description', 'category_id', 'state'],
+        $negocio = $request->attributes->get('negocio');
+        $tipo = (int) ($negocio->type ?? 0);
+
+        /*
+         * Lo propio del producto que llegó en la petición: los comunes
+         * (contenido, presentación, frío) y los de su tipo de negocio. Se
+         * mira si LLEGARON (`array_key_exists`) y no si traen valor: mandar
+         * null es borrarlo, y un «vegano: false» también es un cambio.
+         */
+        $camposComunes = ProductTypeSchema::camposComunes();
+        $camposDelTipo = $tipo && ProductTypeSchema::has($tipo)
+            ? ProductTypeSchema::fieldNames($tipo)
+            : [];
+        $comunes = array_intersect_key($datos, array_flip($camposComunes));
+        $delTipo = array_intersect_key($datos, array_flip($camposDelTipo));
+
+        $tocaCompartido = array_merge(
+            array_intersect(
+                array_keys(array_filter($datos, fn ($v) => $v !== null)),
+                ['name', 'description', 'category_id', 'state'],
+            ),
+            array_keys($comunes),
+            array_keys($delTipo),
         );
 
         if ($otras > 0 && $tocaCompartido) {
@@ -142,7 +220,7 @@ class ProductosDelNegocioController extends Controller
             ], 422);
         }
 
-        DB::transaction(function () use ($datos, $pb, $id, $otras) {
+        DB::transaction(function () use ($datos, $pb, $id, $otras, $comunes, $delTipo, $tipo) {
             $deLaTienda = array_filter(
                 [
                     'price' => $datos['price'] ?? null,
@@ -175,6 +253,9 @@ class ProductosDelNegocioController extends Controller
                     fn ($v) => $v !== null,
                 );
 
+                // Contenido, presentación y frío viven en `products`.
+                $delProducto = array_merge($delProducto, $comunes);
+
                 if ($delProducto) {
                     /*
                      * Por la instancia y no con `Product::where()->update()`.
@@ -193,6 +274,19 @@ class ProductosDelNegocioController extends Controller
                     if ($producto) {
                         $producto->fill($delProducto)->save();
                     }
+                }
+
+                /*
+                 * Lo de su tipo va en la tabla de su tipo (restaurant_products,
+                 * pharmacy_products…), una fila por producto: si no la tenía,
+                 * se crea. Es lo que deja a un restaurante llevar su carta
+                 * completa —alérgenos, preparación, acompañamientos— sin
+                 * subir un archivo.
+                 */
+                $modelo = $tipo ? ProductTypeSchema::model($tipo) : null;
+
+                if ($delTipo && $modelo) {
+                    $modelo::updateOrCreate(['products_id' => $id], $delTipo);
                 }
             }
         });

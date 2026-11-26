@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Negocio;
 
+use App\Support\ProductTypeSchema;
 use App\Support\UnidadDeVenta;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -24,7 +25,7 @@ class ActualizarProductoRequest extends FormRequest
 
     public function rules(): array
     {
-        return [
+        return array_merge($this->reglasDelTipo(), [
             'price' => 'nullable|numeric|min:0',
             // Lo que le costó a la tienda. Opcional: sin él la cuenta lo avisa.
             'costo' => 'nullable|numeric|min:0|max:100000000',
@@ -52,6 +53,32 @@ class ActualizarProductoRequest extends FormRequest
             'description' => 'nullable|string',
             'category_id' => 'nullable|integer|exists:category,category_id',
             'state' => 'nullable|boolean',
-        ];
+        ]);
+    }
+
+    /**
+     * Los datos de su TIPO de negocio (alérgenos y minutos de preparación en
+     * un restaurante; INVIMA y fórmula en una droguería) y los comunes a
+     * todos (contenido, presentación, si necesita frío). Todos opcionales:
+     * se cambia lo que llega. Si el producto lo venden otros negocios, el
+     * controlador los rechaza: son del catálogo compartido.
+     */
+    private function reglasDelTipo(): array
+    {
+        $tipo = (int) ($this->attributes->get('negocio')->type ?? 0);
+        $reglas = ProductTypeSchema::reglasComunes();
+
+        if ($tipo && ProductTypeSchema::has($tipo)) {
+            $reglas = array_merge($reglas, ProductTypeSchema::updateRules($tipo));
+        }
+
+        // Opcionales y borrables: mandar null deja el campo vacío.
+        return array_map(
+            fn (array $r) => array_values(array_unique(array_merge(
+                ['nullable'],
+                array_filter($r, fn ($x) => $x !== 'required' && $x !== 'sometimes'),
+            ))),
+            $reglas,
+        );
     }
 }
