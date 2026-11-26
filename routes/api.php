@@ -53,6 +53,7 @@ use App\Http\Controllers\Conjunto\MiConjuntoController;
 use App\Http\Controllers\Conjunto\PorteriaController;
 use App\Http\Controllers\Conjunto\ResidentesController;
 use App\Http\Controllers\Conjunto\ResumenDelConjuntoController;
+use App\Http\Controllers\Conjunto\SolicitudDeCambioController;
 use App\Http\Controllers\Conjunto\TurnosController;
 use App\Http\Controllers\Conjunto\VisitantesController;
 use App\Http\Controllers\DeviceTokenController;
@@ -641,6 +642,12 @@ Route::middleware(['auth:sanctum', 'cuenta.habilitada', 'audit.api'])->group(fun
             ->middleware('conjunto:dueno');
         Route::post('perfil/foto', [MiConjuntoController::class, 'subirFoto'])
             ->middleware('conjunto:dueno');
+        // Las torres y los apartamentos no se cambian desde aquí: se PIDEN.
+        // Radica un PQRS de petición y deja la solicitud «en revisión».
+        Route::get('perfil/cambio-de-forma', [SolicitudDeCambioController::class, 'ultima'])
+            ->middleware('conjunto:dueno');
+        Route::post('perfil/cambio-de-forma', [SolicitudDeCambioController::class, 'solicitar'])
+            ->middleware(['conjunto:dueno', 'throttle:5,10']);
 
         Route::get('celadores', [CeladoresController::class, 'celadores'])
             ->middleware('conjunto:dueno');
