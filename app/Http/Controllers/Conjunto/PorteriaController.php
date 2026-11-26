@@ -57,6 +57,22 @@ class PorteriaController extends Controller
             ], 404);
         }
 
+        /*
+         * DESACTIVADO EN LA PLATAFORMA, NO PASA.
+         *
+         * Antes se miraban solo los pedidos: a un domiciliario dado de baja
+         * con un pedido todavía en camino se le abría la puerta. Va antes de
+         * los pedidos y sin ficha: a quien la plataforma retiró no se le
+         * enseña nombre ni teléfono en la portería.
+         */
+        if ($this->acceso->estaDesactivado($domiciliario)) {
+            return response()->json([
+                'message' => 'Este domiciliario está desactivado en VeciPa\'Ya.',
+                'allowed' => false,
+                'reason' => 'domiciliario_inactivo',
+            ]);
+        }
+
         $pedidos = $this->acceso->pedidosEnElConjunto($domiciliario, $complexId);
 
         $conjunto = DB::table('residential_complexes')
@@ -65,18 +81,18 @@ class PorteriaController extends Controller
 
         if ($pedidos->isEmpty()) {
             /*
-             * Sólo el nombre. La ficha completa —teléfono, calificación,
-             * historial— es para quien tiene algo que hacer en este edificio.
-             * Con ella aquí, cualquier cédula escrita en la portería devolvía
-             * el teléfono de un domiciliario sin relación con el conjunto.
+             * NI SIQUIERA EL NOMBRE.
+             *
+             * La ficha completa —teléfono, calificación, historial— es para
+             * quien tiene algo que hacer en este edificio. Y el nombre solo
+             * también sobraba: escribir cédulas en la portería convertía el
+             * panel en un buscador de «a quién pertenece este número». El
+             * celador solo necesita saber que no pasa y por qué.
              */
             return response()->json([
                 'message' => 'Este domiciliario no tiene pedidos en el conjunto',
                 'allowed' => false,
-                'domiciliary' => [
-                    'domiciliary_id' => $domiciliario->domiciliary_id,
-                    'name' => $domiciliario->user->name ?? null,
-                ],
+                'reason' => 'sin_pedidos',
             ]);
         }
 

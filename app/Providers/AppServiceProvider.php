@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Models\Conjunto\ComplexStaff;
 use App\Models\Domiciliary;
 use App\Models\Order\OrdersSales;
 use App\Models\User;
@@ -172,6 +173,25 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(1000)->by(
                 $request->user()?->user_id ?: $request->ip(),
             );
+        });
+
+        /*
+         * LA VERIFICACIÓN DE LA PORTERÍA, POR CONJUNTO.
+         *
+         * El `throttle:40,1` de la ruta es por usuario, y un conjunto puede
+         * tener varios celadores: con diez cuentas se probaban cuatrocientas
+         * cédulas por minuto contra la misma puerta. Este tope es del
+         * EDIFICIO entero. Una portería real no verifica dos personas por
+         * segundo sostenidas.
+         *
+         * El conjunto lo deja puesto `EnsureComplexStaff`, que corre antes;
+         * si por algún motivo no estuviera, se resuelve desde la ficha.
+         */
+        RateLimiter::for('porteria-conjunto', function (Request $request) {
+            $conjunto = $request->attributes->get('complex_id')
+                ?? ComplexStaff::de($request->user()?->user_id)?->complex_id;
+
+            return Limit::perMinute(120)->by('conjunto:'.($conjunto ?: $request->ip()));
         });
 
         /*

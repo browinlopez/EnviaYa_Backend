@@ -605,9 +605,11 @@ Route::middleware(['auth:sanctum', 'cuenta.habilitada', 'audit.api'])->group(fun
             ->middleware('conjunto:dueno');
 
         // Con límite propio: una portería real verifica unas pocas personas
-        // por minuto, y sin tope se podían probar cédulas en serie.
+        // por minuto, y sin tope se podían probar cédulas en serie. Dos topes:
+        // por celador y por CONJUNTO (`porteria-conjunto`, en AppServiceProvider),
+        // para que repartir el intento entre varias cuentas no lo multiplique.
         Route::post('porteria/verificar', [PorteriaController::class, 'verificar'])
-            ->middleware('throttle:40,1');
+            ->middleware(['throttle:40,1', 'throttle:porteria-conjunto']);
         Route::get('porteria/entradas', [PorteriaController::class, 'entradas']);
 
         /*
