@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Resources\Pedido;
 
+use App\Support\ProductTypeSchema;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -36,6 +37,19 @@ use Illuminate\Http\Resources\Json\JsonResource;
  */
 class RenglonDelPedidoResource extends JsonResource
 {
+    public function __construct(
+        $detail,
+        /*
+         * El tipo del negocio que despacha: con él, cada renglón trae lo que
+         * su oficio necesita saber al armar el pedido —si pide fórmula, los
+         * minutos de cocina y los alérgenos, para qué carro es el repuesto—.
+         * Sin tipo (la app del comprador), `detalles` sale vacío.
+         */
+        private readonly ?int $tipoDeNegocio = null,
+    ) {
+        parent::__construct($detail);
+    }
+
     /** @return array<string, mixed> */
     public function toArray(Request $request): array
     {
@@ -55,6 +69,9 @@ class RenglonDelPedidoResource extends JsonResource
             'qty_requested' => $detail->qty_requested,
             'qty_final' => $detail->qty_final,
             'line_total' => $detail->line_total,
+            'detalles' => $this->tipoDeNegocio
+                ? ProductTypeSchema::detallesParaElComprador($this->tipoDeNegocio, $detail->product)
+                : [],
         ];
     }
 }
