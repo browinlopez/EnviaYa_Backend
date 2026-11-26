@@ -15,6 +15,7 @@ use App\Services\PulsoDelConjunto;
 use App\Support\Enmascarar;
 use App\Support\FiltroDeFechas;
 use App\Support\Like;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -146,6 +147,25 @@ class PorteriaController extends Controller
     }
 
     /** Las entradas registradas en este conjunto. */
+    /** Cuántas entradas por página, como mucho. El libro de un día puede pasar de mil. */
+    public const POR_PAGINA_MAX = 100;
+
+    public const POR_PAGINA = 50;
+
+    /**
+     * EL LIBRO, PAGINADO EN EL SERVIDOR.
+     *
+     * Antes devolvía las 300 primeras y el panel contaba y paginaba en el
+     * navegador: en un día de 400 entradas las cifras de la cabecera salían
+     * de un libro recortado sin que nadie lo supiera. Ahora la página es de
+     * `per_page` (50, como mucho 100) y lo que se cuenta va aparte:
+     *
+     *   `cifras`   el DÍA entero (rango de fechas), sin buscador ni pestaña:
+     *              son las de la cabecera y no cambian al escribir.
+     *   `conteos`  cuántas hay en cada pestaña con el buscador puesto: el
+     *              número junto a cada pestaña.
+     *   `meta`     la página servida, sobre lo filtrado.
+     */
     public function entradas(Request $request)
     {
         $complexId = (int) $request->attributes->get('complex_id');
@@ -154,28 +174,61 @@ class PorteriaController extends Controller
         $request->validate([
             'desde' => 'nullable|date',
             'hasta' => 'nullable|date',
+            'page' => 'nullable|integer|min:1',
+            'per_page' => 'nullable|integer|min:1',
         ]);
 
-        $consulta = DB::table('complex_entries as e')
-            ->where('e.complex_id', $complexId)
-            ->leftJoin('domiciliary as d', 'd.domiciliary_id', '=', 'e.domiciliary_id')
-            ->leftJoin('user as u', 'u.user_id', '=', 'd.user_id')
+        $porPagina = min(self::POR_PAGINA_MAX, max(1, (int) $request->query('per_page', self::POR_PAGINA)));
+        $pagina = max(1, (int) $request->query('page', 1));
+
+        // El día (o el rango): la base de todo lo que se cuenta.
+        $delDia = function () use ($complexId, $request) {
+            $q = DB::table('complex_entries as e')->where('e.complex_id', $complexId);
+
+            /*
+             * COMO RANGO, y el de `hasta` NO es la traduccion obvia: ver
+             * `FiltroDeFechas::hasta()`. `date(col) <= '2026-11-05'` incluye
+             * todo el dia 5; escribir `col <= '2026-11-05'` lo recorta a las
+             * 00:00:00 y se pierde el dia entero menos el primer segundo, sin
+             * un error: solo un numero mas pequenio.
+             */
+            if ($desde = $request->query('desde')) {
+                FiltroDeFechas::desde($q, 'e.created_at', $desde);
+            }
+
+            if ($hasta = $request->query('hasta')) {
+                FiltroDeFechas::hasta($q, 'e.created_at', $hasta);
+            }
+
+            return $q;
+        };
+
+        // El día con el buscador: sobre esto se cuentan las pestañas.
+        $buscado = function () use ($delDia, $request) {
+            $q = $delDia()
+                ->leftJoin('domiciliary as d', 'd.domiciliary_id', '=', 'e.domiciliary_id')
+                ->leftJoin('user as u', 'u.user_id', '=', 'd.user_id');
+
+            if ($buscar = trim((string) $request->query('search'))) {
+                $q->where(function ($q) use ($buscar) {
+                    // Las visitas también se buscan: el libro es uno solo.
+                    // Escapado: un `%` o un `_` del buscador no son comodines.
+                    Like::contiene($q, 'u.name', $buscar);
+                    Like::contiene($q, 'd.document', $buscar, 'or');
+                    Like::contiene($q, 'e.visitor_name', $buscar, 'or');
+                    Like::contiene($q, 'e.visitor_document', $buscar, 'or');
+                });
+            }
+
+            return $q;
+        };
+
+        $consulta = $buscado()
             // Quién estaba en la portería cuando pasó. Es la mitad del valor
             // de un registro de entradas: sin eso dice qué ocurrió y no bajo
             // la responsabilidad de quién.
             ->leftJoin('user as c', 'c.user_id', '=', 'e.registered_by')
             ->leftJoin('user as x', 'x.user_id', '=', 'e.exit_registered_by');
-
-        if ($buscar = trim((string) $request->query('search'))) {
-            $consulta->where(function ($q) use ($buscar) {
-                // Las visitas también se buscan: el libro es uno solo.
-                // Escapado: un `%` o un `_` del buscador no son comodines.
-                Like::contiene($q, 'u.name', $buscar);
-                Like::contiene($q, 'd.document', $buscar, 'or');
-                Like::contiene($q, 'e.visitor_name', $buscar, 'or');
-                Like::contiene($q, 'e.visitor_document', $buscar, 'or');
-            });
-        }
 
         if ($metodo = $request->query('method')) {
             if (in_array($metodo, ['codigo', 'cedula', 'manual'], true)) {
@@ -199,24 +252,12 @@ class PorteriaController extends Controller
             $consulta->whereNull('e.exited_at');
         }
 
-        /*
-         * COMO RANGO, y el de `hasta` NO es la traduccion obvia: ver
-         * `FiltroDeFechas::hasta()`. `date(col) <= '2026-11-05'` incluye
-         * todo el dia 5; escribir `col <= '2026-11-05'` lo recorta a las
-         * 00:00:00 y se pierde el dia entero menos el primer segundo, sin
-         * un error: solo un numero mas pequenio.
-         */
-        if ($desde = $request->query('desde')) {
-            FiltroDeFechas::desde($consulta, 'e.created_at', $desde);
-        }
-
-        if ($hasta = $request->query('hasta')) {
-            FiltroDeFechas::hasta($consulta, 'e.created_at', $hasta);
-        }
+        $total = (clone $consulta)->count();
 
         $filas = $consulta
             ->orderByDesc('e.created_at')
-            ->limit(300)
+            ->orderByDesc('e.id')
+            ->forPage($pagina, $porPagina)
             ->get([
                 'e.id', 'e.kind', 'e.method', 'e.orders_count', 'e.created_at',
                 'e.exited_at',
@@ -254,7 +295,59 @@ class PorteriaController extends Controller
             });
         }
 
-        return response()->json(['data' => $filas]);
+        // Por pestaña, con el buscador puesto: una sola consulta agrupada.
+        $porClase = $buscado()
+            ->groupBy('e.kind')
+            ->get([
+                'e.kind',
+                DB::raw('COUNT(*) as n'),
+                DB::raw('SUM(CASE WHEN e.exited_at IS NULL THEN 1 ELSE 0 END) as dentro'),
+            ]);
+
+        $conteos = [
+            'todas' => (int) $porClase->sum('n'),
+            'dentro' => (int) $porClase->sum('dentro'),
+        ];
+        foreach (['domiciliario', 'visitante', 'servicio', 'domicilio_externo'] as $k) {
+            $conteos[$k] = (int) ($porClase->firstWhere('kind', $k)->n ?? 0);
+        }
+
+        return response()->json([
+            'data' => $filas,
+            'meta' => [
+                'page' => $pagina,
+                'per_page' => $porPagina,
+                'total' => $total,
+                'last_page' => max(1, (int) ceil($total / $porPagina)),
+            ],
+            'conteos' => $conteos,
+            'cifras' => $this->cifrasDelDia($delDia()),
+        ]);
+    }
+
+    /**
+     * Las cifras de la cabecera, sobre el día entero.
+     *
+     * El tiempo adentro se calcula en PHP y no en SQL: la resta de fechas se
+     * escribe distinto en MySQL y en SQLite, y un día de portería son unos
+     * cientos de filas, no millones.
+     */
+    private function cifrasDelDia(Builder $consulta): array
+    {
+        $filas = $consulta->get(['e.kind', 'e.method', 'e.created_at', 'e.exited_at']);
+        $domis = $filas->where('kind', 'domiciliario');
+
+        $minutos = $domis->filter(fn ($f) => $f->exited_at)
+            ->map(fn ($f) => (strtotime((string) $f->exited_at) - strtotime((string) $f->created_at)) / 60)
+            ->filter(fn ($m) => $m >= 0);
+
+        return [
+            'total' => $filas->count(),
+            'dentro' => $filas->whereNull('exited_at')->count(),
+            'domiciliarios' => $domis->count(),
+            'por_cedula' => $domis->where('method', 'cedula')->count(),
+            'promedio_minutos' => $minutos->isEmpty() ? null : (int) round($minutos->avg()),
+        ];
     }
 
     /**
