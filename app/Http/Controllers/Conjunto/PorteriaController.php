@@ -131,6 +131,12 @@ class PorteriaController extends Controller
     {
         $complexId = (int) $request->attributes->get('complex_id');
 
+        // Una fecha que no es fecha es un 422, no el 500 de `Carbon::parse()`.
+        $request->validate([
+            'desde' => 'nullable|date',
+            'hasta' => 'nullable|date',
+        ]);
+
         $consulta = DB::table('complex_entries as e')
             ->where('e.complex_id', $complexId)
             ->leftJoin('domiciliary as d', 'd.domiciliary_id', '=', 'e.domiciliary_id')

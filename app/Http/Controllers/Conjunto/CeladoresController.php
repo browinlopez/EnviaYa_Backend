@@ -126,8 +126,15 @@ class CeladoresController extends Controller
             return response()->json(['message' => 'Ese celador no es de tu conjunto.'], 404);
         }
 
-        if (array_key_exists('name', $datos) || array_key_exists('phone', $datos)) {
-            User::where('user_id', $ficha->user_id)->update(array_intersect_key($datos, ['name' => 1, 'phone' => 1]));
+        $usuario = User::find($ficha->user_id);
+
+        /*
+         * Por el MODELO y no con `User::where()->update()`: aquello saltaba los
+         * eventos y el cambio de nombre o teléfono no quedaba en la auditoría,
+         * ni quién lo hizo ni el valor anterior.
+         */
+        if ($usuario && (array_key_exists('name', $datos) || array_key_exists('phone', $datos))) {
+            $usuario->update(array_intersect_key($datos, ['name' => 1, 'phone' => 1]));
         }
 
         if (! array_key_exists('state', $datos)) {
@@ -136,6 +143,17 @@ class CeladoresController extends Controller
 
         $ficha->state = $datos['state'];
         $ficha->save();
+
+        /*
+         * Desactivar cierra TODAS sus sesiones.
+         *
+         * La ficha apagada ya lo sacaba de este panel, pero el token seguía
+         * vivo para el resto del API autenticado. Si se le vuelve a activar,
+         * inicia sesión de nuevo.
+         */
+        if (! $datos['state'] && $usuario) {
+            $usuario->tokens()->delete();
+        }
 
         return response()->json([
             'message' => $datos['state']

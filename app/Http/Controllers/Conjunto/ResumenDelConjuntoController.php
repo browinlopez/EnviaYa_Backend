@@ -86,6 +86,13 @@ class ResumenDelConjuntoController extends Controller
      */
     private function ventana(Request $request): array
     {
+        // Una fecha que no es fecha es un 422 que dice cuál campo, no un 500
+        // que sale de `CarbonImmutable::parse()` sin explicar nada.
+        $request->validate([
+            'desde' => 'nullable|date',
+            'hasta' => 'nullable|date',
+        ]);
+
         $hoy = CarbonImmutable::today();
 
         $hasta = $request->filled('hasta')

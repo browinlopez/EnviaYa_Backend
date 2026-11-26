@@ -5,8 +5,12 @@ declare(strict_types=1);
 namespace App\Exports\Conjunto;
 
 use Maatwebsite\Excel\Concerns\FromArray;
+use Maatwebsite\Excel\Concerns\WithCustomValueBinder;
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 use Maatwebsite\Excel\Concerns\WithTitle;
+use Maatwebsite\Excel\DefaultValueBinder;
+use PhpOffice\PhpSpreadsheet\Cell\Cell;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 
 /**
  * El reporte del conjunto, en Excel.
@@ -38,7 +42,34 @@ class ReporteDelConjuntoExport implements WithMultipleSheets
     }
 }
 
-class HojaResumen implements FromArray, WithTitle
+/**
+ * Ninguna celda de este reporte es una FÓRMULA.
+ *
+ * La torre la escribe el comprador al registrar su dirección y el nombre del
+ * domiciliario lo escribe él mismo. Con el binder por defecto, un texto que
+ * empieza por «=» se guarda como fórmula, y el administrador que abre el
+ * reporte ejecuta lo que un tercero escribió —un `=HYPERLINK` a otro sitio,
+ * o algo peor—. Esos textos se guardan como texto.
+ *
+ * Solo los que empiezan por «=»: el resto sigue el binder de siempre, para
+ * que las cifras que llegan de la base como cadena sigan siendo números que
+ * el administrador puede sumar.
+ */
+abstract class HojaSinFormulas extends DefaultValueBinder implements WithCustomValueBinder
+{
+    public function bindValue(Cell $cell, $value)
+    {
+        if (is_string($value) && str_starts_with(ltrim($value), '=')) {
+            $cell->setValueExplicit($value, DataType::TYPE_STRING);
+
+            return true;
+        }
+
+        return parent::bindValue($cell, $value);
+    }
+}
+
+class HojaResumen extends HojaSinFormulas implements FromArray, WithTitle
 {
     public function __construct(private array $d, private string $conjunto) {}
 
@@ -76,7 +107,7 @@ class HojaResumen implements FromArray, WithTitle
     }
 }
 
-class HojaPorTorre implements FromArray, WithTitle
+class HojaPorTorre extends HojaSinFormulas implements FromArray, WithTitle
 {
     public function __construct(private array $d) {}
 
@@ -97,7 +128,7 @@ class HojaPorTorre implements FromArray, WithTitle
     }
 }
 
-class HojaPorDia implements FromArray, WithTitle
+class HojaPorDia extends HojaSinFormulas implements FromArray, WithTitle
 {
     public function __construct(private array $d) {}
 
@@ -118,7 +149,7 @@ class HojaPorDia implements FromArray, WithTitle
     }
 }
 
-class HojaDomiciliarios implements FromArray, WithTitle
+class HojaDomiciliarios extends HojaSinFormulas implements FromArray, WithTitle
 {
     public function __construct(private array $d) {}
 
