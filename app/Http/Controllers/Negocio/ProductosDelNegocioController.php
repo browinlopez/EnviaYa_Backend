@@ -8,7 +8,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Negocio\ActualizarProductoRequest;
 use App\Http\Requests\Negocio\AgregarProductoRequest;
 use App\Http\Requests\Negocio\CopiarSurtidoRequest;
+use App\Http\Requests\Negocio\CrearVarianteRequest;
 use App\Http\Requests\Negocio\PreciosEnLoteRequest;
+use App\Http\Requests\Negocio\SubirFotoDeProductoRequest;
 use App\Http\Resources\Producto\ProductoDeLaTiendaResource;
 use App\Models\Product\Product;
 use App\Models\Product\ProductBusiness;
@@ -116,30 +118,10 @@ class ProductosDelNegocioController extends Controller
      * una tienda —la foto de la Coca-Cola es la de todas—, así que ahí se
      * responde lo mismo que al nombre.
      */
-    public function subirFoto(Request $request, int $id, MediaService $medios)
+    public function subirFoto(SubirFotoDeProductoRequest $request, int $id, MediaService $medios)
     {
-        $businessId = (int) $request->attributes->get('busines_id');
-
-        $pb = ProductBusiness::where('products_id', $id)
-            ->where('busines_id', $businessId)
-            ->first();
-
-        if (! $pb) {
-            return response()->json(['message' => 'Ese producto no es de tu negocio.'], 404);
-        }
-
-        $otras = ProductBusiness::where('products_id', $id)
-            ->where('busines_id', '!=', $businessId)
-            ->count();
-
-        if ($otras > 0) {
-            return response()->json([
-                'message' => 'Otros negocios venden este mismo producto: su foto es de todos y no se cambia desde acá.',
-            ], 422);
-        }
-
-        $request->validate(['file' => 'required|file|image|max:8192']);
-
+        // Que sea del negocio y que nadie más lo venda lo comprueba el
+        // FormRequest, antes de mirar el archivo y con las mismas respuestas.
         if (! $medios->configurado()) {
             return response()->json([
                 'message' => 'El almacenamiento de archivos no está configurado en el servidor.',
@@ -178,14 +160,9 @@ class ProductosDelNegocioController extends Controller
      * Lo del catálogo compartido no: sus grupos los arma el equipo, y una
      * tienda no puede meterle presentaciones a lo que venden las demás.
      */
-    public function crearVariante(Request $request, int $id)
+    public function crearVariante(CrearVarianteRequest $request, int $id)
     {
-        $datos = $request->validate([
-            'variante' => 'required|string|max:40',
-            'price' => 'required|numeric|min:0',
-            'amount' => 'nullable|numeric|min:0',
-            'variante_actual' => 'nullable|string|max:40',
-        ]);
+        $datos = $request->validated();
         $businessId = (int) $request->attributes->get('busines_id');
         $tipo = (int) ($request->attributes->get('negocio')->type ?? 0);
 

@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Conjunto;
 
 use App\Events\CodigoDeAccesoUsado;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Conjunto\LibroDeLaPorteriaRequest;
 use App\Http\Requests\Conjunto\VerificarEnPorteriaRequest;
 use App\Http\Resources\Domiciliario\DomiciliarioEnLaPorteriaResource;
 use App\Models\Conjunto\ComplexStaff;
@@ -16,7 +17,6 @@ use App\Support\Enmascarar;
 use App\Support\FiltroDeFechas;
 use App\Support\Like;
 use Illuminate\Database\Query\Builder;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -166,17 +166,9 @@ class PorteriaController extends Controller
      *              número junto a cada pestaña.
      *   `meta`     la página servida, sobre lo filtrado.
      */
-    public function entradas(Request $request)
+    public function entradas(LibroDeLaPorteriaRequest $request)
     {
         $complexId = (int) $request->attributes->get('complex_id');
-
-        // Una fecha que no es fecha es un 422, no el 500 de `Carbon::parse()`.
-        $request->validate([
-            'desde' => 'nullable|date',
-            'hasta' => 'nullable|date',
-            'page' => 'nullable|integer|min:1',
-            'per_page' => 'nullable|integer|min:1',
-        ]);
 
         $porPagina = min(self::POR_PAGINA_MAX, max(1, (int) $request->query('per_page', self::POR_PAGINA)));
         $pagina = max(1, (int) $request->query('page', 1));

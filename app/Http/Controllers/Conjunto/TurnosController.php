@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Conjunto;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Conjunto\TurnosDelConjuntoRequest;
 use App\Models\Conjunto\ComplexShift;
 use App\Models\Conjunto\ComplexStaff;
 use App\Support\FiltroDeFechas;
@@ -99,14 +100,8 @@ class TurnosController extends Controller
      * Los turnos del conjunto, del administrador: los abiertos primero y luego
      * los más recientes. `abiertos=1` deja solo quién está en la puerta ahora.
      */
-    public function index(Request $request)
+    public function index(TurnosDelConjuntoRequest $request)
     {
-        $request->validate([
-            'desde' => ['nullable', 'date_format:Y-m-d'],
-            'hasta' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:desde'],
-            'user_id' => ['nullable', 'integer'],
-        ]);
-
         $complexId = (int) $request->attributes->get('complex_id');
         $porPagina = min(100, max(1, (int) $request->query('per_page', 30)));
 
