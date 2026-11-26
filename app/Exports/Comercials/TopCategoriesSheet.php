@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Exports\Comercials;
 
+use App\Exports\Compartido\SinFormulas;
 use App\Models\Product\Category;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\FromCollection;
@@ -12,7 +13,7 @@ use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class TopCategoriesSheet implements FromCollection, WithHeadings, WithStyles, WithTitle
+class TopCategoriesSheet extends SinFormulas implements FromCollection, WithHeadings, WithStyles, WithTitle
 {
     protected $start;
 

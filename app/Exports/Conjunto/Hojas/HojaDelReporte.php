@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Exports\Conjunto\Hojas;
 
+use App\Exports\Compartido\SinFormulas;
 use App\Exports\Conjunto\CifrasDelReporte;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithEvents;
@@ -40,7 +41,7 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
  * devuelve el API, ya calculadas, y un total que Excel recalcula al abrir es
  * un total que se puede descuadrar con la pantalla si alguien borra una fila.
  */
-abstract class HojaDelReporte extends HojaSinFormulas implements FromArray, WithEvents, WithStrictNullComparison, WithTitle
+abstract class HojaDelReporte extends SinFormulas implements FromArray, WithEvents, WithStrictNullComparison, WithTitle
 {
     public const MARCA = '1B1464';
 

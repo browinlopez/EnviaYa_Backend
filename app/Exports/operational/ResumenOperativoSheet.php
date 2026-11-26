@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Exports\operational;
 
+use App\Exports\Compartido\SinFormulas;
 use App\Models\Order\OrdersSales;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithTitle;
 
-class ResumenOperativoSheet implements FromArray, WithTitle
+class ResumenOperativoSheet extends SinFormulas implements FromArray, WithTitle
 {
     public function __construct(protected $start, protected $end) {}
 

@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace App\Exports\operational;
 
+use App\Exports\Compartido\SinFormulas;
 use App\Models\Domiciliary;
 use App\Models\Order\OrdersSales;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithTitle;
 
-class DisponibilidadDomiciliariosSheet implements FromArray, WithTitle
+class DisponibilidadDomiciliariosSheet extends SinFormulas implements FromArray, WithTitle
 {
     public function __construct(protected $start, protected $end) {}
 

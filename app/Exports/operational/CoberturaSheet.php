@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace App\Exports\operational;
 
+use App\Exports\Compartido\SinFormulas;
 use App\Models\Order\OrdersSales;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithTitle;
 
-class CoberturaSheet implements FromCollection, WithHeadings, WithTitle
+class CoberturaSheet extends SinFormulas implements FromCollection, WithHeadings, WithTitle
 {
     public function __construct(protected $start, protected $end) {}
 

@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace App\Exports\operational;
 
+use App\Exports\Compartido\SinFormulas;
 use App\Models\Reviews\BusinessReview;
 use App\Models\Reviews\DomiciliaryReview;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithTitle;
 
-class SatisfaccionSheet implements FromArray, WithTitle
+class SatisfaccionSheet extends SinFormulas implements FromArray, WithTitle
 {
     public function __construct(protected $start, protected $end) {}
 

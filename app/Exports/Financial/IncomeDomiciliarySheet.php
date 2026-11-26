@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Exports\Financial;
 
+use App\Exports\Compartido\SinFormulas;
 use App\Models\Payment\Payment;
 use App\Support\SqlPortable;
 use Illuminate\Support\Facades\DB;
@@ -13,7 +14,7 @@ use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class IncomeDomiciliarySheet implements FromCollection, WithHeadings, WithStyles, WithTitle
+class IncomeDomiciliarySheet extends SinFormulas implements FromCollection, WithHeadings, WithStyles, WithTitle
 {
     protected $domiciliary_id;
 
