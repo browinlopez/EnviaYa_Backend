@@ -292,6 +292,44 @@ class ProductosDelNegocioController extends Controller
         ], 201);
     }
 
+    /**
+     * El grupo de presentaciones de un producto propio: renombrarlo o sacar
+     * este producto de él.
+     *
+     * Solo se toca un grupo que armó el negocio (`origen` tendero): los del
+     * catálogo general los revisa el equipo. Si al salir uno queda un solo
+     * miembro, el grupo ya no agrupa nada y se deshace, para que la app no
+     * enseñe un selector con una sola opción.
+     */
+    private function ajustarGrupo(int $id, array $datos): void
+    {
+        $producto = Product::find($id);
+        if (! $producto?->group_id) {
+            return;
+        }
+
+        $grupo = ProductGroup::find($producto->group_id);
+        if (! $grupo || $grupo->origen !== 'tendero') {
+            return;
+        }
+
+        if (! empty($datos['grupo'])) {
+            $grupo->fill(['name' => trim($datos['grupo'])])->save();
+        }
+
+        if (! empty($datos['sin_grupo'])) {
+            $producto->fill(['group_id' => null, 'variante' => null])->save();
+
+            $quedan = Product::where('group_id', $grupo->group_id)->get();
+            if ($quedan->count() <= 1) {
+                foreach ($quedan as $ultimo) {
+                    $ultimo->fill(['group_id' => null, 'variante' => null])->save();
+                }
+                $grupo->delete();
+            }
+        }
+    }
+
     public function update(ActualizarProductoRequest $request, int $id)
     {
         $businessId = (int) $request->attributes->get('busines_id');
@@ -334,7 +372,7 @@ class ProductosDelNegocioController extends Controller
         $tocaCompartido = array_merge(
             array_intersect(
                 array_keys(array_filter($datos, fn ($v) => $v !== null)),
-                ['name', 'description', 'category_id', 'state', 'variante'],
+                ['name', 'description', 'category_id', 'state', 'variante', 'grupo', 'sin_grupo'],
             ),
             array_keys($comunes),
             array_keys($delTipo),
@@ -419,6 +457,8 @@ class ProductosDelNegocioController extends Controller
                 if ($delTipo && $modelo) {
                     $modelo::updateOrCreate(['products_id' => $id], $delTipo);
                 }
+
+                $this->ajustarGrupo($id, $datos);
             }
         });
 

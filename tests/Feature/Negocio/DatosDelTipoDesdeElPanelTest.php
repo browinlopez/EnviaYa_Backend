@@ -146,3 +146,25 @@ test('a lo que venden otros negocios no se le arman presentaciones', function ()
         ->assertStatus(422);
     expect(Product::find($id)->group_id)->toBeNull();
 });
+
+test('el grupo propio se renombra, y al sacar la penúltima se deshace', function () {
+    $r = restauranteDelPanel();
+    $id = platoEn($r['negocio'], 'Mojarra');
+    Sanctum::actingAs($r['user']);
+    $h = ['X-Negocio' => $r['negocio']];
+
+    $nueva = $this->postJson("/v1/negocio/productos/{$id}/variantes", [
+        'variante' => 'Grande', 'price' => 32000, 'variante_actual' => 'Mediana',
+    ], $h)->assertCreated()->json('data.products_id');
+    $grupo = Product::find($id)->group_id;
+
+    $this->putJson("/v1/negocio/productos/{$id}", ['grupo' => 'Mojarra frita'], $h)->assertOk();
+    expect(DB::table('product_groups')->where('group_id', $grupo)->value('name'))->toBe('Mojarra frita');
+
+    // Sacar la grande deja una sola: el grupo ya no agrupa nada.
+    $this->putJson("/v1/negocio/productos/{$nueva}", ['sin_grupo' => true], $h)->assertOk();
+    expect(Product::find($nueva)->group_id)->toBeNull()
+        ->and(Product::find($id)->group_id)->toBeNull()
+        ->and(Product::find($id)->variante)->toBeNull()
+        ->and(DB::table('product_groups')->where('group_id', $grupo)->exists())->toBeFalse();
+});

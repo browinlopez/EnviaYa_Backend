@@ -56,6 +56,10 @@ class ActualizarProductoRequest extends FormRequest
             // La etiqueta de esta presentación dentro de su grupo
             // («Personal», «Familiar»). Solo en lo que es de este negocio.
             'variante' => 'nullable|string|max:40',
+            // El nombre del grupo de presentaciones («Sancocho de gallina»).
+            'grupo' => 'nullable|string|max:255',
+            // Sacarlo de su grupo: vuelve a ser un producto suelto.
+            'sin_grupo' => 'nullable|boolean',
         ]);
     }
 
