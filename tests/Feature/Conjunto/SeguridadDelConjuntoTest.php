@@ -140,18 +140,19 @@ test('el excel del reporte no ejecuta formulas escritas por terceros', function 
      * del domiciliario lo escribe él. Con el binder por defecto, un texto que
      * empieza por «=» se guarda como FÓRMULA: el administrador abría el
      * reporte y Excel ejecutaba lo que un vecino hubiera escrito.
+     *
+     * Los datos tienen la forma de `PulsoDelConjunto::reporte()`: el Excel lee
+     * `libro`, lo mismo que la pantalla.
      */
     $datos = [
-        'totales' => [
-            'pedidos' => 1, 'entregados' => 1, 'cancelados' => 0,
-            'promedio_diario' => 1, 'valor_pedidos' => 1000, 'entradas' => 1,
-            'domiciliarios' => 1,
-        ],
         'periodo' => ['desde' => '2026-11-01', 'hasta' => '2026-11-26', 'dias' => 26],
-        'identificacion' => ['codigo' => 1, 'cedula' => 0],
-        'por_torre' => [(object) ['torre' => '=HYPERLINK("http://malo.test","Torre 1")', 'pedidos' => 3, 'valor' => 9000]],
-        'por_dia' => [],
-        'domiciliarios' => [(object) ['nombre' => '=1+1', 'document' => '+57300', 'entradas' => 1, 'pedidos' => 1]],
+        'libro' => [
+            'entradas' => 2, 'entradas_anterior' => 0, 'pedidos_recibidos' => 3, 'visitantes' => 1,
+            'identificacion' => ['codigo' => 1, 'cedula' => 0, 'manual' => 1],
+            'por_dia' => [['dia' => '2026-11-25', 'etiqueta' => '25 nov', 'entradas' => 2]],
+            'por_torre' => collect([['torre' => '=HYPERLINK("http://malo.test","Torre 1")', 'pedidos' => 3]]),
+            'domiciliarios' => collect([['nombre' => '=1+1', 'entradas' => 1, 'por_qr' => 1.0, 'minutos' => 4]]),
+        ],
     ];
 
     $binario = Excel::raw(new ReporteDelConjuntoExport($datos, '@Conjunto'), FormatoExcel::XLSX);
@@ -161,14 +162,28 @@ test('el excel del reporte no ejecuta formulas escritas por terceros', function 
     $libro = IOFactory::load($ruta);
     @unlink($ruta);
 
-    $torre = $libro->getSheetByName('Por torre')->getCell('A2');
-    $domi = $libro->getSheetByName('Domiciliarios')->getCell('A2');
+    // La primera fila de cada tabla de detalle es la 7 (ver `HojaDelReporte`).
+    $torre = $libro->getSheetByName('Por torre')->getCell('A7');
+    $domi = $libro->getSheetByName('Domiciliarios')->getCell('B7');
 
     expect($torre->getDataType())->toBe(DataType::TYPE_STRING)
         ->and($torre->getValue())->toBe('=HYPERLINK("http://malo.test","Torre 1")')
         ->and($domi->getDataType())->toBe(DataType::TYPE_STRING)
+        ->and($domi->getValue())->toBe('=1+1')
         // Las cifras siguen siendo cifras: el administrador suma columnas.
-        ->and($libro->getSheetByName('Por torre')->getCell('B2')->getDataType())->toBe(DataType::TYPE_NUMERIC);
+        ->and($libro->getSheetByName('Por torre')->getCell('B7')->getDataType())->toBe(DataType::TYPE_NUMERIC);
+
+    /*
+     * Y en NINGUNA hoja hay una fórmula: el Consolidado repite torres y
+     * domiciliarios en sus tablas cortas, y una hoja nueva que no herede el
+     * binder volvería a abrir el hueco sin que la prueba de arriba lo note.
+     */
+    foreach ($libro->getAllSheets() as $hoja) {
+        foreach ($hoja->getCellCollection()->getCoordinates() as $coordenada) {
+            expect($hoja->getCell($coordenada)->getDataType())
+                ->not->toBe(DataType::TYPE_FORMULA, $hoja->getTitle().'!'.$coordenada);
+        }
+    }
 });
 
 /* -------------------------- FECHAS MAL ESCRITAS -------------------------- */
