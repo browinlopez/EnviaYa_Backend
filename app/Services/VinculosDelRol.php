@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\DB;
  *     rol 3 domiciliario  →  domiciliary
  *     rol 4 personal      →  user.area_id  (no hay tabla propia)
  *     rol 5 y 6 conjunto  →  complex_staff
+ *     rol 7 inversionista →  nada: mira la plataforma entera, no un registro
  *
  * Cambiar el número sin tocar esas filas deja cuentas a medias en las dos
  * direcciones, y ninguna de las dos avisa:
@@ -51,6 +52,13 @@ class VinculosDelRol
     public const ROLES_DE_CONJUNTO = [ComplexStaff::ROL_DUENO, ComplexStaff::ROL_CELADOR];
 
     public const ROL_PERSONAL = 4;
+
+    /*
+     * El inversionista no tiene perfil ni vínculo que crear o cerrar: entra
+     * al tablero de cifras agregadas (`EnsureInvestor`) y nada más. Por eso
+     * no aparece en `PERFIL` y `estaAMedias()` nunca lo da por incompleto.
+     */
+    public const ROL_INVERSIONISTA = 7;
 
     /**
      * Crea el perfil que le falta a esta persona para su rol.

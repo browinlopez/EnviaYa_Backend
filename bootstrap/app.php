@@ -9,6 +9,7 @@ use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsureBusinessOwner;
 use App\Http\Middleware\EnsureCategoryAccess;
 use App\Http\Middleware\EnsureComplexStaff;
+use App\Http\Middleware\EnsureInvestor;
 use App\Http\Middleware\EnsureMediaAccess;
 use App\Http\Middleware\EnsureModuleAccess;
 use App\Http\Middleware\MedidaDeLaPeticion;
@@ -108,6 +109,9 @@ return Application::configure(basePath: dirname(__DIR__))
             // para que ningún controlador tenga que creerle un `business_id` al
             // cuerpo de la petición.
             'negocio' => EnsureBusinessOwner::class,
+            // Puerta del tablero del inversionista (rol 7): solo cifras
+            // agregadas de la plataforma, sin entrar a negocio ni a conjunto.
+            'inversionista' => EnsureInvestor::class,
             // Puerta de los archivos. Aparte porque el módulo que manda depende de
             // la entidad de la URL: los de un negocio los rige `negocios` y los de
             // un banner, `marketing.banners`.
