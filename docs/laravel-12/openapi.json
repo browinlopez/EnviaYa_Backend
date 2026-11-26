@@ -13505,6 +13505,9 @@
                                                                     "type": "string",
                                                                     "nullable": true
                                                                 },
+                                                                "detalles": {
+                                                                    "type": "object"
+                                                                },
                                                                 "image": {
                                                                     "type": "string",
                                                                     "nullable": true
@@ -13669,6 +13672,14 @@
                                 "properties": {
                                     "business_id": {
                                         "type": "integer"
+                                    },
+                                    "periodo": {
+                                        "type": "string",
+                                        "enum": [
+                                            "hoy",
+                                            "semana",
+                                            "mes"
+                                        ]
                                     }
                                 },
                                 "required": [

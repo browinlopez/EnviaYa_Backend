@@ -25,6 +25,9 @@ class PedidosDelNegocioRequest extends FormRequest
     {
         return [
             'business_id' => 'required|integer',
+            // El tablero del panel por periodo: hoy, esta semana o este mes.
+            // Sin él, como siempre: lo abierto entero y lo cerrado de hoy.
+            'periodo' => 'nullable|string|in:hoy,semana,mes',
         ];
     }
 }

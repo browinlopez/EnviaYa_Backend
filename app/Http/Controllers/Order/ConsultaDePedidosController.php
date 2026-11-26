@@ -99,21 +99,32 @@ class ConsultaDePedidosController extends Controller
          * le pagaron y si hace falta el comprobante. El resto vive en el
          * historial, que tiene su propia pantalla y su filtro de fechas.
          */
+        /*
+         * CON PERIODO (el panel), todo se acota a él: lo que entró desde el
+         * inicio del día, de la semana o del mes, y lo cerrado en ese mismo
+         * rango. Así el tablero no acumula pedidos viejos. Sin periodo (la
+         * app), lo de siempre: lo abierto entero y lo cerrado de hoy.
+         */
+        $desde = match ($request->input('periodo')) {
+            'hoy' => now()->startOfDay(),
+            'semana' => now()->startOfWeek(),
+            'mes' => now()->startOfMonth(),
+            default => null,
+        };
+
         $orders = OrdersSales::where('busines_id', $business->busines_id)
             ->confirmados()
-            ->where(function ($q) {
-                $q->whereIn('state', OrdersSales::ACTIVOS)
-                  /*
-                   * Los cerrados, por el día en que SE CERRARON y no por el
-                   * día en que se pidieron: uno pedido a las 23:50 y
-                   * entregado a las 00:20 es de hoy y no aparecía. El
-                   * entregado tiene su fecha; el cancelado, la de su último
-                   * cambio.
-                   */
+            ->where(function ($q) use ($desde) {
+                $q->where(function ($a) use ($desde) {
+                    $a->whereIn('state', OrdersSales::ACTIVOS);
+                    if ($desde) {
+                        $a->where('sale_date', '>=', $desde);
+                    }
+                })
                     ->orWhere(fn ($q2) => $q2->where('state', OrdersSales::ENTREGADO)
-                        ->where($this->cerradoHoy('delivery_date')))
+                        ->where($this->cerradoDesde('delivery_date', $desde)))
                     ->orWhere(fn ($q2) => $q2->where('state', OrdersSales::CANCELADO)
-                        ->where($this->cerradoHoy('updated_at')));
+                        ->where($this->cerradoDesde('updated_at', $desde)));
             })
             // La lista la declara el presentador, que es quien las lee: esta
             // copia se habia quedado sin `domiciliary.user` y cargaba el
@@ -521,7 +532,13 @@ class ConsultaDePedidosController extends Controller
      */
     private function cerradoHoy(string $columna): callable
     {
-        $desde = now()->startOfDay();
+        return $this->cerradoDesde($columna, null);
+    }
+
+    /** Cerrado desde `$desde` (o desde hoy, si no se dice) hasta ahora. */
+    private function cerradoDesde(string $columna, $desde): callable
+    {
+        $desde = $desde ?? now()->startOfDay();
         $hasta = now()->addDay()->startOfDay();
 
         return function ($q) use ($columna, $desde, $hasta) {
