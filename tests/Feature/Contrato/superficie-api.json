@@ -2699,6 +2699,30 @@
         ]
     },
     {
+        "verbo": "GET",
+        "uri": "v1/inversionista/me",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "cuenta.habilitada",
+            "inversionista"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/inversionista/tablero",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "cuenta.habilitada",
+            "inversionista"
+        ]
+    },
+    {
         "verbo": "POST",
         "uri": "v1/login",
         "nombre": null,

@@ -64,6 +64,7 @@ use App\Http\Controllers\Domiciliary\EvidenciaDeEntregaController;
 use App\Http\Controllers\Domiciliary\IngresosDelDomiciliarioController;
 use App\Http\Controllers\Domiciliary\PedidosDelDomiciliarioController;
 use App\Http\Controllers\ErroresDeLaAppController;
+use App\Http\Controllers\Inversionista\TableroDelInversionistaController;
 use App\Http\Controllers\LandingRequestController;
 use App\Http\Controllers\Marketing\AdsController;
 use App\Http\Controllers\Negocio\AltaDeDomiciliarioController;
@@ -579,6 +580,21 @@ Route::middleware(['auth:sanctum', 'cuenta.habilitada', 'audit.api'])->group(fun
     Route::prefix('favorites')->group(function () {
         Route::post('toggle', [FavoriteController::class, 'toggleFavorite']);
         Route::post('index', [FavoriteController::class, 'myFavorites']);
+    });
+
+    /*
+     * PANEL DE ALIADOS: el inversionista (rol 7).
+     *
+     * Puerta propia (`inversionista`), aparte de `negocio` y `conjunto`: mira
+     * la plataforma entera y solo en cifras agregadas. Sin nombres, teléfonos
+     * ni pedidos sueltos: ver `TableroDelInversionista`.
+     *
+     * Queda sujeta al modo de mantenimiento como las otras dos secciones del
+     * panel (`AppEnMantenimiento` no la exime).
+     */
+    Route::prefix('inversionista')->middleware('inversionista')->group(function () {
+        Route::get('me', [TableroDelInversionistaController::class, 'mio']);
+        Route::get('tablero', [TableroDelInversionistaController::class, 'tablero']);
     });
 
     /*
