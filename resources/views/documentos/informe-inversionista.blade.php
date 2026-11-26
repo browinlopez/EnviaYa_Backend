@@ -7,6 +7,15 @@
     después negocios, ciudades, usuarios, operación e ingresos, y al final la
     serie de doce meses.
 
+    EL MEMBRETE se repite en cada página (los `position: fixed` de dompdf van
+    en todas): arriba el logo de VeciPa'Ya, el título, el periodo y la fecha en
+    que se generó; abajo «Solo cifras agregadas» y la página. El logo va como
+    `data:` porque el documento se arma sin red (`isRemoteEnabled` apagado).
+
+    LAS BURBUJAS del fondo son las del panel (`burbujas-fondo`): círculos de
+    color muy suaves detrás de todo, para que el papel se sienta de la marca
+    sin pelear con los números. Solo en el PDF.
+
     Solo agregados: no hay un nombre, un teléfono ni un pedido suelto.
 --}}
 @php
@@ -30,16 +39,36 @@
     $u = $d['usuarios']['cifras'];
     $o = $d['operacion'];
     $i = $d['ingresos']['cifras'];
+
+    $archivoLogo = resource_path('marca/logotipo.png');
+    $logo = is_file($archivoLogo) ? 'data:image/png;base64,' . base64_encode(file_get_contents($archivoLogo)) : null;
+    $generado = Carbon::parse($d['generado'])->locale('es')->isoFormat('D [de] MMMM [de] YYYY, h:mm a');
 @endphp
 <!doctype html>
 <html lang="es">
 <head>
     <meta charset="utf-8">
     <style>
-        @page { margin: 28px 30px 36px; }
+        @page { margin: 96px 34px 52px; }
         body { font-family: 'DejaVu Sans', sans-serif; font-size: 10.5px; color: #1f2333; line-height: 1.45; }
-        .franja { background: #1B1464; color: #fff; padding: 10px 14px; font-weight: bold; font-size: 12px; }
-        h1 { font-size: 20px; color: #1B1464; margin: 14px 0 2px; }
+
+        /* Las burbujas del fondo, detrás de todo y en todas las páginas. */
+        .burbuja { position: fixed; border-radius: 50%; z-index: -1; }
+        .b1 { width: 420px; height: 420px; top: -150px; right: -170px; background: #6D5DFC; opacity: 0.07; }
+        .b2 { width: 260px; height: 260px; top: 300px; left: -150px; background: #FF6B5B; opacity: 0.06; }
+        .b3 { width: 340px; height: 340px; bottom: -160px; right: 40px; background: #1B1464; opacity: 0.05; }
+        .b4 { width: 120px; height: 120px; top: 520px; right: -40px; background: #F5A524; opacity: 0.07; }
+
+        /* El membrete. */
+        .membrete { position: fixed; top: -78px; left: 0; right: 0; height: 60px; border-bottom: 2px solid #1B1464; }
+        .membrete table td { border: 0; padding: 0; background: none !important; vertical-align: middle; }
+        .membrete img { height: 50px; }
+        .membrete .doc { text-align: right; }
+        .membrete .doc b { display: block; font-size: 13px; color: #1B1464; }
+        .membrete .doc span { display: block; font-size: 8.5px; color: #6E6C88; }
+        .pie { position: fixed; bottom: -36px; left: 0; right: 0; height: 18px; border-top: 1px solid #DCDAEA; padding-top: 5px; font-size: 8px; color: #8A88A3; }
+
+        h1 { font-size: 20px; color: #1B1464; margin: 0 0 2px; }
         .alcance { color: #4A4867; font-size: 11px; }
         .generado { color: #8A88A3; font-size: 9px; font-style: italic; margin-top: 2px; }
         h2 { font-size: 13px; color: #1B1464; border-bottom: 2px solid #1B1464; padding-bottom: 3px; margin: 18px 0 8px; }
@@ -48,9 +77,11 @@
         th:first-child { text-align: left; }
         td { border-bottom: 1px solid #E4E2F0; padding: 4px 6px; text-align: right; }
         td:first-child { text-align: left; }
-        tr:nth-child(even) td { background: #F7F6FC; }
+        /* Sin cebra: con fondo, las filas tapaban las burbujas a tiras (y en
+           translúcido dompdf deja costuras entre celdas). La línea basta. */
+        .junto { page-break-inside: avoid; }
         .kpis td { border: 0; background: none !important; padding: 0 4px 0 0; width: 25%; vertical-align: top; text-align: left; }
-        .kpi { border: 1px solid #DCDAEA; border-radius: 6px; padding: 8px 10px; }
+        .kpi { border: 1px solid #DCDAEA; border-radius: 6px; padding: 8px 10px; background: #fff; }
         .kpi small { display: block; color: #6E6C88; font-size: 9px; }
         .kpi b { display: block; font-size: 16px; color: #1B1464; margin: 2px 0; }
         .sube { color: #1F7A4D; }
@@ -61,7 +92,27 @@
     </style>
 </head>
 <body>
-    <div class="franja">VeciPa'Ya · Informe para inversionistas</div>
+    <div class="burbuja b1"></div>
+    <div class="burbuja b2"></div>
+    <div class="burbuja b3"></div>
+    <div class="burbuja b4"></div>
+
+    <div class="membrete">
+        <table>
+            <tr>
+                <td>@if ($logo)<img src="{{ $logo }}" alt="VeciPa'Ya">@else<b>VeciPa'Ya</b>@endif</td>
+                <td class="doc">
+                    <b>Informe para inversionistas</b>
+                    <span>Del {{ $fecha($p['desde']) }} al {{ $fecha($p['hasta']) }}</span>
+                    <span>Generado el {{ $generado }}</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div class="pie">
+        Solo cifras agregadas, sin datos de personas · VeciPa'Ya
+    </div>
+
     <h1>Así va VeciPa'Ya</h1>
     <div class="alcance">
         Del {{ $fecha($p['desde']) }} al {{ $fecha($p['hasta']) }}
@@ -70,9 +121,8 @@
     </div>
     <div class="generado">
         Comparado con el {{ $fecha($p['desde_anterior']) }} – {{ $fecha($p['hasta_anterior']) }}
-        · Generado el {{ Carbon::parse($d['generado'])->locale('es')->isoFormat('D [de] MMMM [de] YYYY') }}
-        · Solo cifras agregadas, sin datos de personas
     </div>
+
 
     <h2>Las cifras clave</h2>
     <table class="kpis">
@@ -175,6 +225,7 @@
         domiciliario). Los subsidios ya están descontados de ese margen: se informan aparte, no se restan dos veces.
     </div>
 
+    <div class="junto">
     <h2>Mes a mes</h2>
     @php
         $ing = collect($d['ingresos']['meses'])->keyBy('mes');
@@ -202,6 +253,7 @@
             </tr>
         @endforeach
     </table>
+    </div>
     <div class="nota">
         Pedido = entregado y con el pago confirmado. Negocio activo = visible en la app. Usuario registrado = cuenta de
         comprador. El periodo anterior es uno de igual número de días, justo antes.

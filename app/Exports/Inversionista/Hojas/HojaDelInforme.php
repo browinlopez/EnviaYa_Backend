@@ -15,12 +15,16 @@ use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
 use PhpOffice\PhpSpreadsheet\Worksheet\PageSetup;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 /**
- * Lo común a las hojas del informe del inversionista: la franja de marca, el
- * título, el periodo, las tablas con su estilo y la hoja lista para imprimir.
+ * Lo común a las hojas del informe del inversionista: el MEMBRETE (la franja
+ * de marca con el logo de VeciPa'Ya, el título del documento, el periodo y la
+ * fecha en que se generó; al imprimir, el mismo encabezado arriba y, abajo, la
+ * página y «Solo cifras agregadas»), las tablas con su estilo y la hoja lista
+ * para imprimir.
  *
  * Cada hoja solo dice QUÉ filas lleva (`cuerpo()`); cómo se visten lo
  * resuelve esta clase. Hereda el binder sin fórmulas como todas las de
@@ -73,7 +77,7 @@ abstract class HojaDelInforme extends SinFormulas implements FromArray, WithEven
     {
         if ($this->filas === null) {
             $this->filas = [
-                ["VeciPa'Ya · Informe para inversionistas"],
+                ['Informe para inversionistas'],
                 [$this->encabezado()],
                 [$this->alcance()],
                 ['Generado el '.Carbon::parse($this->d['generado'])->locale('es')->isoFormat('D [de] MMMM [de] YYYY, h:mm a').' · Solo cifras agregadas, sin datos de personas'],
@@ -191,13 +195,16 @@ abstract class HojaDelInforme extends SinFormulas implements FromArray, WithEven
         $hoja->setShowGridlines(false);
         $hoja->getTabColor()->setRGB(self::MARCA);
 
+        // El membrete: el logo blanco sobre la franja de marca y el nombre del
+        // documento a la derecha.
         $hoja->mergeCells("A1:{$ultima}1");
         $hoja->getStyle("A1:{$ultima}1")->applyFromArray([
             'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => 'FFFFFF']],
             'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => self::MARCA]],
-            'alignment' => ['vertical' => Alignment::VERTICAL_CENTER, 'indent' => 1],
+            'alignment' => ['vertical' => Alignment::VERTICAL_CENTER, 'horizontal' => Alignment::HORIZONTAL_RIGHT, 'indent' => 1],
         ]);
-        $hoja->getRowDimension(1)->setRowHeight(24);
+        $hoja->getRowDimension(1)->setRowHeight(42);
+        $this->logo($hoja);
         $hoja->getStyle('A2')->getFont()->setBold(true)->setSize(16)->getColor()->setRGB(self::MARCA);
         $hoja->getRowDimension(2)->setRowHeight(26);
         $hoja->getStyle('A3')->getFont()->setSize(11)->getColor()->setRGB('4A4867');
@@ -256,6 +263,29 @@ abstract class HojaDelInforme extends SinFormulas implements FromArray, WithEven
         $pagina->setPaperSize(PageSetup::PAPERSIZE_LETTER);
         $pagina->setFitToWidth(1);
         $pagina->setFitToHeight(0);
-        $hoja->getHeaderFooter()->setOddFooter('&L&8VeciPa\'Ya · Solo cifras agregadas&R&8Página &P de &N');
+        // En los códigos de encabezado «&» es una orden: se duplica.
+        $texto = fn (string $t) => str_replace('&', '&&', $t);
+        $hoja->getHeaderFooter()
+            ->setOddHeader('&L&B'.$texto("VeciPa'Ya · Informe para inversionistas").'&B&R&9'.$texto($this->title().' · '.$this->alcance()))
+            ->setOddFooter('&L&8Solo cifras agregadas, sin datos de personas&R&8Página &P de &N');
+    }
+
+    /** El logo de VeciPa'Ya, en blanco, en la esquina de la franja de marca. */
+    private function logo(Worksheet $hoja): void
+    {
+        $archivo = resource_path('marca/logotipo-blanco.png');
+        if (! is_file($archivo)) {
+            return;
+        }
+
+        $logo = new Drawing;
+        $logo->setName("VeciPa'Ya");
+        $logo->setDescription("Logo de VeciPa'Ya");
+        $logo->setPath($archivo);
+        $logo->setHeight(52);
+        $logo->setCoordinates('A1');
+        $logo->setOffsetX(6);
+        $logo->setOffsetY(2);
+        $logo->setWorksheet($hoja);
     }
 }
