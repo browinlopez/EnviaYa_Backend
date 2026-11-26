@@ -26,7 +26,10 @@ use Illuminate\Support\Facades\Hash;
  *   · unos treinta residentes con torre y apartamento;
  *   · ~35 días de entradas: domiciliarios de la plataforma (con su pedido
  *     entregado de verdad), visitas, servicio y domicilios de otras apps,
- *     con salida en casi todas y algunas TODAVÍA ADENTRO hoy.
+ *     con salida en casi todas y algunas TODAVÍA ADENTRO hoy —un par de
+ *     ellas pasadas de las horas de alerta, para que se vea el aviso—;
+ *   · los turnos de los celadores (uno EN TURNO AHORA) y, en el historial
+ *     de Jhon, una baja y su reactivación de hace unos días.
  *
  * Las entradas de domiciliarios se guardan como las guarda
  * `PorteriaController::verificar`: sin torre propia, con la lista de pedidos
@@ -179,6 +182,8 @@ class ConjuntoVillaCarolinaDemoSeeder extends Seeder
             $this->crearResidentes($clave, $conjunto);
             $this->limpiarLoAnterior();
             $this->sembrarEntradas();
+            $this->sembrarTurnos();
+            $this->historialDeCuentas();
         });
 
         $this->informar();
@@ -237,6 +242,13 @@ class ConjuntoVillaCarolinaDemoSeeder extends Seeder
                     'created_by' => $dueno,
                 ],
             );
+
+            // La clave del demo la conoce quien la enseña: entra sin pasar por
+            // «Crea tu clave». Y el alta, un poco antes del libro, para que
+            // el historial empiece por ahí.
+            $user->forceFill(['must_change_password' => false])->save();
+            DB::table('complex_staff')->where('user_id', $user->user_id)
+                ->update(['created_at' => $this->ahora->subDays(self::DIAS + 5)]);
 
             $this->celadores[] = (int) $user->user_id;
         }
@@ -393,6 +405,90 @@ class ConjuntoVillaCarolinaDemoSeeder extends Seeder
             if ($otros + $i < 3) {
                 $this->entrada($i === 2 ? 'servicio' : 'visitante', $hace($min), adentro: true);
             }
+        }
+
+        // Dos que llevan más de las 4 h de alerta: una visita de cinco horas
+        // y un técnico de seis y media. Si el día apenas empieza, quedan con
+        // lo que dé el día (sin pasarse a ayer, que no cuenta como adentro).
+        $this->entrada('visitante', $hace(300), adentro: true);
+        $this->entrada('servicio', $hace(390), adentro: true);
+    }
+
+    /* --------------------------- LOS TURNOS --------------------------- */
+
+    /**
+     * Un turno de mañana (6 a 14) y uno de tarde y noche (14 a 6) por día,
+     * del celador que `celadorDeTurno()` pone a esa hora. El que corre ahora
+     * queda ABIERTO: en Celadores sale «En turno ahora» y en la portería de
+     * ese celador, «llevas 3 h».
+     */
+    private function sembrarTurnos(): void
+    {
+        DB::table('complex_shifts')
+            ->where('complex_id', self::CONJUNTO)
+            ->whereIn('user_id', $this->celadores)
+            ->delete();
+
+        $filas = [];
+        $primero = $this->ahora->startOfDay()->subDays(self::DIAS);
+
+        for ($dia = $primero; $dia->lessThanOrEqualTo($this->ahora); $dia = $dia->addDay()) {
+            foreach ([[6, 8], [14, 16]] as [$hora, $largo]) {
+                $inicio = $dia->setTime($hora, 0)->subMinutes(mt_rand(0, 12));
+                $fin = $dia->setTime($hora, 0)->addHours($largo)->addMinutes(mt_rand(0, 15));
+
+                if ($inicio->greaterThan($this->ahora)) {
+                    continue;
+                }
+
+                $filas[] = [
+                    'complex_id' => self::CONJUNTO,
+                    'user_id' => $this->celadorDeTurno($dia->setTime($hora, 30)),
+                    'started_at' => $inicio,
+                    // El que todavía corre queda abierto.
+                    'ended_at' => $fin->greaterThan($this->ahora) ? null : $fin,
+                    'created_at' => $inicio,
+                    'updated_at' => $fin->greaterThan($this->ahora) ? $inicio : $fin,
+                ];
+            }
+        }
+
+        foreach (array_chunk($filas, 200) as $lote) {
+            DB::table('complex_shifts')->insert($lote);
+        }
+    }
+
+    /**
+     * Una baja y su reactivación en la ficha de Jhon, como las deja la
+     * auditoría al desactivarlo desde Celadores. El paquete no audita en
+     * consola, así que se escriben a mano, marcadas para poder borrarlas.
+     */
+    private function historialDeCuentas(): void
+    {
+        $jhon = DB::table('complex_staff')->where('user_id', $this->celadores[2])->value('id');
+        $dueno = ComplexStaff::where('complex_id', self::CONJUNTO)->where('role', ComplexStaff::DUENO)->value('user_id');
+
+        DB::table('audits')
+            ->where('auditable_type', (new ComplexStaff)->getMorphClass())
+            ->where('auditable_id', $jhon)
+            ->where('tags', 'demo-villa-carolina')
+            ->delete();
+
+        foreach ([[2, true, false], [1, false, true]] as [$hace, $antes, $despues]) {
+            $cuando = $this->ahora->subDays($hace)->setTime(9, 15);
+            DB::table('audits')->insert([
+                'user_type' => $dueno ? User::class : null,
+                'user_id' => $dueno,
+                'event' => 'updated',
+                'auditable_type' => (new ComplexStaff)->getMorphClass(),
+                'auditable_id' => $jhon,
+                'old_values' => json_encode(['state' => $antes]),
+                'new_values' => json_encode(['state' => $despues]),
+                'url' => 'demo',
+                'tags' => 'demo-villa-carolina',
+                'created_at' => $cuando,
+                'updated_at' => $cuando,
+            ]);
         }
     }
 
@@ -682,6 +778,9 @@ class ConjuntoVillaCarolinaDemoSeeder extends Seeder
             ['Entradas (total)', (clone $base)->count()],
             ['Entradas hoy', (clone $hoy)->count()],
             ['Siguen adentro', (clone $hoy)->whereNull('exited_at')->count()],
+            ['Llevan más de 4 h', (clone $hoy)->whereNull('exited_at')->where('created_at', '<=', $this->ahora->subHours(4))->count()],
+            ['En turno ahora', DB::table('complex_shifts as s')->join('user as u', 'u.user_id', '=', 's.user_id')
+                ->where('s.complex_id', self::CONJUNTO)->whereNull('s.ended_at')->pluck('u.name')->implode(', ')],
             ['Pedidos de los residentes', DB::table('orderssales')->whereIn('buyer_id', array_column($this->residentes, 'buyer_id'))->count()],
         ]);
         $this->command?->line('Celadores: '.implode(', ', array_column(self::CELADORES, 0)).' (clave: SEED_PASSWORD).');
