@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\Order\OrdersSales;
+use App\Support\ExtensionSegura;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -78,7 +79,8 @@ class EvidenciaDeEntrega
             throw new RuntimeException('La foto supera los 4 MB. Vuelve a tomarla con menos calidad.');
         }
 
-        $ext = strtolower($archivo->getClientOriginalExtension() ?: $archivo->guessExtension() ?: 'jpg');
+        // Del contenido y no del nombre: ver `ExtensionSegura`.
+        $ext = ExtensionSegura::de($archivo, 'jpg');
 
         /*
          * El nombre lleva el pedido delante. Mirando el bucket a secas se
