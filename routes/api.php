@@ -53,6 +53,7 @@ use App\Http\Controllers\Conjunto\MiConjuntoController;
 use App\Http\Controllers\Conjunto\PorteriaController;
 use App\Http\Controllers\Conjunto\ResidentesController;
 use App\Http\Controllers\Conjunto\ResumenDelConjuntoController;
+use App\Http\Controllers\Conjunto\TurnosController;
 use App\Http\Controllers\Conjunto\VisitantesController;
 use App\Http\Controllers\DeviceTokenController;
 use App\Http\Controllers\Domiciliary\ContratoDelDomiciliarioController;
@@ -646,6 +647,20 @@ Route::middleware(['auth:sanctum', 'cuenta.habilitada', 'audit.api'])->group(fun
         Route::post('celadores', [CeladoresController::class, 'crearCelador'])
             ->middleware('conjunto:dueno');
         Route::put('celadores/{id}', [CeladoresController::class, 'cambiarCelador'])
+            ->middleware('conjunto:dueno');
+        // Lo que hizo un celador: entradas, salidas, turnos, alta y bajas.
+        Route::get('celadores/{id}/historial', [CeladoresController::class, 'historial'])
+            ->middleware('conjunto:dueno')->whereNumber('id');
+
+        /*
+         * LOS TURNOS. El celador abre y cierra el suyo (uno abierto como
+         * mucho); el administrador ve quién está en la puerta y los turnos
+         * recientes.
+         */
+        Route::get('turno', [TurnosController::class, 'mio']);
+        Route::post('turno/iniciar', [TurnosController::class, 'iniciar'])->middleware('throttle:20,1');
+        Route::post('turno/terminar', [TurnosController::class, 'terminar'])->middleware('throttle:20,1');
+        Route::get('turnos', [TurnosController::class, 'index'])
             ->middleware('conjunto:dueno');
     });
 

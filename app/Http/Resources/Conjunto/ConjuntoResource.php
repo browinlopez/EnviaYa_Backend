@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Resources\Conjunto;
 
+use App\Models\Buyer\ResidentialComplex;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -49,6 +50,10 @@ class ConjuntoResource extends JsonResource
             // Las instrucciones permanentes de la porteria: ver la cabecera.
             'gate_notes' => $c->gate_notes,
             'require_authorization' => (bool) $c->require_authorization,
+            // Desde cuántas horas adentro se avisa: las suyas o las 4 de la plataforma.
+            'horas_alerta_adentro' => $c->horas_alerta_adentro
+                ? (int) $c->horas_alerta_adentro
+                : ResidentialComplex::HORAS_ALERTA_ADENTRO,
             'towers_count' => $c->towers_count,
             'apartments_per_tower' => $c->apartments_per_tower,
             'latitude' => $c->latitude !== null ? (float) $c->latitude : null,

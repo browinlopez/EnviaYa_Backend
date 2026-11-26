@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Conjunto;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Conjunto\CambiarCeladorRequest;
 use App\Http\Requests\Conjunto\CrearCeladorRequest;
+use App\Models\Conjunto\ComplexShift;
 use App\Models\Conjunto\ComplexStaff;
 use App\Models\Rol;
 use App\Models\User;
@@ -34,6 +35,12 @@ class CeladoresController extends Controller
             ->get(['registered_by', DB::raw('COUNT(*) as entradas'), DB::raw('MAX(created_at) as ultima')])
             ->keyBy('registered_by');
 
+        // Quién está en la puerta ahora: el turno abierto de cada uno.
+        $enTurno = DB::table('complex_shifts')
+            ->where('complex_id', $complexId)
+            ->whereNull('ended_at')
+            ->pluck('started_at', 'user_id');
+
         return response()->json([
             'data' => ComplexStaff::where('complex_id', $complexId)
                 ->where('role', ComplexStaff::CELADOR)
@@ -46,11 +53,12 @@ class CeladoresController extends Controller
                     // Si todavía entra con la clave que le dio la administración.
                     'u.must_change_password',
                 ])
-                ->map(function ($c) use ($libro) {
+                ->map(function ($c) use ($libro, $enTurno) {
                     $l = $libro[$c->user_id] ?? null;
                     $c->entradas = (int) ($l->entradas ?? 0);
                     $c->ultima_entrada = $l->ultima ?? null;
                     $c->must_change_password = (bool) $c->must_change_password;
+                    $c->en_turno_desde = isset($enTurno[$c->user_id]) ? (string) $enTurno[$c->user_id] : null;
 
                     return $c;
                 }),
@@ -111,6 +119,124 @@ class CeladoresController extends Controller
             'message' => 'Celador creado. Ya puede entrar con ese correo.',
             'user_id' => $celador->user_id,
         ], 201);
+    }
+
+    /**
+     * LO QUE HIZO UN CELADOR, DEL MÁS RECIENTE AL MÁS VIEJO.
+     *
+     * Una sola línea de tiempo con cinco fuentes: las entradas que anotó, las
+     * salidas que marcó, sus turnos (inicio y fin), su alta y cada vez que se
+     * le activó o desactivó (de `audits`, con quién lo hizo).
+     *
+     * PAGINADA SIN UNIR EN SQL. Las cinco fuentes viven en tablas distintas y
+     * un UNION con fechas de columnas diferentes se escribe distinto en cada
+     * motor. Para servir la página `p` basta con traer de cada fuente sus
+     * `p × por_página` más recientes, mezclarlas y cortar: lo que no entra en
+     * ninguno de esos cortes tampoco puede estar en la página. El total es la
+     * suma de los conteos. Tope de 50 páginas de fondo: es un historial para
+     * mirar, no para exportar.
+     */
+    public function historial(Request $request, int $id)
+    {
+        $complexId = (int) $request->attributes->get('complex_id');
+
+        $ficha = ComplexStaff::where('id', $id)
+            ->where('complex_id', $complexId)
+            ->where('role', ComplexStaff::CELADOR)
+            ->first();
+
+        if (! $ficha) {
+            return response()->json(['message' => 'Ese celador no es de tu conjunto.'], 404);
+        }
+
+        $porPagina = min(50, max(5, (int) $request->query('per_page', 20)));
+        $pagina = min(50, max(1, (int) $request->query('page', 1)));
+        $hondo = $pagina * $porPagina;
+        $userId = (int) $ficha->user_id;
+
+        $entradas = DB::table('complex_entries as e')
+            ->where('e.complex_id', $complexId)
+            ->where('e.registered_by', $userId);
+        $salidas = DB::table('complex_entries as e')
+            ->where('e.complex_id', $complexId)
+            ->where('e.exit_registered_by', $userId)
+            ->whereNotNull('e.exited_at');
+        $turnos = DB::table('complex_shifts')
+            ->where('complex_id', $complexId)
+            ->where('user_id', $userId);
+        $accesos = DB::table('audits as a')
+            ->where('a.auditable_type', $ficha->getMorphClass())
+            ->where('a.auditable_id', $ficha->id)
+            ->where('a.event', 'updated')
+            ->where('a.new_values', 'like', '%"state"%');
+
+        $quien = fn ($q) => $q
+            ->leftJoin('domiciliary as d', 'd.domiciliary_id', '=', 'e.domiciliary_id')
+            ->leftJoin('user as u', 'u.user_id', '=', 'd.user_id');
+
+        $eventos = collect()
+            ->concat($quien(clone $entradas)->orderByDesc('e.created_at')->limit($hondo)
+                ->get(['e.id', 'e.kind', 'e.method', 'e.created_at as fecha', DB::raw('COALESCE(u.name, e.visitor_name) as nombre')])
+                ->map(fn ($e) => [
+                    'tipo' => 'entrada',
+                    'fecha' => (string) $e->fecha,
+                    'texto' => 'Registró la entrada de '.($e->nombre ?: 'alguien sin nombre'),
+                    'kind' => $e->kind,
+                    'method' => $e->method,
+                    'entry_id' => (int) $e->id,
+                ]))
+            ->concat($quien(clone $salidas)->orderByDesc('e.exited_at')->limit($hondo)
+                ->get(['e.id', 'e.kind', 'e.exited_at as fecha', DB::raw('COALESCE(u.name, e.visitor_name) as nombre')])
+                ->map(fn ($e) => [
+                    'tipo' => 'salida',
+                    'fecha' => (string) $e->fecha,
+                    'texto' => 'Marcó la salida de '.($e->nombre ?: 'alguien sin nombre'),
+                    'kind' => $e->kind,
+                    'entry_id' => (int) $e->id,
+                ]))
+            ->concat((clone $turnos)->orderByDesc('started_at')->limit($hondo)->get(['started_at'])
+                ->map(fn ($t) => ['tipo' => 'turno_inicio', 'fecha' => (string) $t->started_at, 'texto' => 'Empezó su turno']))
+            ->concat((clone $turnos)->whereNotNull('ended_at')->orderByDesc('ended_at')->limit($hondo)->get(['started_at', 'ended_at'])
+                ->map(fn ($t) => [
+                    'tipo' => 'turno_fin',
+                    'fecha' => (string) $t->ended_at,
+                    'texto' => 'Terminó su turno',
+                    'minutos' => max(0, (int) floor((strtotime((string) $t->ended_at) - strtotime((string) $t->started_at)) / 60)),
+                ]))
+            ->concat((clone $accesos)->leftJoin('user as p', 'p.user_id', '=', 'a.user_id')
+                ->orderByDesc('a.created_at')->limit($hondo)
+                ->get(['a.new_values', 'a.created_at as fecha', 'p.name as por'])
+                ->map(function ($a) {
+                    $activo = (bool) (json_decode((string) $a->new_values, true)['state'] ?? false);
+
+                    return [
+                        'tipo' => $activo ? 'activado' : 'desactivado',
+                        'fecha' => (string) $a->fecha,
+                        'texto' => ($activo ? 'Lo activaron de nuevo' : 'Lo desactivaron').($a->por ? " ({$a->por})" : ''),
+                    ];
+                }))
+            ->push([
+                'tipo' => 'alta',
+                'fecha' => (string) $ficha->getRawOriginal('created_at'),
+                'texto' => 'Le crearon la cuenta de celador',
+            ])
+            ->filter(fn ($e) => $e['fecha'] !== '')
+            ->sortByDesc('fecha')
+            ->values();
+
+        $total = (clone $entradas)->count() + (clone $salidas)->count()
+            + (clone $turnos)->count() + (clone $turnos)->whereNotNull('ended_at')->count()
+            + (clone $accesos)->count() + ($ficha->getRawOriginal('created_at') ? 1 : 0);
+
+        return response()->json([
+            'data' => $eventos->forPage($pagina, $porPagina)->values(),
+            'meta' => [
+                'page' => $pagina,
+                'per_page' => $porPagina,
+                'total' => $total,
+                'last_page' => min(50, max(1, (int) ceil($total / $porPagina))),
+            ],
+        ]);
     }
 
     /** Activa o desactiva a un celador. Solo los del propio conjunto. */
@@ -180,6 +306,9 @@ class CeladoresController extends Controller
          */
         if (! $datos['state'] && $usuario) {
             $usuario->tokens()->delete();
+            // Y su turno, si lo tenía abierto: quien ya no puede entrar no
+            // sigue «en turno» en la tarjeta.
+            ComplexShift::cerrarDe((int) $usuario->user_id);
         }
 
         return response()->json([

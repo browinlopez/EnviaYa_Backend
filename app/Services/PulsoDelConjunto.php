@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\Buyer\ResidentialComplex;
 use App\Models\Conjunto\ComplexStaff;
 use App\Models\Order\OrdersSales;
 use App\Support\FiltroDeFechas;
@@ -146,6 +147,15 @@ class PulsoDelConjunto
             // Entraron hoy y no han salido. Es la cifra que convierte el libro
             // en control de acceso.
             'adentro' => (int) (clone $entradasHoy)->whereNull('e.exited_at')->count(),
+            /*
+             * Los que llevan más de las horas de alerta del conjunto: los que
+             * el celador tiene que ir a buscar. Mismo criterio que
+             * `/porteria/adentro`, que los marca uno por uno.
+             */
+            'demorados' => (int) (clone $entradasHoy)->whereNull('e.exited_at')
+                ->where('e.created_at', '<=', now()->subHours(ResidentialComplex::horasDeAlerta($complexId)))
+                ->count(),
+            'horas_alerta' => ResidentialComplex::horasDeAlerta($complexId),
             // El mismo número partido: «2 domiciliarios · 3 visitas» dice a
             // quién hay que ir a buscar; «5» solo, no.
             'adentro_domiciliarios' => (int) (clone $entradasHoy)->whereNull('e.exited_at')

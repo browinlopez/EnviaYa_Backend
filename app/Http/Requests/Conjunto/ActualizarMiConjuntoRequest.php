@@ -32,6 +32,8 @@ class ActualizarMiConjuntoRequest extends FormRequest
             'nit' => 'nullable|string|max:40',
             'gate_notes' => 'nullable|string|max:2000',
             'require_authorization' => 'nullable|boolean',
+            // Desde cuántas horas adentro se avisa en «Siguen adentro».
+            'horas_alerta_adentro' => 'sometimes|nullable|integer|min:1|max:24',
         ];
     }
 }
