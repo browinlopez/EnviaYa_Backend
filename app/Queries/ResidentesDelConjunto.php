@@ -107,7 +107,7 @@ class ResidentesDelConjunto
      *
      * @return array<string, array{n:int, ultimo:?string}>
      */
-    public function domiciliosPorPuerta(int $complexId, CarbonImmutable $desde): array
+    public function domiciliosPorPuerta(int $complexId, CarbonImmutable $desde, ?CarbonImmutable $hasta = null): array
     {
         $puertas = [];
 
@@ -115,6 +115,9 @@ class ResidentesDelConjunto
             ->where('complex_id', $complexId)
             ->where('kind', 'domiciliario')
             ->where('created_at', '>=', $desde)
+            // Con fin solo las ventanas cerradas («el mes pasado»); las
+            // demás llegan hasta ahora.
+            ->when($hasta, fn ($q) => $q->where('created_at', '<=', $hasta))
             ->select(['id', 'orders', 'created_at'])
             ->chunkById(500, function ($entradas) use (&$puertas) {
                 foreach ($entradas as $e) {

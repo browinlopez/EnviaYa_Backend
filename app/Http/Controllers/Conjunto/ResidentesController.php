@@ -49,8 +49,8 @@ class ResidentesController extends Controller
          * Los domicilios se cuentan por APARTAMENTO: el libro sabe a qué
          * puerta iba el pedido, no quién de la casa lo pidió.
          */
-        [$desde] = $this->ventana($request);
-        $puertas = $lee->domiciliosPorPuerta($complexId, $desde);
+        [$desde, , $hasta] = $this->ventana($request);
+        $puertas = $lee->domiciliosPorPuerta($complexId, $desde, $hasta);
 
         $filas = $filas->map(function ($f) use ($puertas, $lee) {
             $p = $puertas[$lee->puerta($f->tower, $f->apartment)] ?? null;
@@ -75,6 +75,7 @@ class ResidentesController extends Controller
                 'total' => $total,
                 'last_page' => max(1, (int) ceil($total / $porPagina)),
                 'desde' => $desde->toDateString(),
+                'hasta' => $hasta?->toDateString(),
                 // Si se llegó al tope, el total no es el del conjunto: se dice.
                 'truncado' => $total >= 5000,
             ],
@@ -97,8 +98,8 @@ class ResidentesController extends Controller
         $porTorre = (int) ($conjunto->apartments_per_tower ?? 0);
         $unidades = (int) ($conjunto->towers_count ?? 0) * $porTorre;
 
-        [$desde, $ventana] = $this->ventana($request);
-        $puertas = $lee->domiciliosPorPuerta($complexId, $desde);
+        [$desde, $ventana, $hasta] = $this->ventana($request);
+        $puertas = $lee->domiciliosPorPuerta($complexId, $desde, $hasta);
 
         $domiciliosTorre = [];
         foreach ($puertas as $clave => $p) {
@@ -142,6 +143,7 @@ class ResidentesController extends Controller
                 'domicilios' => (int) array_sum($domiciliosTorre),
                 'ventana' => $ventana,
                 'desde' => $desde->toDateString(),
+                'hasta' => $hasta?->toDateString(),
                 'nuevos_mes' => $nuevosEntre($inicioMes, null),
                 'nuevos_mes_anterior' => $nuevosEntre($inicioAntes, $inicioMes),
                 'mes_anterior' => $inicioAntes->locale('es')->isoFormat('MMMM'),
@@ -150,19 +152,30 @@ class ResidentesController extends Controller
     }
 
     /**
-     * La ventana de los domicilios: los últimos 7, 30 o 90 días, o este mes.
-     * Cualquier otro valor cae en 30 días: nunca se calcula sobre un rango
-     * que el cliente invente.
+     * La ventana de los domicilios: los últimos 7, 30 o 90 días, este mes o
+     * el mes pasado. Cualquier otro valor cae en 30 días: nunca se calcula
+     * sobre un rango que el cliente invente.
+     *
+     * Devuelve [desde, código, hasta]. `hasta` solo lo tiene la ventana que
+     * ya cerró —el mes pasado, hasta su último segundo—; las demás llegan
+     * hasta ahora y lo dejan en null.
+     *
+     * @return array{0: CarbonImmutable, 1: string, 2: ?CarbonImmutable}
      */
     private function ventana(Request $request): array
     {
         $hoy = CarbonImmutable::now();
 
         return match ((string) $request->query('ventana', '30')) {
-            'mes' => [$hoy->startOfMonth(), 'mes'],
-            '7' => [$hoy->subDays(6)->startOfDay(), '7'],
-            '90' => [$hoy->subDays(89)->startOfDay(), '90'],
-            default => [$hoy->subDays(29)->startOfDay(), '30'],
+            'mes' => [$hoy->startOfMonth(), 'mes', null],
+            'mes_pasado' => [
+                $hoy->startOfMonth()->subMonthNoOverflow(),
+                'mes_pasado',
+                $hoy->startOfMonth()->subMonthNoOverflow()->endOfMonth(),
+            ],
+            '7' => [$hoy->subDays(6)->startOfDay(), '7', null],
+            '90' => [$hoy->subDays(89)->startOfDay(), '90', null],
+            default => [$hoy->subDays(29)->startOfDay(), '30', null],
         };
     }
 
