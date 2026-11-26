@@ -75,6 +75,22 @@ class InformeDelInversionista
         $dompdf->setPaper('letter', 'portrait');
         $dompdf->render();
 
+        /*
+         * «Página X de Y» en el pie de cada hoja. Va por el lienzo y no por
+         * CSS: dompdf no sabe cuántas páginas hay mientras arma el HTML
+         * (`counter(pages)` sale en cero), y acá ya lo sabe.
+         */
+        $lienzo = $dompdf->getCanvas();
+        $letra = $dompdf->getFontMetrics()->getFont('DejaVu Sans');
+        $lienzo->page_text(
+            $lienzo->get_width() - 92,
+            $lienzo->get_height() - 30,
+            'Página {PAGE_NUM} de {PAGE_COUNT}',
+            $letra,
+            7,
+            [0.54, 0.53, 0.64],
+        );
+
         return $dompdf->output();
     }
 }

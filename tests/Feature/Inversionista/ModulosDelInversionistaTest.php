@@ -375,3 +375,77 @@ test('ningun modulo trae un dato de una persona, de un negocio ni de un pedido',
 
     expect(array_intersect(array_keys($claves), $prohibidas))->toBe([]);
 })->with(['opciones', 'resumen', 'negocios', 'expansion', 'usuarios', 'operacion', 'ingresos']);
+
+/**
+ * El mapa: direcciones con coordenadas para b1 (dos, en la misma celda) y b2.
+ * o1 y o2 (b1·n1) van a la primera dirección; se agregan dos entregas más de
+ * n1 a la segunda de b1 (misma celda) y una de b2 a otra celda.
+ */
+function invModMapa(): array
+{
+    $e = invModEscenario();
+
+    $usuario = fn (string $correo) => DB::table('user')->where('email', $correo)->value('user_id');
+    $buyer = fn (string $correo) => DB::table('buyer')->where('user_id', $usuario($correo))->value('buyer_id');
+    $direccion = fn (string $correo, float $lat, float $lng) => DB::table('user_address')->insertGetId([
+        'user_id' => $usuario($correo), 'address' => 'Calle Privada 9 # 8-7', 'state' => 1,
+        'latitude' => $lat, 'longitude' => $lng,
+    ], 'address_id');
+
+    // Las dos de Marta caen en la celda [2749, -18701] (0,004°).
+    $casa = $direccion('marta.privada@correo.co', 10.99712, -74.80321);
+    $oficina = $direccion('marta.privada@correo.co', 10.99788, -74.80255);
+    $lejos = $direccion('pedro.privado@correo.co', 10.91234, -74.76543);
+
+    $n1 = DB::table('business')->where('name', 'Tienda La Secreta')->value('busines_id');
+    $n2 = DB::table('business')->where('name', 'Droguería Escondida')->value('busines_id');
+
+    DB::table('orderssales')->where('busines_id', $n1)->where('state', 4)->where('payment_state', 'paid')
+        ->update(['address_id' => $casa]);
+    DB::table('orderssales')->where('busines_id', $n2)->where('sale_date', '2026-11-06 09:00:00')
+        ->update(['address_id' => $lejos]);
+
+    foreach (['2026-11-10 12:00:00', '2026-11-11 12:00:00'] as $fecha) {
+        DB::table('orderssales')->insert([
+            'buyer_id' => $buyer('marta.privada@correo.co'), 'busines_id' => $n1, 'address_id' => $oficina,
+            'methods_id' => 1, 'total' => 1000, 'subtotal' => 1000, 'discount' => 0, 'state' => 4,
+            'payment_state' => 'paid', 'sale_date' => $fecha,
+        ]);
+    }
+
+    return $e;
+}
+
+test('expansion: el radio de entregas es el percentil 90, con cinco entregas o mas', function () {
+    invModMapa();
+    $c = collect(invModPedir('expansion')['por_ciudad'])->keyBy('ciudad');
+
+    // Barranquilla: cuatro entregas cerca de n1 (~0,7 km) y una lejos (~10 km)
+    // desde n2. Cinco medidas: el p90 es la quinta, la lejana.
+    expect($c['Barranquilla']['entregas_medidas'])->toBe(5)
+        ->and($c['Barranquilla']['radio_km'])->toBeGreaterThan(9.0)->toBeLessThan(12.0);
+
+    // Soledad no tiene coordenadas de negocio: no hay radio que medir.
+    expect($c['Soledad'])->toMatchArray(['radio_km' => null, 'entregas_medidas' => 0]);
+});
+
+test('expansion: el mapa de calor solo trae celdas de 3 pedidos o mas, por su centro', function () {
+    invModMapa();
+    $calor = invModPedir('expansion')['calor'];
+
+    // La celda de Marta tiene 4 pedidos; la de Pedro, 1 (no sale).
+    expect($calor['celdas'])->toBe([['lat' => 10.998, 'lng' => -74.802, 'pedidos' => 4]])
+        ->and($calor['minimo_por_celda'])->toBe(3)
+        ->and($calor['pedidos_ocultos'])->toBe(1);
+
+    $crudo = json_encode(invModPedir('expansion'));
+    foreach (['10.99712', '74.80321', '10.99788', '74.80255', '10.91234', '74.76543', '10.912', '-74.765'] as $coordenada) {
+        expect($crudo)->not->toContain($coordenada);
+    }
+});
+
+test('expansion: el mapa respeta el filtro de ciudad', function () {
+    $e = invModMapa();
+
+    expect(invModPedir('expansion', ['municipality_id' => $e['sol']])['calor']['celdas'])->toBe([]);
+});

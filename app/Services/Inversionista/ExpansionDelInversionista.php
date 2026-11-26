@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Inversionista;
 
+use App\Services\GeneradorDeReportes;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -24,12 +25,25 @@ use Illuminate\Support\Facades\DB;
  * de la ciudad (o, si no tiene, de sus conjuntos), REDONDEADO A DOS DECIMALES
  * (unos 1,1 km). No es la dirección de nadie: es dónde cae la ciudad en el
  * mapa, con la precisión justa para que tres municipios vecinos no se monten.
+ *
+ * EL RADIO DE ENTREGAS de cada ciudad y el MAPA DE CALOR de dónde se compra
+ * los arma `MapaDeEntregas`, con sus propios umbrales de privacidad.
  */
 class ExpansionDelInversionista extends BaseDelInversionista
 {
+    public function __construct(GeneradorDeReportes $reportes, private MapaDeEntregas $mapa)
+    {
+        parent::__construct($reportes);
+    }
+
     public function datos(array $v, array $f): array
     {
-        $ciudades = $this->porCiudad($v, $f);
+        $mapa = $this->mapa->datos($v, $f);
+
+        $ciudades = array_map(fn (array $c) => $c + [
+            'radio_km' => $c['municipality_id'] === null ? null : ($mapa['radios'][$c['municipality_id']]['radio_km'] ?? null),
+            'entregas_medidas' => $c['municipality_id'] === null ? 0 : ($mapa['radios'][$c['municipality_id']]['entregas_medidas'] ?? 0),
+        ], $this->porCiudad($v, $f));
 
         $conCiudad = array_filter($ciudades, fn ($c) => $c['municipality_id'] !== null);
 
@@ -46,6 +60,7 @@ class ExpansionDelInversionista extends BaseDelInversionista
                 'residentes_en_conjuntos' => array_sum(array_column($ciudades, 'residentes')),
             ],
             'por_ciudad' => $ciudades,
+            'calor' => $mapa['calor'],
         ];
     }
 
