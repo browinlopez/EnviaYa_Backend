@@ -31,6 +31,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # La historia completa: el chequeo de comentarios compara contra la base del PR.
+          fetch-depth: 0
 
       - name: Preparar PHP
         uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
@@ -96,6 +99,11 @@ jobs:
       # Probado anadiendo una ruta y sin regenerar: sale con 1.
       - name: Contrato OpenAPI al dia
         run: php scripts/openapi.php --revisar
+
+      # Solo las líneas que agrega el PR: lo existente se limpia aparte, por módulo.
+      - name: Comentarios nuevos de una linea
+        if: github.event_name == 'pull_request' && matrix.php == '8.2'
+        run: php scripts/comentarios.php --base "origin/${{ github.base_ref }}"
 
       - name: Pruebas
         run: php artisan test
