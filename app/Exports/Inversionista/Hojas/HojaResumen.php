@@ -31,17 +31,19 @@ class HojaResumen extends HojaDelInforme
             ['Negocios activos', $c['negocios_activos'], self::ENTERO],
             ['Usuarios registrados', $c['usuarios_registrados'], self::ENTERO],
             ['Pedidos realizados', $c['pedidos'], self::ENTERO],
-            ['Usuarios activos (con un pedido en el periodo)', $c['usuarios_activos'], self::ENTERO],
+            ['Ventas', $c['ventas'], self::PESOS],
+            ['Ticket promedio', $c['ticket_promedio'], self::PESOS],
+            ['Ingreso de la plataforma', $this->d['ingresos']['cifras']['ingreso'], self::PESOS],
         ]);
         $this->fila();
 
         $this->seccion('Negocios por tipo');
         $this->tabla(
-            ['Tipo', 'Negocios activos', '% de los negocios', 'Pedidos', '% de los pedidos'],
+            ['Tipo', 'Negocios activos', '% de los negocios', 'Pedidos', 'Ventas', '% de las ventas'],
             array_map(fn ($t) => [
-                $t['nombre'], $t['negocios'], $this->pct($t['porcentaje']), $t['pedidos'], $this->pct($t['participacion_pedidos']),
+                $t['nombre'], $t['negocios'], $this->pct($t['porcentaje']), $t['pedidos'], $t['ventas'], $this->pct($t['participacion_ventas']),
             ], $this->d['resumen']['por_tipo']),
-            [1 => self::ENTERO, 2 => self::PORCENTAJE, 3 => self::ENTERO, 4 => self::PORCENTAJE],
+            [1 => self::ENTERO, 2 => self::PORCENTAJE, 3 => self::ENTERO, 4 => self::PESOS, 5 => self::PORCENTAJE],
         );
         $this->fila();
         $this->nota('Pedido = entregado y con el pago confirmado; ni los cancelados ni los que esperan un pago en línea. Negocio activo = visible en la app. Usuario registrado = cuenta de comprador. El periodo anterior es uno de igual número de días, justo antes.');

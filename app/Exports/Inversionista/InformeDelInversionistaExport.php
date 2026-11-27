@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Exports\Inversionista;
 
 use App\Exports\Inversionista\Hojas\HojaCiudades;
+use App\Exports\Inversionista\Hojas\HojaIngresos;
 use App\Exports\Inversionista\Hojas\HojaMeses;
 use App\Exports\Inversionista\Hojas\HojaNegocios;
 use App\Exports\Inversionista\Hojas\HojaOperacion;
@@ -20,15 +21,15 @@ use Maatwebsite\Excel\Events\BeforeWriting;
  *
  * Recibe los datos YA CALCULADOS por `InformeDelInversionista`, que se los
  * pide a los mismos servicios de las pantallas: el archivo dice lo mismo que
- * el panel. Seis hojas, ninguna con nombres de personas ni de negocios ni
- * con pesos (el inversionista ve crecimiento, no plata):
+ * el panel. Siete hojas, ninguna con nombres de personas ni de negocios:
  *
  *   Resumen     las cifras clave y el reparto por tipo
  *   Mes a mes   doce meses con las series de todos los módulos
- *   Negocios    activos, con pedidos y días hasta la primera venta
+ *   Negocios    activos, con ventas y días hasta la primera venta
  *   Ciudades    el avance por ciudad
  *   Usuarios    registrados, activos, recompra y frecuencia
  *   Operación   tiempos, puntualidad, cancelación y flota
+ *   Ingresos    ventas, ingreso de la plataforma y comisión efectiva
  */
 class InformeDelInversionistaExport implements WithEvents, WithMultipleSheets, WithProperties
 {
@@ -43,6 +44,7 @@ class InformeDelInversionistaExport implements WithEvents, WithMultipleSheets, W
             new HojaCiudades($this->datos),
             new HojaUsuarios($this->datos),
             new HojaOperacion($this->datos),
+            new HojaIngresos($this->datos),
         ];
     }
 

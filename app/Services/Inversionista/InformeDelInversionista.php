@@ -25,6 +25,7 @@ class InformeDelInversionista
         private ExpansionDelInversionista $expansion,
         private UsuariosDelInversionista $usuarios,
         private OperacionDelInversionista $operacion,
+        private IngresosDelInversionista $ingresos,
     ) {}
 
     public function datos(array $pedido): array
@@ -48,6 +49,7 @@ class InformeDelInversionista
             'expansion' => $this->expansion->datos($v, $f),
             'usuarios' => $this->usuarios->datos($v, $f),
             'operacion' => $this->operacion->datos($v, $f),
+            'ingresos' => $this->ingresos->datos($v, $f),
         ];
     }
 

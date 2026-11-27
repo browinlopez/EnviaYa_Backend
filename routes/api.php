@@ -604,7 +604,8 @@ Route::middleware(['auth:sanctum', 'cuenta.habilitada', 'audit.api'])->group(fun
         Route::get('expansion', [TableroDelInversionistaController::class, 'expansion']);
         Route::get('usuarios', [TableroDelInversionistaController::class, 'usuarios']);
         Route::get('operacion', [TableroDelInversionistaController::class, 'operacion']);
-        // El informe arma los cinco módulos de una vez: va con freno, como las
+        Route::get('ingresos', [TableroDelInversionistaController::class, 'ingresos']);
+        // El informe arma los seis módulos de una vez: va con freno, como las
         // otras descargas.
         Route::get('informe', [TableroDelInversionistaController::class, 'informe'])->middleware('throttle:10,1');
     });

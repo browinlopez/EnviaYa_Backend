@@ -12,8 +12,8 @@ use Illuminate\Support\Facades\DB;
  * EXPANSIÓN: DÓNDE ESTÁ VECIPA'YA Y DÓNDE LA ESTÁN ESPERANDO.
  *
  * Por cada ciudad: los negocios activos (con su reparto por tipo), los
- * conjuntos activos y los vecinos registrados en ellos, los pedidos del
- * periodo, los compradores con dirección ahí, cuántos compradores
+ * conjuntos activos y los vecinos registrados en ellos, los pedidos y las
+ * ventas del periodo, los compradores con dirección ahí, cuántos compradores
  * hay por negocio (la cobertura) y desde cuándo hay presencia.
  *
  * Entra toda ciudad donde haya algo: un negocio, un conjunto, un pedido o un
@@ -82,6 +82,7 @@ class ExpansionDelInversionista extends BaseDelInversionista
                 'conjuntos' => 0,
                 'residentes' => 0,
                 'pedidos' => 0,
+                'ventas' => 0.0,
                 'compradores' => 0,
                 'desde' => null,
                 'punto' => null,
@@ -153,13 +154,14 @@ class ExpansionDelInversionista extends BaseDelInversionista
         }
 
         $pedidos = $this->entregados($f, $v['desde'], $v['hasta'], true)
-            ->selectRaw('b.municipality_id as m, COUNT(*) as n')
+            ->selectRaw('b.municipality_id as m, COUNT(*) as n, COALESCE(SUM(o.total), 0) as ventas')
             ->groupBy('b.municipality_id')
             ->get();
 
         foreach ($pedidos as $p) {
             $k = $fila($id($p->m));
             $filas[$k]['pedidos'] += (int) $p->n;
+            $filas[$k]['ventas'] += (float) $p->ventas;
         }
 
         $compradores = DB::table('user_address as ua')
@@ -221,6 +223,7 @@ class ExpansionDelInversionista extends BaseDelInversionista
                 'conjuntos' => $r['conjuntos'],
                 'residentes' => $r['residentes'],
                 'pedidos' => $r['pedidos'],
+                'ventas' => round($r['ventas'], 2),
                 'compradores' => $r['compradores'],
                 /*
                  * ESPERANDO: una ciudad con demanda (compradores con dirección

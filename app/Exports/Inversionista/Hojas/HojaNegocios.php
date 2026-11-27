@@ -32,7 +32,7 @@ class HojaNegocios extends HojaDelInforme
         $this->cifras([
             ['Negocios activos', $a['activos'], self::ENTERO],
             ['Con al menos una venta', $a['con_ventas'], self::ENTERO],
-            ['Pedidos por negocio que vendió', $a['pedidos_por_negocio'], self::DECIMAL],
+            ['Ventas por negocio que vendió', $a['ventas_por_negocio'], self::PESOS],
         ]);
         $this->fila();
 

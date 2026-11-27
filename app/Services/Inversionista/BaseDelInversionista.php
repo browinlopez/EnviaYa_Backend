@@ -355,4 +355,10 @@ abstract class BaseDelInversionista
     {
         return ($v === null || $v === '' || (int) $v <= 0) ? null : (int) $v;
     }
+
+    /** Pesos con dos decimales a partir de lo que devuelva la base. */
+    protected function pesos(mixed $v): float
+    {
+        return round((float) ($v ?? 0), 2);
+    }
 }

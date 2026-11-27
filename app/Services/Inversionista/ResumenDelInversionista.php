@@ -5,18 +5,15 @@ declare(strict_types=1);
 namespace App\Services\Inversionista;
 
 use Carbon\Carbon;
+use Illuminate\Database\Query\Builder;
 
 /**
- * RESUMEN: LAS CUATRO CIFRAS, EL REPARTO POR TIPO Y EL AÑO.
+ * RESUMEN: LAS CUATRO CIFRAS, LAS VENTAS, EL REPARTO POR TIPO Y EL AÑO.
  *
  * Es la portada del panel del inversionista: negocios activos, usuarios
- * registrados, pedidos realizados y usuarios activos (cada uno contra el
- * periodo anterior de igual tamaño), cuántos negocios hay de cada tipo y la
- * serie de doce meses.
- *
- * SIN PESOS. El inversionista ve el crecimiento —negocios, personas,
- * pedidos, ciudades, conjuntos— y no la plata: ni ventas, ni ticket, ni
- * comisiones. No es que la pantalla las esconda: no salen de aquí.
+ * registrados, pedidos realizados y ticket promedio (cada uno contra el
+ * periodo anterior de igual tamaño), las ventas del periodo, cuántos negocios
+ * hay de cada tipo y la serie de doce meses.
  *
  * El reparto por tipo y la serie de meses también los usan Negocios e
  * Informes: por eso son públicos.
@@ -49,17 +46,11 @@ class ResumenDelInversionista extends BaseDelInversionista
         $nuevos = $this->compradores($f)->whereBetween('u.created_at', [$v['desde'], $v['hasta']])->count();
         $nuevosAntes = $this->compradores($f)->whereBetween('u.created_at', [$v['desde_antes'], $v['hasta_antes']])->count();
 
-        $pedidos = $this->entregados($f, $v['desde'], $v['hasta'])->count();
-        $pedidosAntes = $this->entregados($f, $v['desde_antes'], $v['hasta_antes'])->count();
+        [$pedidos, $ventas] = $this->totales($this->entregados($f, $v['desde'], $v['hasta']));
+        [$pedidosAntes, $ventasAntes] = $this->totales($this->entregados($f, $v['desde_antes'], $v['hasta_antes']));
 
-        /*
-         * USUARIOS ACTIVOS: compradores distintos con al menos un pedido
-         * entregado en el periodo. Es la cifra que dice si la gente vuelve,
-         * y ocupa el lugar que tenía el ticket promedio (que era plata).
-         */
-        $activos = fn ($desde, $hasta) => $this->entregados($f, $desde, $hasta)
-            ->distinct()
-            ->count('o.buyer_id');
+        $ticket = $pedidos > 0 ? round($ventas / $pedidos, 2) : null;
+        $ticketAntes = $pedidosAntes > 0 ? round($ventasAntes / $pedidosAntes, 2) : null;
 
         return [
             'negocios_activos' => $this->cifra($negocios, $negociosAntes) + ['con_pedidos' => $conPedidos],
@@ -68,18 +59,24 @@ class ResumenDelInversionista extends BaseDelInversionista
                 'nuevos_anterior' => $nuevosAntes,
             ],
             'pedidos' => $this->cifra($pedidos, $pedidosAntes),
-            'usuarios_activos' => $this->cifra(
-                $activos($v['desde'], $v['hasta']),
-                $activos($v['desde_antes'], $v['hasta_antes']),
-            ),
+            'ventas' => $this->cifra($ventas, $ventasAntes),
+            'ticket_promedio' => $this->cifra($ticket, $ticketAntes),
         ];
+    }
+
+    /** @return array{0:int, 1:float} pedidos y ventas */
+    private function totales(Builder $q): array
+    {
+        $fila = $q->selectRaw('COUNT(*) as n, COALESCE(SUM(o.total), 0) as ventas')->first();
+
+        return [(int) ($fila->n ?? 0), $this->pesos($fila->ventas ?? 0)];
     }
 
     /* ----------------------------- POR TIPO ----------------------------- */
 
     /**
-     * Los negocios activos de cada oficio, con los pedidos que entregaron en
-     * el periodo y su parte de los pedidos.
+     * Los negocios activos de cada oficio, con lo que movieron en el periodo
+     * y su parte de las ventas.
      *
      * NO lleva el filtro de tipo, a propósito: es el reparto entre tipos, y
      * filtrado por uno solo quedaría una tarjeta al 100 % y tres en cero. Sí
@@ -95,23 +92,27 @@ class ResumenDelInversionista extends BaseDelInversionista
             ->pluck('n', 'tipo');
 
         $pedidos = $this->entregados($sinTipo, $v['desde'], $v['hasta'], true)
-            ->selectRaw('b.type as tipo, COUNT(*) as n')
+            ->selectRaw('b.type as tipo, COUNT(*) as n, COALESCE(SUM(o.total), 0) as ventas')
             ->groupBy('b.type')
             ->get()
             ->keyBy('tipo');
 
         $total = (int) $negocios->sum();
         $totalPedidos = (int) $pedidos->sum('n');
+        $totalVentas = (float) $pedidos->sum('ventas');
 
-        return array_map(function (array $t) use ($negocios, $pedidos, $total, $totalPedidos) {
+        return array_map(function (array $t) use ($negocios, $pedidos, $total, $totalPedidos, $totalVentas) {
             $n = (int) ($negocios[$t['id']] ?? 0);
             $p = $pedidos[$t['id']] ?? null;
+            $ventas = $this->pesos($p->ventas ?? 0);
 
             return $t + [
                 'negocios' => $n,
                 'porcentaje' => $total > 0 ? round($n / $total * 100, 1) : 0,
                 'pedidos' => (int) ($p->n ?? 0),
-                // Qué parte de los pedidos es de este oficio.
+                'ventas' => $ventas,
+                // Qué parte de lo que se vendió (y de los pedidos) es de este oficio.
+                'participacion_ventas' => $totalVentas > 0 ? round($ventas / $totalVentas * 100, 1) : 0,
                 'participacion_pedidos' => $totalPedidos > 0 ? round((int) ($p->n ?? 0) / $totalPedidos * 100, 1) : 0,
             ];
         }, $this->tipos());
@@ -130,7 +131,7 @@ class ResumenDelInversionista extends BaseDelInversionista
         [$inicio, $fin, $meses] = $this->mesesHasta($hasta, 1);
 
         $pedidos = $this->entregados($f, $inicio, $fin)
-            ->selectRaw("{$this->mesDe('o.sale_date')} as mes, COUNT(*) as n")
+            ->selectRaw("{$this->mesDe('o.sale_date')} as mes, COUNT(*) as n, COALESCE(SUM(o.total), 0) as ventas")
             ->groupBy('mes')
             ->get()
             ->keyBy('mes');
@@ -154,12 +155,13 @@ class ResumenDelInversionista extends BaseDelInversionista
             $clave = $m['mes'];
             $fila = $this->rotuloDeMes($m) + [
                 'pedidos' => (int) ($pedidos[$clave]->n ?? 0),
+                'ventas' => $this->pesos($pedidos[$clave]->ventas ?? 0),
                 'negocios_nuevos' => (int) ($negocios[$clave] ?? 0),
                 'usuarios_nuevos' => (int) ($usuarios[$clave] ?? 0),
             ];
 
             $fila['variacion'] = [];
-            foreach (['pedidos', 'negocios_nuevos', 'usuarios_nuevos'] as $k) {
+            foreach (['pedidos', 'ventas', 'negocios_nuevos', 'usuarios_nuevos'] as $k) {
                 $fila['variacion'][$k] = $this->variacion($fila[$k], $previo[$k] ?? null);
             }
 

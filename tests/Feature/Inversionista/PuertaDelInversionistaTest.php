@@ -14,7 +14,7 @@ use App\Models\User;
 use Laravel\Sanctum\Sanctum;
 
 /** Todo lo que cuelga de `/inversionista`, sin `me`. */
-const INV_RUTAS = ['opciones', 'resumen', 'negocios', 'expansion', 'usuarios', 'operacion', 'informe'];
+const INV_RUTAS = ['opciones', 'resumen', 'negocios', 'expansion', 'usuarios', 'operacion', 'ingresos', 'informe'];
 
 function invCuenta(int $rol, bool $habilitada = true): User
 {
@@ -37,13 +37,13 @@ test('el inversionista entra a su ambito con la forma de los otros', function ()
             'area' => ['name' => "VeciPa'Ya"],
             'role' => 'inversionista',
             'permissions' => array_fill_keys(
-                ['resumen', 'negocios', 'expansion', 'usuarios', 'operacion', 'informes'],
+                ['resumen', 'negocios', 'expansion', 'usuarios', 'operacion', 'ingresos', 'informes'],
                 ['view' => true, 'manage' => false],
             ),
             'stats' => [],
         ]);
 
-    foreach (['resumen', 'negocios', 'expansion', 'usuarios', 'operacion'] as $modulo) {
+    foreach (['resumen', 'negocios', 'expansion', 'usuarios', 'operacion', 'ingresos'] as $modulo) {
         $this->getJson('/v1/inversionista/'.$modulo)->assertOk()->assertJsonStructure(['periodo', 'filtros']);
     }
     $this->getJson('/v1/inversionista/opciones')->assertOk()->assertJsonStructure(['ciudades', 'tipos']);
@@ -98,7 +98,7 @@ test('una cuenta de inversionista deshabilitada no entra', function () {
 test('los filtros mal escritos se rechazan con 422', function () {
     Sanctum::actingAs(invCuenta(7));
 
-    foreach (['resumen', 'negocios', 'expansion', 'usuarios', 'operacion', 'informe'] as $modulo) {
+    foreach (['resumen', 'negocios', 'expansion', 'usuarios', 'operacion', 'ingresos', 'informe'] as $modulo) {
         $this->getJson('/v1/inversionista/'.$modulo.'?desde=ayer-no&municipality_id=abc')
             ->assertStatus(422)
             ->assertJsonValidationErrors(['desde', 'municipality_id']);
