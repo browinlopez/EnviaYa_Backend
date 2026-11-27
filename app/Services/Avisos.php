@@ -7,7 +7,9 @@ namespace App\Services;
 use App\Events\AvisoPersonal;
 use App\Jobs\EnviarAvisoPush;
 use App\Models\Notification;
+use App\Models\Order\OrdersSales;
 use App\Models\User;
+use App\Services\Push\EntregaDelPush;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -58,6 +60,9 @@ class Avisos
         'recordatorio_programado' => 'Tu pedido programado',
         'recordatorio_programado_15' => 'Tu pedido es en 15 minutos',
         'promocion' => 'Promoción nueva',
+        'visita_por_autorizar' => '¿Dejas entrar a alguien?',
+        'visita_respondida' => 'Ya contestaron en tu apartamento',
+        'domiciliario_en_porteria' => 'Tu pedido ya entró al conjunto',
     ];
 
     /*
@@ -73,6 +78,7 @@ class Avisos
      * domiciliarios distintos, y un chat trae muchos mensajes.
      */
     private const UNA_VEZ_POR_PEDIDO = [
+        'domiciliario_en_porteria',
         'pedido_nuevo',
         'pedido_aceptado',
         'pedido_en_camino',
@@ -107,8 +113,17 @@ class Avisos
         array $datos = [],
         bool $push = true,
         ?string $titulo = null,
+        array $entrega = [],
     ): ?Notification {
         $pedido = $datos['order_id'] ?? null;
+
+        // Con el local en el aviso, la app se pasa a él antes de abrir el pedido.
+        if ($pedido !== null && ! isset($datos['business_id'])) {
+            $negocio = OrdersSales::whereKey($pedido)->value('busines_id');
+            if ($negocio) {
+                $datos['business_id'] = (int) $negocio;
+            }
+        }
         if ($pedido !== null && in_array($tipo, self::UNA_VEZ_POR_PEDIDO, true)) {
             $yaEsta = Notification::where('user_id', $userId)
                 ->where('tipo', $tipo)
@@ -180,7 +195,10 @@ class Avisos
                     ['tipo' => $tipo, 'rol' => (string) (User::whereKey($userId)->value('rol') ?? '')] + array_map(
                         fn ($v) => is_scalar($v) ? (string) $v : json_encode($v),
                         $datos,
-                    ),
+                    ) + array_filter([
+                        EntregaDelPush::ETIQUETA => $entrega['etiqueta'] ?? null,
+                        EntregaDelPush::VENCE => $entrega['vence'] ?? null,
+                    ]),
                 );
             } catch (\Throwable $e) {
                 Log::warning('No se pudo encolar el push del aviso', [

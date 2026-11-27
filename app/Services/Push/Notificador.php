@@ -7,6 +7,7 @@ namespace App\Services\Push;
 use App\Jobs\EnviarLotePush;
 use App\Models\DeviceToken;
 use App\Models\Marketing\PushCampaign;
+use App\Models\Product\Product;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -130,11 +131,21 @@ class Notificador
             return ['campaign_id' => (string) $campana->id];
         }
 
-        return [
+        $datos = [
             'campaign_id' => (string) $campana->id,
             'link_type' => (string) $campana->link_type,
             'link_value' => (string) $campana->link_value,
         ];
+
+        // Varias tiendas venden el producto: la app busca por su nombre en el barrio.
+        if ($campana->link_type === 'product') {
+            $nombre = Product::whereKey((int) $campana->link_value)->value('name');
+            if ($nombre) {
+                $datos['producto'] = (string) $nombre;
+            }
+        }
+
+        return $datos;
     }
 
     public function transporte(): TransportePush

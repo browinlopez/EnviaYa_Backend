@@ -89,16 +89,31 @@ class AccesoAlConjunto
      */
     public function resolverCodigo(string $codigo): ?Domiciliary
     {
-        $limpio = strtoupper(trim($codigo));
-        $id = Cache::pull($this->llave($limpio));
+        $domiciliario = $this->duenoDelCodigo($codigo);
+
+        return $domiciliario && $this->gastarCodigo($codigo) ? $domiciliario : null;
+    }
+
+    // Sin gastarlo: al rechazado no se le debe quemar el código.
+    public function duenoDelCodigo(string $codigo): ?Domiciliary
+    {
+        $id = Cache::get($this->llave(strtoupper(trim($codigo))));
+
+        return $id ? Domiciliary::find($id) : null;
+    }
+
+    // pull lee y borra a la vez: dos celadores con el mismo código no anotan dos entradas.
+    public function gastarCodigo(string $codigo): bool
+    {
+        $id = Cache::pull($this->llave(strtoupper(trim($codigo))));
 
         if (! $id) {
-            return null;
+            return false;
         }
 
         Cache::forget('acceso_conjunto_de:'.$id);
 
-        return Domiciliary::find($id);
+        return true;
     }
 
     /**

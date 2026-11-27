@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Services\Totp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
@@ -93,13 +94,7 @@ class AuthController extends Controller
             'user_agent' => substr((string) $request->userAgent(), 0, 255),
         ]);
 
-        if ($user->rol == 1) {
-            $user->load('buyer');
-        } elseif ($user->rol == 2) {
-            $user->load(['owner.businesses']);
-        } elseif ($user->rol == 3) {
-            $user->load(['domiciliary.businesses']);
-        }
+        self::conSusRelaciones($user);
 
         return response()->json([
             'user' => new UsuarioResource($user),
@@ -152,10 +147,12 @@ class AuthController extends Controller
          * o desde la pantalla de seguridad. Salir no es lo mismo que querer
          * que el teléfono olvide la cuenta.
          */
-        $request->user()
-            ->tokens()
-            ->where('name', '!=', AccesoBiometricoController::NOMBRE_TOKEN)
-            ->delete();
+        // Solo esta sesión: salir del teléfono no debe cerrar el panel en el computador.
+        $actual = $request->user()->currentAccessToken();
+
+        if ($actual instanceof PersonalAccessToken && $actual->name !== AccesoBiometricoController::NOMBRE_TOKEN) {
+            $actual->delete();
+        }
 
         return response()->json(['message' => 'Sesión cerrada correctamente']);
     }
@@ -163,6 +160,21 @@ class AuthController extends Controller
     // Perfil
     public function profile(Request $request)
     {
-        return response()->json(new UsuarioResource($request->user()));
+        // Con las relaciones del login: sin owner.businesses la app no ve un local nuevo.
+        return response()->json(new UsuarioResource(self::conSusRelaciones($request->user())));
+    }
+
+    /** Lo que cada rol necesita de su cuenta, igual al entrar y al refrescar. */
+    private static function conSusRelaciones(User $user): User
+    {
+        if ($user->rol == 1) {
+            $user->load('buyer');
+        } elseif ($user->rol == 2) {
+            $user->load(['owner.businesses']);
+        } elseif ($user->rol == 3) {
+            $user->load(['domiciliary.businesses']);
+        }
+
+        return $user;
     }
 }

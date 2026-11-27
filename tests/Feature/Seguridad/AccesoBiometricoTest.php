@@ -217,3 +217,14 @@ test('una peticion autenticada busca el token UNA vez, no dos', function () {
 
     expect($veces)->toBe(1);
 });
+
+test('salir cierra solo la sesion desde la que se sale, no el panel ni el otro telefono', function () {
+    $u = cuentaVerificada();
+    $telefono = $u->createToken('auth_token')->plainTextToken;
+    $u->createToken('auth_token'); // el panel de aliados en el computador
+
+    test()->withHeader('Authorization', 'Bearer '.$telefono)
+        ->postJson('/v1/logout')->assertOk();
+
+    expect($u->tokens()->count())->toBe(1);
+});

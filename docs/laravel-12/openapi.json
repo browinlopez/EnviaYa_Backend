@@ -8707,6 +8707,122 @@
                 }
             }
         },
+        "/v1/conjunto/porteria/autorizaciones": {
+            "post": {
+                "operationId": "post_v1_conjunto_porteria_autorizaciones",
+                "tags": [
+                    "conjunto"
+                ],
+                "summary": "App\\Http\\Controllers\\Conjunto\\AutorizacionesController@pedir",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "clave.propia",
+                    "conjunto",
+                    "cuenta.habilitada",
+                    "en.turno",
+                    "throttle:30,1"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    },
+                    "422": {
+                        "description": "Validacion fallida."
+                    }
+                },
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "visitor_name": {
+                                        "type": "string"
+                                    },
+                                    "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                            "visitante",
+                                            "servicio",
+                                            "domicilio_externo"
+                                        ]
+                                    },
+                                    "tower": {
+                                        "type": "string"
+                                    },
+                                    "apartment": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "visitor_name",
+                                    "tower",
+                                    "apartment"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\Conjunto\\PedirAutorizacionRequest"
+            }
+        },
+        "/v1/conjunto/porteria/autorizaciones/{id}": {
+            "get": {
+                "operationId": "get_v1_conjunto_porteria_autorizaciones_id_",
+                "tags": [
+                    "conjunto"
+                ],
+                "summary": "App\\Http\\Controllers\\Conjunto\\AutorizacionesController@ver",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "clave.propia",
+                    "conjunto",
+                    "cuenta.habilitada"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
         "/v1/conjunto/porteria/entradas": {
             "get": {
                 "operationId": "get_v1_conjunto_porteria_entradas",
@@ -14446,6 +14562,10 @@
                                                                 "type": "string",
                                                                 "nullable": true
                                                             },
+                                                            "apartment": {
+                                                                "type": "string",
+                                                                "nullable": true
+                                                            },
                                                             "country": {
                                                                 "type": "string",
                                                                 "nullable": true
@@ -14467,6 +14587,10 @@
                                                                 "nullable": true
                                                             },
                                                             "street": {
+                                                                "type": "string",
+                                                                "nullable": true
+                                                            },
+                                                            "tower": {
                                                                 "type": "string",
                                                                 "nullable": true
                                                             }
@@ -15639,6 +15763,99 @@
                         "description": "Sin token, o token invalido."
                     }
                 }
+            }
+        },
+        "/v1/porteria/visitas": {
+            "get": {
+                "operationId": "get_v1_porteria_visitas",
+                "tags": [
+                    "porteria"
+                ],
+                "summary": "App\\Http\\Controllers\\User\\VisitasPorAutorizarController@pendientes",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "cuenta.habilitada"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    }
+                }
+            }
+        },
+        "/v1/porteria/visitas/{id}/respuesta": {
+            "post": {
+                "operationId": "post_v1_porteria_visitas_id_respuesta",
+                "tags": [
+                    "porteria"
+                ],
+                "summary": "App\\Http\\Controllers\\User\\VisitasPorAutorizarController@responder",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "cuenta.habilitada",
+                    "throttle:30,1"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "422": {
+                        "description": "Validacion fallida."
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "decision": {
+                                        "type": "string",
+                                        "enum": [
+                                            "si",
+                                            "no"
+                                        ]
+                                    }
+                                },
+                                "required": [
+                                    "decision"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "x-form-request": "App\\Http\\Requests\\User\\ResponderVisitaRequest"
             }
         },
         "/v1/product/create": {

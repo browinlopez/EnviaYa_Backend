@@ -49,7 +49,9 @@ class Owner extends Authenticatable implements AuditableContract
             'owner_busines',
             'owner_id',
             'busines_id'
-        )->withPivot('state');
+        )->withPivot('state')
+            // Por nombre, como negociosDe(): si no, la app y /negocio/* elegían locales distintos.
+            ->orderBy('business.name');
     }
 
     // Relación con tabla user

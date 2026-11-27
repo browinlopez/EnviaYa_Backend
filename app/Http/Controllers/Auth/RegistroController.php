@@ -95,6 +95,17 @@ class RegistroController extends Controller
             'consentimiento.accepted' => 'Falta la autorizacion de tratamiento de datos.',
         ]);
 
+        /* Una torre que el conjunto no tiene: ver ResidentialComplex::torreValida. */
+        if (! empty($validated['complex_id'])) {
+            $c = ResidentialComplex::find($validated['complex_id']);
+            if ($c && ! $c->torreValida($validated['tower'] ?? null)) {
+                return response()->json([
+                    'message' => "{$c->name} tiene {$c->towers_count} torres: revisa el número de la torre.",
+                    'errors' => ['tower' => ['Esa torre no existe en el conjunto.']],
+                ], 422);
+            }
+        }
+
         /*
          * Quien autorizo, cuando y desde donde. Se toma del servidor y no del
          * cliente: una hora que manda el telefono no demuestra nada, porque el
