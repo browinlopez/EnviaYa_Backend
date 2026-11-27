@@ -136,6 +136,10 @@ class PulsoDelConjunto
             'domiciliarios' => (int) (clone $entradasHoy)
                 ->where('e.kind', 'domiciliario')
                 ->distinct()->count('e.domiciliary_id'),
+            // Y cuántas veces entraron: «2 domiciliarios distintos, 10
+            // entradas». Sin esto, «Entradas 18» no cuadraba con nada.
+            'entradas_domiciliarios' => (int) (clone $entradasHoy)
+                ->where('e.kind', 'domiciliario')->count(),
             /*
              * Todo lo que no es domiciliario de la plataforma: visitas,
              * servicio, domicilios de otras apps. Se cuenta aparte porque son

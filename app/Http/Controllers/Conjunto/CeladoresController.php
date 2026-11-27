@@ -35,6 +35,18 @@ class CeladoresController extends Controller
             ->get(['registered_by', DB::raw('COUNT(*) as entradas'), DB::raw('MAX(created_at) as ultima')])
             ->keyBy('registered_by');
 
+        /*
+         * El ÚLTIMO TURNO de cada uno: cuándo EMPEZÓ, no la hora de la última
+         * entrada que anotó. Un turno de noche sin movimiento después de las
+         * diez decía «último turno 9:54 p. m.» aunque hubiera empezado a las
+         * seis.
+         */
+        $ultimoTurno = DB::table('complex_shifts')
+            ->where('complex_id', $complexId)
+            ->groupBy('user_id')
+            ->selectRaw('user_id, MAX(started_at) as inicio')
+            ->pluck('inicio', 'user_id');
+
         // Quién está en la puerta ahora: el turno abierto de cada uno.
         $enTurno = DB::table('complex_shifts')
             ->where('complex_id', $complexId)
@@ -53,12 +65,13 @@ class CeladoresController extends Controller
                     // Si todavía entra con la clave que le dio la administración.
                     'u.must_change_password',
                 ])
-                ->map(function ($c) use ($libro, $enTurno) {
+                ->map(function ($c) use ($libro, $enTurno, $ultimoTurno) {
                     $l = $libro[$c->user_id] ?? null;
                     $c->entradas = (int) ($l->entradas ?? 0);
                     $c->ultima_entrada = $l->ultima ?? null;
                     $c->must_change_password = (bool) $c->must_change_password;
                     $c->en_turno_desde = isset($enTurno[$c->user_id]) ? (string) $enTurno[$c->user_id] : null;
+                    $c->ultimo_turno = isset($ultimoTurno[$c->user_id]) ? (string) $ultimoTurno[$c->user_id] : null;
 
                     return $c;
                 }),
