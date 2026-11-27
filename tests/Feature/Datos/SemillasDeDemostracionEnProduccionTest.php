@@ -1,6 +1,7 @@
 <?php
 
 use Database\Seeders\ConjuntoVillaCarolinaDemoSeeder;
+use Database\Seeders\DemostracionQaSeeder;
 use Database\Seeders\DrogueriaDemoSeeder;
 use Database\Seeders\InversionistaDemoSeeder;
 use Database\Seeders\MuestraDeTresNegociosSeeder;
@@ -16,6 +17,7 @@ dataset('semillas de demostracion', [
     ConjuntoVillaCarolinaDemoSeeder::class,
     DrogueriaDemoSeeder::class,
     InversionistaDemoSeeder::class,
+    DemostracionQaSeeder::class,
 ]);
 
 test('en produccion no escriben nada', function (string $semilla) {
