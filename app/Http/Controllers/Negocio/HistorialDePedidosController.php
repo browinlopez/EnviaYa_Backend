@@ -7,9 +7,9 @@ namespace App\Http\Controllers\Negocio;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Negocio\HistorialDePedidosRequest;
 use App\Models\Order\OrdersSales;
+use App\Queries\VentasDelNegocio;
 use App\Services\CreditoDeTienda;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 
 /**
  * EL ARCHIVO DE PEDIDOS DE LA TIENDA.
@@ -125,6 +125,7 @@ class HistorialDePedidosController extends Controller
          * concreto.
          */
         $entregados = (clone $base())->where('state', OrdersSales::ENTREGADO);
+        $ventas = VentasDelNegocio::entre($businessId, $desde, $hasta);
 
         return response()->json([
             'periodo' => [
@@ -135,9 +136,18 @@ class HistorialDePedidosController extends Controller
                 'pedidos' => (int) (clone $base())->count(),
                 'entregados' => (int) (clone $entregados)->count(),
                 'cancelados' => (int) (clone $base())->where('state', OrdersSales::CANCELADO)->count(),
-                // Sin el domicilio: ese dinero es del domiciliario, no de la
-                // tienda. Es la misma regla que la cifra «Ventas hoy».
-                'vendido' => (float) (clone $entregados)->sum(DB::raw('subtotal - discount')),
+                /*
+                 * LO VENDIDO, con la definición de `VentasDelNegocio`: los
+                 * pedidos entregados (sin el domicilio, que es del
+                 * domiciliario) y las ventas del mostrador cobradas. Es la
+                 * misma cifra que «Ventas hoy», Ingresos y Cuánto te queda.
+                 * `ventas` cuenta las dos; `entregados`, solo los pedidos.
+                 */
+                'vendido' => $ventas['ventas'],
+                'vendido_app' => $ventas['ventas_app'],
+                'vendido_mostrador' => $ventas['ventas_mostrador'],
+                'ventas' => $ventas['cuantas'],
+                'ventas_en_mostrador' => $ventas['cuantas_mostrador'],
                 /*
                  * CUÁNTOS LLEGARON A TIEMPO, y sobre cuántos se puede decir.
                  *

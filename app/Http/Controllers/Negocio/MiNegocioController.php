@@ -10,8 +10,8 @@ use App\Http\Requests\Negocio\RecibirPedidosRequest;
 use App\Http\Requests\Negocio\SubirLogoRequest;
 use App\Http\Resources\Negocio\MiNegocioResource;
 use App\Models\Order\OrdersSales;
+use App\Queries\VentasDelNegocio;
 use App\Services\BusinessMediaService;
-use App\Support\FiltroDeFechas;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -210,10 +210,16 @@ class MiNegocioController extends Controller
     private function resumen(int $businessId): array
     {
         $base = fn () => OrdersSales::where('busines_id', $businessId)->confirmados();
+        $ahora = now();
 
-        // Como rango y no `whereDate`: medido con EXPLAIN sobre esta misma
-        // consulta, 507 filas abiertas contra 21. Ver `FiltroDeFechas`.
-        $hoy = FiltroDeFechas::unDia($base(), 'sale_date', now());
+        /*
+         * Las cifras de dinero y de pedidos salen de `VentasDelNegocio`, la
+         * misma definición de venta que Ingresos, Cuánto te queda y el
+         * Resumen económico: la app y el mostrador, entregadas y cobradas.
+         */
+        $ventas = VentasDelNegocio::entre($businessId, $ahora->copy()->startOfDay(), $ahora->copy()->endOfDay());
+        $delDia = VentasDelNegocio::pedidosDelDia($businessId, $ahora);
+        $enCurso = VentasDelNegocio::enCurso($businessId, $ahora);
 
         return [
             // Los que esperan que alguien pulse "Aceptar". Es la cifra que
@@ -225,12 +231,20 @@ class MiNegocioController extends Controller
             // treinta minutos, y sin esta fecha ese reloj no se puede contar:
             // el panel solo sabe cuántos hay, no desde cuándo.
             'espera_desde' => $base()->where('state', 1)->min('sale_date'),
-            'en_curso' => (int) $base()->whereIn('state', [2, 3])->count(),
-            'hoy' => (int) (clone $hoy)->count(),
-            // Solo el subtotal: el domicilio no es del negocio, es del
-            // domiciliario. Sumar el total le enseñaría una venta más alta que
-            // la que se le va a liquidar.
-            'venta_hoy' => (float) (clone $hoy)->whereIn('state', [2, 3, 4])->sum(DB::raw('subtotal - discount')),
+            // Aceptados, en camino o volviendo, con la regla del tablero de
+            // hoy: la cifra cuadra con sus columnas.
+            'en_curso' => $enCurso['hoy'],
+            // Los que siguen abiertos de días anteriores: no salen en el
+            // tablero de hoy y se dicen aparte.
+            'en_curso_de_antes' => $enCurso['de_antes'],
+            // Los pedidos de hoy: los de la app sin cancelados y los del
+            // mostrador.
+            'hoy' => $delDia['total'],
+            'hoy_mostrador' => $delDia['mostrador'],
+            // Lo vendido hoy: pedidos entregados y ventas del mostrador
+            // cobradas, sin el domicilio (es del domiciliario).
+            'venta_hoy' => $ventas['ventas'],
+            'venta_hoy_mostrador' => $ventas['ventas_mostrador'],
         ];
     }
 

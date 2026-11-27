@@ -38,6 +38,9 @@ class DomiciliaryController extends Controller
         // tendero vea a quién puede despacharle antes de intentarlo.
         $business->domiciliaries->loadCount([
             'orders as active_orders' => fn ($q) => $q->where('state', OrdersSales::EN_CAMINO),
+            // Los de esta tienda: «en la calle» cuadra con la Torre.
+            'orders as en_camino_tuyos' => fn ($q) => $q->where('state', OrdersSales::EN_CAMINO)
+                ->where('busines_id', $business->busines_id),
         ]);
 
         $maxSimultaneos = (int) Ajustes::valor('operacion.entregas_simultaneas');

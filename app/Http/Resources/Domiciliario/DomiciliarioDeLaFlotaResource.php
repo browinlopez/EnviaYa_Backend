@@ -72,6 +72,12 @@ class DomiciliarioDeLaFlotaResource extends JsonResource
             'qualification' => $d->qualification,
             'state' => $d->state,
             'active_orders' => $this->enCurso,
+            /*
+             * De esos, los de ESTA tienda en camino. `active_orders` cuenta
+             * los de todas las tiendas (el cupo es uno solo); este es el que
+             * cuadra con la Torre de control y el tablero de Pedidos.
+             */
+            'en_camino_tuyos' => (int) ($d->en_camino_tuyos ?? 0),
             'max_active_orders' => $this->maxSimultaneos,
             // Mismas condiciones que valida orders/update al despachar.
             'can_take' => $this->puedeTomar,
