@@ -148,11 +148,23 @@ class RestauranteYRepuestosDemoSeeder extends Seeder
      * mezclaría el problema del multiempresa con el del tipo de negocio, y
      * cuando algo saliera mal no se sabría cuál de los dos lo causó.
      */
+    /** Razón social y NIT propios, solo si están vacíos (no pisa lo editado). */
+    private function datosLegales(int $id, string $nombre): void
+    {
+        DB::table('business')->where('busines_id', $id)->whereNull('razonSocial_DCD')
+            ->update(['razonSocial_DCD' => $nombre.' S.A.S.']);
+        DB::table('business')->where('busines_id', $id)->whereNull('NIT')
+            ->update(['NIT' => 'DEMO-RR-'.$id]);
+    }
+
     private function negocio(string $nombre, int $tipo, string $dir, string $desc, float $lat, float $lng): int
     {
         $existente = DB::table('business')->where('name', $nombre)->value('busines_id');
 
         if ($existente) {
+            // Con sus propios datos legales: sin ellos Mi negocio quedaba con
+            // la razón social y el NIT vacíos (y el de otro negocio al lado).
+            $this->datosLegales((int) $existente, $nombre);
             DB::table('business')->where('busines_id', $existente)->update([
                 'type' => $tipo,
                 'address' => $dir,
@@ -188,6 +200,7 @@ class RestauranteYRepuestosDemoSeeder extends Seeder
         ], 'busines_id');
 
         $this->dueno($tipo, $id);
+        $this->datosLegales($id, $nombre);
 
         return $id;
     }
