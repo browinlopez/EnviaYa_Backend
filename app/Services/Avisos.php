@@ -9,6 +9,7 @@ use App\Jobs\EnviarAvisoPush;
 use App\Models\Notification;
 use App\Models\Order\OrdersSales;
 use App\Models\User;
+use App\Services\Push\EntregaDelPush;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -60,6 +61,7 @@ class Avisos
         'recordatorio_programado_15' => 'Tu pedido es en 15 minutos',
         'promocion' => 'Promoción nueva',
         'visita_por_autorizar' => '¿Dejas entrar a alguien?',
+        'visita_respondida' => 'Ya contestaron en tu apartamento',
         'domiciliario_en_porteria' => 'Tu pedido ya entró al conjunto',
     ];
 
@@ -103,6 +105,9 @@ class Avisos
      *                               sino del contenido: en un chat es el NOMBRE de quien
      *                               escribe, que es lo que hace que se reconozca en la
      *                               barra sin abrir nada.
+     * @param  array{etiqueta?: string, vence?: int}  $entrega  Cómo se
+     *                                                          entrega el push: ver `EntregaDelPush`. Solo viaja al
+     *                                                          teléfono, no se guarda en la campana.
      */
     public static function para(
         int|string $userId,
@@ -111,6 +116,7 @@ class Avisos
         array $datos = [],
         bool $push = true,
         ?string $titulo = null,
+        array $entrega = [],
     ): ?Notification {
         $pedido = $datos['order_id'] ?? null;
 
@@ -198,7 +204,10 @@ class Avisos
                     ['tipo' => $tipo, 'rol' => (string) (User::whereKey($userId)->value('rol') ?? '')] + array_map(
                         fn ($v) => is_scalar($v) ? (string) $v : json_encode($v),
                         $datos,
-                    ),
+                    ) + array_filter([
+                        EntregaDelPush::ETIQUETA => $entrega['etiqueta'] ?? null,
+                        EntregaDelPush::VENCE => $entrega['vence'] ?? null,
+                    ]),
                 );
             } catch (\Throwable $e) {
                 Log::warning('No se pudo encolar el push del aviso', [

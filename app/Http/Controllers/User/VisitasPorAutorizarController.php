@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\User;
 
+use App\Events\VisitaRespondida;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\User\ResponderVisitaRequest;
 use App\Models\Conjunto\SolicitudDeEntrada;
 use App\Services\AutorizacionDelResidente;
+use App\Services\Avisos;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * EL LADO DEL RESIDENTE: «¿DEJAS ENTRAR A ESTA PERSONA?».
@@ -107,11 +110,58 @@ class VisitasPorAutorizarController extends Controller
             return response()->json(['message' => 'Alguien de tu apartamento ya contestó.'], 409);
         }
 
+        $this->anunciar($solicitud, $nuevo, $userId);
+
         return response()->json([
             'message' => $nuevo === SolicitudDeEntrada::AUTORIZADA
                 ? 'Le avisamos al celador que puede entrar.'
                 : 'Le avisamos al celador que no entra.',
             'state' => $nuevo,
         ]);
+    }
+
+    /**
+     * QUE SE ENTEREN LOS DEMÁS.
+     *
+     * Al celador y a los residentes, por el tiempo real; y a los OTROS
+     * residentes también al teléfono, reemplazando el «¿Dejas entrar…?» que
+     * tenían en la barra. Nada de esto puede tumbar la respuesta: ya quedó
+     * guardada, y el panel la ve igual al volver a preguntar.
+     */
+    private function anunciar(SolicitudDeEntrada $s, string $estado, int $quienContesto): void
+    {
+        $nombre = (string) (DB::table('user')->where('user_id', $quienContesto)->value('name') ?? 'Un residente');
+        $residentes = $this->residentes->residentesDe($s->complex_id, $s->tower, $s->apartment);
+
+        try {
+            broadcast(new VisitaRespondida(
+                destinatarios: $residentes->push((int) $s->requested_by)->filter()->values()->all(),
+                solicitudId: $s->id,
+                estado: $estado,
+                respondioId: $quienContesto,
+                respondioNombre: $nombre,
+            ));
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo anunciar la respuesta de la visita', [
+                'solicitud_id' => $s->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        $paso = $estado === SolicitudDeEntrada::AUTORIZADA ? 'dejó entrar a' : 'no dejó entrar a';
+
+        foreach ($residentes as $otro) {
+            if ((int) $otro === $quienContesto || (int) $otro === (int) $s->requested_by) {
+                continue;
+            }
+
+            Avisos::para(
+                $otro,
+                'visita_respondida',
+                "{$nombre} {$paso} {$s->visitor_name}.",
+                ['solicitud_id' => $s->id],
+                entrega: ['etiqueta' => "visita-{$s->id}"],
+            );
+        }
     }
 }

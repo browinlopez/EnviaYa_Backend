@@ -1,11 +1,15 @@
 <?php
 
+use App\Events\VisitaRespondida;
 use App\Jobs\EnviarAvisoPush;
 use App\Models\Conjunto\SolicitudDeEntrada;
 use App\Models\Rol;
 use App\Models\User;
 use App\Services\AccesoAlConjunto;
+use App\Services\Push\EntregaDelPush;
+use App\Services\Push\TransportePush;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Sanctum\Sanctum;
 
@@ -143,4 +147,94 @@ test('cuando el domiciliario entra, al residente le llega «tu pedido ya entró�
         EnviarAvisoPush::class,
         fn ($job) => $job->datos['tipo'] === 'domiciliario_en_porteria',
     );
+});
+
+/*
+ * EL PUSH DE LA PORTERÍA CADUCA Y SE REEMPLAZA.
+ *
+ * Un «¿Dejas entrar a Juan?» que llega a los diez minutos ya no se puede
+ * contestar; y si otro del apartamento ya contestó, no debe quedarse en la
+ * barra esperando.
+ */
+test('el push de la visita vence con la solicitud y lleva su etiqueta', function () {
+    $c = conjuntoConPersonal();
+    $vecina = residenteEn($c['complexId']);
+    Sanctum::actingAs($c['user']);
+
+    $id = $this->postJson('/v1/conjunto/porteria/autorizaciones', [
+        'visitor_name' => 'Juan', 'tower' => '3', 'apartment' => '502',
+    ])->json('id');
+
+    $vence = SolicitudDeEntrada::find($id)->expires_at->getTimestamp();
+
+    Queue::assertPushed(
+        EnviarAvisoPush::class,
+        fn ($job) => (int) $job->userId === (int) $vecina->user_id
+            && $job->datos[EntregaDelPush::ETIQUETA] === "visita-{$id}"
+            && (int) $job->datos[EntregaDelPush::VENCE] === $vence,
+    );
+});
+
+test('al contestar, el celador y los demás residentes se enteran al instante', function () {
+    Event::fake([VisitaRespondida::class]);
+
+    $c = conjuntoConPersonal();
+    $vecina = residenteEn($c['complexId']);
+    $hermano = residenteEn($c['complexId']);
+
+    Sanctum::actingAs($c['user']);
+    $id = $this->postJson('/v1/conjunto/porteria/autorizaciones', [
+        'visitor_name' => 'Juan Pérez', 'tower' => '3', 'apartment' => '502',
+    ])->json('id');
+
+    Sanctum::actingAs($vecina);
+    $this->postJson("/v1/porteria/visitas/{$id}/respuesta", ['decision' => 'si'])->assertOk();
+
+    Event::assertDispatched(VisitaRespondida::class, function (VisitaRespondida $e) use ($c, $vecina, $hermano, $id) {
+        $canales = array_map(fn ($ch) => $ch->name, $e->broadcastOn());
+
+        return $e->solicitudId === $id
+            && $e->estado === 'autorizada'
+            && $e->broadcastWith()['answered_by_name'] === 'María Gómez'
+            && in_array('private-App.Models.User.'.$c['user']->user_id, $canales, true)
+            && in_array('private-App.Models.User.'.$hermano->user_id, $canales, true)
+            && in_array('private-App.Models.User.'.$vecina->user_id, $canales, true);
+    });
+
+    // Al otro residente se le reemplaza el aviso; a quien contestó, no.
+    Queue::assertPushed(
+        EnviarAvisoPush::class,
+        fn ($job) => (int) $job->userId === (int) $hermano->user_id
+            && $job->datos['tipo'] === 'visita_respondida'
+            && $job->datos[EntregaDelPush::ETIQUETA] === "visita-{$id}"
+            && str_contains($job->titulo, 'Ya contestaron'),
+    );
+    Queue::assertNotPushed(
+        EnviarAvisoPush::class,
+        fn ($job) => (int) $job->userId === (int) $vecina->user_id
+            && $job->datos['tipo'] === 'visita_respondida',
+    );
+});
+
+test('un reintento del push que llega vencido no suena', function () {
+    $transporte = Mockery::mock(TransportePush::class);
+    $transporte->shouldReceive('configurado')->andReturn(true);
+    $transporte->shouldNotReceive('enviar');
+
+    (new EnviarAvisoPush(1, '¿Dejas entrar a alguien?', 'Juan está en la portería', [
+        'tipo' => 'visita_por_autorizar',
+        EntregaDelPush::VENCE => (string) (time() - 10),
+    ]))->handle($transporte);
+});
+
+test('las opciones de entrega no llegan a la app como datos', function () {
+    [$datos, $etiqueta, $vence] = EntregaDelPush::separar([
+        'tipo' => 'visita_por_autorizar',
+        EntregaDelPush::ETIQUETA => 'visita-7',
+        EntregaDelPush::VENCE => '1900000000',
+    ]);
+
+    expect($datos)->toBe(['tipo' => 'visita_por_autorizar'])
+        ->and($etiqueta)->toBe('visita-7')
+        ->and($vence)->toBe(1900000000);
 });

@@ -138,15 +138,27 @@ class PushApns implements TransportePush
         string $cuerpo,
         array $datos,
     ): ResultadoPush {
+        [$datos, $etiqueta, $vence] = EntregaDelPush::separar($datos);
+
+        $cabeceras = [
+            'authorization' => 'bearer '.$jwt,
+            'apns-topic' => (string) config('services.apns.bundle_id'),
+            // `alert` es lo que hace que el sistema la MUESTRE con la app
+            // cerrada. Con `background` llegaría callada.
+            'apns-push-type' => 'alert',
+            'apns-priority' => '10',
+        ];
+
+        /* Ver `EntregaDelPush`. Apple limita el collapse-id a 64 bytes. */
+        if ($etiqueta !== null) {
+            $cabeceras['apns-collapse-id'] = substr($etiqueta, 0, 64);
+        }
+        if ($vence !== null) {
+            $cabeceras['apns-expiration'] = (string) $vence;
+        }
+
         try {
-            $r = Http::withHeaders([
-                'authorization' => 'bearer '.$jwt,
-                'apns-topic' => (string) config('services.apns.bundle_id'),
-                // `alert` es lo que hace que el sistema la MUESTRE con la app
-                // cerrada. Con `background` llegaría callada.
-                'apns-push-type' => 'alert',
-                'apns-priority' => '10',
-            ])
+            $r = Http::withHeaders($cabeceras)
                 ->connectTimeout(5)
                 ->timeout(15)
                 /*

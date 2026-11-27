@@ -139,22 +139,36 @@ class PushFirebase implements TransportePush
         string $cuerpo,
         array $datos,
     ): ResultadoPush {
+        [$datos, $etiqueta, $vence] = EntregaDelPush::separar($datos);
+
+        $mensaje = [
+            'token' => $token,
+            'notification' => ['title' => $titulo, 'body' => $cuerpo],
+            /*
+             * Todo a texto: FCM rechaza el mensaje entero si un valor
+             * de `data` no es una cadena, y un entero suelto tumbaría
+             * el envío completo por un detalle de tipos.
+             */
+            'data' => array_map(fn ($v) => (string) $v, $datos),
+        ];
+
+        /* Ver `EntregaDelPush`: reemplazar en la barra y caducar a tiempo. */
+        if ($etiqueta !== null || $vence !== null) {
+            $android = ['priority' => 'high'];
+            if ($vence !== null) {
+                $android['ttl'] = EntregaDelPush::segundosQueQuedan($vence).'s';
+            }
+            if ($etiqueta !== null) {
+                $android['notification'] = ['tag' => $etiqueta];
+            }
+            $mensaje['android'] = $android;
+        }
+
         try {
             $r = Http::withToken($acceso)
                 ->connectTimeout(5)
                 ->timeout(15)
-                ->post($url, [
-                    'message' => [
-                        'token' => $token,
-                        'notification' => ['title' => $titulo, 'body' => $cuerpo],
-                        /*
-                         * Todo a texto: FCM rechaza el mensaje entero si un valor
-                         * de `data` no es una cadena, y un entero suelto tumbaría
-                         * el envío completo por un detalle de tipos.
-                         */
-                        'data' => array_map(fn ($v) => (string) $v, $datos),
-                    ],
-                ]);
+                ->post($url, ['message' => $mensaje]);
 
             if ($r->successful()) {
                 return ResultadoPush::entregado();

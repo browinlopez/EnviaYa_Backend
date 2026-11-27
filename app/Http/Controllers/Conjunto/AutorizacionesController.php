@@ -59,13 +59,23 @@ class AutorizacionesController extends Controller
                 'visita_por_autorizar',
                 "{$quien} está en la portería de {$conjunto} para la torre {$solicitud->tower}, apto {$solicitud->apartment}. ¿Lo dejas entrar?",
                 ['solicitud_id' => $solicitud->id],
+                entrega: [
+                    // Si contesta otro del apartamento, este aviso se cambia
+                    // por «ya contestaron» en vez de quedarse esperando.
+                    'etiqueta' => "visita-{$solicitud->id}",
+                    // Pasados los cinco minutos ya no tiene sentido que suene.
+                    'vence' => $solicitud->expires_at->getTimestamp(),
+                ],
             );
         }
 
         return response()->json($this->forma($solicitud), 201);
     }
 
-    /** El panel pregunta cada pocos segundos cómo va. */
+    /**
+     * Cómo va. El panel se entera al instante por `VisitaRespondida`; esto
+     * queda de respaldo por si el tiempo real no está.
+     */
     public function ver(Request $request, int $id)
     {
         $solicitud = SolicitudDeEntrada::where('id', $id)

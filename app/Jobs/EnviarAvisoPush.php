@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Jobs;
 
 use App\Models\DeviceToken;
+use App\Services\Push\EntregaDelPush;
 use App\Services\Push\TransportePush;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -59,6 +60,14 @@ class EnviarAvisoPush implements ShouldQueue
          * los registros: en desarrollo esto es lo normal, no una avería.
          */
         if (! $push->configurado()) {
+            return;
+        }
+
+        /*
+         * Un reintento que llega tarde no suena: «¿Dejas entrar a Carlos?» a
+         * los diez minutos ya no se puede contestar. Ver `EntregaDelPush`.
+         */
+        if (EntregaDelPush::vencido($this->datos)) {
             return;
         }
 
