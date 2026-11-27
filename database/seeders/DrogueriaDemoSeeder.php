@@ -49,6 +49,12 @@ class DrogueriaDemoSeeder extends Seeder
 
     public function run(): void
     {
+        if (app()->isProduction() && ! config('semillas.permitir_en_produccion')) {
+            $this->command?->warn('DrogueriaDemoSeeder no corre en producción: son datos falsos.');
+
+            return;
+        }
+
         $negocio = (int) DB::table('business')
             ->where('type', ProductTypeSchema::TYPE_PHARMACY)
             ->orderBy('busines_id')

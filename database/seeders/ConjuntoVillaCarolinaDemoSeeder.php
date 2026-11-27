@@ -142,6 +142,12 @@ class ConjuntoVillaCarolinaDemoSeeder extends Seeder
 
     public function run(): void
     {
+        if (app()->isProduction() && ! config('semillas.permitir_en_produccion')) {
+            $this->command?->warn('ConjuntoVillaCarolinaDemoSeeder no corre en producción: son datos falsos.');
+
+            return;
+        }
+
         $conjunto = DB::table('residential_complexes')->where('complex_id', self::CONJUNTO)->first();
 
         if (! $conjunto) {
