@@ -23,6 +23,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * @property bool $must_change_password
  * @property string|null $en_turno_desde
+ * @property string|null $ultimo_turno
  */
 class ComplexStaff extends Audit
 {
