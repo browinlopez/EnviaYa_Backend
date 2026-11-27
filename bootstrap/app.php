@@ -12,6 +12,7 @@ use App\Http\Middleware\EnsureComplexStaff;
 use App\Http\Middleware\EnsureInvestor;
 use App\Http\Middleware\EnsureMediaAccess;
 use App\Http\Middleware\EnsureModuleAccess;
+use App\Http\Middleware\IdempotenciaDelDinero;
 use App\Http\Middleware\MedidaDeLaPeticion;
 use App\Http\Middleware\SetContentLengthForDevServer;
 use App\Http\Middleware\SoloParaCambiarPorSesion;
@@ -119,6 +120,8 @@ return Application::configure(basePath: dirname(__DIR__))
             // Puerta de las categorías. Aparte por lo mismo: una sola ruta sirve
             // las de producto y las de negocio, y son dos módulos distintos.
             'categorias' => EnsureCategoryAccess::class,
+            // Va detrás de `negocio`: la huella del intento incluye la tienda activa.
+            'idempotente' => IdempotenciaDelDinero::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

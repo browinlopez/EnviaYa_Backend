@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\IdempotencyKey;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -138,4 +139,10 @@ Schedule::command('ubicaciones:podar')
 */
 Schedule::command('pedidos:recordar-programados')
     ->everyMinute()
+    ->withoutOverlapping();
+
+// A las 24 h una clave ya no protege a nadie: el reintento llega en minutos, no al otro día.
+Schedule::command('model:prune', ['--model' => [IdempotencyKey::class]])
+    ->dailyAt('04:30')
+    ->timezone('America/Bogota')
     ->withoutOverlapping();

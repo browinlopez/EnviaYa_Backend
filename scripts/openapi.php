@@ -315,6 +315,19 @@ foreach ($rutas as [$verbo, $uri, $r]) {
         }
     }
 
+    // Sale del middleware y no de un comentario, para que el contrato no se quede atrás.
+    $idempotente = in_array('idempotente', $middleware, true);
+
+    if ($idempotente) {
+        $parametros[] = [
+            'name' => 'Idempotency-Key',
+            'in' => 'header',
+            'required' => false,
+            'description' => 'UUID del intento. Repetido con el mismo cuerpo devuelve la respuesta guardada (24 h) sin volver a ejecutar.',
+            'schema' => ['type' => 'string', 'format' => 'uuid'],
+        ];
+    }
+
     if ($parametros !== []) {
         $op['parameters'] = $parametros;
     }
@@ -393,8 +406,14 @@ foreach ($rutas as [$verbo, $uri, $r]) {
         $op['responses']['403'] = ['description' => 'La sesion no alcanza este recurso.'];
     }
 
+    if ($idempotente) {
+        $op['responses']['409'] = ['description' => 'La misma Idempotency-Key sigue en curso.'];
+    }
+
     if (isset($op['requestBody']) || isset($op['x-cuerpo'])) {
-        $op['responses']['422'] = ['description' => 'Validacion fallida.'];
+        $op['responses']['422'] = ['description' => $idempotente
+            ? 'Validacion fallida, o la Idempotency-Key ya se uso con otro cuerpo.'
+            : 'Validacion fallida.'];
     }
 
     $paths[$ruta] ??= [];

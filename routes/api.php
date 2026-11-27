@@ -738,7 +738,7 @@ Route::middleware(['auth:sanctum', 'cuenta.habilitada', 'audit.api'])->group(fun
         Route::get('mis-negocios/ventas', [VentasDeMisNegociosController::class, 'index']);
         Route::get('efectivo', [EfectivoDeLaTiendaController::class, 'index']);
         Route::post('efectivo/{id}/entregas', [EfectivoDeLaTiendaController::class, 'recibir'])
-            ->whereNumber('id');
+            ->whereNumber('id')->middleware('idempotente');
 
         /*
          * DENUNCIAR A UN COMPRADOR DESDE EL CHAT.
@@ -819,11 +819,11 @@ Route::middleware(['auth:sanctum', 'cuenta.habilitada', 'audit.api'])->group(fun
          * Entra en «Cuánto te queda» y descuenta el inventario. Ver
          * `VentaDeMostradorController`.
          */
-        Route::post('ventas-mostrador', [VentaDeMostradorController::class, 'registrar']);
+        Route::post('ventas-mostrador', [VentaDeMostradorController::class, 'registrar'])->middleware('idempotente');
         Route::get('ventas-mostrador', [VentaDeMostradorController::class, 'delDia']);
         // El QR Bre-B: cómo va el pago y cancelarlo si el vecino no pagó.
         Route::get('ventas-mostrador/{id}/pago', [VentaDeMostradorController::class, 'pago'])->whereNumber('id');
-        Route::post('ventas-mostrador/{id}/cancelar', [VentaDeMostradorController::class, 'cancelar'])->whereNumber('id');
+        Route::post('ventas-mostrador/{id}/cancelar', [VentaDeMostradorController::class, 'cancelar'])->whereNumber('id')->middleware('idempotente');
         /*
          * «Hormiga culona, $3.000»: un producto que el catálogo no tiene,
          * solo para esta tienda, con nombre y precio. Ver `crearPropio`.
@@ -832,7 +832,7 @@ Route::middleware(['auth:sanctum', 'cuenta.habilitada', 'audit.api'])->group(fun
         Route::get('costos', [CuantoTeQuedaController::class, 'costos']);
         Route::put('costos', [CuantoTeQuedaController::class, 'guardarCostos']);
         Route::get('gastos', [CuantoTeQuedaController::class, 'gastos']);
-        Route::post('gastos', [CuantoTeQuedaController::class, 'crearGasto']);
+        Route::post('gastos', [CuantoTeQuedaController::class, 'crearGasto'])->middleware('idempotente');
         Route::put('gastos/{id}', [CuantoTeQuedaController::class, 'actualizarGasto'])->whereNumber('id');
         Route::delete('gastos/{id}', [CuantoTeQuedaController::class, 'quitarGasto'])->whereNumber('id');
         Route::get('productos/tiendas-para-copiar', [ProductosDelNegocioController::class, 'tiendasParaCopiar']);
@@ -939,7 +939,7 @@ Route::middleware(['auth:sanctum', 'cuenta.habilitada', 'audit.api'])->group(fun
 
         Route::get('creditos', [CreditosDelNegocioController::class, 'index']);
         Route::put('creditos/{userId}', [CreditosDelNegocioController::class, 'asignar'])->whereNumber('userId');
-        Route::post('creditos/{userId}/abonos', [CreditosDelNegocioController::class, 'abonar'])->whereNumber('userId');
+        Route::post('creditos/{userId}/abonos', [CreditosDelNegocioController::class, 'abonar'])->whereNumber('userId')->middleware('idempotente');
         Route::get('creditos/{userId}/movimientos', [CreditosDelNegocioController::class, 'movimientos'])->whereNumber('userId');
         Route::get('creditos/{userId}/movimientos/{movimientoId}/comprobante', [CreditosDelNegocioController::class, 'comprobante'])->whereNumber(['userId', 'movimientoId']);
 
