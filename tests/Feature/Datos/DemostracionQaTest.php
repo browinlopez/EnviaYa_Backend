@@ -20,7 +20,7 @@ it('siembra la plataforma entera y deja intacto lo que ya había', function () {
         ->and((clone $correos)->where('rol', 1)->count())->toBe(120)
         ->and((clone $correos)->where('rol', 3)->count())->toBe(8)
         ->and((clone $correos)->whereIn('rol', [4, 7])->count())->toBe(0)
-        ->and(DB::table('owner_busines')->groupBy('owner_id')->selectRaw('count(*) as n')->pluck('n')->max())->toBe(3)
+        ->and((int) DB::table('owner_busines')->groupBy('owner_id')->selectRaw('count(*) as n')->pluck('n')->max())->toBe(3)
         ->and(DB::table('orderssales')->where('state', 4)->where('payment_state', 'paid')->count())->toBeGreaterThan(1500)
         ->and(DB::table('orderssales')->where('state', 5)->count())->toBeGreaterThan(30)
         ->and(DB::table('orderssales')->whereIn('state', [1, 2, 3])->where('is_scheduled', 0)->count())->toBeGreaterThanOrEqual(12)

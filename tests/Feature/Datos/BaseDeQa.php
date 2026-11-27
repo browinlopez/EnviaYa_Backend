@@ -4,6 +4,7 @@ use App\Models\Rol;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 // Los catálogos de QA y lo que ya había: un tendero con su tienda, un comprador y un conjunto.
 function baseDeQa(): void
@@ -57,8 +58,11 @@ function loQueYaHabia(?array $antes = null): array
         ->orderBy($llave)->get()->keyBy($llave)->map(fn ($f) => (array) $f)->all())->all();
 }
 
+// Cuántas filas tiene cada tabla de la base de pruebas, en SQLite o en MySQL.
 function filasPorTabla(): array
 {
-    return collect(DB::select("select name from sqlite_master where type = 'table' and name not like 'sqlite_%'"))
-        ->mapWithKeys(fn ($t) => [$t->name => DB::table($t->name)->count()])->sortKeys()->all();
+    $esquemas = ['main', DB::connection()->getDatabaseName()];
+
+    return collect(Schema::getTables())->filter(fn ($t) => in_array($t['schema'] ?? 'main', $esquemas, true))
+        ->mapWithKeys(fn ($t) => [$t['name'] => DB::table($t['name'])->count()])->sortKeys()->all();
 }
