@@ -44,12 +44,20 @@ class InformeDelInversionista
                 'tipo' => $tipo['nombre'] ?? null,
             ],
             'generado' => Carbon::now()->toIso8601String(),
-            'resumen' => $this->resumen->datos($v, $f),
-            'negocios' => $this->negocios->datos($v, $f),
-            'expansion' => $this->expansion->datos($v, $f),
-            'usuarios' => $this->usuarios->datos($v, $f),
-            'operacion' => $this->operacion->datos($v, $f),
-            'ingresos' => $this->ingresos->datos($v, $f),
+            /*
+             * La plata total, solo con el interruptor encendido
+             * (`config/inversionista.php`): sin él, ni ventas, ni ingreso,
+             * ni la hoja de Ingresos. Los promedios van siempre.
+             */
+            'ver_ingresos' => BaseDelInversionista::verIngresos(),
+            ...BaseDelInversionista::segunElInterruptor([
+                'resumen' => $this->resumen->datos($v, $f),
+                'negocios' => $this->negocios->datos($v, $f),
+                'expansion' => $this->expansion->datos($v, $f),
+                'usuarios' => $this->usuarios->datos($v, $f),
+                'operacion' => $this->operacion->datos($v, $f),
+            ]),
+            ...(BaseDelInversionista::verIngresos() ? ['ingresos' => $this->ingresos->datos($v, $f)] : []),
         ];
     }
 

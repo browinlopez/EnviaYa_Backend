@@ -144,6 +144,11 @@ class AccesoAlConjunto
      * conjunto recibe pedidos de una droguería, y la lista de medicamentos de
      * un apartamento no es asunto de la portería. Quien lo despliega deja
      * constancia de que lo hizo a propósito.
+     *
+     * SIN DINERO: ni el total del pedido ni el precio de cada producto. La
+     * portería ve el número, la tienda, la puerta y, plegado, qué cosas trae;
+     * nunca cuánto pagó el vecino. `methods_id` sí va: «cobra al entregar» o
+     * «ya pagado» le dice al celador si el domiciliario sale con efectivo.
      */
     public function pedidosEnElConjunto(Domiciliary $domiciliario, int $complexId)
     {
@@ -156,7 +161,6 @@ class AccesoAlConjunto
             ->where('ua.complex_id', $complexId)
             ->get([
                 'orderssales.orderSales_id',
-                'orderssales.total',
                 'orderssales.methods_id',
                 'ua.tower',
                 'ua.apartment',
@@ -172,12 +176,10 @@ class AccesoAlConjunto
             ->join('products as p', 'p.products_id', '=', 'd.product_id')
             ->whereIn('d.orderSales_id', $pedidos->pluck('orderSales_id'))
             ->get([
-                'd.orderSales_id', 'd.amount', 'd.unit_price', 'p.name',
-                // Una linea al peso trae `amount` = 1 y el importe congelado
-                // en `line_total`: sin esto, la porteria multiplicaria el
-                // precio del kilo por uno y enseniaria $18.000 donde el
-                // cliente pago $3.000.
-                'd.line_total', 'd.sale_unit', 'd.qty_requested', 'd.qty_final',
+                'd.orderSales_id', 'd.amount', 'p.name',
+                // Una linea al peso trae `amount` = 1: la cantidad real va en
+                // `qty_final` (o `qty_requested` si aun no se peso).
+                'd.sale_unit', 'd.qty_requested', 'd.qty_final',
             ])
             ->groupBy('orderSales_id');
 
@@ -187,8 +189,6 @@ class AccesoAlConjunto
             $o->items = $items->map(fn ($i) => [
                 'name' => $i->name,
                 'amount' => (int) $i->amount,
-                'unit_price' => (float) $i->unit_price,
-                'line_total' => $i->line_total === null ? null : (float) $i->line_total,
                 'sale_unit' => $i->sale_unit ?? 'unidad',
                 'qty_requested' => $i->qty_requested === null ? null : (float) $i->qty_requested,
                 'qty_final' => $i->qty_final === null ? null : (float) $i->qty_final,

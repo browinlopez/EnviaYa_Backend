@@ -228,3 +228,31 @@ test('la lista de turnos se filtra por fechas y trae el resumen del rango', func
 
     $this->getJson('/v1/conjunto/turnos?desde=2026-11-30&hasta=2026-11-01')->assertStatus(422);
 });
+
+test('el último turno de cada celador es cuándo empezó, no su última entrada', function () {
+    Carbon\Carbon::setTestNow('2026-11-20 23:00:00');
+    $dueno = conjuntoConPersonal(ComplexStaff::DUENO);
+    $celador = User::factory()->create(['rol' => 6]);
+    ComplexStaff::create([
+        'user_id' => $celador->user_id, 'complex_id' => $dueno['complexId'],
+        'role' => ComplexStaff::CELADOR, 'state' => true,
+    ]);
+    ComplexShift::create([
+        'complex_id' => $dueno['complexId'], 'user_id' => $celador->user_id,
+        'started_at' => '2026-11-20 18:00:00', 'ended_at' => '2026-11-20 22:30:00',
+    ]);
+    DB::table('complex_entries')->insert([
+        'complex_id' => $dueno['complexId'], 'kind' => 'visitante', 'method' => 'manual',
+        'orders_count' => 0, 'registered_by' => $celador->user_id,
+        'created_at' => '2026-11-20 21:54:00', 'updated_at' => '2026-11-20 21:54:00',
+    ]);
+
+    Sanctum::actingAs($dueno['user']);
+    $c = collect($this->getJson('/v1/conjunto/celadores')->assertOk()->json('data'))
+        ->firstWhere('user_id', $celador->user_id);
+
+    expect($c['ultimo_turno'])->toStartWith('2026-11-20 18:00')
+        ->and($c['ultima_entrada'])->toStartWith('2026-11-20 21:54');
+
+    Carbon\Carbon::setTestNow();
+});

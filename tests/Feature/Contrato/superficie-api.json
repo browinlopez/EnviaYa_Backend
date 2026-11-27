@@ -3252,6 +3252,18 @@
     },
     {
         "verbo": "GET",
+        "uri": "v1/negocio/mis-negocios/ventas",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "cuenta.habilitada",
+            "negocio"
+        ]
+    },
+    {
+        "verbo": "GET",
         "uri": "v1/negocio/pedidos",
         "nombre": null,
         "middleware": [

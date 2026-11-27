@@ -38,7 +38,10 @@
     $e = $d['expansion'];
     $u = $d['usuarios']['cifras'];
     $o = $d['operacion'];
-    $i = $d['ingresos']['cifras'];
+    // La plata total, solo con el interruptor `inversionista.ver_ingresos`
+    // encendido; el ticket promedio va siempre.
+    $conPlata = (bool) ($d['ver_ingresos'] ?? false);
+    $i = $d['ingresos']['cifras'] ?? null;
 
     $archivoLogo = resource_path('marca/logotipo.png');
     $logo = is_file($archivoLogo) ? 'data:image/png;base64,' . base64_encode(file_get_contents($archivoLogo)) : null;
@@ -140,8 +143,13 @@
     <table class="kpis" style="margin-top: 6px">
         <tr>
             @foreach ([
-                ['Ventas (GMV)', $pesos($i['ventas']['valor']), $i['ventas']['variacion']],
-                ['Ingreso de la plataforma', $pesos($i['ingreso']['valor']), $i['ingreso']['variacion']],
+                ...($conPlata ? [
+                    ['Ventas totales', $pesos($i['ventas']['valor']), $i['ventas']['variacion']],
+                    ['Ingreso de la plataforma', $pesos($i['ingreso']['valor']), $i['ingreso']['variacion']],
+                ] : [
+                    ['Compradores activos', $num($u['activos']['valor']), $u['activos']['variacion']],
+                    ['Pedidos por comprador', $num($u['pedidos_por_comprador']['valor'], 1), $u['pedidos_por_comprador']['variacion']],
+                ]),
                 ['Entregas a tiempo', $pct($o['cifras']['a_tiempo']['valor']), $o['cifras']['a_tiempo']['variacion']],
                 ['Recompra', $pct($u['recompra']['valor']), $u['recompra']['variacion']],
             ] as [$rot, $valor, $v])
@@ -152,9 +160,9 @@
 
     <h2>Negocios</h2>
     <table>
-        <tr><th>Tipo</th><th>Negocios activos</th><th>Pedidos</th><th>Ventas</th><th>% de las ventas</th></tr>
+        <tr><th>Tipo</th><th>Negocios activos</th><th>Pedidos</th>@if ($conPlata)<th>Ventas</th>@endif<th>% de las ventas</th></tr>
         @foreach ($n['por_tipo'] as $t)
-            <tr><td>{{ $t['nombre'] }}</td><td>{{ $num($t['negocios']) }}</td><td>{{ $num($t['pedidos']) }}</td><td>{{ $pesos($t['ventas']) }}</td><td>{{ $pct($t['participacion_ventas']) }}</td></tr>
+            <tr><td>{{ $t['nombre'] }}</td><td>{{ $num($t['negocios']) }}</td><td>{{ $num($t['pedidos']) }}</td>@if ($conPlata)<td>{{ $pesos($t['ventas']) }}</td>@endif<td>{{ $pct($t['participacion_ventas']) }}</td></tr>
         @endforeach
     </table>
     <table style="margin-top: 8px">
@@ -166,11 +174,11 @@
 
     <h2>Expansión por ciudad</h2>
     <table>
-        <tr><th>Ciudad</th><th>Negocios</th><th>Conjuntos</th><th>Pedidos</th><th>Ventas</th><th>Compradores</th></tr>
+        <tr><th>Ciudad</th><th>Negocios</th><th>Conjuntos</th><th>Pedidos</th>@if ($conPlata)<th>Ventas</th>@endif<th>Compradores</th></tr>
         @forelse ($e['por_ciudad'] as $c)
-            <tr><td>{{ $c['ciudad'] }}@if ($c['departamento']) <span class="gris">· {{ $c['departamento'] }}</span>@endif</td><td>{{ $num($c['negocios']) }}</td><td>{{ $num($c['conjuntos']) }}</td><td>{{ $num($c['pedidos']) }}</td><td>{{ $pesos($c['ventas']) }}</td><td>{{ $num($c['compradores']) }}</td></tr>
+            <tr><td>{{ $c['ciudad'] }}@if ($c['departamento']) <span class="gris">· {{ $c['departamento'] }}</span>@endif</td><td>{{ $num($c['negocios']) }}</td><td>{{ $num($c['conjuntos']) }}</td><td>{{ $num($c['pedidos']) }}</td>@if ($conPlata)<td>{{ $pesos($c['ventas']) }}</td>@endif<td>{{ $num($c['compradores']) }}</td></tr>
         @empty
-            <tr><td colspan="6">Sin presencia todavía</td></tr>
+            <tr><td colspan="{{ $conPlata ? 6 : 5 }}">Sin presencia todavía</td></tr>
         @endforelse
     </table>
 
@@ -206,15 +214,16 @@
         <tr><td>Domiciliarios disponibles ahora</td><td>{{ $num($o['flota']['disponibles']) }}</td><td colspan="2">de {{ $num($o['flota']['habilitados']) }} habilitados</td></tr>
     </table>
 
+    @if ($conPlata)
     <h2>Ingresos</h2>
     <table>
         <tr><th>Indicador</th><th>Este periodo</th><th>Periodo anterior</th><th>Variación</th></tr>
         @foreach ([
-            ['Ventas (GMV)', $i['ventas'], $pesos],
+            ['Ventas totales', $i['ventas'], $pesos],
             ['Comisiones de los negocios', $i['comisiones'], $pesos],
             ['Margen de los domicilios', $i['margen_domicilio'], $pesos],
             ['Ingreso de la plataforma', $i['ingreso'], $pesos],
-            ['Comisión efectiva (take rate)', $i['take_rate'], $pct],
+            ['Comisión efectiva (de cada $100)', $i['take_rate'], $pct],
             ['Subsidios al domicilio', $i['subsidios'], $pesos],
         ] as [$rot, $cifra, $fmt])
             <tr><td>{{ $rot }}</td><td>{{ $fmt($cifra['valor']) }}</td><td>{{ $fmt($cifra['anterior']) }}</td><td class="{{ $tono($cifra['variacion']) }}">{{ $var($cifra['variacion']) }}</td></tr>
@@ -224,11 +233,12 @@
         Ingreso = comisiones + margen de los domicilios (lo que pagó el comprador por el domicilio menos lo que se lleva el
         domiciliario). Los subsidios ya están descontados de ese margen: se informan aparte, no se restan dos veces.
     </div>
+    @endif
 
     <div class="junto">
     <h2>Mes a mes</h2>
     @php
-        $ing = collect($d['ingresos']['meses'])->keyBy('mes');
+        $ing = collect($d['ingresos']['meses'] ?? [])->keyBy('mes');
         $act = collect($d['usuarios']['meses'])->keyBy('mes');
         // Los meses de antes del primer movimiento no dicen nada: en papel
         // solo ocupan media hoja de ceros.
@@ -240,13 +250,15 @@
         }
     @endphp
     <table>
-        <tr><th>Mes</th><th>Pedidos</th><th>Ventas</th><th>Ingreso</th><th>Compradores activos</th><th>Negocios nuevos</th><th>Usuarios nuevos</th></tr>
+        <tr><th>Mes</th><th>Pedidos</th>@if ($conPlata)<th>Ventas</th><th>Ingreso</th>@endif<th>Compradores activos</th><th>Negocios nuevos</th><th>Usuarios nuevos</th></tr>
         @foreach ($meses as $m)
             <tr>
                 <td>{{ $m['etiqueta'] }} {{ $m['anio'] }}@if ($m['en_curso']) <span class="gris">(en curso)</span>@endif</td>
                 <td>{{ $num($m['pedidos']) }}</td>
+                @if ($conPlata)
                 <td>{{ $pesos($m['ventas']) }}</td>
                 <td>{{ $pesos($ing[$m['mes']]['ingreso'] ?? 0) }}</td>
+                @endif
                 <td>{{ $num($act[$m['mes']]['activos'] ?? 0) }}</td>
                 <td>{{ $num($m['negocios_nuevos']) }}</td>
                 <td>{{ $num($m['usuarios_nuevos']) }}</td>

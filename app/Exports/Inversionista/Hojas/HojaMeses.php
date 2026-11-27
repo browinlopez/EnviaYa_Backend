@@ -26,7 +26,7 @@ class HojaMeses extends HojaDelInforme
     {
         $usuarios = collect($this->d['usuarios']['meses'])->keyBy('mes');
         $operacion = collect($this->d['operacion']['meses'])->keyBy('mes');
-        $ingresos = collect($this->d['ingresos']['meses'])->keyBy('mes');
+        $ingresos = collect($this->d['ingresos']['meses'] ?? [])->keyBy('mes');
 
         $filas = array_map(function ($m) use ($usuarios, $operacion, $ingresos) {
             $u = $usuarios[$m['mes']] ?? [];
@@ -36,7 +36,7 @@ class HojaMeses extends HojaDelInforme
             return [
                 $m['etiqueta'].' '.$m['anio'].($m['en_curso'] ? ' *' : ''),
                 $m['pedidos'],
-                $m['ventas'],
+                $m['ventas'] ?? null,
                 $m['negocios_nuevos'],
                 $m['usuarios_nuevos'],
                 $u['activos'] ?? 0,
@@ -49,10 +49,12 @@ class HojaMeses extends HojaDelInforme
         }, $this->d['resumen']['meses']);
 
         $this->seccion('Mes a mes');
-        $this->tabla(
+        // Ventas, ingreso y comisión: solo con el interruptor de la plata.
+        $this->tablaSegunElInterruptor(
             ['Mes', 'Pedidos', 'Ventas', 'Negocios nuevos', 'Usuarios nuevos', 'Compradores activos', 'Ingreso plataforma', 'Comisión efectiva', 'Minutos en camino', 'A tiempo', 'Cancelados'],
             $filas,
             [1 => self::ENTERO, 2 => self::PESOS, 3 => self::ENTERO, 4 => self::ENTERO, 5 => self::ENTERO, 6 => self::PESOS, 7 => self::PORCENTAJE, 8 => self::DECIMAL, 9 => self::PORCENTAJE, 10 => self::PORCENTAJE],
+            [2, 6, 7],
         );
         $this->fila();
         $this->nota('* Mes en curso: todavía no termina, así que no se compara entero contra un mes cerrado. La serie no depende del periodo elegido, solo de dónde termina.');

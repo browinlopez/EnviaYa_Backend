@@ -16,6 +16,7 @@ use App\Services\PulsoDelConjunto;
 use App\Support\Enmascarar;
 use App\Support\FiltroDeFechas;
 use App\Support\Like;
+use App\Support\PedidosDeLaEntrada;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 
@@ -107,7 +108,8 @@ class PorteriaController extends Controller
             'domiciliary_id' => $domiciliario->domiciliary_id,
             'method' => $porCodigo ? 'codigo' : 'cedula',
             'orders_count' => $pedidos->count(),
-            'orders' => $pedidos->toJson(),
+            // Congelado sin dinero ni contenido: ver `PedidosDeLaEntrada`.
+            'orders' => PedidosDeLaEntrada::paraGuardar($pedidos),
             'registered_by' => $request->user()->user_id,
             'created_at' => now(),
             'updated_at' => now(),
@@ -278,6 +280,15 @@ class PorteriaController extends Controller
          * últimos para reconocer a quien tiene delante, y así el turno de
          * noche no se lleva en el teléfono un directorio de todo el que pasó.
          */
+        // Del pedido, el número, la tienda y la puerta. Nunca el valor, ni
+        // para el celador ni para el administrador (las entradas viejas se
+        // guardaron con él: se limpia al leer).
+        $filas->transform(function ($f) {
+            $f->orders = $f->orders === null ? null : PedidosDeLaEntrada::paraElLibro($f->orders);
+
+            return $f;
+        });
+
         if ($request->attributes->get('complex_role') !== ComplexStaff::DUENO) {
             $filas->transform(function ($f) {
                 $f->visitor_document = Enmascarar::ultimos4($f->visitor_document);

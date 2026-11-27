@@ -49,6 +49,12 @@ class DrogueriaDemoSeeder extends Seeder
 
     public function run(): void
     {
+        if (app()->isProduction() && ! config('semillas.permitir_en_produccion')) {
+            $this->command?->warn('DrogueriaDemoSeeder no corre en producción: son datos falsos.');
+
+            return;
+        }
+
         $negocio = (int) DB::table('business')
             ->where('type', ProductTypeSchema::TYPE_PHARMACY)
             ->orderBy('busines_id')
@@ -433,6 +439,14 @@ class DrogueriaDemoSeeder extends Seeder
 
         DB::table('business')->where('busines_id', $norte)->update([
             'name' => 'Droguería Vida Sana Norte',
+            /*
+             * Su razón social, no la que traía: el negocio 4 nació como
+             * «Sabor Costeño Restaurante» en DemoSeeder y conservaba «Sabor
+             * Costeño Restaurante S.A.S.», que Mi negocio enseñaba como la de
+             * la droguería. El NIT (DEMO-003) se queda: es la llave con la que
+             * DemoSeeder lo encuentra.
+             */
+            'razonSocial_DCD' => 'Droguería Vida Sana Norte S.A.S.',
             'type' => ProductTypeSchema::TYPE_PHARMACY,
             'address' => 'Calle 85 #51B-22',
             'description' => 'La sede del norte. Mismo surtido, abierta hasta las 11 p. m.',

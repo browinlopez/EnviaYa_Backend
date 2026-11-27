@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\Negocio\GastoDelNegocio;
-use App\Models\Order\OrdersSales;
+use App\Queries\VentasDelNegocio;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
@@ -20,8 +20,10 @@ use Illuminate\Support\Facades\DB;
  *   − Los gastos del negocio                  (luz, agua, arriendo…)
  *   = Lo que te queda
  *
- * Se cuentan los pedidos ENTREGADOS en el periodo, por el día en que se
- * entregaron, y las ventas hechas en el MOSTRADOR. El domicilio no entra: es
+ * Se cuentan las VENTAS del periodo con la definición de `VentasDelNegocio`
+ * (la misma de Pedidos, Ingresos y el Resumen económico): los pedidos
+ * ENTREGADOS, por el día en que se pidieron, y las ventas del MOSTRADOR
+ * cobradas. El domicilio no entra: es
  * del domiciliario. Las de mostrador no pagan comisión: no pasaron por la app.
  *
  * El costo de cada línea es el CONGELADO al vender (`unit_cost`); para las
@@ -66,9 +68,10 @@ class CuentaDelNegocio
     private function cuenta(int $negocio, string $periodo, CarbonImmutable $desde, CarbonImmutable $hasta): array
     {
 
-        $pedidos = OrdersSales::where('busines_id', $negocio)
-            ->where('state', OrdersSales::ENTREGADO)
-            ->whereBetween('delivery_date', [$desde, $hasta])
+        // Los pedidos vendidos con la definición de todo el panel
+        // (`VentasDelNegocio`): entregados, con el pago confirmado, por el
+        // día en que se pidieron.
+        $pedidos = VentasDelNegocio::pedidosDeLaApp($negocio, $desde, $hasta)
             ->get(['orderSales_id', 'subtotal', 'discount', 'platform_fee']);
 
         $ventasApp = (float) $pedidos->sum(fn ($o) => (float) $o->subtotal - (float) $o->discount);

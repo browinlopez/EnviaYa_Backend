@@ -12294,6 +12294,38 @@
                 "x-form-request": "App\\Http\\Requests\\Negocio\\RecibirPedidosRequest"
             }
         },
+        "/v1/negocio/mis-negocios/ventas": {
+            "get": {
+                "operationId": "get_v1_negocio_mis_negocios_ventas",
+                "tags": [
+                    "negocio"
+                ],
+                "summary": "App\\Http\\Controllers\\Negocio\\VentasDeMisNegociosController@index",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "cuenta.habilitada",
+                    "negocio"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    }
+                }
+            }
+        },
         "/v1/negocio/pedidos": {
             "get": {
                 "operationId": "get_v1_negocio_pedidos",

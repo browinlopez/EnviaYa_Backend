@@ -6,10 +6,10 @@ namespace App\Http\Controllers\Conjunto;
 
 use App\Exports\Conjunto\ReporteDelConjuntoExport;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Conjunto\ResumenDelConjuntoRequest;
 use App\Http\Requests\Conjunto\VentanaDelConjuntoRequest;
 use App\Services\PulsoDelConjunto;
 use Carbon\CarbonImmutable;
-use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
 
 /**
@@ -23,19 +23,38 @@ class ResumenDelConjuntoController extends Controller
 {
     public function __construct(private PulsoDelConjunto $pulso) {}
 
-    /** Lo que está pasando ahora. Lo ven el dueño y el celador. */
-    public function resumen(Request $request)
+    /**
+     * Lo que está pasando ahora. Lo ven el dueño y el celador.
+     *
+     * El periodo de las gráficas: entre dos fechas del calendario del panel
+     * (`desde` y `hasta`), o los últimos `dias` como siempre —la portería
+     * pide `dias=1`—.
+     */
+    public function resumen(ResumenDelConjuntoRequest $request)
     {
         $complexId = (int) $request->attributes->get('complex_id');
 
-        $dias = (int) $request->query('dias', 14);
-        // Acotado: con 365 la gráfica no se lee y la consulta agrupa un año
-        // entero para pintar una línea de un píxel por día.
-        // Desde 1: «Hoy» es la vista que más se mira en una portería.
-        $dias = max(1, min($dias, 90));
+        $rango = $request->rango();
+
+        if ($rango) {
+            $desde = $rango[0]->startOfDay();
+            $hasta = $rango[1]->startOfDay();
+        } else {
+            $dias = (int) ($request->validated()['dias'] ?? 14);
+            // Acotado: con 365 la gráfica no se lee y la consulta agrupa un año
+            // entero para pintar una línea de un píxel por día.
+            // Desde 1: «Hoy» es la vista que más se mira en una portería.
+            $dias = max(1, min($dias, 90));
+            $hasta = CarbonImmutable::today();
+            $desde = $hasta->subDays($dias - 1);
+        }
 
         return response()->json(
-            $this->pulso->resumen($complexId, $dias) + ['dias' => $dias],
+            $this->pulso->resumen($complexId, $desde, $hasta) + [
+                'dias' => (int) $desde->diffInDays($hasta) + 1,
+                'desde' => $desde->toDateString(),
+                'hasta' => $hasta->toDateString(),
+            ],
         );
     }
 

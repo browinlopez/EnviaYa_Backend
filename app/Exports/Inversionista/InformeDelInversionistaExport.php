@@ -44,7 +44,9 @@ class InformeDelInversionistaExport implements WithEvents, WithMultipleSheets, W
             new HojaCiudades($this->datos),
             new HojaUsuarios($this->datos),
             new HojaOperacion($this->datos),
-            new HojaIngresos($this->datos),
+            // La hoja de la plata, solo con el interruptor encendido
+            // (`config/inversionista.php`).
+            ...(($this->datos['ver_ingresos'] ?? false) ? [new HojaIngresos($this->datos)] : []),
         ];
     }
 

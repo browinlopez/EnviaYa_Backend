@@ -19,6 +19,7 @@ use App\Models\Buyer\Buyer;
 use App\Models\Order\OrderGeolocation;
 use App\Models\Order\OrdersSales;
 use App\Models\User;
+use App\Queries\VentasDelNegocio;
 use App\Services\CreditoDeTienda;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -186,26 +187,28 @@ class ConsultaDePedidosController extends Controller
 
         $business_id = $request->business_id;
 
-        /**
-         * Una orden cuenta como ingreso cuando su pago online está
-         * confirmado (payment_state 'paid') o cuando ya fue entregada
-         * (efectivo, state 4). Antes se sumaba desde `payments`, que solo
-         * existe para pagos online: las ventas en efectivo no contaban.
+        /*
+         * UNA VENTA ES LA DE `VentasDelNegocio`: el pedido de la app
+         * ENTREGADO y con el pago confirmado, por lo que se cobró de
+         * productos (sin el domicilio, que es del domiciliario), más la venta
+         * del MOSTRADOR cobrada. Es la misma cifra que la cabecera de
+         * Pedidos, Cuánto te queda y el Resumen económico.
+         *
+         * Antes contaba también lo pagado en línea sin entregar y sumaba el
+         * total con el domicilio: «hoy» decía una cifra y Pedidos otra. Un
+         * cancelado tampoco cuenta, aunque se hubiera pagado.
          */
         $incomeOrders = fn () => OrdersSales::where('busines_id', $business_id)
-            /*
-             * UN CANCELADO NO ES UN INGRESO, aunque se hubiera pagado.
-             *
-             * Al cancelar uno pagado la plata se devuelve (`DevolucionDelPedido`)
-             * pero `payment_state` se queda en «paid», así que el pedido seguía
-             * sumando en el ingreso de hoy, de la semana, del mes y en la
-             * gráfica. Visto en la tienda de prueba: de $70.500 «de hoy»,
-             * $47.600 eran pedidos cancelados.
-             */
-            ->where('state', '!=', OrdersSales::CANCELADO)
-            ->where(function ($q) {
-                $q->where('payment_state', 'paid')->orWhere('state', 4);
-            });
+            ->confirmados()
+            ->where('state', OrdersSales::ENTREGADO);
+        $importe = DB::raw(VentasDelNegocio::IMPORTE_APP);
+        $mostrador = fn ($desde, $hasta) => VentasDelNegocio::delMostrador((int) $business_id, Carbon::parse($desde), Carbon::parse($hasta));
+        // Lo vendido entre dos momentos: la app y el mostrador.
+        $vendido = fn ($desde, $hasta) => (float) $incomeOrders()->whereBetween('sale_date', [$desde, $hasta])->sum($importe)
+            + (float) $mostrador($desde, $hasta)->sum('total');
+        // Cuántas ventas: los pedidos entregados y las del mostrador.
+        $cuantas = fn ($desde, $hasta) => $incomeOrders()->whereBetween('sale_date', [$desde, $hasta])->count()
+            + $mostrador($desde, $hasta)->count();
 
         $daysOfWeek = [
             2 => 'Lunes',
@@ -230,20 +233,26 @@ class ConsultaDePedidosController extends Controller
             : 'DAYOFWEEK(sale_date)';
 
         // Ingresos por día de la semana para un rango dado
-        $incomeByDay = function ($start, $end) use ($incomeOrders, $daysOfWeek, $diaDeLaSemana) {
+        $incomeByDay = function ($start, $end) use ($incomeOrders, $mostrador, $daysOfWeek, $diaDeLaSemana) {
             $rows = $incomeOrders()
                 ->select(
                     DB::raw("$diaDeLaSemana as weekday"),
-                    DB::raw('SUM(total) as total_income')
+                    DB::raw('SUM('.VentasDelNegocio::IMPORTE_APP.') as total_income')
                 )
                 ->whereBetween('sale_date', [$start, $end])
                 ->groupBy('weekday')
                 ->get()
                 ->keyBy('weekday');
 
+            // Las del mostrador, por el mismo día de la semana (1 = domingo).
+            $delMostrador = $mostrador($start, $end)
+                ->get(['vendida_at', 'total'])
+                ->groupBy(fn ($v) => Carbon::parse($v->vendida_at)->dayOfWeek + 1)
+                ->map(fn ($g) => (float) $g->sum('total'));
+
             $out = [];
             foreach ($daysOfWeek as $key => $day) {
-                $out[$day] = (float) ($rows[$key]->total_income ?? 0);
+                $out[$day] = (float) ($rows[$key]->total_income ?? 0) + (float) ($delMostrador[$key] ?? 0);
             }
 
             return $out;
@@ -304,13 +313,28 @@ class ConsultaDePedidosController extends Controller
          * Son tres `GROUP BY` sobre una tabla que ya se está recorriendo seis
          * veces en esta misma respuesta, así que el coste es el que ya había.
          */
+        /*
+         * El mostrador entra en los mismos bolsillos: lo cobrado en efectivo
+         * está en el cajón como el efectivo de la app; el QR y la
+         * transferencia del mostrador van aparte, porque no los liquida la
+         * app como un pedido (el QR lo paga la pasarela; la transferencia
+         * llega directo).
+         */
+        $bolsilloDelMostrador = fn (string $forma) => $forma === 'efectivo' ? 'Efectivo' : 'QR o transferencia en el mostrador';
         $porMedioEntre = fn ($desde, $hasta) => $incomeOrders()
-            ->select('methods_id', DB::raw('SUM(total) as total'))
             ->whereBetween('sale_date', [$desde, $hasta])
+            ->select('methods_id', DB::raw('SUM('.VentasDelNegocio::IMPORTE_APP.') as total'))
             ->groupBy('methods_id')
             ->get()
-            ->groupBy(fn ($f) => $bolsillo((int) $f->methods_id))
+            ->map(fn ($f) => ['medio' => $bolsillo((int) $f->methods_id), 'total' => (float) $f->total])
+            ->concat($mostrador($desde, $hasta)
+                ->select('forma_de_pago', DB::raw('SUM(total) as total'))
+                ->groupBy('forma_de_pago')
+                ->get()
+                ->map(fn ($f) => ['medio' => $bolsilloDelMostrador((string) $f->forma_de_pago), 'total' => (float) $f->total]))
+            ->groupBy('medio')
             ->map(fn ($g) => (float) $g->sum('total'))
+            ->filter(fn ($total) => $total > 0)
             ->sortDesc()
             ->map(fn ($total, $medio) => ['medio' => $medio, 'total' => $total])
             ->values()
@@ -321,25 +345,27 @@ class ConsultaDePedidosController extends Controller
         $month_start = now()->startOfMonth();
         $month_end = (clone $month_start)->endOfMonth();
 
-        $monthlyIncome = $incomeOrders()
-            ->whereBetween('sale_date', [$month_start, $month_end])
-            ->sum('total');
+        $monthlyIncome = $vendido($month_start, $month_end);
 
-        $totalIncome = $incomeOrders()->sum('total');
+        $totalIncome = (float) $incomeOrders()->sum($importe)
+            + (float) DB::table('ventas_mostrador')
+                ->where('busines_id', $business_id)
+                ->where('estado_pago', 'pagada')
+                ->sum('total');
 
         /* Lo que la pantalla del panel necesita además de los totales: cuántas
            ventas fueron, el ticket promedio, lo de hoy y la tendencia. */
-        $ventasSemana = $incomeOrders()->whereBetween('sale_date', [$currentWeekStart, $currentWeekEnd]);
-        $cuantasSemana = (clone $ventasSemana)->count();
-        $hoy = $incomeOrders()->whereBetween('sale_date', [now()->startOfDay(), now()->endOfDay()]);
+        $cuantasSemana = $cuantas($currentWeekStart, $currentWeekEnd);
+        $inicioDeHoy = now()->startOfDay();
+        $finDeHoy = now()->endOfDay();
 
-        $ultimasSemanas = collect(range(7, 0))->map(function ($atras) use ($incomeOrders, $currentWeekStart) {
+        $ultimasSemanas = collect(range(7, 0))->map(function ($atras) use ($vendido, $currentWeekStart) {
             $inicio = (clone $currentWeekStart)->subWeeks($atras);
             $fin = (clone $inicio)->endOfWeek();
 
             return [
                 'inicio' => $inicio->toDateString(),
-                'total' => (float) $incomeOrders()->whereBetween('sale_date', [$inicio, $fin])->sum('total'),
+                'total' => $vendido($inicio, $fin),
             ];
         })->values()->all();
 
@@ -377,27 +403,15 @@ class ConsultaDePedidosController extends Controller
                 $desde = $hasta->copy()->subDays(92)->startOfDay();
             }
 
-            $delRango = fn () => $incomeOrders()->whereBetween('sale_date', [$desde, $hasta]);
-            $cuantas = (clone $delRango())->count();
+            $delRango = VentasDelNegocio::entre((int) $business_id, $desde, $hasta);
 
             $rango = [
                 'desde' => $desde->toDateString(),
                 'hasta' => $hasta->toDateString(),
-                'total' => (float) (clone $delRango())->sum('total'),
-                'ventas' => $cuantas,
-                'ticket_promedio' => $cuantas
-                    ? round((float) (clone $delRango())->sum('total') / $cuantas, 2)
-                    : 0.0,
-                'por_medio' => (clone $delRango())
-                    ->select('methods_id', DB::raw('SUM(total) as total'))
-                    ->groupBy('methods_id')
-                    ->get()
-                    ->groupBy(fn ($f) => $bolsillo((int) $f->methods_id))
-                    ->map(fn ($g) => (float) $g->sum('total'))
-                    ->sortDesc()
-                    ->map(fn ($total, $medio) => ['medio' => $medio, 'total' => $total])
-                    ->values()
-                    ->all(),
+                'total' => $delRango['ventas'],
+                'ventas' => $delRango['cuantas'],
+                'ticket_promedio' => $delRango['ticket_promedio'],
+                'por_medio' => $porMedioEntre($desde, $hasta),
                 /*
                  * DIA A DIA, pero solo si el rango cabe en una pantalla.
                  *
@@ -407,14 +421,12 @@ class ConsultaDePedidosController extends Controller
                  */
                 'dia_a_dia' => $desde->diffInDays($hasta) <= 31
                     ? collect(range(0, (int) $desde->diffInDays($hasta)))
-                        ->map(function ($i) use ($desde, $incomeOrders) {
+                        ->map(function ($i) use ($desde, $vendido) {
                             $dia = $desde->copy()->addDays($i);
 
                             return [
                                 'dia' => $dia->toDateString(),
-                                'total' => (float) $incomeOrders()
-                                    ->whereBetween('sale_date', [$dia->copy()->startOfDay(), $dia->copy()->endOfDay()])
-                                    ->sum('total'),
+                                'total' => $vendido($dia->copy()->startOfDay(), $dia->copy()->endOfDay()),
                             ];
                         })
                         ->all()
@@ -437,24 +449,15 @@ class ConsultaDePedidosController extends Controller
                día y hora de hoy. Comparar el miércoles contra una semana
                entera siempre da «vas peor»; contra esto, la comparación es
                justa. */
-            'previous_week_to_date' => (float) $incomeOrders()
-                ->whereBetween('sale_date', [$previousWeekStart, now()->subWeek()])
-                ->sum('total'),
+            'previous_week_to_date' => $vendido($previousWeekStart, now()->subWeek()),
 
             'ventas_semana' => $cuantasSemana,
             'ticket_promedio' => $cuantasSemana ? round((float) $currentWeekTotal / $cuantasSemana, 2) : 0.0,
-            'hoy' => (float) (clone $hoy)->sum('total'),
-            'ventas_hoy' => (clone $hoy)->count(),
-            /*
-             * LO DEL MOSTRADOR DE HOY, aparte: el inicio lo suma al ingreso
-             * del día y dice de dónde salió. No entra en `hoy`, que sigue
-             * siendo lo de la app para las pantallas que ya lo leen así.
-             */
-            'hoy_mostrador' => (float) DB::table('ventas_mostrador')
-                ->where('busines_id', $business_id)
-                ->where('estado_pago', 'pagada')
-                ->whereBetween('vendida_at', [now()->startOfDay(), now()->endOfDay()])
-                ->sum('total'),
+            // Lo de hoy, la app y el mostrador juntos (`VentasDelNegocio`).
+            'hoy' => $vendido($inicioDeHoy, $finDeHoy),
+            'ventas_hoy' => $cuantas($inicioDeHoy, $finDeHoy),
+            // De eso, lo que salió del mostrador: ya está DENTRO de `hoy`.
+            'hoy_mostrador' => (float) $mostrador($inicioDeHoy, $finDeHoy)->sum('total'),
             'ultimas_semanas' => $ultimasSemanas,
 
             'weekly_income' => $weeklyIncome,
