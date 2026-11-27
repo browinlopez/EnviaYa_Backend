@@ -49,7 +49,16 @@ class Owner extends Authenticatable implements AuditableContract
             'owner_busines',
             'owner_id',
             'busines_id'
-        )->withPivot('state');
+        )->withPivot('state')
+            /*
+             * Por nombre, como `NegocioDelUsuario::negociosDe()`. Sin orden,
+             * la app tomaba `businesses[0]` en el orden de la tabla mientras
+             * las rutas `/negocio/*` sin cabecera elegían el primero por
+             * nombre: con dos locales, una pantalla mostraba uno y otra
+             * actuaba sobre el otro. Las versiones de la app que aún no
+             * mandan `X-Negocio` quedan así de acuerdo con el servidor.
+             */
+            ->orderBy('business.name');
     }
 
     // Relación con tabla user

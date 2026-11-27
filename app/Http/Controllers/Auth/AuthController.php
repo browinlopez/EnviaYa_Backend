@@ -93,13 +93,7 @@ class AuthController extends Controller
             'user_agent' => substr((string) $request->userAgent(), 0, 255),
         ]);
 
-        if ($user->rol == 1) {
-            $user->load('buyer');
-        } elseif ($user->rol == 2) {
-            $user->load(['owner.businesses']);
-        } elseif ($user->rol == 3) {
-            $user->load(['domiciliary.businesses']);
-        }
+        self::conSusRelaciones($user);
 
         return response()->json([
             'user' => new UsuarioResource($user),
@@ -163,6 +157,26 @@ class AuthController extends Controller
     // Perfil
     public function profile(Request $request)
     {
-        return response()->json(new UsuarioResource($request->user()));
+        /*
+         * Con las MISMAS relaciones que el login. La app guarda el usuario al
+         * entrar y no lo volvía a pedir: a un dueño al que le sumaban un local
+         * no le salía en el selector hasta cerrar sesión. Ahora la app pide
+         * esto al abrirse, y sin `owner.businesses` no le serviría de nada.
+         */
+        return response()->json(new UsuarioResource(self::conSusRelaciones($request->user())));
+    }
+
+    /** Lo que cada rol necesita de su cuenta, igual al entrar y al refrescar. */
+    private static function conSusRelaciones(User $user): User
+    {
+        if ($user->rol == 1) {
+            $user->load('buyer');
+        } elseif ($user->rol == 2) {
+            $user->load(['owner.businesses']);
+        } elseif ($user->rol == 3) {
+            $user->load(['domiciliary.businesses']);
+        }
+
+        return $user;
     }
 }

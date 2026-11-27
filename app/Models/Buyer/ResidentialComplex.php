@@ -58,6 +58,27 @@ class ResidentialComplex extends Audit
         'apartments_per_tower',
     ];
 
+    /**
+     * Si una torre puede ser de este conjunto.
+     *
+     * Solo se juzga cuando es un número y el conjunto dice cuántas tiene: la
+     * «Torre 7» de un conjunto de cuatro no existe, y con ella el celador no
+     * encuentra a nadie. «Torre A» o «Bloque 2B» pasan: no hay con qué
+     * compararlas. El apartamento no se mira así: un «301» real es mayor que
+     * los apartamentos por torre, y rechazarlo dejaría fuera a medio edificio.
+     */
+    public function torreValida(?string $torre): bool
+    {
+        $t = trim((string) $torre);
+        $cuantas = (int) ($this->towers_count ?? 0);
+
+        if ($t === '' || $cuantas <= 0 || ! ctype_digit($t)) {
+            return true;
+        }
+
+        return (int) $t >= 1 && (int) $t <= $cuantas;
+    }
+
     /** @return HasMany<BuyerComplex, $this> */
     public function buyers(): HasMany
     {

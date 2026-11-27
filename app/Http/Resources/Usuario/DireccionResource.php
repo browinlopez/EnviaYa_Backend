@@ -53,6 +53,15 @@ class DireccionResource extends JsonResource
             'nombre' => $a->nombre,
             'latitude' => $a->latitude,
             'longitude' => $a->longitude,
+            /*
+             * El conjunto, la torre y el apartamento. No salían, así que la
+             * app no sabía que la dirección era de un conjunto y, al editarla,
+             * la guardaba sin él: la portería dejaba de reconocer los pedidos.
+             */
+            'complex_id' => $a->complex_id,
+            'complex_name' => $a->complex_id ? $a->complex?->name : null,
+            'tower' => $a->tower,
+            'apartment' => $a->apartment,
             'alias_id' => $a->alias?->alias_id,
             'alias_name' => $a->alias?->name,
             'municipality_id' => $a->municipality?->id,
