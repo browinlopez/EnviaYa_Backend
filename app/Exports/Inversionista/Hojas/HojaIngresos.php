@@ -29,11 +29,11 @@ class HojaIngresos extends HojaDelInforme
 
         $this->seccion('Las cifras');
         $this->cifras([
-            ['Ventas (GMV)', $c['ventas'], self::PESOS],
+            ['Ventas totales', $c['ventas'], self::PESOS],
             ['Comisiones de los negocios', $c['comisiones'], self::PESOS],
             ['Margen de los domicilios', $c['margen_domicilio'], self::PESOS],
             ['Ingreso de la plataforma', $c['ingreso'], self::PESOS],
-            ['Comisión efectiva (take rate)', $c['take_rate'], self::PORCENTAJE],
+            ['Comisión efectiva (de cada $100)', $c['take_rate'], self::PORCENTAJE],
             ['Subsidios al domicilio', $c['subsidios'], self::PESOS],
         ]);
         $this->fila();

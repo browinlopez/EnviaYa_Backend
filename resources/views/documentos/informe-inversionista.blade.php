@@ -140,7 +140,7 @@
     <table class="kpis" style="margin-top: 6px">
         <tr>
             @foreach ([
-                ['Ventas (GMV)', $pesos($i['ventas']['valor']), $i['ventas']['variacion']],
+                ['Ventas totales', $pesos($i['ventas']['valor']), $i['ventas']['variacion']],
                 ['Ingreso de la plataforma', $pesos($i['ingreso']['valor']), $i['ingreso']['variacion']],
                 ['Entregas a tiempo', $pct($o['cifras']['a_tiempo']['valor']), $o['cifras']['a_tiempo']['variacion']],
                 ['Recompra', $pct($u['recompra']['valor']), $u['recompra']['variacion']],
@@ -210,11 +210,11 @@
     <table>
         <tr><th>Indicador</th><th>Este periodo</th><th>Periodo anterior</th><th>Variación</th></tr>
         @foreach ([
-            ['Ventas (GMV)', $i['ventas'], $pesos],
+            ['Ventas totales', $i['ventas'], $pesos],
             ['Comisiones de los negocios', $i['comisiones'], $pesos],
             ['Margen de los domicilios', $i['margen_domicilio'], $pesos],
             ['Ingreso de la plataforma', $i['ingreso'], $pesos],
-            ['Comisión efectiva (take rate)', $i['take_rate'], $pct],
+            ['Comisión efectiva (de cada $100)', $i['take_rate'], $pct],
             ['Subsidios al domicilio', $i['subsidios'], $pesos],
         ] as [$rot, $cifra, $fmt])
             <tr><td>{{ $rot }}</td><td>{{ $fmt($cifra['valor']) }}</td><td>{{ $fmt($cifra['anterior']) }}</td><td class="{{ $tono($cifra['variacion']) }}">{{ $var($cifra['variacion']) }}</td></tr>
