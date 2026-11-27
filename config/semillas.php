@@ -37,4 +37,10 @@ return [
      */
     'permitir_en_produccion' => (bool) env('SEED_ALLOW_PRODUCTION', false),
 
+    // Clave común de las cuentas de DemostracionQaSeeder; sin ella esa semilla no siembra.
+    'demo_qa_clave' => env('DEMO_QA_PASSWORD'),
+
+    // Con 1, DemostracionQaSeeder solo retira lo que sembró y no vuelve a sembrar.
+    'demo_qa_purgar' => (bool) env('DEMO_PURGAR', false),
+
 ];
