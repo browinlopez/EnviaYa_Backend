@@ -192,8 +192,8 @@ test('expansion: cobertura, conjuntos, la ciudad sin oferta y el punto redondead
     $e = invModPedir('expansion');
 
     expect($e['resumen'])->toBe([
-        'ciudades_con_negocios' => 2, 'ciudades_sin_oferta' => 1, 'departamentos' => 1,
-        'conjuntos_activos' => 1, 'residentes_en_conjuntos' => 1,
+        'ciudades_con_negocios' => 2, 'ciudades_sin_oferta' => 1, 'negocios_sin_ciudad' => 0,
+        'departamentos' => 1, 'conjuntos_activos' => 1, 'residentes_en_conjuntos' => 1,
     ]);
 
     $c = collect($e['por_ciudad'])->keyBy('ciudad');
@@ -206,7 +206,32 @@ test('expansion: cobertura, conjuntos, la ciudad sin oferta y el punto redondead
 
     // Soledad no tiene coordenadas ni conjunto activo: no hay dónde ponerla.
     expect($c['Soledad'])->toMatchArray(['negocios' => 1, 'pedidos' => 1, 'compradores' => 1, 'punto' => null]);
-    expect($c['Cali'])->toMatchArray(['negocios' => 0, 'compradores' => 1, 'compradores_por_negocio' => null]);
+    expect($c['Cali'])->toMatchArray(['negocios' => 0, 'compradores' => 1, 'compradores_por_negocio' => null, 'esperando' => true]);
+    expect($c['Barranquilla']['esperando'])->toBeFalse();
+});
+
+test('expansion: una ciudad con conjuntos y sin negocios espera; «Sin ciudad» no es ciudad', function () {
+    invModEscenario();
+
+    $ant = DB::table('departments')->insertGetId(['name' => 'Antioquia', 'country_id' => DB::table('countries')->value('id')]);
+    $med = DB::table('municipalities')->insertGetId(['name' => 'Medellín', 'department_id' => $ant]);
+    DB::table('residential_complexes')->insert(['name' => 'Conjunto Paisa', 'state' => 1, 'municipality_id' => $med]);
+    DB::table('business')->insert([
+        'name' => 'Tienda Sin Ciudad', 'qualification' => 0, 'state' => 1,
+        'type' => DB::table('category_business')->where('name', 'Tienda')->value('id'),
+        'municipality_id' => null, 'address' => 'Calle 1',
+    ]);
+
+    $e = invModPedir('expansion');
+
+    // Cali (compradores) y Medellín (un conjunto): las dos esperan.
+    expect($e['resumen'])->toMatchArray([
+        'ciudades_con_negocios' => 2, 'ciudades_sin_oferta' => 2, 'negocios_sin_ciudad' => 1,
+    ]);
+
+    $c = collect($e['por_ciudad'])->keyBy('ciudad');
+    expect($c['Medellín'])->toMatchArray(['negocios' => 0, 'conjuntos' => 1, 'compradores' => 0, 'esperando' => true])
+        ->and($c['Sin ciudad'])->toMatchArray(['municipality_id' => null, 'negocios' => 1, 'esperando' => false]);
 });
 
 test('usuarios: activos, recompra, pedidos por comprador y conjuntos', function () {

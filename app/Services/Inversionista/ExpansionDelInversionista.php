@@ -17,9 +17,12 @@ use Illuminate\Support\Facades\DB;
  * hay por negocio (la cobertura) y desde cuándo hay presencia.
  *
  * Entra toda ciudad donde haya algo: un negocio, un conjunto, un pedido o un
- * comprador con dirección ahí. Una ciudad con compradores y sin negocios no
- * es ruido: es demanda esperando oferta, que es justo lo que un inversionista
- * quiere ver.
+ * comprador con dirección ahí. Una ciudad ESPERANDO es la que tiene demanda
+ * (compradores con dirección ahí o conjuntos activos) y ningún negocio
+ * activo: no es ruido, es demanda esperando oferta, que es justo lo que un
+ * inversionista quiere ver. La fila «Sin ciudad» (negocios y compradores sin
+ * municipio) no es una ciudad: es un hueco en los datos y no se cuenta como
+ * ciudad en ninguna cifra.
  *
  * EL PUNTO DEL MAPA es el promedio de las coordenadas de los negocios activos
  * de la ciudad (o, si no tiene, de sus conjuntos), REDONDEADO A DOS DECIMALES
@@ -46,12 +49,15 @@ class ExpansionDelInversionista extends BaseDelInversionista
         ], $this->porCiudad($v, $f));
 
         $conCiudad = array_filter($ciudades, fn ($c) => $c['municipality_id'] !== null);
+        $sinCiudad = array_values(array_filter($ciudades, fn ($c) => $c['municipality_id'] === null));
 
         return [
             'resumen' => [
                 'ciudades_con_negocios' => count(array_filter($conCiudad, fn ($c) => $c['negocios'] > 0)),
-                // Compradores esperando y ni un negocio: la próxima ciudad.
-                'ciudades_sin_oferta' => count(array_filter($conCiudad, fn ($c) => $c['negocios'] === 0 && $c['compradores'] > 0)),
+                // Demanda (compradores o conjuntos activos) y ni un negocio: la próxima ciudad.
+                'ciudades_sin_oferta' => count(array_filter($conCiudad, fn ($c) => $c['esperando'])),
+                // «Sin ciudad» no es una ciudad: es un hueco en los datos.
+                'negocios_sin_ciudad' => $sinCiudad[0]['negocios'] ?? 0,
                 'departamentos' => count(array_unique(array_filter(array_map(
                     fn ($c) => $c['negocios'] > 0 ? $c['departamento'] : null,
                     $conCiudad,
@@ -219,6 +225,12 @@ class ExpansionDelInversionista extends BaseDelInversionista
                 'pedidos' => $r['pedidos'],
                 'ventas' => round($r['ventas'], 2),
                 'compradores' => $r['compradores'],
+                /*
+                 * ESPERANDO: una ciudad con demanda (compradores con dirección
+                 * ahí o conjuntos activos) y ningún negocio activo. «Sin
+                 * ciudad» nunca espera: no es una ciudad.
+                 */
+                'esperando' => ! $sin && $r['negocios'] === 0 && ($r['compradores'] > 0 || $r['conjuntos'] > 0),
                 // La cobertura: cuántos compradores le tocan a cada negocio.
                 'compradores_por_negocio' => $this->cociente($r['compradores'], $r['negocios']),
                 'desde' => $r['desde'] ? Carbon::parse($r['desde'])->toDateString() : null,
