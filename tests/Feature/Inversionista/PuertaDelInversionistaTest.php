@@ -36,17 +36,28 @@ test('el inversionista entra a su ambito con la forma de los otros', function ()
         ->assertExactJson([
             'area' => ['name' => "VeciPa'Ya"],
             'role' => 'inversionista',
+            // Ingresos, apagado de fábrica: ver config/inversionista.php.
             'permissions' => array_fill_keys(
-                ['resumen', 'negocios', 'expansion', 'usuarios', 'operacion', 'ingresos', 'informes'],
+                ['resumen', 'negocios', 'expansion', 'usuarios', 'operacion', 'informes'],
                 ['view' => true, 'manage' => false],
-            ),
+            ) + ['ingresos' => ['view' => false, 'manage' => false]],
             'stats' => [],
         ]);
 
-    foreach (['resumen', 'negocios', 'expansion', 'usuarios', 'operacion', 'ingresos'] as $modulo) {
+    foreach (['resumen', 'negocios', 'expansion', 'usuarios', 'operacion'] as $modulo) {
         $this->getJson('/v1/inversionista/'.$modulo)->assertOk()->assertJsonStructure(['periodo', 'filtros']);
     }
+    $this->getJson('/v1/inversionista/ingresos')->assertForbidden();
     $this->getJson('/v1/inversionista/opciones')->assertOk()->assertJsonStructure(['ciudades', 'tipos']);
+});
+
+test('con el interruptor de la plata encendido, Ingresos se abre y me lo dice', function () {
+    config(['inversionista.ver_ingresos' => true]);
+    Sanctum::actingAs(invCuenta(7));
+
+    expect($this->getJson('/v1/inversionista/me')->assertOk()->json('permissions.ingresos'))
+        ->toBe(['view' => true, 'manage' => false]);
+    $this->getJson('/v1/inversionista/ingresos')->assertOk()->assertJsonStructure(['periodo', 'filtros', 'cifras']);
 });
 
 test('sin sesion no hay ningun modulo', function () {

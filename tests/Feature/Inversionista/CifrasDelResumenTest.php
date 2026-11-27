@@ -116,6 +116,11 @@ function invResumenYCiudades(array $filtros = []): array
     ];
 }
 
+/* Estas pruebas miran la plata (ventas, ticket): con el interruptor
+   `inversionista.ver_ingresos` encendido. Apagado, ver
+   ModulosDelInversionistaTest. */
+beforeEach(fn () => config(['inversionista.ver_ingresos' => true]));
+
 afterEach(fn () => Carbon::setTestNow());
 
 test('las cifras de arriba solo cuentan lo entregado y pagado', function () {

@@ -65,7 +65,54 @@ abstract class BaseDelInversionista
     {
         [$v, $f] = $this->contexto($pedido);
 
-        return ['periodo' => $this->periodo($v), 'filtros' => $f] + $this->datos($v, $f);
+        return ['periodo' => $this->periodo($v), 'filtros' => $f] + self::segunElInterruptor($this->datos($v, $f));
+    }
+
+    /* --------------------------- LA PLATA TOTAL --------------------------- */
+
+    /**
+     * Las claves de PLATA TOTAL: lo vendido (`ventas`, también dentro de
+     * `variacion`), el ingreso de la plataforma, las comisiones, los
+     * subsidios y lo de los domicilios.
+     *
+     * Los PROMEDIOS no están, a propósito: `ticket_promedio`,
+     * `ventas_por_negocio` (lo que vende, en promedio, un negocio que
+     * vendió) y la parte de cada tipo (`participacion_ventas`, un
+     * porcentaje) se ven siempre.
+     */
+    public const TOTALES_DE_PLATA = [
+        'ventas', 'ingreso', 'comisiones', 'subsidios', 'margen_domicilio',
+        'domicilios', 'pago_domiciliarios',
+    ];
+
+    /** ¿El inversionista ve la plata total? Ver `config/inversionista.php`. */
+    public static function verIngresos(): bool
+    {
+        return (bool) config('inversionista.ver_ingresos', false);
+    }
+
+    /**
+     * Los datos tal cual con el interruptor encendido; sin los totales de
+     * plata, a cualquier profundidad, con él apagado.
+     */
+    public static function segunElInterruptor(array $datos): array
+    {
+        return self::verIngresos() ? $datos : self::sinTotalesDePlata($datos);
+    }
+
+    private static function sinTotalesDePlata(array $datos): array
+    {
+        $limpio = [];
+
+        foreach ($datos as $clave => $valor) {
+            if (is_string($clave) && in_array($clave, self::TOTALES_DE_PLATA, true)) {
+                continue;
+            }
+
+            $limpio[$clave] = is_array($valor) ? self::sinTotalesDePlata($valor) : $valor;
+        }
+
+        return $limpio;
     }
 
     /** Los datos propios del módulo, para una ventana y unos filtros ya resueltos. */

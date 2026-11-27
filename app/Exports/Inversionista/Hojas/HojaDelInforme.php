@@ -143,6 +143,44 @@ abstract class HojaDelInforme extends SinFormulas implements FromArray, WithEven
     }
 
     /**
+     * ¿El informe lleva la plata total? Lo decide el interruptor
+     * `inversionista.ver_ingresos` (ver `config/inversionista.php`); los
+     * promedios, como el ticket, van siempre.
+     */
+    protected function conPlata(): bool
+    {
+        return (bool) ($this->d['ver_ingresos'] ?? false);
+    }
+
+    /**
+     * La tabla, sin las columnas de plata total (`$dePlata`, índices desde 0)
+     * cuando el interruptor está apagado. Los formatos se corren con ellas.
+     *
+     * @param  array<int, string>  $formatos
+     * @param  list<int>  $dePlata
+     */
+    protected function tablaSegunElInterruptor(array $cabecera, array $cuerpo, array $formatos, array $dePlata): void
+    {
+        if (! $this->conPlata()) {
+            $quitar = array_flip($dePlata);
+            $fuera = fn (array $fila) => array_values(array_diff_key($fila, $quitar));
+            $cabecera = $fuera($cabecera);
+            $cuerpo = array_map($fuera, $cuerpo);
+
+            $corridos = [];
+            foreach ($formatos as $i => $formato) {
+                if (! isset($quitar[$i])) {
+                    $antes = count(array_filter($dePlata, fn ($q) => $q < $i));
+                    $corridos[$i - $antes] = $formato;
+                }
+            }
+            $formatos = $corridos;
+        }
+
+        $this->tabla($cabecera, $cuerpo, $formatos);
+    }
+
+    /**
      * Indicadores contra el periodo anterior: rótulo, actual, anterior y
      * variación, cada uno con su formato.
      *

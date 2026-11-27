@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Inversionista;
 use App\Exports\Inversionista\InformeDelInversionistaExport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Inversionista\TableroDelInversionistaRequest;
+use App\Services\Inversionista\BaseDelInversionista;
 use App\Services\Inversionista\ExpansionDelInversionista;
 use App\Services\Inversionista\InformeDelInversionista;
 use App\Services\Inversionista\IngresosDelInversionista;
@@ -44,7 +45,15 @@ class TableroDelInversionistaController extends Controller
         return response()->json([
             'area' => ['name' => "VeciPa'Ya"],
             'role' => 'inversionista',
-            'permissions' => array_fill_keys(self::MODULOS, ['view' => true, 'manage' => false]),
+            /*
+             * Ingresos (la plata total) solo con el interruptor encendido:
+             * ver `config/inversionista.php`. Apagado, el panel no muestra
+             * el módulo y su ruta responde 403.
+             */
+            'permissions' => array_merge(
+                array_fill_keys(self::MODULOS, ['view' => true, 'manage' => false]),
+                ['ingresos' => ['view' => BaseDelInversionista::verIngresos(), 'manage' => false]],
+            ),
             'stats' => new \stdClass,
         ]);
     }
@@ -80,8 +89,19 @@ class TableroDelInversionistaController extends Controller
         return response()->json($s->para($request->validated()));
     }
 
+    /**
+     * La plata total. Con el interruptor `inversionista.ver_ingresos`
+     * apagado (el de fábrica) responde 403, no 404: la ruta existe, pero
+     * este inversionista no tiene ese permiso ahora (`me` lo dice igual).
+     */
     public function ingresos(TableroDelInversionistaRequest $request, IngresosDelInversionista $s): JsonResponse
     {
+        if (! BaseDelInversionista::verIngresos()) {
+            return response()->json([
+                'message' => 'Los ingresos no están disponibles en este panel por ahora.',
+            ], 403);
+        }
+
         return response()->json($s->para($request->validated()));
     }
 

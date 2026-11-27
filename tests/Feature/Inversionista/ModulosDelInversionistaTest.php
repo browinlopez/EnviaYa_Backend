@@ -33,6 +33,7 @@
 
 use App\Models\Rol;
 use App\Models\User;
+use App\Services\Inversionista\BaseDelInversionista;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
@@ -148,6 +149,11 @@ function invModPedir(string $modulo, array $filtros = []): array
 
     return test()->getJson("/v1/inversionista/{$modulo}?{$q}")->assertOk()->json();
 }
+
+/* Casi todas estas pruebas miran también la plata: con el interruptor
+   `inversionista.ver_ingresos` encendido. Las del interruptor apagado (el
+   de fábrica) lo apagan ellas mismas, al final del archivo. */
+beforeEach(fn () => config(['inversionista.ver_ingresos' => true]));
 
 afterEach(fn () => Carbon::setTestNow());
 
@@ -473,4 +479,90 @@ test('expansion: el mapa respeta el filtro de ciudad', function () {
     $e = invModMapa();
 
     expect(invModPedir('expansion', ['municipality_id' => $e['sol']])['calor']['celdas'])->toBe([]);
+});
+
+/* ------------------- EL INTERRUPTOR DE LA PLATA, APAGADO ------------------- */
+
+/**
+ * Apagado (el de fábrica, `config/inversionista.php`): el inversionista ve el
+ * crecimiento y los PROMEDIOS, no la plata total. Los totales no salen del
+ * servidor; el ticket promedio sí.
+ */
+function invClavesDe(array $datos): array
+{
+    $claves = [];
+    $recorrer = function ($v) use (&$recorrer, &$claves) {
+        if (! is_array($v)) {
+            return;
+        }
+        foreach ($v as $k => $dentro) {
+            if (is_string($k)) {
+                $claves[$k] = true;
+            }
+            $recorrer($dentro);
+        }
+    };
+    $recorrer($datos);
+
+    return array_keys($claves);
+}
+
+test('apagado: ningun modulo trae plata total, pero si los promedios', function () {
+    config(['inversionista.ver_ingresos' => false]);
+    invModEscenario();
+
+    foreach (['resumen', 'negocios', 'expansion', 'usuarios', 'operacion'] as $modulo) {
+        expect(array_values(array_intersect(invClavesDe(invModPedir($modulo)), BaseDelInversionista::TOTALES_DE_PLATA)))
+            ->toBe([], "«{$modulo}» manda plata total con el interruptor apagado");
+    }
+
+    // Los promedios se quedan: el ticket (y contra el periodo anterior) y lo
+    // que vende en promedio un negocio que vendió.
+    $c = invModPedir('resumen')['cifras'];
+    expect((float) $c['ticket_promedio']['valor'])->toBe(16250.0)
+        ->and((float) $c['ticket_promedio']['anterior'])->toBe(40000.0)
+        ->and($c['ticket_promedio'])->toHaveKey('variacion')
+        ->and((float) invModPedir('negocios')['actividad']['ventas_por_negocio']['valor'])->toBe(21666.67);
+
+    // Ingresos, cerrado: 403 y `me` lo dice.
+    $this->getJson('/v1/inversionista/ingresos?desde=2026-11-01&hasta=2026-11-20')->assertForbidden();
+    expect($this->getJson('/v1/inversionista/me')->json('permissions.ingresos.view'))->toBeFalse();
+});
+
+test('encendido: la plata total vuelve en los modulos', function () {
+    invModEscenario();
+
+    $c = invModPedir('resumen')['cifras'];
+    expect((float) $c['ventas']['valor'])->toBe(65000.0)
+        ->and(invClavesDe(invModPedir('expansion')))->toContain('ventas')
+        ->and((float) invModPedir('ingresos')['cifras']['ingreso']['valor'])->toBe(3050.0);
+});
+
+test('apagado: el informe en Excel sale sin la hoja ni las columnas de plata, con el ticket', function () {
+    config(['inversionista.ver_ingresos' => false]);
+    invModEscenario();
+
+    $r = $this->get('/v1/inversionista/informe?desde=2026-11-01&hasta=2026-11-20')->assertOk();
+    $archivo = tempnam(sys_get_temp_dir(), 'inv').'.xlsx';
+    file_put_contents($archivo, $r->streamedContent());
+    $libro = IOFactory::load($archivo);
+
+    expect($libro->getSheetNames())->toBe(['Resumen', 'Mes a mes', 'Negocios', 'Ciudades', 'Usuarios', 'Operación']);
+
+    $texto = '';
+    foreach ($libro->getAllSheets() as $hoja) {
+        foreach ($hoja->toArray(null, false, false) as $fila) {
+            $texto .= implode('|', array_map('strval', $fila))."\n";
+        }
+    }
+    // Ni las ventas (65.000) ni el ingreso (3.050) ni sus rótulos; el
+    // ticket promedio (16.250), sí.
+    expect($texto)->not->toContain('65000')->not->toContain('3050')
+        ->not->toContain('Ingreso plataforma')->not->toContain('Ingreso de la plataforma')
+        ->toContain('Ticket promedio')->toContain('16250');
+
+    @unlink($archivo);
+
+    $pdf = $this->get('/v1/inversionista/informe?desde=2026-11-01&hasta=2026-11-20&formato=pdf')->assertOk();
+    expect(substr($pdf->getContent(), 0, 4))->toBe('%PDF');
 });
