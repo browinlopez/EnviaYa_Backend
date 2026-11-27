@@ -89,16 +89,42 @@ class AccesoAlConjunto
      */
     public function resolverCodigo(string $codigo): ?Domiciliary
     {
-        $limpio = strtoupper(trim($codigo));
-        $id = Cache::pull($this->llave($limpio));
+        $domiciliario = $this->duenoDelCodigo($codigo);
+
+        return $domiciliario && $this->gastarCodigo($codigo) ? $domiciliario : null;
+    }
+
+    /**
+     * De quién es el código, SIN gastarlo.
+     *
+     * La portería primero mira si el domiciliario puede pasar y solo gasta el
+     * código cuando lo deja entrar. Antes se gastaba al leerlo: a quien
+     * rechazaban --sin pedidos ahí, o desactivado-- se le quemaba el código y
+     * su app seguía enseñándolo como vigente.
+     */
+    public function duenoDelCodigo(string $codigo): ?Domiciliary
+    {
+        $id = Cache::get($this->llave(strtoupper(trim($codigo))));
+
+        return $id ? Domiciliary::find($id) : null;
+    }
+
+    /**
+     * Gasta el código. Devuelve `false` si ya no estaba: dos celadores
+     * verificando el mismo código a la vez no pueden anotar dos entradas, y
+     * `pull` lee y borra en una sola operación.
+     */
+    public function gastarCodigo(string $codigo): bool
+    {
+        $id = Cache::pull($this->llave(strtoupper(trim($codigo))));
 
         if (! $id) {
-            return null;
+            return false;
         }
 
         Cache::forget('acceso_conjunto_de:'.$id);
 
-        return Domiciliary::find($id);
+        return true;
     }
 
     /**

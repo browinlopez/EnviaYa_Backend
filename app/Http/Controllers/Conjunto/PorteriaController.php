@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Conjunto;
 
+use App\Events\CodigoDeAccesoRechazado;
 use App\Events\CodigoDeAccesoUsado;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Conjunto\LibroDeLaPorteriaRequest;
@@ -12,6 +13,7 @@ use App\Http\Resources\Domiciliario\DomiciliarioEnLaPorteriaResource;
 use App\Models\Conjunto\ComplexStaff;
 use App\Models\Domiciliary;
 use App\Services\AccesoAlConjunto;
+use App\Services\Avisos;
 use App\Services\PulsoDelConjunto;
 use App\Support\Enmascarar;
 use App\Support\FiltroDeFechas;
@@ -47,7 +49,8 @@ class PorteriaController extends Controller
 
         $porCodigo = ! empty($datos['code']);
         $domiciliario = $porCodigo
-            ? $this->acceso->resolverCodigo($datos['code'])
+            // Se lee sin gastarlo: solo se gasta si pasa (más abajo).
+            ? $this->acceso->duenoDelCodigo($datos['code'])
             : $this->acceso->resolverCedula($datos['document']);
 
         if (! $domiciliario) {
@@ -71,6 +74,8 @@ class PorteriaController extends Controller
          * enseña nombre ni teléfono en la portería.
          */
         if ($this->acceso->estaDesactivado($domiciliario)) {
+            $this->avisarRechazo($porCodigo, $domiciliario, 'domiciliario_inactivo', $complexId);
+
             return response()->json([
                 'message' => 'Este domiciliario está desactivado en VeciPa\'Ya.',
                 'allowed' => false,
@@ -85,6 +90,8 @@ class PorteriaController extends Controller
             ->first(['name']);
 
         if ($pedidos->isEmpty()) {
+            $this->avisarRechazo($porCodigo, $domiciliario, 'sin_pedidos', $complexId, $conjunto->name ?? null);
+
             /*
              * NI SIQUIERA EL NOMBRE.
              *
@@ -99,6 +106,18 @@ class PorteriaController extends Controller
                 'allowed' => false,
                 'reason' => 'sin_pedidos',
             ]);
+        }
+
+        /*
+         * AHORA SÍ SE GASTA EL CÓDIGO, y si ya no estaba --otro celador lo
+         * acaba de usar en este mismo instante-- no se anota una segunda
+         * entrada.
+         */
+        if ($porCodigo && ! $this->acceso->gastarCodigo($datos['code'])) {
+            return response()->json([
+                'message' => 'El código no es válido o ya venció. Pídele que genere uno nuevo.',
+                'allowed' => false,
+            ], 404);
         }
 
         // Solo se registra la entrada cuando procede: una entrada anotada de
@@ -138,6 +157,8 @@ class PorteriaController extends Controller
                 report($e);
             }
         }
+
+        $this->avisarAlResidente($pedidos, (string) ($conjunto->name ?? 'tu conjunto'));
 
         return response()->json([
             'message' => 'Puede entrar.',
@@ -367,6 +388,57 @@ class PorteriaController extends Controller
      * La calificación y el historial son del DOMICILIARIO, no del comprador:
      * acá no se expone nada de quien pidió.
      */
+    /**
+     * AL RESIDENTE: «tu pedido ya entró». Ya sabe que el domiciliario sube y
+     * puede ir abriendo; antes se enteraba cuando le tocaban la puerta.
+     * Que falle no tumba la portería: el domiciliario ya está pasando.
+     */
+    private function avisarAlResidente($pedidos, string $conjunto): void
+    {
+        try {
+            $compradores = DB::table('orderssales as o')
+                ->join('buyer as b', 'b.buyer_id', '=', 'o.buyer_id')
+                ->whereIn('o.orderSales_id', $pedidos->pluck('orderSales_id'))
+                ->get(['o.orderSales_id', 'b.user_id']);
+
+            foreach ($compradores as $c) {
+                if (! $c->user_id) {
+                    continue;
+                }
+                Avisos::para(
+                    (int) $c->user_id,
+                    'domiciliario_en_porteria',
+                    "El domiciliario ya entró a {$conjunto} y va para tu apartamento.",
+                    ['order_id' => (int) $c->orderSales_id],
+                );
+            }
+        } catch (\Throwable $e) {
+            report($e);
+        }
+    }
+
+    /**
+     * Le dice a la app del domiciliario que no lo dejaron pasar, y por qué.
+     * Solo cuando vino con código: con la cédula no hay pantalla esperando.
+     */
+    private function avisarRechazo(bool $porCodigo, $domiciliario, string $motivo, int $complexId, ?string $nombre = null): void
+    {
+        if (! $porCodigo) {
+            return;
+        }
+
+        try {
+            CodigoDeAccesoRechazado::dispatch(
+                (int) $domiciliario->user_id,
+                $motivo,
+                (string) ($nombre ?? DB::table('residential_complexes')->where('complex_id', $complexId)->value('name') ?? 'el conjunto'),
+            );
+        } catch (\Throwable $e) {
+            // Que no se pueda avisar no puede tumbar la portería.
+            report($e);
+        }
+    }
+
     private function ficha(Domiciliary $d, int $complexId): array
     {
         return (new DomiciliarioEnLaPorteriaResource(

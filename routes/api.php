@@ -48,6 +48,7 @@ use App\Http\Controllers\Buyer\ResidentialComplexController;
 use App\Http\Controllers\Category\CategoryController;
 use App\Http\Controllers\Chat\ChatController;
 use App\Http\Controllers\CoberturaController;
+use App\Http\Controllers\Conjunto\AutorizacionesController;
 use App\Http\Controllers\Conjunto\CeladoresController;
 use App\Http\Controllers\Conjunto\MiConjuntoController;
 use App\Http\Controllers\Conjunto\PorteriaController;
@@ -112,6 +113,7 @@ use App\Http\Controllers\Soporte\AyudaDesdeLaAppController;
 use App\Http\Controllers\User\DireccionesController;
 use App\Http\Controllers\User\NotificacionesController;
 use App\Http\Controllers\User\UserController;
+use App\Http\Controllers\User\VisitasPorAutorizarController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -574,6 +576,15 @@ Route::middleware(['auth:sanctum', 'cuenta.habilitada', 'audit.api'])->group(fun
         });
     });
 
+    /*
+     * El residente contesta si deja entrar a quien está en la portería. Ver
+     * `VisitasPorAutorizarController`.
+     */
+    Route::get('porteria/visitas', [VisitasPorAutorizarController::class, 'pendientes']);
+    Route::post('porteria/visitas/{id}/respuesta', [VisitasPorAutorizarController::class, 'responder'])
+        ->whereNumber('id')
+        ->middleware('throttle:30,1');
+
     // El crédito que las tiendas le dieron a quien pregunta.
     Route::get('creditos', [MiCreditoController::class, 'index']);
     Route::get('creditos/tienda/{negocioId}', [MiCreditoController::class, 'enTienda'])->whereNumber('negocioId');
@@ -657,6 +668,15 @@ Route::middleware(['auth:sanctum', 'cuenta.habilitada', 'audit.api'])->group(fun
         Route::post('porteria/visitantes', [VisitantesController::class, 'registrar'])->middleware('en.turno');
         Route::put('porteria/entradas/{id}/salida', [VisitantesController::class, 'salida'])->middleware('en.turno');
         Route::get('porteria/adentro', [VisitantesController::class, 'adentro']);
+
+        /*
+         * PREGUNTARLE AL RESIDENTE POR LA APP en vez del citófono. Lo pide el
+         * celador en turno; el panel consulta cómo va cada pocos segundos.
+         */
+        Route::post('porteria/autorizaciones', [AutorizacionesController::class, 'pedir'])
+            ->middleware(['throttle:30,1', 'en.turno']);
+        Route::get('porteria/autorizaciones/{id}', [AutorizacionesController::class, 'ver'])
+            ->whereNumber('id');
 
         // Los celadores los administra el dueño, no el equipo interno: es
         // quien sabe quién trabaja en su portería.

@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Events\AvisoPersonal;
 use App\Jobs\EnviarAvisoPush;
 use App\Models\Notification;
+use App\Models\Order\OrdersSales;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 
@@ -58,6 +59,8 @@ class Avisos
         'recordatorio_programado' => 'Tu pedido programado',
         'recordatorio_programado_15' => 'Tu pedido es en 15 minutos',
         'promocion' => 'Promoción nueva',
+        'visita_por_autorizar' => '¿Dejas entrar a alguien?',
+        'domiciliario_en_porteria' => 'Tu pedido ya entró al conjunto',
     ];
 
     /*
@@ -73,6 +76,7 @@ class Avisos
      * domiciliarios distintos, y un chat trae muchos mensajes.
      */
     private const UNA_VEZ_POR_PEDIDO = [
+        'domiciliario_en_porteria',
         'pedido_nuevo',
         'pedido_aceptado',
         'pedido_en_camino',
@@ -109,6 +113,20 @@ class Avisos
         ?string $titulo = null,
     ): ?Notification {
         $pedido = $datos['order_id'] ?? null;
+
+        /*
+         * DE QUÉ LOCAL ES EL PEDIDO. Un dueño con dos negocios recibe los
+         * avisos de los dos, y la app abre el tablero del que tenga activo:
+         * sin esto, «¡Pedido nuevo!» del otro local llevaba a un tablero donde
+         * el pedido no estaba. Con el negocio en el aviso, la app se pasa a ese
+         * local antes de abrirlo. Se guarda también en la campana.
+         */
+        if ($pedido !== null && ! isset($datos['business_id'])) {
+            $negocio = OrdersSales::whereKey($pedido)->value('busines_id');
+            if ($negocio) {
+                $datos['business_id'] = (int) $negocio;
+            }
+        }
         if ($pedido !== null && in_array($tipo, self::UNA_VEZ_POR_PEDIDO, true)) {
             $yaEsta = Notification::where('user_id', $userId)
                 ->where('tipo', $tipo)
