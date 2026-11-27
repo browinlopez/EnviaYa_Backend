@@ -2699,6 +2699,115 @@
         ]
     },
     {
+        "verbo": "GET",
+        "uri": "v1/inversionista/expansion",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "cuenta.habilitada",
+            "inversionista"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/inversionista/informe",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "cuenta.habilitada",
+            "inversionista",
+            "throttle:10,1"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/inversionista/ingresos",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "cuenta.habilitada",
+            "inversionista"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/inversionista/me",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "cuenta.habilitada",
+            "inversionista"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/inversionista/negocios",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "cuenta.habilitada",
+            "inversionista"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/inversionista/opciones",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "cuenta.habilitada",
+            "inversionista"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/inversionista/operacion",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "cuenta.habilitada",
+            "inversionista"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/inversionista/resumen",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "cuenta.habilitada",
+            "inversionista"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/inversionista/usuarios",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "cuenta.habilitada",
+            "inversionista"
+        ]
+    },
+    {
         "verbo": "POST",
         "uri": "v1/login",
         "nombre": null,

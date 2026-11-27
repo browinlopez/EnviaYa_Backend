@@ -55,6 +55,10 @@ test('per_page no pasa de 100', function () {
 });
 
 test('las cifras salen del dia entero y no de la pagina ni de la pestana', function () {
+    // Al mediodía: «hace dos horas» tiene que caer HOY. Corrida pasada la
+    // medianoche, caía ayer y la prueba fallaba según la hora del reloj.
+    $this->travelTo(now()->setTime(12, 0));
+
     $c = conjuntoConPersonal(ComplexStaff::CELADOR);
     Sanctum::actingAs($c['user']);
     $hoy = now()->toDateString();

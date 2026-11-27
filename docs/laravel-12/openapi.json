@@ -10350,6 +10350,268 @@
                 "x-form-request": "App\\Http\\Requests\\Auth\\PedirCodigoDeRecuperacionRequest"
             }
         },
+        "/v1/inversionista/expansion": {
+            "get": {
+                "operationId": "get_v1_inversionista_expansion",
+                "tags": [
+                    "inversionista"
+                ],
+                "summary": "App\\Http\\Controllers\\Inversionista\\TableroDelInversionistaController@expansion",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "cuenta.habilitada",
+                    "inversionista"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    }
+                }
+            }
+        },
+        "/v1/inversionista/informe": {
+            "get": {
+                "operationId": "get_v1_inversionista_informe",
+                "tags": [
+                    "inversionista"
+                ],
+                "summary": "App\\Http\\Controllers\\Inversionista\\TableroDelInversionistaController@informe",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "cuenta.habilitada",
+                    "inversionista",
+                    "throttle:10,1"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    }
+                }
+            }
+        },
+        "/v1/inversionista/ingresos": {
+            "get": {
+                "operationId": "get_v1_inversionista_ingresos",
+                "tags": [
+                    "inversionista"
+                ],
+                "summary": "App\\Http\\Controllers\\Inversionista\\TableroDelInversionistaController@ingresos",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "cuenta.habilitada",
+                    "inversionista"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    }
+                }
+            }
+        },
+        "/v1/inversionista/me": {
+            "get": {
+                "operationId": "get_v1_inversionista_me",
+                "tags": [
+                    "inversionista"
+                ],
+                "summary": "App\\Http\\Controllers\\Inversionista\\TableroDelInversionistaController@mio",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "cuenta.habilitada",
+                    "inversionista"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    }
+                }
+            }
+        },
+        "/v1/inversionista/negocios": {
+            "get": {
+                "operationId": "get_v1_inversionista_negocios",
+                "tags": [
+                    "inversionista"
+                ],
+                "summary": "App\\Http\\Controllers\\Inversionista\\TableroDelInversionistaController@negocios",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "cuenta.habilitada",
+                    "inversionista"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    }
+                }
+            }
+        },
+        "/v1/inversionista/opciones": {
+            "get": {
+                "operationId": "get_v1_inversionista_opciones",
+                "tags": [
+                    "inversionista"
+                ],
+                "summary": "App\\Http\\Controllers\\Inversionista\\TableroDelInversionistaController@opciones",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "cuenta.habilitada",
+                    "inversionista"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    }
+                }
+            }
+        },
+        "/v1/inversionista/operacion": {
+            "get": {
+                "operationId": "get_v1_inversionista_operacion",
+                "tags": [
+                    "inversionista"
+                ],
+                "summary": "App\\Http\\Controllers\\Inversionista\\TableroDelInversionistaController@operacion",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "cuenta.habilitada",
+                    "inversionista"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    }
+                }
+            }
+        },
+        "/v1/inversionista/resumen": {
+            "get": {
+                "operationId": "get_v1_inversionista_resumen",
+                "tags": [
+                    "inversionista"
+                ],
+                "summary": "App\\Http\\Controllers\\Inversionista\\TableroDelInversionistaController@resumen",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "cuenta.habilitada",
+                    "inversionista"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    }
+                }
+            }
+        },
+        "/v1/inversionista/usuarios": {
+            "get": {
+                "operationId": "get_v1_inversionista_usuarios",
+                "tags": [
+                    "inversionista"
+                ],
+                "summary": "App\\Http\\Controllers\\Inversionista\\TableroDelInversionistaController@usuarios",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "cuenta.habilitada",
+                    "inversionista"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    }
+                }
+            }
+        },
         "/v1/login": {
             "post": {
                 "operationId": "post_v1_login",
