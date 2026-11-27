@@ -133,10 +133,9 @@ test('las cifras de arriba solo cuentan lo entregado y pagado', function () {
     // los de pago en línea pendiente o rechazado.
     expect($c['pedidos'])->toMatchArray(['valor' => 4, 'anterior' => 1])
         ->and((float) $c['pedidos']['variacion'])->toBe(300.0)
-        ->and((float) $c['ventas']['valor'])->toBe(65000.0)
-        ->and((float) $c['ventas']['anterior'])->toBe(40000.0)
-        ->and((float) $c['ticket_promedio']['valor'])->toBe(16250.0)
-        ->and((float) $c['ticket_promedio']['anterior'])->toBe(40000.0);
+        // Sin pesos: ni ventas ni ticket. En su lugar, los usuarios activos.
+        ->and($c)->not->toHaveKeys(['ventas', 'ticket_promedio'])
+        ->and($c['usuarios_activos'])->toMatchArray(['valor' => 1, 'anterior' => 1]); // un mismo comprador
 
     // Activos: los cuatro visibles (el cerrado no). Al cierre de octubre aún
     // no existía la droguería. Con pedidos: la esquina, la droguería y la de
@@ -160,7 +159,8 @@ test('el reparto por tipo usa el nombre del panel y no se filtra por tipo', func
             ->and($porTipo['drogueria']['nombre'])->toBe('Droguería')
             ->and($porTipo['tienda'])->toMatchArray(['negocios' => 2, 'pedidos' => 3])
             ->and((float) $porTipo['tienda']['porcentaje'])->toBe(50.0)
-            ->and((float) $porTipo['tienda']['ventas'])->toBe(35000.0)
+            ->and($porTipo['tienda'])->not->toHaveKeys(['ventas', 'participacion_ventas'])
+            ->and((float) $porTipo['tienda']['participacion_pedidos'])->toBe(75.0)
             ->and($porTipo['drogueria'])->toMatchArray(['negocios' => 1, 'pedidos' => 1])
             ->and($porTipo['restaurante'])->toMatchArray(['negocios' => 1, 'pedidos' => 0]);
     }
@@ -171,7 +171,6 @@ test('el filtro de tipo recorta las cifras de arriba', function () {
     $c = invResumenYCiudades(['tipo' => $e['tienda']])['cifras'];
 
     expect($c['pedidos']['valor'])->toBe(3)
-        ->and((float) $c['ventas']['valor'])->toBe(35000.0)
         ->and($c['negocios_activos']['valor'])->toBe(2);
 });
 
@@ -186,7 +185,7 @@ test('el avance por ciudad lleva la fila Sin ciudad al final', function () {
     expect($baq)->toMatchArray([
         'departamento' => 'Atlántico', 'negocios' => 2, 'conjuntos' => 1,
         'pedidos' => 3, 'compradores' => 1, 'desde' => '2026-11-05',
-    ])->and((float) $baq['ventas'])->toBe(60000.0)
+    ])->and($baq)->not->toHaveKey('ventas')
         ->and(collect($baq['por_tipo'])->pluck('negocios', 'clave')->all())
         ->toEqual(['tienda' => 1, 'drogueria' => 1]);
 
@@ -198,7 +197,7 @@ test('el avance por ciudad lleva la fila Sin ciudad al final', function () {
 
     expect($sin)->toMatchArray([
         'municipality_id' => null, 'negocios' => 1, 'pedidos' => 1, 'compradores' => 1,
-    ])->and((float) $sin['ventas'])->toBe(5000.0);
+    ]);
 });
 
 test('con una ciudad elegida todo se acota a ella y no sale Sin ciudad', function () {
@@ -207,7 +206,6 @@ test('con una ciudad elegida todo se acota a ella y no sale Sin ciudad', functio
 
     expect(array_column($t['por_ciudad'], 'ciudad'))->toBe(['Barranquilla'])
         ->and($t['cifras']['pedidos']['valor'])->toBe(3)
-        ->and((float) $t['cifras']['ventas']['valor'])->toBe(60000.0)
         ->and($t['cifras']['usuarios_registrados']['valor'])->toBe(1)
         ->and($t['cifras']['negocios_activos']['valor'])->toBe(2);
 
@@ -226,9 +224,9 @@ test('la serie mensual son doce meses con su variacion', function () {
     expect($meses['2026-11'])->toMatchArray([
         'etiqueta' => 'nov', 'en_curso' => true, 'pedidos' => 4,
         'negocios_nuevos' => 1, 'usuarios_nuevos' => 1,
-    ])->and((float) $meses['2026-11']['ventas'])->toBe(65000.0)
+    ])->and($meses['2026-11'])->not->toHaveKey('ventas')
         ->and((float) $meses['2026-11']['variacion']['pedidos'])->toBe(300.0)
-        ->and((float) $meses['2026-11']['variacion']['ventas'])->toBe(62.5);
+        ->and($meses['2026-11']['variacion'])->not->toHaveKey('ventas');
 
     expect($meses['2026-10'])->toMatchArray(['pedidos' => 1, 'en_curso' => false, 'negocios_nuevos' => 1])
         ->and((float) $meses['2026-10']['variacion']['pedidos'])->toBe(0.0);

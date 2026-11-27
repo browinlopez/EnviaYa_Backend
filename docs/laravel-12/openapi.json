@@ -10409,35 +10409,6 @@
                 }
             }
         },
-        "/v1/inversionista/ingresos": {
-            "get": {
-                "operationId": "get_v1_inversionista_ingresos",
-                "tags": [
-                    "inversionista"
-                ],
-                "summary": "App\\Http\\Controllers\\Inversionista\\TableroDelInversionistaController@ingresos",
-                "x-middleware": [
-                    "api",
-                    "audit.api",
-                    "auth:sanctum",
-                    "cuenta.habilitada",
-                    "inversionista"
-                ],
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
-                    },
-                    "401": {
-                        "description": "Sin token, o token invalido."
-                    }
-                }
-            }
-        },
         "/v1/inversionista/me": {
             "get": {
                 "operationId": "get_v1_inversionista_me",

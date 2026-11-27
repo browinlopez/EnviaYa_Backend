@@ -151,7 +151,7 @@ function invModPedir(string $modulo, array $filtros = []): array
 
 afterEach(fn () => Carbon::setTestNow());
 
-test('negocios: activos, con ventas y la parte de las ventas de cada tipo', function () {
+test('negocios: activos, con ventas y la parte de los pedidos de cada tipo, sin pesos', function () {
     invModEscenario();
     $n = invModPedir('negocios');
 
@@ -161,12 +161,13 @@ test('negocios: activos, con ventas y la parte de las ventas de cada tipo', func
         'sin_ventas' => 1,
         'porcentaje_con_ventas' => 75,
         'nuevos' => 2,
-    ])->and((float) $n['actividad']['ventas_por_negocio']['valor'])->toBe(21666.67)
-        ->and((float) $n['actividad']['ventas_por_negocio']['anterior'])->toBe(40000.0);
+    ])->and($n['actividad'])->not->toHaveKey('ventas_por_negocio')
+        // Pedidos por negocio que vendió, no pesos.
+        ->and((float) $n['actividad']['pedidos_por_negocio']['valor'])->toBe(1.3)
+        ->and((float) $n['actividad']['pedidos_por_negocio']['anterior'])->toBe(1.0);
 
     $tipos = collect($n['por_tipo'])->keyBy('clave');
-    expect((float) $tipos['tienda']['participacion_ventas'])->toBe(53.8)
-        ->and((float) $tipos['drogueria']['participacion_ventas'])->toBe(46.2)
+    expect($tipos['tienda'])->not->toHaveKeys(['ventas', 'participacion_ventas'])
         ->and((float) $tipos['tienda']['participacion_pedidos'])->toBe(75.0);
 });
 
@@ -294,39 +295,21 @@ test('operacion: con una ciudad, la flota es la de sus negocios', function () {
         ->toBe(['habilitados' => 1, 'disponibles' => 0]);
 });
 
-test('ingresos: comisiones mas margen del domicilio, sin restar dos veces el subsidio', function () {
+test('el modulo de ingresos ya no existe: el inversionista no ve plata', function () {
     invModEscenario();
-    $i = invModPedir('ingresos');
-    $c = $i['cifras'];
 
-    expect((float) $c['ventas']['valor'])->toBe(65000.0)
-        ->and((float) $c['comisiones']['valor'])->toBe(1800.0)
-        // (1.000 − 750) + (2.000 − 1.500) + (2.000 − 1.500) + 0
-        ->and((float) $c['margen_domicilio']['valor'])->toBe(1250.0)
-        ->and((float) $c['ingreso']['valor'])->toBe(3050.0)
-        ->and((float) $c['ingreso']['anterior'])->toBe(1640.0)
-        ->and((float) $c['take_rate']['valor'])->toBe(4.69)
-        ->and((float) $c['take_rate']['anterior'])->toBe(4.1)
-        ->and((float) $c['subsidios']['valor'])->toBe(500.0)
-        ->and((float) $c['ingreso_por_pedido']['valor'])->toBe(762.5);
-
-    $tipos = collect($i['por_tipo'])->keyBy('clave');
-    // Tienda: 270 + 540 + 150 + 250 + 500 = 1.710; droguería: 840 + 500 = 1.340.
-    expect((float) $tipos['tienda']['ingreso'])->toBe(1710.0)
-        ->and((float) $tipos['drogueria']['ingreso'])->toBe(1340.0)
-        ->and((float) $tipos['tienda']['participacion'])->toBe(56.1);
-
-    expect((float) collect($i['meses'])->keyBy('mes')['2026-11']['ingreso'])->toBe(3050.0);
+    $this->getJson('/v1/inversionista/ingresos?desde=2026-11-01&hasta=2026-11-20')->assertNotFound();
+    expect(array_keys($this->getJson('/v1/inversionista/me')->assertOk()->json('permissions')))
+        ->not->toContain('ingresos');
 });
 
-test('el filtro de tipo recorta ingresos y operacion', function () {
+test('el filtro de tipo recorta la operacion', function () {
     $e = invModEscenario();
 
-    expect((float) invModPedir('ingresos', ['tipo' => $e['farmacia']])['cifras']['ingreso']['valor'])->toBe(1340.0)
-        ->and(invModPedir('operacion', ['tipo' => $e['farmacia']])['cifras']['entregados']['valor'])->toBe(1);
+    expect(invModPedir('operacion', ['tipo' => $e['farmacia']])['cifras']['entregados']['valor'])->toBe(1);
 });
 
-test('el informe se descarga en Excel con sus siete hojas', function () {
+test('el informe se descarga en Excel con sus seis hojas y sin pesos', function () {
     invModEscenario();
 
     $r = $this->get('/v1/inversionista/informe?desde=2026-11-01&hasta=2026-11-20')->assertOk();
@@ -337,7 +320,7 @@ test('el informe se descarga en Excel con sus siete hojas', function () {
     file_put_contents($archivo, $r->streamedContent());
     $libro = IOFactory::load($archivo);
 
-    expect($libro->getSheetNames())->toBe(['Resumen', 'Mes a mes', 'Negocios', 'Ciudades', 'Usuarios', 'Operación', 'Ingresos']);
+    expect($libro->getSheetNames())->toBe(['Resumen', 'Mes a mes', 'Negocios', 'Ciudades', 'Usuarios', 'Operación']);
 
     // Las cifras son las de la pantalla, y nada de una persona ni de un negocio.
     $texto = '';
@@ -346,7 +329,11 @@ test('el informe se descarga en Excel con sus siete hojas', function () {
             $texto .= implode('|', array_map('strval', $fila))."\n";
         }
     }
-    expect($texto)->toContain('65000')->toContain('3050');
+    // Ni las ventas (65.000) ni el ingreso de la plataforma (3.050), ni un
+    // rótulo de plata.
+    expect($texto)->not->toContain('65000')->not->toContain('3050')
+        // «Con ventas» sí sale: es cuántos negocios vendieron, no plata.
+        ->and(mb_strtolower($texto))->not->toMatch('/ticket|ingreso|comisi|pesos/');
     foreach (['Marta Reservada', 'marta.privada', 'Tienda La Secreta', 'Droguería Escondida', 'Calle Privada', 'Carrera 50', 'Repartidor Uno', 'Conjunto Reservado'] as $dato) {
         expect($texto)->not->toContain($dato);
     }
@@ -364,7 +351,7 @@ test('el informe tambien sale en PDF', function () {
         ->and(substr($r->getContent(), 0, 4))->toBe('%PDF');
 });
 
-test('ningun modulo trae un dato de una persona, de un negocio ni de un pedido', function (string $modulo) {
+test('ningun modulo trae un dato de una persona, de un negocio ni de un pedido, ni plata', function (string $modulo) {
     invModEscenario();
     $datos = invModPedir($modulo);
     $crudo = json_encode($datos, JSON_UNESCAPED_UNICODE);
@@ -399,7 +386,20 @@ test('ningun modulo trae un dato de una persona, de un negocio ni de un pedido',
     $recorrer($datos);
 
     expect(array_intersect(array_keys($claves), $prohibidas))->toBe([]);
-})->with(['opciones', 'resumen', 'negocios', 'expansion', 'usuarios', 'operacion', 'ingresos']);
+
+    /*
+     * NI PLATA. El inversionista ve crecimiento —negocios, personas,
+     * pedidos, ciudades, conjuntos—, no pesos: ninguna clave de ventas,
+     * ticket, ingreso, comisión o un total en pesos. «con_ventas» es un
+     * conteo de negocios, no plata, y se deja.
+     */
+    $deDinero = array_filter(
+        array_keys($claves),
+        fn ($k) => preg_match('/^(ventas|ticket|ingreso|comision|take_rate|margen|subsidio|facturado|total$|participacion_ventas)/', $k)
+            || str_contains($k, 'ventas_por') || str_contains($k, 'pesos'),
+    );
+    expect(array_values($deDinero))->toBe([]);
+})->with(['opciones', 'resumen', 'negocios', 'expansion', 'usuarios', 'operacion']);
 
 /**
  * El mapa: direcciones con coordenadas para b1 (dos, en la misma celda) y b2.

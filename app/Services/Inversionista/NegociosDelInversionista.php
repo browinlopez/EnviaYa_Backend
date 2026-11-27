@@ -53,7 +53,7 @@ class NegociosDelInversionista extends BaseDelInversionista
 
         $conVentas = fn (Carbon $desde, Carbon $hasta) => $this->entregados($f, $desde, $hasta, true)
             ->where('b.state', 1)
-            ->selectRaw('COUNT(DISTINCT o.busines_id) as n, COALESCE(SUM(o.total), 0) as ventas')
+            ->selectRaw('COUNT(DISTINCT o.busines_id) as n, COUNT(*) as pedidos')
             ->first();
 
         $ahora = $conVentas($v['desde'], $v['hasta']);
@@ -66,10 +66,14 @@ class NegociosDelInversionista extends BaseDelInversionista
             'con_ventas' => $this->cifra($n, $nAntes),
             'sin_ventas' => max(0, $activos - $n),
             'porcentaje_con_ventas' => $this->porcentaje($n, $activos),
-            // Lo que vende, en promedio, un negocio que sí vendió.
-            'ventas_por_negocio' => $this->cifra(
-                $this->cociente($this->pesos($ahora->ventas ?? 0), $n, 2),
-                $this->cociente($this->pesos($antes->ventas ?? 0), $nAntes, 2),
+            /*
+             * Cuántos pedidos entrega, en promedio, un negocio que sí vendió.
+             * En pedidos y no en pesos: el inversionista ve crecimiento, no
+             * la plata de cada negocio.
+             */
+            'pedidos_por_negocio' => $this->cifra(
+                $this->cociente((int) ($ahora->pedidos ?? 0), $n, 1),
+                $this->cociente((int) ($antes->pedidos ?? 0), $nAntes, 1),
             ),
             'nuevos' => $this->negocios($f)->whereBetween('b.created_at', [$v['desde'], $v['hasta']])->count(),
         ];

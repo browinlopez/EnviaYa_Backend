@@ -9,7 +9,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Inversionista\TableroDelInversionistaRequest;
 use App\Services\Inversionista\ExpansionDelInversionista;
 use App\Services\Inversionista\InformeDelInversionista;
-use App\Services\Inversionista\IngresosDelInversionista;
 use App\Services\Inversionista\NegociosDelInversionista;
 use App\Services\Inversionista\OperacionDelInversionista;
 use App\Services\Inversionista\ResumenDelInversionista;
@@ -32,7 +31,12 @@ use Symfony\Component\HttpFoundation\Response;
 class TableroDelInversionistaController extends Controller
 {
     /** Los módulos, en el orden del menú. Cada uno es un permiso de `me`. */
-    public const MODULOS = ['resumen', 'negocios', 'expansion', 'usuarios', 'operacion', 'ingresos', 'informes'];
+    /*
+     * SIN «INGRESOS»: el inversionista ve el crecimiento, no la plata. El
+     * módulo de ventas, comisiones e ingreso de la plataforma se quitó con
+     * su ruta; ningún otro manda pesos.
+     */
+    public const MODULOS = ['resumen', 'negocios', 'expansion', 'usuarios', 'operacion', 'informes'];
 
     /**
      * Con la MISMA forma que `/conjunto/me` y `/negocio/me`: el panel arma el
@@ -80,14 +84,9 @@ class TableroDelInversionistaController extends Controller
         return response()->json($s->para($request->validated()));
     }
 
-    public function ingresos(TableroDelInversionistaRequest $request, IngresosDelInversionista $s): JsonResponse
-    {
-        return response()->json($s->para($request->validated()));
-    }
-
     /**
      * El informe para descargar: Excel (por defecto) o PDF, con las cifras de
-     * los seis módulos para el periodo y los filtros pedidos.
+     * los cinco módulos para el periodo y los filtros pedidos. Sin pesos.
      */
     public function informe(TableroDelInversionistaRequest $request, InformeDelInversionista $informe): Response
     {

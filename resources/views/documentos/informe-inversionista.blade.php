@@ -4,8 +4,9 @@
     Carta vertical. Las mismas cifras del Excel y del panel —salen de
     `InformeDelInversionista`, que se las pide a los servicios de cada módulo—
     en el orden en que se leen en una junta: la portada con las cifras clave,
-    después negocios, ciudades, usuarios, operación e ingresos, y al final la
-    serie de doce meses.
+    después negocios, ciudades, usuarios y operación, y al final la serie de
+    doce meses. SIN PESOS: el inversionista ve crecimiento (negocios,
+    personas, pedidos, ciudades, conjuntos), no ventas ni comisiones.
 
     EL MEMBRETE se repite en cada página (los `position: fixed` de dompdf van
     en todas): arriba el logo de VeciPa'Ya, el título, el periodo y la fecha en
@@ -21,7 +22,6 @@
 @php
     use Carbon\Carbon;
 
-    $pesos = fn ($v) => $v === null ? '—' : '$ ' . number_format((float) $v, 0, ',', '.');
     $num = fn ($v, $dec = 0) => $v === null ? '—' : number_format((float) $v, $dec, ',', '.');
     $pct = fn ($v) => $v === null ? '—' : number_format((float) $v, 1, ',', '.') . ' %';
     $var = function ($v) {
@@ -38,7 +38,6 @@
     $e = $d['expansion'];
     $u = $d['usuarios']['cifras'];
     $o = $d['operacion'];
-    $i = $d['ingresos']['cifras'];
 
     $archivoLogo = resource_path('marca/logotipo.png');
     $logo = is_file($archivoLogo) ? 'data:image/png;base64,' . base64_encode(file_get_contents($archivoLogo)) : null;
@@ -131,7 +130,7 @@
                 ['Negocios activos', $num($r['negocios_activos']['valor']), $r['negocios_activos']['variacion']],
                 ['Usuarios registrados', $num($r['usuarios_registrados']['valor']), $r['usuarios_registrados']['variacion']],
                 ['Pedidos realizados', $num($r['pedidos']['valor']), $r['pedidos']['variacion']],
-                ['Ticket promedio', $pesos($r['ticket_promedio']['valor']), $r['ticket_promedio']['variacion']],
+                ['Usuarios activos', $num($r['usuarios_activos']['valor']), $r['usuarios_activos']['variacion']],
             ] as [$rot, $valor, $v])
                 <td><div class="kpi"><small>{{ $rot }}</small><b>{{ $valor }}</b><span class="{{ $tono($v) }}">{{ $var($v) }} vs. antes</span></div></td>
             @endforeach
@@ -140,8 +139,7 @@
     <table class="kpis" style="margin-top: 6px">
         <tr>
             @foreach ([
-                ['Ventas totales', $pesos($i['ventas']['valor']), $i['ventas']['variacion']],
-                ['Ingreso de la plataforma', $pesos($i['ingreso']['valor']), $i['ingreso']['variacion']],
+                ['Pedidos por comprador', $num($u['pedidos_por_comprador']['valor'], 1), $u['pedidos_por_comprador']['variacion']],
                 ['Entregas a tiempo', $pct($o['cifras']['a_tiempo']['valor']), $o['cifras']['a_tiempo']['variacion']],
                 ['Recompra', $pct($u['recompra']['valor']), $u['recompra']['variacion']],
             ] as [$rot, $valor, $v])
@@ -152,9 +150,9 @@
 
     <h2>Negocios</h2>
     <table>
-        <tr><th>Tipo</th><th>Negocios activos</th><th>Pedidos</th><th>Ventas</th><th>% de las ventas</th></tr>
+        <tr><th>Tipo</th><th>Negocios activos</th><th>% de los negocios</th><th>Pedidos</th><th>% de los pedidos</th></tr>
         @foreach ($n['por_tipo'] as $t)
-            <tr><td>{{ $t['nombre'] }}</td><td>{{ $num($t['negocios']) }}</td><td>{{ $num($t['pedidos']) }}</td><td>{{ $pesos($t['ventas']) }}</td><td>{{ $pct($t['participacion_ventas']) }}</td></tr>
+            <tr><td>{{ $t['nombre'] }}</td><td>{{ $num($t['negocios']) }}</td><td>{{ $pct($t['porcentaje']) }}</td><td>{{ $num($t['pedidos']) }}</td><td>{{ $pct($t['participacion_pedidos']) }}</td></tr>
         @endforeach
     </table>
     <table style="margin-top: 8px">
@@ -166,11 +164,11 @@
 
     <h2>Expansión por ciudad</h2>
     <table>
-        <tr><th>Ciudad</th><th>Negocios</th><th>Conjuntos</th><th>Pedidos</th><th>Ventas</th><th>Compradores</th></tr>
+        <tr><th>Ciudad</th><th>Negocios</th><th>Conjuntos</th><th>Pedidos</th><th>Compradores</th></tr>
         @forelse ($e['por_ciudad'] as $c)
-            <tr><td>{{ $c['ciudad'] }}@if ($c['departamento']) <span class="gris">· {{ $c['departamento'] }}</span>@endif</td><td>{{ $num($c['negocios']) }}</td><td>{{ $num($c['conjuntos']) }}</td><td>{{ $num($c['pedidos']) }}</td><td>{{ $pesos($c['ventas']) }}</td><td>{{ $num($c['compradores']) }}</td></tr>
+            <tr><td>{{ $c['ciudad'] }}@if ($c['departamento']) <span class="gris">· {{ $c['departamento'] }}</span>@endif</td><td>{{ $num($c['negocios']) }}</td><td>{{ $num($c['conjuntos']) }}</td><td>{{ $num($c['pedidos']) }}</td><td>{{ $num($c['compradores']) }}</td></tr>
         @empty
-            <tr><td colspan="6">Sin presencia todavía</td></tr>
+            <tr><td colspan="5">Sin presencia todavía</td></tr>
         @endforelse
     </table>
 
@@ -206,29 +204,9 @@
         <tr><td>Domiciliarios disponibles ahora</td><td>{{ $num($o['flota']['disponibles']) }}</td><td colspan="2">de {{ $num($o['flota']['habilitados']) }} habilitados</td></tr>
     </table>
 
-    <h2>Ingresos</h2>
-    <table>
-        <tr><th>Indicador</th><th>Este periodo</th><th>Periodo anterior</th><th>Variación</th></tr>
-        @foreach ([
-            ['Ventas totales', $i['ventas'], $pesos],
-            ['Comisiones de los negocios', $i['comisiones'], $pesos],
-            ['Margen de los domicilios', $i['margen_domicilio'], $pesos],
-            ['Ingreso de la plataforma', $i['ingreso'], $pesos],
-            ['Comisión efectiva (de cada $100)', $i['take_rate'], $pct],
-            ['Subsidios al domicilio', $i['subsidios'], $pesos],
-        ] as [$rot, $cifra, $fmt])
-            <tr><td>{{ $rot }}</td><td>{{ $fmt($cifra['valor']) }}</td><td>{{ $fmt($cifra['anterior']) }}</td><td class="{{ $tono($cifra['variacion']) }}">{{ $var($cifra['variacion']) }}</td></tr>
-        @endforeach
-    </table>
-    <div class="nota">
-        Ingreso = comisiones + margen de los domicilios (lo que pagó el comprador por el domicilio menos lo que se lleva el
-        domiciliario). Los subsidios ya están descontados de ese margen: se informan aparte, no se restan dos veces.
-    </div>
-
     <div class="junto">
     <h2>Mes a mes</h2>
     @php
-        $ing = collect($d['ingresos']['meses'])->keyBy('mes');
         $act = collect($d['usuarios']['meses'])->keyBy('mes');
         // Los meses de antes del primer movimiento no dicen nada: en papel
         // solo ocupan media hoja de ceros.
@@ -240,13 +218,11 @@
         }
     @endphp
     <table>
-        <tr><th>Mes</th><th>Pedidos</th><th>Ventas</th><th>Ingreso</th><th>Compradores activos</th><th>Negocios nuevos</th><th>Usuarios nuevos</th></tr>
+        <tr><th>Mes</th><th>Pedidos</th><th>Compradores activos</th><th>Negocios nuevos</th><th>Usuarios nuevos</th></tr>
         @foreach ($meses as $m)
             <tr>
                 <td>{{ $m['etiqueta'] }} {{ $m['anio'] }}@if ($m['en_curso']) <span class="gris">(en curso)</span>@endif</td>
                 <td>{{ $num($m['pedidos']) }}</td>
-                <td>{{ $pesos($m['ventas']) }}</td>
-                <td>{{ $pesos($ing[$m['mes']]['ingreso'] ?? 0) }}</td>
                 <td>{{ $num($act[$m['mes']]['activos'] ?? 0) }}</td>
                 <td>{{ $num($m['negocios_nuevos']) }}</td>
                 <td>{{ $num($m['usuarios_nuevos']) }}</td>

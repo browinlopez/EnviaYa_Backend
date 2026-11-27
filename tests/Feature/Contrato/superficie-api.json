@@ -2725,18 +2725,6 @@
     },
     {
         "verbo": "GET",
-        "uri": "v1/inversionista/ingresos",
-        "nombre": null,
-        "middleware": [
-            "api",
-            "audit.api",
-            "auth:sanctum",
-            "cuenta.habilitada",
-            "inversionista"
-        ]
-    },
-    {
-        "verbo": "GET",
         "uri": "v1/inversionista/me",
         "nombre": null,
         "middleware": [
