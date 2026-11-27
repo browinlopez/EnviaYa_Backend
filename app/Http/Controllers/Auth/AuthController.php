@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Services\Totp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
@@ -146,10 +147,20 @@ class AuthController extends Controller
          * o desde la pantalla de seguridad. Salir no es lo mismo que querer
          * que el teléfono olvide la cuenta.
          */
-        $request->user()
-            ->tokens()
-            ->where('name', '!=', AccesoBiometricoController::NOMBRE_TOKEN)
-            ->delete();
+        /*
+         * Y SOLO LA SESIÓN DESDE LA QUE SE SALE.
+         *
+         * Antes se borraban todas: salir en el teléfono cerraba también el
+         * panel de aliados en el computador, y la del otro teléfono. Mientras
+         * la app no llamaba a esta ruta no se notaba; desde que sí, el dueño
+         * que salía de la app perdía el panel. Cerrar las demás es otra cosa,
+         * y tiene su botón: «Dónde está abierta tu cuenta».
+         */
+        $actual = $request->user()->currentAccessToken();
+
+        if ($actual instanceof PersonalAccessToken && $actual->name !== AccesoBiometricoController::NOMBRE_TOKEN) {
+            $actual->delete();
+        }
 
         return response()->json(['message' => 'Sesión cerrada correctamente']);
     }
