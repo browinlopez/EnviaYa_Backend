@@ -58,6 +58,19 @@ class ResidentialComplex extends Audit
         'apartments_per_tower',
     ];
 
+    // Solo torres numéricas: «Torre A» no se puede comparar y un «301» real es válido.
+    public function torreValida(?string $torre): bool
+    {
+        $t = trim((string) $torre);
+        $cuantas = (int) ($this->towers_count ?? 0);
+
+        if ($t === '' || $cuantas <= 0 || ! ctype_digit($t)) {
+            return true;
+        }
+
+        return (int) $t >= 1 && (int) $t <= $cuantas;
+    }
+
     /** @return HasMany<BuyerComplex, $this> */
     public function buyers(): HasMany
     {

@@ -2255,6 +2255,34 @@
         ]
     },
     {
+        "verbo": "POST",
+        "uri": "v1/conjunto/porteria/autorizaciones",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "clave.propia",
+            "conjunto",
+            "cuenta.habilitada",
+            "en.turno",
+            "throttle:30,1"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/conjunto/porteria/autorizaciones/{id}",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "clave.propia",
+            "conjunto",
+            "cuenta.habilitada"
+        ]
+    },
+    {
         "verbo": "GET",
         "uri": "v1/conjunto/porteria/entradas",
         "nombre": null,
@@ -3816,6 +3844,29 @@
             "audit.api",
             "auth:sanctum",
             "cuenta.habilitada"
+        ]
+    },
+    {
+        "verbo": "GET",
+        "uri": "v1/porteria/visitas",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "cuenta.habilitada"
+        ]
+    },
+    {
+        "verbo": "POST",
+        "uri": "v1/porteria/visitas/{id}/respuesta",
+        "nombre": null,
+        "middleware": [
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "cuenta.habilitada",
+            "throttle:30,1"
         ]
     },
     {

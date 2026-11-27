@@ -292,9 +292,13 @@ class PedidoDeLaAppResource extends JsonResource
                          */
                 'address' => trim(implode(', ', array_filter([
                     $order->address->street,
+                    // La dirección del conjunto es la portería: sin esto no se sabe a qué apartamento va.
+                    self::torreYApto($order->address->tower, $order->address->apartment),
                     $order->address->address,
                 ]))),
                 'street' => $order->address->street,
+                'tower' => $order->address->tower,
+                'apartment' => $order->address->apartment,
                 'alias' => $order->address->alias?->name,
                 'municipality' => $order->address->municipality?->name,
                 'department' => $order->address->department?->name,
@@ -352,5 +356,16 @@ class PedidoDeLaAppResource extends JsonResource
                 ? $order->payments
                 : collect($order->payments->toArray())->except('domiciliary_fee')->all(),
         ];
+    }
+
+    /** «Torre 2, apto 301», o null si no es en un conjunto. */
+    private static function torreYApto(?string $torre, ?string $apto): ?string
+    {
+        $partes = array_filter([
+            $torre !== null && trim($torre) !== '' ? 'Torre '.trim($torre) : null,
+            $apto !== null && trim($apto) !== '' ? 'apto '.trim($apto) : null,
+        ]);
+
+        return $partes ? implode(', ', $partes) : null;
     }
 }

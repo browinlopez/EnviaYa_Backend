@@ -1,11 +1,13 @@
 <?php
 
+use App\Events\CodigoDeAccesoRechazado;
 use App\Models\Conjunto\ComplexShift;
 use App\Models\Conjunto\ComplexStaff;
 use App\Models\Rol;
 use App\Models\User;
 use App\Services\AccesoAlConjunto;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Laravel\Sanctum\Sanctum;
 
 /**
@@ -591,4 +593,43 @@ test('la verificacion tiene limite por minuto', function () {
 
     $this->postJson('/v1/conjunto/porteria/verificar', ['document' => '91111111'])
         ->assertStatus(429);
+});
+
+test('si no lo dejan pasar, el codigo NO se gasta y su app se entera del motivo', function () {
+    Event::fake([CodigoDeAccesoRechazado::class]);
+
+    $c = conjuntoConPersonal();
+    $domi = repartidorConPedidoEn(null); // todavía sin pedido aquí
+
+    $codigo = app(AccesoAlConjunto::class)->generar($domi)['code'];
+
+    Sanctum::actingAs($c['user']);
+
+    $this->postJson('/v1/conjunto/porteria/verificar', ['code' => $codigo])
+        ->assertOk()
+        ->assertJsonPath('allowed', false)
+        ->assertJsonPath('reason', 'sin_pedidos');
+
+    Event::assertDispatched(
+        CodigoDeAccesoRechazado::class,
+        fn ($e) => $e->userId === (int) $domi->user_id && $e->motivo === 'sin_pedidos',
+    );
+
+    // El código sigue valiendo: no dio entrada a nadie.
+    expect(app(AccesoAlConjunto::class)->duenoDelCodigo($codigo)?->domiciliary_id)
+        ->toBe($domi->domiciliary_id);
+});
+
+test('con el mismo codigo, cuando ya lleva el pedido, entra y entonces si se gasta', function () {
+    $c = conjuntoConPersonal();
+    $domi = repartidorConPedidoEn($c['complexId']);
+    $codigo = app(AccesoAlConjunto::class)->generar($domi)['code'];
+
+    Sanctum::actingAs($c['user']);
+
+    $this->postJson('/v1/conjunto/porteria/verificar', ['code' => $codigo])
+        ->assertOk()
+        ->assertJsonPath('allowed', true);
+
+    expect(app(AccesoAlConjunto::class)->duenoDelCodigo($codigo))->toBeNull();
 });
