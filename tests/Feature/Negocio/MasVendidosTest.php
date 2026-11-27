@@ -43,7 +43,7 @@ test('ordena por unidades, cuenta solo lo entregado y no mezcla tiendas', functi
  * EL CALENDARIO DEL PANEL: entre dos fechas, además de `dias`. La app sigue
  * mandando `dias` y tiene que seguir funcionando igual.
  */
-function ventaEl(int $negocio, int $producto, float $cantidad, string $cuando): void
+function vendidoEnLaFecha(int $negocio, int $producto, float $cantidad, string $cuando): void
 {
     $id = DB::table('orderssales')->insertGetId([
         'busines_id' => $negocio, 'state' => 4, 'total' => $cantidad * 1000, 'sale_date' => $cuando,
@@ -58,10 +58,10 @@ test('entre dos fechas cuenta solo ese rango, con los dos días enteros', functi
     Sanctum::actingAs($t['user']);
     $gasas = productoDeCatalogo('Gasas estériles', '7703', $t['categoria'])->products_id;
 
-    ventaEl($t['mio'], $gasas, 1, '2026-10-31 23:59:00'); // antes
-    ventaEl($t['mio'], $gasas, 2, '2026-11-01 00:05:00'); // dentro
-    ventaEl($t['mio'], $gasas, 3, '2026-11-07 23:58:00'); // dentro, el último día
-    ventaEl($t['mio'], $gasas, 7, '2026-11-08 00:01:00'); // después
+    vendidoEnLaFecha($t['mio'], $gasas, 1, '2026-10-31 23:59:00'); // antes
+    vendidoEnLaFecha($t['mio'], $gasas, 2, '2026-11-01 00:05:00'); // dentro
+    vendidoEnLaFecha($t['mio'], $gasas, 3, '2026-11-07 23:58:00'); // dentro, el último día
+    vendidoEnLaFecha($t['mio'], $gasas, 7, '2026-11-08 00:01:00'); // después
 
     $r = $this->getJson('/v1/negocio/mas-vendidos?desde=2026-11-01&hasta=2026-11-07')->assertOk();
 
@@ -75,7 +75,7 @@ test('dias sigue funcionando y dice su rango', function () {
     $t = tenderoConCatalogo();
     Sanctum::actingAs($t['user']);
     $gasas = productoDeCatalogo('Gasas estériles', '7703', $t['categoria'])->products_id;
-    ventaEl($t['mio'], $gasas, 2, now()->subDays(3)->toDateTimeString());
+    vendidoEnLaFecha($t['mio'], $gasas, 2, now()->subDays(3)->toDateTimeString());
 
     $r = $this->getJson('/v1/negocio/mas-vendidos?dias=7')->assertOk();
 
