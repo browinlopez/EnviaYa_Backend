@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Negocio;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Negocio\MasVendidosRequest;
 use App\Models\Order\OrdersSales;
+use App\Support\FiltroDeFechas;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -33,8 +34,22 @@ class MasVendidosController extends Controller
         $negocioId = (int) $request->attributes->get('busines_id');
 
         $datos = $request->validated();
-        $dias = (int) ($datos['dias'] ?? 30);
         $limite = (int) ($datos['limite'] ?? 10);
+
+        /*
+         * EL PERIODO: entre dos fechas del calendario del panel, o los
+         * últimos `dias` como siempre (la app manda eso). Sin `hasta`, la
+         * ventana llega hasta ahora.
+         */
+        $rango = $request->rango();
+        if ($rango) {
+            [$desde, $hasta] = $rango;
+            $dias = (int) $desde->diffInDays($hasta->startOfDay()) + 1;
+        } else {
+            $dias = (int) ($datos['dias'] ?? 30);
+            $desde = now()->subDays($dias)->startOfDay();
+            $hasta = null;
+        }
 
         $filas = DB::table('orderssales_detail as d')
             ->join('orderssales as o', 'o.orderSales_id', '=', 'd.orderSales_id')
@@ -45,7 +60,8 @@ class MasVendidosController extends Controller
             })
             ->where('o.busines_id', $negocioId)
             ->where('o.state', OrdersSales::ENTREGADO)
-            ->where('o.sale_date', '>=', now()->subDays($dias)->startOfDay())
+            ->where('o.sale_date', '>=', $desde)
+            ->when($hasta, fn ($q) => FiltroDeFechas::hasta($q, 'o.sale_date', $hasta))
             ->groupBy('d.product_id', 'p.name', 'p.image', 'pb.price')
             ->orderByDesc('unidades')
             ->limit($limite)
@@ -62,6 +78,8 @@ class MasVendidosController extends Controller
 
         return response()->json([
             'dias' => $dias,
+            'desde' => $desde->toDateString(),
+            'hasta' => ($hasta ?? now())->toDateString(),
             'productos' => $filas->map(fn ($f) => [
                 'product_id' => (int) $f->product_id,
                 'nombre' => $f->name,

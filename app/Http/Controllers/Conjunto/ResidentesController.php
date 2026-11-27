@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Conjunto;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Conjunto\ResidentesDelConjuntoRequest;
 use App\Queries\ResidentesDelConjunto;
 use Carbon\CarbonImmutable;
-use Illuminate\Http\Request;
 
 class ResidentesController extends Controller
 {
@@ -28,7 +28,7 @@ class ResidentesController extends Controller
      * Paginado: se pide de a una torre (unos cientos de vecinos como mucho), y
      * el orden por domicilios exige contar antes de cortar la página.
      */
-    public function residentesDetalle(Request $request)
+    public function residentesDetalle(ResidentesDelConjuntoRequest $request)
     {
         $complexId = (int) $request->attributes->get('complex_id');
 
@@ -86,7 +86,7 @@ class ResidentesController extends Controller
      * Cuántos vecinos usan la plataforma, por torre, y cuántos domicilios les
      * entraron por la portería. Sin nombres: eso es el detalle de cada torre.
      */
-    public function residentes(Request $request)
+    public function residentes(ResidentesDelConjuntoRequest $request)
     {
         $complexId = (int) $request->attributes->get('complex_id');
 
@@ -152,18 +152,25 @@ class ResidentesController extends Controller
     }
 
     /**
-     * La ventana de los domicilios: los últimos 7, 30 o 90 días, este mes o
-     * el mes pasado. Cualquier otro valor cae en 30 días: nunca se calcula
-     * sobre un rango que el cliente invente.
+     * La ventana de los domicilios: entre dos fechas del calendario del panel
+     * (`desde` y `hasta`), o una con nombre —los últimos 7, 30 o 90 días,
+     * este mes o el mes pasado—. Cualquier otro nombre cae en 30 días: nunca
+     * se calcula sobre un rango que el cliente invente sin decir cuál.
      *
-     * Devuelve [desde, código, hasta]. `hasta` solo lo tiene la ventana que
-     * ya cerró —el mes pasado, hasta su último segundo—; las demás llegan
-     * hasta ahora y lo dejan en null.
+     * Devuelve [desde, código, hasta]. `hasta` solo lo tienen las ventanas
+     * que ya cerraron —el mes pasado, un rango del calendario— hasta su
+     * último segundo; las demás llegan hasta ahora y lo dejan en null. Un
+     * rango que termina hoy también cierra hoy: es lo mismo.
      *
      * @return array{0: CarbonImmutable, 1: string, 2: ?CarbonImmutable}
      */
-    private function ventana(Request $request): array
+    private function ventana(ResidentesDelConjuntoRequest $request): array
     {
+        $rango = $request->rango();
+        if ($rango) {
+            return [$rango[0], 'rango', $rango[1]];
+        }
+
         $hoy = CarbonImmutable::now();
 
         return match ((string) $request->query('ventana', '30')) {

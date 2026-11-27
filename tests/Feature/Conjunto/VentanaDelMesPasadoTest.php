@@ -61,3 +61,34 @@ test('las ventanas abiertas siguen sin fecha de fin', function () {
     expect($r->json('resumen.hasta'))->toBeNull()
         ->and($r->json('resumen.domicilios'))->toBe(1);
 });
+
+test('entre dos fechas del calendario cuenta solo ese rango, en la cifra y en la torre', function () {
+    $c = conjuntoConPersonal(ComplexStaff::DUENO);
+    Sanctum::actingAs($c['user']);
+    $domi = repartidorConPedidoEn($c['complexId']);
+    $buyerId = DB::table('buyer')->latest('buyer_id')->value('buyer_id');
+    DB::table('buyer_complex')->insert(['buyer_id' => $buyerId, 'complex_id' => $c['complexId']]);
+
+    domicilioALa502($c['complexId'], $domi->domiciliary_id, '2026-11-02 23:50:00'); // antes
+    domicilioALa502($c['complexId'], $domi->domiciliary_id, '2026-11-03 08:00:00'); // dentro
+    domicilioALa502($c['complexId'], $domi->domiciliary_id, '2026-11-09 23:30:00'); // dentro
+    domicilioALa502($c['complexId'], $domi->domiciliary_id, '2026-11-10 07:00:00'); // después
+
+    $r = $this->getJson('/v1/conjunto/residentes?desde=2026-11-03&hasta=2026-11-09')->assertOk();
+
+    expect($r->json('resumen.ventana'))->toBe('rango')
+        ->and($r->json('resumen.desde'))->toBe('2026-11-03')
+        ->and($r->json('resumen.hasta'))->toBe('2026-11-09')
+        ->and($r->json('resumen.domicilios'))->toBe(2);
+
+    $d = $this->getJson('/v1/conjunto/residentes/detalle?desde=2026-11-03&hasta=2026-11-09&tower=3')->assertOk();
+
+    expect($d->json('meta.desde'))->toBe('2026-11-03')
+        ->and(collect($d->json('data'))->firstWhere('apartment', '502')['domicilios'])->toBe(2);
+
+    // Sin rango manda la ventana de siempre, y un nombre raro cae en 30 días.
+    expect($this->getJson('/v1/conjunto/residentes?ventana=cualquiera')->assertOk()->json('resumen.ventana'))
+        ->toBe('30');
+    $this->getJson('/v1/conjunto/residentes?desde=2026-11-09&hasta=2026-11-03')
+        ->assertStatus(422)->assertJsonValidationErrors('hasta');
+});

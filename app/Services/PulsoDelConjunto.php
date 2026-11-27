@@ -56,14 +56,16 @@ class PulsoDelConjunto
     /**
      * El tablero de inicio.
      *
-     * `$dias` es la ventana de las series. Catorce por defecto: dos semanas
-     * completas, que es lo que deja comparar un martes con el martes anterior
-     * sin que la gráfica se vuelva ilegible.
+     * `$desde` y `$hasta` son la ventana de las series (días enteros). Sin
+     * ellos, los últimos catorce días: dos semanas completas, que es lo que
+     * deja comparar un martes con el martes anterior sin que la gráfica se
+     * vuelva ilegible.
      */
-    public function resumen(int $complexId, int $dias = 14): array
+    public function resumen(int $complexId, ?CarbonImmutable $desde = null, ?CarbonImmutable $hasta = null): array
     {
         $hoy = CarbonImmutable::today();
-        $desde = $hoy->subDays($dias - 1);
+        $hasta = ($hasta ?? $hoy)->startOfDay();
+        $desde = ($desde ?? $hasta->subDays(13))->startOfDay();
 
         /*
          * Todo lo de abajo mira la MISMA ventana que eligió quien mira: si dice
@@ -74,10 +76,10 @@ class PulsoDelConjunto
         return [
             'hoy' => $this->deHoy($complexId, $hoy),
             'comparativa' => $this->comparativa($complexId, $hoy),
-            'series' => $this->series($complexId, $desde, $hoy),
-            'por_hora' => $this->porHora($complexId, $desde),
-            'torres' => $this->torres($complexId, $desde),
-            'identificacion' => $this->identificacion($complexId, $desde),
+            'series' => $this->series($complexId, $desde, $hasta),
+            'por_hora' => $this->porHora($complexId, $desde, $hasta),
+            'torres' => $this->torres($complexId, $desde, $hasta),
+            'identificacion' => $this->identificacion($complexId, $desde, $hasta),
             'comunidad' => $this->comunidad($complexId),
             'ultimas' => $this->ultimasEntradas($complexId, 6),
         ];
@@ -118,6 +120,19 @@ class PulsoDelConjunto
          * alguien la toque sin leer la otra.
          */
         return FiltroDeFechas::unDia($consulta, $columna, $dia);
+    }
+
+    /**
+     * Las entradas del periodo: del primer instante de `$desde` al último de
+     * `$hasta`. Antes solo había piso (`>= desde`) porque todas las ventanas
+     * llegaban hasta hoy; con el calendario se puede mirar la semana pasada,
+     * y sin techo se le sumaría lo de esta.
+     */
+    private function entreFechas(mixed $consulta, CarbonImmutable $desde, CarbonImmutable $hasta): mixed
+    {
+        return FiltroDeFechas::hasta(
+            FiltroDeFechas::desde($consulta, 'e.created_at', $desde), 'e.created_at', $hasta
+        );
     }
 
     private function deHoy(int $complexId, CarbonImmutable $hoy): array
@@ -244,10 +259,9 @@ class PulsoDelConjunto
      * cero: una gráfica que sólo pinta las horas con movimiento miente sobre
      * la forma del día.
      */
-    private function porHora(int $complexId, CarbonImmutable $desde): array
+    private function porHora(int $complexId, CarbonImmutable $desde, CarbonImmutable $hasta): array
     {
-        $cuentas = $this->entradas($complexId)
-            ->where('e.created_at', '>=', $desde->startOfDay())
+        $cuentas = $this->entreFechas($this->entradas($complexId), $desde, $hasta)
             ->selectRaw(SqlPortable::hora('e.created_at').' as hora, COUNT(*) as total')
             ->groupBy('hora')
             ->pluck('total', 'hora');
@@ -267,10 +281,9 @@ class PulsoDelConjunto
      * tienda— la que sabe a dónde fue cada uno. Ordenadas por número para que
      * la torre 3 esté siempre en el mismo sitio y se compare a ojo.
      */
-    private function torres(int $complexId, CarbonImmutable $desde): Collection
+    private function torres(int $complexId, CarbonImmutable $desde, CarbonImmutable $hasta): Collection
     {
-        return $this->entradas($complexId)
-            ->where('e.created_at', '>=', $desde->startOfDay())
+        return $this->entreFechas($this->entradas($complexId), $desde, $hasta)
             ->whereNotNull('e.tower')
             ->where('e.tower', '!=', '')
             ->selectRaw('e.tower as torre, COUNT(*) as entradas')
@@ -289,10 +302,9 @@ class PulsoDelConjunto
      * número. Una portería donde casi todo entra por cédula está controlando
      * menos de lo que cree.
      */
-    private function identificacion(int $complexId, CarbonImmutable $desde): array
+    private function identificacion(int $complexId, CarbonImmutable $desde, CarbonImmutable $hasta): array
     {
-        $filas = $this->entradas($complexId)
-            ->where('e.created_at', '>=', $desde->startOfDay())
+        $filas = $this->entreFechas($this->entradas($complexId), $desde, $hasta)
             /*
              * Sólo domiciliarios de la plataforma. Un visitante no tiene
              * código que generar ni cédula que verificar contra nada: lo anota
@@ -314,8 +326,7 @@ class PulsoDelConjunto
          * arriba. Se da para la barra de «cómo entró la gente» completa, que
          * es otra pregunta: cuánto de la portería verifica el sistema.
          */
-        $anotadas = (int) $this->entradas($complexId)
-            ->where('e.created_at', '>=', $desde->startOfDay())
+        $anotadas = (int) $this->entreFechas($this->entradas($complexId), $desde, $hasta)
             ->where(fn ($q) => $q->where('e.kind', '!=', 'domiciliario')->orWhere('e.method', 'manual'))
             ->count();
 
