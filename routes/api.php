@@ -86,6 +86,7 @@ use App\Http\Controllers\Negocio\PromocionesController;
 use App\Http\Controllers\Negocio\RendimientoDeDomiciliariosController;
 use App\Http\Controllers\Negocio\TorreDeControlController;
 use App\Http\Controllers\Negocio\VentaDeMostradorController;
+use App\Http\Controllers\Negocio\VentasDeMisNegociosController;
 use App\Http\Controllers\Operacion\EfectivoController;
 use App\Http\Controllers\Order\ComprobanteDelPedidoController;
 use App\Http\Controllers\Order\ConsultaDePedidosController;
@@ -729,6 +730,12 @@ Route::middleware(['auth:sanctum', 'cuenta.habilitada', 'audit.api'])->group(fun
         /* El efectivo que los domiciliarios le entregan a la tienda en el
            mostrador. Ver EfectivoDeLaTiendaController. */
         Route::get('mas-vendidos', [MasVendidosController::class, 'index']);
+
+        /*
+         * TUS VENTAS POR NEGOCIO: todos los negocios del dueno, no el activo.
+         * La lista la pone el middleware desde la sesion. Ver el controlador.
+         */
+        Route::get('mis-negocios/ventas', [VentasDeMisNegociosController::class, 'index']);
         Route::get('efectivo', [EfectivoDeLaTiendaController::class, 'index']);
         Route::post('efectivo/{id}/entregas', [EfectivoDeLaTiendaController::class, 'recibir'])
             ->whereNumber('id');
