@@ -109,8 +109,8 @@ class VisitasPorAutorizarController extends Controller
 
         return response()->json([
             'message' => $nuevo === SolicitudDeEntrada::AUTORIZADA
-                ? 'Listo: le avisamos al celador que puede entrar.'
-                : 'Listo: le avisamos al celador que no la dejes entrar.',
+                ? 'Le avisamos al celador que puede entrar.'
+                : 'Le avisamos al celador que no entra.',
             'state' => $nuevo,
         ]);
     }
