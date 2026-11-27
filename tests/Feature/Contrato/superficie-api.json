@@ -2969,6 +2969,7 @@
             "audit.api",
             "auth:sanctum",
             "cuenta.habilitada",
+            "idempotente",
             "negocio"
         ]
     },
@@ -3127,6 +3128,7 @@
             "audit.api",
             "auth:sanctum",
             "cuenta.habilitada",
+            "idempotente",
             "negocio"
         ]
     },
@@ -3151,6 +3153,7 @@
             "audit.api",
             "auth:sanctum",
             "cuenta.habilitada",
+            "idempotente",
             "negocio"
         ]
     },
@@ -3643,6 +3646,7 @@
             "audit.api",
             "auth:sanctum",
             "cuenta.habilitada",
+            "idempotente",
             "negocio"
         ]
     },
@@ -3655,6 +3659,7 @@
             "audit.api",
             "auth:sanctum",
             "cuenta.habilitada",
+            "idempotente",
             "negocio"
         ]
     },

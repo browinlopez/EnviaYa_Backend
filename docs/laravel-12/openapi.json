@@ -11227,6 +11227,7 @@
                     "audit.api",
                     "auth:sanctum",
                     "cuenta.habilitada",
+                    "idempotente",
                     "negocio"
                 ],
                 "security": [
@@ -11244,8 +11245,11 @@
                     "403": {
                         "description": "La sesion no alcanza este recurso."
                     },
+                    "409": {
+                        "description": "La misma Idempotency-Key sigue en curso."
+                    },
                     "422": {
-                        "description": "Validacion fallida."
+                        "description": "Validacion fallida, o la Idempotency-Key ya se uso con otro cuerpo."
                     }
                 },
                 "parameters": [
@@ -11255,6 +11259,16 @@
                         "required": true,
                         "schema": {
                             "type": "string"
+                        }
+                    },
+                    {
+                        "name": "Idempotency-Key",
+                        "in": "header",
+                        "required": false,
+                        "description": "UUID del intento. Repetido con el mismo cuerpo devuelve la respuesta guardada (24 h) sin volver a ejecutar.",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
                         }
                     }
                 ],
@@ -11768,6 +11782,7 @@
                     "audit.api",
                     "auth:sanctum",
                     "cuenta.habilitada",
+                    "idempotente",
                     "negocio"
                 ],
                 "security": [
@@ -11785,8 +11800,11 @@
                     "403": {
                         "description": "La sesion no alcanza este recurso."
                     },
+                    "409": {
+                        "description": "La misma Idempotency-Key sigue en curso."
+                    },
                     "422": {
-                        "description": "Validacion fallida."
+                        "description": "Validacion fallida, o la Idempotency-Key ya se uso con otro cuerpo."
                     }
                 },
                 "parameters": [
@@ -11796,6 +11814,16 @@
                         "required": true,
                         "schema": {
                             "type": "string"
+                        }
+                    },
+                    {
+                        "name": "Idempotency-Key",
+                        "in": "header",
+                        "required": false,
+                        "description": "UUID del intento. Repetido con el mismo cuerpo devuelve la respuesta guardada (24 h) sin volver a ejecutar.",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
                         }
                     }
                 ],
@@ -11844,6 +11872,7 @@
                     "audit.api",
                     "auth:sanctum",
                     "cuenta.habilitada",
+                    "idempotente",
                     "negocio"
                 ],
                 "security": [
@@ -11861,10 +11890,25 @@
                     "403": {
                         "description": "La sesion no alcanza este recurso."
                     },
+                    "409": {
+                        "description": "La misma Idempotency-Key sigue en curso."
+                    },
                     "422": {
-                        "description": "Validacion fallida."
+                        "description": "Validacion fallida, o la Idempotency-Key ya se uso con otro cuerpo."
                     }
                 },
+                "parameters": [
+                    {
+                        "name": "Idempotency-Key",
+                        "in": "header",
+                        "required": false,
+                        "description": "UUID del intento. Repetido con el mismo cuerpo devuelve la respuesta guardada (24 h) sin volver a ejecutar.",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -13982,6 +14026,7 @@
                     "audit.api",
                     "auth:sanctum",
                     "cuenta.habilitada",
+                    "idempotente",
                     "negocio"
                 ],
                 "security": [
@@ -13999,10 +14044,25 @@
                     "403": {
                         "description": "La sesion no alcanza este recurso."
                     },
+                    "409": {
+                        "description": "La misma Idempotency-Key sigue en curso."
+                    },
                     "422": {
-                        "description": "Validacion fallida."
+                        "description": "Validacion fallida, o la Idempotency-Key ya se uso con otro cuerpo."
                     }
                 },
+                "parameters": [
+                    {
+                        "name": "Idempotency-Key",
+                        "in": "header",
+                        "required": false,
+                        "description": "UUID del intento. Repetido con el mismo cuerpo devuelve la respuesta guardada (24 h) sin volver a ejecutar.",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -14050,6 +14110,7 @@
                     "audit.api",
                     "auth:sanctum",
                     "cuenta.habilitada",
+                    "idempotente",
                     "negocio"
                 ],
                 "security": [
@@ -14067,8 +14128,11 @@
                     "403": {
                         "description": "La sesion no alcanza este recurso."
                     },
+                    "409": {
+                        "description": "La misma Idempotency-Key sigue en curso."
+                    },
                     "422": {
-                        "description": "Validacion fallida."
+                        "description": "Validacion fallida, o la Idempotency-Key ya se uso con otro cuerpo."
                     }
                 },
                 "parameters": [
@@ -14078,6 +14142,16 @@
                         "required": true,
                         "schema": {
                             "type": "string"
+                        }
+                    },
+                    {
+                        "name": "Idempotency-Key",
+                        "in": "header",
+                        "required": false,
+                        "description": "UUID del intento. Repetido con el mismo cuerpo devuelve la respuesta guardada (24 h) sin volver a ejecutar.",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
                         }
                     }
                 ],
