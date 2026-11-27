@@ -85,7 +85,8 @@ test('el libro de entradas no trae el total ni al celador ni al administrador', 
     $r = $this->getJson('/v1/conjunto/porteria/entradas')->assertOk();
     $pedidos = $r->json('data.0.orders');
 
-    expect($pedidos)->toBe([[
+    // toEqual y no toBe: MySQL guarda el JSON con las claves en otro orden.
+    expect($pedidos)->toEqual([[
         'orderSales_id' => 77, 'tower' => '2', 'apartment' => '301', 'business_name' => 'Tienda Doña Rosa',
     ]]);
     expect($r->getContent())->not->toContain('82610')
