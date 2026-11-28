@@ -152,7 +152,7 @@ class PaymentController extends Controller
                  */
                 'billing_address' => [
                     // Al recoger no hay dirección del pedido: se factura con la del negocio.
-                    'street1' => $order->address?->address ?? $order->business?->address ?? 'Recoge en el negocio',
+                    'street1' => $order->address->address ?? $order->business->address ?? 'Recoge en el negocio',
                     'street2' => '',
                     'city' => $order->address?->municipality?->name,
                     'zip_code' => '130001',
