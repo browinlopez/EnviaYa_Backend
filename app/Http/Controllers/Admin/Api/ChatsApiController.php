@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\ResumenDePreordenesRequest;
 use App\Queries\ChatsDelPanel;
+use App\Queries\PreordenesDelPanel;
 use Illuminate\Http\Request;
 
 class ChatsApiController extends Controller
@@ -21,6 +23,11 @@ class ChatsApiController extends Controller
     public function chats(Request $request)
     {
         return response()->json((new ChatsDelPanel)->listado());
+    }
+
+    public function preordenes(ResumenDePreordenesRequest $request)
+    {
+        return response()->json((new PreordenesDelPanel)->resumen($request->dias()));
     }
 
     public function chatMessages($chatId)

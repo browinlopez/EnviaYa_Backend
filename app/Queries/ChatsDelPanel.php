@@ -41,7 +41,8 @@ class ChatsDelPanel
                 'c.chat_id', 'c.type', 'c.created_at',
                 DB::raw('COUNT(m.message_id) as messages_count'),
                 DB::raw('MAX(m.created_at) as last_at'),
-                DB::raw("SUM(CASE WHEN m.content LIKE '%\"type\":\"preorder\"%' THEN 1 ELSE 0 END) as preorders_count"),
+                // Desde la tabla de preórdenes: ya no se busca dentro del texto de cada mensaje.
+                DB::raw('(SELECT COUNT(*) FROM preorders p WHERE p.chat_id = c.chat_id) as preorders_count'),
             ]);
 
         $participantes = DB::table('chat_participants as cp')

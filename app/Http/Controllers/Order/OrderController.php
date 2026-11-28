@@ -29,6 +29,7 @@ use App\Services\FacturaService;
 use App\Services\PagoEnLinea;
 use App\Services\PinDeEntrega;
 use App\Services\PlazoPorDistancia;
+use App\Services\PreordenDelChat;
 use App\Services\RecordatorioDeProgramados;
 use App\Services\ReglasDeDespacho;
 use App\Services\TarifaPorDistancia;
@@ -121,6 +122,8 @@ class OrderController extends Controller
              * alguien escribio un numero bajo-- y por eso es opcional.
              */
             'cash_tendered' => 'sometimes|nullable|numeric|min:0|max:1000000',
+            // La preorden del chat que se está pagando: exige que el negocio la haya confirmado.
+            'preorder_message_id' => 'sometimes|nullable|integer',
         ]);
 
         /* ========= VALIDACIONES REALES ========= */
@@ -269,6 +272,22 @@ class OrderController extends Controller
         DB::beginTransaction();
 
         try {
+            $preorden = null;
+            if ($request->filled('preorder_message_id')) {
+                $preorden = app(PreordenDelChat::class)->paraPagar(
+                    (int) $request->input('preorder_message_id'),
+                    (int) $request->user_id,
+                    (int) $business->busines_id,
+                    $request->products,
+                );
+                if (is_string($preorden)) {
+                    DB::rollBack();
+
+                    return PreordenDelChat::respuestaQueNoSePaga($preorden, (int) $request->input('preorder_message_id'));
+                }
+                $prices = PreordenDelChat::conPreciosPactados($prices, $preorden[1]);
+            }
+
             /* ========= ORDEN ========= */
 
             /*
@@ -371,6 +390,10 @@ class OrderController extends Controller
             }
 
             /* ========= PAGO ONLINE ========= */
+
+            if ($preorden !== null) {
+                app(PreordenDelChat::class)->marcarPagada($preorden[0], $preorden[1], (int) $order->orderSales_id);
+            }
 
             $intent = null;
 

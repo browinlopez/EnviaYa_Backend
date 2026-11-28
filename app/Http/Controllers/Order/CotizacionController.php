@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Order;
 use App\Http\Controllers\Controller;
 use App\Models\Business;
 use App\Services\EconomiaDelPedido;
+use App\Services\PreordenDelChat;
 use App\Services\TarifaPorDistancia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -84,6 +85,7 @@ class CotizacionController extends Controller
             'address_id' => 'sometimes|nullable|integer',
             'pickup' => 'sometimes|boolean',
             'coupon_code' => 'sometimes|nullable|string|max:40',
+            'preorder_message_id' => 'sometimes|nullable|integer',
         ]);
 
         $business = Business::find($request->busines_id);
@@ -93,6 +95,20 @@ class CotizacionController extends Controller
             $request->products,
             (int) $business->busines_id,
         );
+
+        // El carrito de una preorden cotiza lo confirmado, o le dice que vuelva al chat.
+        if ($request->filled('preorder_message_id')) {
+            $preorden = DB::transaction(fn () => app(PreordenDelChat::class)->paraPagar(
+                (int) $request->input('preorder_message_id'),
+                (int) $request->user()?->user_id,
+                (int) $business->busines_id,
+                $request->products,
+            ));
+            if (is_string($preorden)) {
+                return PreordenDelChat::respuestaQueNoSePaga($preorden, (int) $request->input('preorder_message_id'));
+            }
+            $precios = PreordenDelChat::conPreciosPactados($precios, $preorden[1]);
+        }
 
         /*
          * Un producto que ya no se vende NO tumba la cotización.

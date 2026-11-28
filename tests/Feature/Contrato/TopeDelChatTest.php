@@ -19,6 +19,7 @@
 
 use App\Models\Rol;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Sanctum\Sanctum;
 
@@ -31,18 +32,28 @@ beforeEach(function () {
 });
 
 /** Manda `$contenido` de una cuenta a otra y devuelve la respuesta. */
-function mandar(string $contenido)
+function mandar(string $contenido, bool $conNegocio = false)
 {
     $escribe = User::factory()->create(['rol' => 1]);
     $recibe = User::factory()->create(['rol' => 2]);
 
     Sanctum::actingAs($escribe);
 
-    return test()->postJson('/v1/chats/send-message', [
+    $cuerpo = [
         'user_id' => $escribe->user_id,
         'recipient_id' => $recibe->user_id,
         'content' => $contenido,
-    ]);
+    ];
+
+    // Una preorden solo viaja en el chat de un negocio, del que es dueño quien la recibe.
+    if ($conNegocio) {
+        $negocio = DB::table('business')->insertGetId(['name' => 'Tienda', 'qualification' => 0, 'state' => 1], 'busines_id');
+        $dueno = DB::table('owner')->insertGetId(['user_id' => $recibe->user_id, 'state' => 1], 'owner_id');
+        DB::table('owner_busines')->insert(['owner_id' => $dueno, 'busines_id' => $negocio, 'state' => 1]);
+        $cuerpo['busines_id'] = $negocio;
+    }
+
+    return test()->postJson('/v1/chats/send-message', $cuerpo);
 }
 
 /** Una tarjeta de pedido de `$productos` líneas, como la que arma la app. */
@@ -50,6 +61,7 @@ function tarjetaDePedido(int $productos, string $tipo = 'preorder'): string
 {
     return json_encode([
         'type' => $tipo,
+        'de' => 'cliente',
         'items' => array_map(fn ($i) => [
             'name' => "Producto número {$i} con nombre largo de los de verdad",
             'price' => 4600 + $i,
@@ -74,7 +86,7 @@ test('una tarjeta de pedido pasa aunque supere las mil letras', function () {
 
     expect(strlen($tarjeta))->toBeGreaterThan(1000);
 
-    mandar($tarjeta)->assertCreated();
+    mandar($tarjeta, conNegocio: true)->assertCreated();
 });
 
 test('envolver un texto largo en un JSON cualquiera NO salta el tope', function () {

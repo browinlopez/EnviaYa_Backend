@@ -4660,6 +4660,39 @@
                 "x-form-request": "App\\Http\\Requests\\Admin\\AnotarEnPqrsRequest"
             }
         },
+        "/v1/admin/preordenes/resumen": {
+            "get": {
+                "operationId": "get_v1_admin_preordenes_resumen",
+                "tags": [
+                    "admin"
+                ],
+                "summary": "App\\Http\\Controllers\\Admin\\Api\\ChatsApiController@preordenes",
+                "x-middleware": [
+                    "admin",
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "cuenta.habilitada",
+                    "modulo:chats"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    }
+                }
+            }
+        },
         "/v1/admin/products": {
             "get": {
                 "operationId": "get_v1_admin_products",
@@ -12802,6 +12835,38 @@
                 ]
             }
         },
+        "/v1/negocio/preordenes/pendientes": {
+            "get": {
+                "operationId": "get_v1_negocio_preordenes_pendientes",
+                "tags": [
+                    "negocio"
+                ],
+                "summary": "App\\Http\\Controllers\\Chat\\PreordenesPendientesController@delNegocio",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "cuenta.habilitada",
+                    "negocio"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    },
+                    "403": {
+                        "description": "La sesion no alcanza este recurso."
+                    }
+                }
+            }
+        },
         "/v1/negocio/productos": {
             "get": {
                 "operationId": "get_v1_negocio_productos",
@@ -15620,6 +15685,34 @@
                     "paymentMethods"
                 ],
                 "summary": "App\\Http\\Controllers\\Order\\MediosDePagoController@paymentMethods",
+                "x-middleware": [
+                    "api",
+                    "audit.api",
+                    "auth:sanctum",
+                    "cuenta.habilitada"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Respuesta correcta. La forma no esta congelada todavia: ver §34 en ESTADO.md."
+                    },
+                    "401": {
+                        "description": "Sin token, o token invalido."
+                    }
+                }
+            }
+        },
+        "/v1/preordenes/pendientes": {
+            "get": {
+                "operationId": "get_v1_preordenes_pendientes",
+                "tags": [
+                    "preordenes"
+                ],
+                "summary": "App\\Http\\Controllers\\Chat\\PreordenesPendientesController@delComprador",
                 "x-middleware": [
                     "api",
                     "audit.api",
