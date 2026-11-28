@@ -199,3 +199,20 @@ test('la preorden que arma el negocio también se cobra a su precio', function (
     $this->postJson('/v1/orders/orders', cuerpoPedido($e, ['preorder_message_id' => $id]))->assertSuccessful();
     expect((float) DB::table('orderssales')->latest('orderSales_id')->value('subtotal'))->toBe(21000.0);
 });
+
+test('una preorden vieja, de antes del formato nuevo, no sale como pendiente', function () {
+    $e = preordenDelCliente();
+    $vieja = [...$e['tarjeta'], 'status' => 'confirmed'];
+    unset($vieja['de']);
+    $chat = DB::table('chats')->insertGetId(['type' => 'private', 'busines_id' => $e['businessId']], 'chat_id');
+    DB::table('chat_participants')->insert([
+        ['chat_id' => $chat, 'user_id' => $e['user']->user_id, 'role_id' => 1],
+        ['chat_id' => $chat, 'user_id' => $e['tendero']->user_id, 'role_id' => 2],
+    ]);
+    DB::table('messages')->insert([
+        'chat_id' => $chat, 'user_id' => $e['tendero']->user_id, 'role_id' => 2, 'content' => json_encode($vieja),
+    ]);
+
+    Sanctum::actingAs($e['user']);
+    $this->getJson('/v1/preordenes/pendientes')->assertJsonCount(0, 'data');
+});

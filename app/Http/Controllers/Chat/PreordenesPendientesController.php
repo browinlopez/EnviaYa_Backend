@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order\OrdersSales;
 use App\Services\PreordenDelChat;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -15,6 +16,8 @@ use Illuminate\Support\Facades\DB;
 class PreordenesPendientesController extends Controller
 {
     private const TOPE = 20;
+
+    private const DIAS = 14;
 
     public function delComprador(Request $request)
     {
@@ -93,7 +96,9 @@ class PreordenesPendientesController extends Controller
 
                 return $f;
             })
-            ->filter(fn ($f) => $f->tarjeta !== null);
+            // Solo el formato nuevo y reciente: las viejas se pagaban sin quedar ligadas a su pedido.
+            ->filter(fn ($f) => $f->tarjeta !== null && isset($f->tarjeta['de'])
+                && Carbon::parse($f->created_at)->gt(now()->subDays(self::DIAS)));
     }
 
     /** @param  array<string, mixed>  $t */
