@@ -19,6 +19,7 @@ use App\Models\Chat\ChatParticipant;
 use App\Models\Chat\Message;
 use App\Models\User;
 use App\Services\Avisos;
+use App\Services\PreordenDelChat;
 use App\Support\ResumenDeMensaje;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -72,6 +73,12 @@ class ChatController extends Controller
              * sigue siendo el suyo y no se mezcla con los de mostrador.
              */
             $negocioId = $this->negocioDeLaConversacion($request, $sender, $recipient);
+
+            // Una preorden solo la arma el cliente o quien administra ese negocio.
+            $tarjeta = PreordenDelChat::tarjeta((string) $request->content);
+            if ($tarjeta !== null && ! app(PreordenDelChat::class)->puedeMandar($sender, $negocioId, $tarjeta)) {
+                return response()->json(['message' => 'No puedes mandar ese pedido en esta conversación.'], 403);
+            }
 
             $chat = Chat::where('type', 'private')
                 ->where(fn ($q) => $negocioId === null
@@ -283,8 +290,11 @@ class ChatController extends Controller
          * las cantidades y los precios tienen que llegar idénticos; si cambia
          * cualquier otra cosa, vuelve a mandar la regla del autor.
          */
-        if (! $this->contestaUnaPreorden($request, $message)
-            && ($no = $this->negarCuentaAjena($request, $message->user_id))) {
+        if (PreordenDelChat::tarjeta((string) $message->content) !== null) {
+            return $this->responderPreorden($request, $message);
+        }
+
+        if ($no = $this->negarCuentaAjena($request, $message->user_id)) {
             return $no;
         }
 
@@ -297,30 +307,80 @@ class ChatController extends Controller
         ]);
     }
 
-    /** ¿Es la otra persona del chat respondiendo a una pre-orden, y nada más? */
-    private function contestaUnaPreorden(Request $request, Message $message): bool
+    private function responderPreorden(Request $request, Message $message)
     {
-        $antes = json_decode((string) $message->content, true);
-        $despues = $request->input('content');
+        $yo = (int) $request->user()?->user_id;
 
-        if (! is_array($antes) || ($antes['type'] ?? null) !== 'preorder' || ! is_array($despues)) {
-            return false;
+        $resultado = DB::transaction(function () use ($message, $yo, $request) {
+            $fresco = Message::whereKey($message->message_id)->lockForUpdate()->firstOrFail();
+            $nueva = app(PreordenDelChat::class)->responder($fresco, $yo, (array) $request->input('content'));
+            if (is_array($nueva)) {
+                $fresco->content = json_encode($nueva);
+                $fresco->save();
+            }
+
+            return [$fresco, $nueva];
+        });
+
+        [$message, $nueva] = $resultado;
+
+        if (is_string($nueva)) {
+            $codigo = match ($nueva) {
+                'cerrada' => 409,
+                'ajena', 'no_permitido' => 403,
+                default => 422,
+            };
+
+            return response()->json([
+                'message' => $codigo === 409 ? 'Ese pedido ya se contestó.' : 'No puedes cambiar ese pedido así.',
+                'reason' => $nueva,
+            ], $codigo);
         }
 
-        if (! in_array($despues['status'] ?? null, ['confirmed', 'cancelled'], true)) {
-            return false;
+        $this->anunciarRespuesta($message, $nueva, $yo);
+
+        return response()->json([
+            'success' => true,
+            'message' => (new MensajeResource($message))->resolve(),
+        ]);
+    }
+
+    /** @param  array<string, mixed>  $tarjeta */
+    private function anunciarRespuesta(Message $message, array $tarjeta, int $yo): void
+    {
+        // Sin esto el otro teléfono solo veía el cambio al minuto, con el sondeo.
+        try {
+            broadcast(new MessageSent($message));
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo anunciar la respuesta a la preorden', ['error' => $e->getMessage()]);
         }
 
-        $sinEstado = fn (array $c) => array_diff_key($c, ['status' => true]);
-        if ($sinEstado($antes) != $sinEstado($despues)) {
-            return false;
+        $chat = Chat::find($message->chat_id);
+        $negocio = $chat?->busines_id ? (string) $chat->negocio()->value('name') : '';
+        $actor = User::find($yo);
+        $esDelNegocio = $negocio !== '' && (int) $actor?->rol === 2;
+        $titulo = $esDelNegocio ? $negocio : (string) ($actor->name ?? 'VeciPa\'Ya');
+        $total = '$'.number_format((float) ($tarjeta['total'] ?? PreordenDelChat::total($tarjeta['items'] ?? [])), 0, ',', '.');
+
+        $texto = match (true) {
+            $tarjeta['status'] === PreordenDelChat::CONFIRMADA && $esDelNegocio => "Confirmó tu pedido: {$total}. Ya puedes pagar.",
+            $tarjeta['status'] === PreordenDelChat::CONFIRMADA => "Confirmó el pedido: {$total}.",
+            $esDelNegocio => 'No pudo atender tu pedido.',
+            default => 'Canceló el pedido.',
+        };
+
+        $otros = ChatParticipant::where('chat_id', $message->chat_id)->where('user_id', '!=', $yo)->pluck('user_id');
+        foreach ($otros as $otro) {
+            Avisos::para((int) $otro, 'preorden_respondida', $texto, [
+                'chat_id' => $message->chat_id,
+                'message_id' => $message->message_id,
+                'business_id' => $chat?->busines_id,
+                'status' => $tarjeta['status'],
+                'remitente_id' => $yo,
+                'remitente_nombre' => $titulo,
+                'remitente_rol' => (int) $actor?->rol,
+            ], titulo: $titulo);
         }
-
-        $yo = $request->user()?->user_id;
-
-        return $yo !== null && ChatParticipant::where('chat_id', $message->chat_id)
-            ->where('user_id', $yo)
-            ->exists();
     }
 
     /**

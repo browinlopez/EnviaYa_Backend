@@ -87,6 +87,11 @@ class ResumenDeMensaje
 
         $productos = $cuantos === 1 ? '1 producto' : "{$cuantos} productos";
 
+        // La que arma el cliente le llega al negocio: él no «armó», «pidió».
+        if (($datos['de'] ?? null) === 'cliente') {
+            return $total === null ? "Te pidió: {$productos}." : "Te pidió: {$productos} · {$total}.";
+        }
+
         return $total === null
             ? "Te armó un pedido: {$productos}. Ábrelo para confirmarlo."
             : "Te armó un pedido: {$productos} · {$total}.";

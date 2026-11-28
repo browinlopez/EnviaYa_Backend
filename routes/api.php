@@ -47,6 +47,7 @@ use App\Http\Controllers\Buyer\MiCreditoController;
 use App\Http\Controllers\Buyer\ResidentialComplexController;
 use App\Http\Controllers\Category\CategoryController;
 use App\Http\Controllers\Chat\ChatController;
+use App\Http\Controllers\Chat\PreordenesPendientesController;
 use App\Http\Controllers\CoberturaController;
 use App\Http\Controllers\Conjunto\CeladoresController;
 use App\Http\Controllers\Conjunto\MiConjuntoController;
@@ -546,6 +547,9 @@ Route::middleware(['auth:sanctum', 'cuenta.habilitada', 'audit.api'])->group(fun
         Route::post('/send-message', [ChatController::class, 'sendMessage']); // enviar mensaje
     });
 
+    // Lo que el comprador tiene por pagar o por contestar, para su inicio.
+    Route::get('preordenes/pendientes', [PreordenesPendientesController::class, 'delComprador']);
+
     // Negocios
     Route::prefix('businesses')->group(function () {
         Route::get('index', [ConsultaDeNegociosController::class, 'index']);
@@ -717,6 +721,7 @@ Route::middleware(['auth:sanctum', 'cuenta.habilitada', 'audit.api'])->group(fun
      */
     Route::prefix('negocio')->middleware('negocio')->group(function () {
         Route::get('me', [MiNegocioController::class, 'mio']);
+        Route::get('preordenes/pendientes', [PreordenesPendientesController::class, 'delNegocio']);
         Route::put('me', [MiNegocioController::class, 'actualizar']);
 
         /*
