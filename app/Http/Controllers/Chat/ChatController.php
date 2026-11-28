@@ -118,6 +118,10 @@ class ChatController extends Controller
                 'content' => $request->content,
             ]);
 
+            if ($tarjeta !== null) {
+                app(PreordenDelChat::class)->registrar($message);
+            }
+
             // Quien escribe ya vio la conversación hasta su propio mensaje.
             $this->marcarLeido($chat->chat_id, (int) $sender->user_id);
 
@@ -315,8 +319,9 @@ class ChatController extends Controller
             $fresco = Message::whereKey($message->message_id)->lockForUpdate()->firstOrFail();
             $nueva = app(PreordenDelChat::class)->responder($fresco, $yo, (array) $request->input('content'));
             if (is_array($nueva)) {
-                $fresco->content = json_encode($nueva);
-                $fresco->save();
+                app(PreordenDelChat::class)->aplicar($fresco, $nueva, $yo);
+                $fresco->refresh();
+                $nueva = PreordenDelChat::tarjeta((string) $fresco->content) ?? $nueva;
             }
 
             return [$fresco, $nueva];

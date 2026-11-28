@@ -7,12 +7,14 @@ namespace App\Services;
 use App\Models\Chat\Chat;
 use App\Models\Chat\ChatParticipant;
 use App\Models\Chat\Message;
+use App\Models\Chat\Preorden;
+use App\Models\Chat\PreordenEvento;
 use App\Models\Order\OrdersSales;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Collection;
 
-// La preorden vive en la tarjeta del chat: estas son sus reglas, en un solo sitio.
+// La preorden vive en su tabla; la tarjeta del chat es la copia que la app pinta.
 class PreordenDelChat
 {
     public const PENDIENTE = 'pending';
@@ -64,6 +66,104 @@ class PreordenDelChat
         return $precio * (float) ($i['quantity'] ?? 0);
     }
 
+    /** La fila de la preorden; una tarjeta de antes se pasa a la tabla la primera vez que se usa. */
+    public function fila(Message $m, bool $bloquear = false): ?Preorden
+    {
+        $consulta = Preorden::where('message_id', $m->message_id);
+        $fila = ($bloquear ? $consulta->lockForUpdate() : $consulta)->first();
+        if ($fila !== null) {
+            return $fila;
+        }
+        $t = self::tarjeta((string) $m->content);
+
+        return $t === null ? null : $this->crearFila($m, $t, (int) $m->user_id, 'migrada');
+    }
+
+    /** Recién mandada la tarjeta: nace su fila y la tarjeta queda con el total del servidor. */
+    public function registrar(Message $m): void
+    {
+        $t = self::tarjeta((string) $m->content);
+        if ($t === null) {
+            return;
+        }
+        $this->copiarALaTarjeta($m, $this->crearFila($m, $t, (int) $m->user_id, 'creada'), $t);
+    }
+
+    /** @param  array<string, mixed>  $t */
+    private function crearFila(Message $m, array $t, int $autor, string $accion): Preorden
+    {
+        $de = self::deQuien($t);
+        $items = array_values($t['items'] ?? []);
+        $fila = Preorden::create([
+            'chat_id' => $m->chat_id,
+            'message_id' => $m->message_id,
+            'busines_id' => Chat::whereKey($m->chat_id)->value('busines_id'),
+            'buyer_user_id' => $de === 'cliente' ? $autor : ChatParticipant::where('chat_id', $m->chat_id)
+                ->where('role_id', 1)->value('user_id'),
+            'created_by' => $autor,
+            'de' => $de,
+            'status' => $t['status'] ?? self::PENDIENTE,
+            'items' => $items,
+            'total' => self::total($items),
+            'ajustada' => (bool) ($t['ajustada'] ?? false),
+            'order_id' => $t['order_id'] ?? null,
+        ]);
+        $this->anotar($fila, $autor, $accion, null, ['status' => $fila->status, 'total' => (float) $fila->total]);
+
+        return $fila;
+    }
+
+    /** @param  array<string, mixed>  $t */
+    private function copiarALaTarjeta(Message $m, Preorden $f, array $t): void
+    {
+        $m->content = json_encode([
+            ...$t,
+            'preorden_id' => $f->id,
+            'status' => $f->status,
+            'items' => $f->items,
+            'total' => (float) $f->total,
+            'ajustada' => $f->ajustada,
+            ...($f->order_id ? ['order_id' => $f->order_id] : []),
+        ]);
+        $m->save();
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $antes
+     * @param  array<string, mixed>|null  $despues
+     */
+    private function anotar(Preorden $f, ?int $quien, string $accion, ?array $antes, ?array $despues): void
+    {
+        PreordenEvento::create([
+            'preorder_id' => $f->id, 'user_id' => $quien, 'accion' => $accion, 'antes' => $antes, 'despues' => $despues,
+        ]);
+    }
+
+    // Guarda la respuesta ya validada por `responder`: fila, historial y copia en la tarjeta.
+    /** @param  array<string, mixed>  $nueva */
+    public function aplicar(Message $m, array $nueva, int $yo): void
+    {
+        $fila = $this->fila($m, true);
+        if ($fila === null) {
+            return;
+        }
+        $antes = ['status' => $fila->status, 'items' => $fila->items, 'total' => (float) $fila->total];
+        $confirmada = $nueva['status'] === self::CONFIRMADA;
+
+        $fila->fill([
+            'status' => $nueva['status'],
+            'items' => array_values($nueva['items'] ?? $fila->items),
+            'total' => self::total($nueva['items'] ?? $fila->items),
+            'ajustada' => (bool) ($nueva['ajustada'] ?? $fila->ajustada),
+            'confirmed_at' => $confirmada ? now() : $fila->confirmed_at,
+            'cancelled_at' => $confirmada ? $fila->cancelled_at : now(),
+        ])->save();
+
+        $accion = $confirmada ? ($fila->ajustada ? 'ajustada' : 'confirmada') : 'cancelada';
+        $this->anotar($fila, $yo, $accion, $antes, ['status' => $fila->status, 'items' => $fila->items, 'total' => (float) $fila->total]);
+        $this->copiarALaTarjeta($m, $fila, $nueva);
+    }
+
     /** @param  array<string, mixed>  $t */
     public function puedeMandar(User $quien, ?int $negocioId, array $t): bool
     {
@@ -83,15 +183,18 @@ class PreordenDelChat
     public function responder(Message $m, int $yo, array $despues): array|string
     {
         $antes = self::tarjeta((string) $m->content);
-        if ($antes === null) {
+        $fila = $antes === null ? null : $this->fila($m);
+        if ($antes === null || $fila === null) {
             return 'no_es_preorden';
         }
         if (! ChatParticipant::where('chat_id', $m->chat_id)->where('user_id', $yo)->exists()) {
             return 'ajena';
         }
-        if (($antes['status'] ?? self::PENDIENTE) !== self::PENDIENTE) {
+        // Manda la fila, no lo que diga la tarjeta: la tarjeta es solo su copia.
+        if ($fila->status !== self::PENDIENTE) {
             return 'cerrada';
         }
+        $antes = [...$antes, 'items' => $fila->items];
 
         $estado = $despues['status'] ?? null;
         if (! in_array($estado, [self::CONFIRMADA, self::CANCELADA], true)) {
@@ -169,9 +272,12 @@ class PreordenDelChat
      */
     private function igualSinEstado(array $a, array $b): bool
     {
-        $sin = fn (array $c) => array_diff_key($c, ['status' => true]);
+        // Lo que cuenta son productos, cantidades y precios; el resto lo pone el servidor.
+        $lineas = fn (array $c) => collect($c['items'] ?? [])
+            ->map(fn ($i) => [(int) ($i['product_id'] ?? 0), (float) ($i['quantity'] ?? 0), (float) ($i['price'] ?? 0)])
+            ->sort()->values()->all();
 
-        return $sin($a) == $sin($b);
+        return $lineas($a) === $lineas($b);
     }
 
     /**
@@ -193,9 +299,14 @@ class PreordenDelChat
             return 'preorden_ajena';
         }
 
-        $estado = $t['status'] ?? self::PENDIENTE;
+        $fila = $this->fila($m, true);
+        if ($fila === null) {
+            return 'preorden_ajena';
+        }
+        $t = [...$t, 'items' => $fila->items];
+        $estado = $fila->status;
         // Un cobro en línea a medias se reintenta sobre el mismo pedido: eso no es pagar dos veces.
-        $pedido = isset($t['order_id']) ? OrdersSales::find((int) $t['order_id']) : null;
+        $pedido = $fila->order_id ? OrdersSales::find((int) $fila->order_id) : null;
         if ($estado === self::PAGADA && ! $pedido?->esperandoPago()) {
             return 'preorden_pagada';
         }
@@ -253,7 +364,13 @@ class PreordenDelChat
     /** @param  array<string, mixed>  $t */
     public function marcarPagada(Message $m, array $t, int $orderId): void
     {
-        $m->content = json_encode([...$t, 'status' => self::PAGADA, 'order_id' => $orderId]);
-        $m->save();
+        $fila = $this->fila($m, true);
+        if ($fila === null) {
+            return;
+        }
+        $antes = ['status' => $fila->status, 'order_id' => $fila->order_id];
+        $fila->fill(['status' => self::PAGADA, 'order_id' => $orderId, 'paid_at' => now()])->save();
+        $this->anotar($fila, $fila->buyer_user_id, 'pagada', $antes, ['status' => self::PAGADA, 'order_id' => $orderId]);
+        $this->copiarALaTarjeta($m, $fila, $t);
     }
 }

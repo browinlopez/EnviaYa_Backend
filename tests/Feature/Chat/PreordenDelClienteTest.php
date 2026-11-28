@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\EnviarAvisoPush;
+use App\Models\Chat\Preorden;
 use App\Models\Rol;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -215,4 +216,60 @@ test('una preorden vieja, de antes del formato nuevo, no sale como pendiente', f
 
     Sanctum::actingAs($e['user']);
     $this->getJson('/v1/preordenes/pendientes')->assertJsonCount(0, 'data');
+});
+
+test('la preorden nace en su tabla, con el total del servidor y no el que manda la app', function () {
+    $e = preordenDelCliente();
+    $envio = mandarPreorden($e, [...$e['tarjeta'], 'total' => 1], $e['user'], $e['tendero']);
+
+    $fila = Preorden::where('message_id', $envio->json('data.message_id'))->firstOrFail();
+    expect($fila->de)->toBe('cliente')
+        ->and((int) $fila->buyer_user_id)->toBe((int) $e['user']->user_id)
+        ->and((int) $fila->busines_id)->toBe((int) $e['businessId'])
+        ->and((float) $fila->total)->toBe(30000.0);
+
+    $tarjeta = json_decode(DB::table('messages')->where('message_id', $fila->message_id)->value('content'), true);
+    expect($tarjeta['preorden_id'])->toBe($fila->id)->and((float) $tarjeta['total'])->toBe(30000.0);
+});
+
+test('queda el historial: quién la creó, quién la ajustó y cuándo se pagó', function () {
+    $e = preordenDelCliente();
+    $id = mandarPreorden($e, $e['tarjeta'], $e['user'], $e['tendero'])->json('data.message_id');
+    confirmarComoNegocio($e, $id, ['items' => [[...$e['tarjeta']['items'][0], 'quantity' => 2, 'price' => 8000]]]);
+
+    Sanctum::actingAs($e['user']);
+    $this->postJson('/v1/orders/orders', cuerpoPedido($e, [
+        'preorder_message_id' => $id,
+        'products' => [['product_id' => $e['productId'], 'amount' => 2]],
+    ]))->assertSuccessful();
+
+    $fila = Preorden::where('message_id', $id)->firstOrFail();
+    expect($fila->status)->toBe('paid')
+        ->and($fila->order_id)->not->toBeNull()
+        ->and($fila->confirmed_at)->not->toBeNull()
+        ->and($fila->paid_at)->not->toBeNull()
+        ->and($fila->eventos()->orderBy('id')->pluck('accion')->all())->toBe(['creada', 'ajustada', 'pagada'])
+        ->and((int) $fila->eventos()->where('accion', 'ajustada')->value('user_id'))->toBe((int) $e['tendero']->user_id);
+});
+
+test('una tarjeta de antes, sin fila, pasa a la tabla la primera vez que se contesta', function () {
+    $e = preordenDelCliente();
+    $chat = DB::table('chats')->insertGetId(['type' => 'private', 'busines_id' => $e['businessId']], 'chat_id');
+    DB::table('chat_participants')->insert([
+        ['chat_id' => $chat, 'user_id' => $e['user']->user_id, 'role_id' => 1],
+        ['chat_id' => $chat, 'user_id' => $e['tendero']->user_id, 'role_id' => 2],
+    ]);
+    $vieja = [...$e['tarjeta'], 'de' => 'negocio'];
+    $id = DB::table('messages')->insertGetId([
+        'chat_id' => $chat, 'user_id' => $e['tendero']->user_id, 'role_id' => 2, 'content' => json_encode($vieja),
+    ], 'message_id');
+
+    Sanctum::actingAs($e['user']);
+    $this->postJson('/v1/chats/updateMessage', ['message_id' => $id, 'content' => [...$vieja, 'status' => 'confirmed']])
+        ->assertOk();
+
+    $fila = Preorden::where('message_id', $id)->firstOrFail();
+    expect($fila->status)->toBe('confirmed')
+        ->and((int) $fila->buyer_user_id)->toBe((int) $e['user']->user_id)
+        ->and($fila->eventos()->orderBy('id')->pluck('accion')->all())->toBe(['migrada', 'confirmada']);
 });

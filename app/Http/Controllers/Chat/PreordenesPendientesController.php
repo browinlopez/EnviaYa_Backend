@@ -5,11 +5,10 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Chat;
 
 use App\Http\Controllers\Controller;
+use App\Models\Chat\Preorden;
 use App\Models\Order\OrdersSales;
 use App\Services\PreordenDelChat;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 // Lo que espera algo de alguien, para enseñarlo en el inicio hasta que se resuelva.
@@ -23,34 +22,27 @@ class PreordenesPendientesController extends Controller
     {
         $yo = (int) $request->user()->user_id;
 
-        $chats = DB::table('chat_participants as p')
-            ->join('chats as c', 'c.chat_id', '=', 'p.chat_id')
-            ->where('p.user_id', $yo)
-            ->whereNotNull('c.busines_id')
-            ->pluck('c.busines_id', 'c.chat_id');
+        $filas = Preorden::where('buyer_user_id', $yo)
+            ->whereIn('status', [PreordenDelChat::PENDIENTE, PreordenDelChat::CONFIRMADA, PreordenDelChat::PAGADA])
+            ->where('updated_at', '>', now()->subDays(self::DIAS))
+            ->orderByDesc('id')
+            ->limit(self::TOPE * 3)
+            ->get();
 
-        $tarjetas = $this->tarjetasDe($chats->keys());
-        $nombres = DB::table('business')->whereIn('busines_id', $chats->values())->pluck('name', 'busines_id');
+        $nombres = DB::table('business')->whereIn('busines_id', $filas->pluck('busines_id')->filter())->pluck('name', 'busines_id');
 
-        $lista = $tarjetas->map(function ($fila) use ($yo, $chats, $nombres) {
-            $t = $fila->tarjeta;
-            $estado = $t['status'] ?? PreordenDelChat::PENDIENTE;
-            $suya = (int) $fila->user_id === $yo;
-
+        $lista = $filas->map(function (Preorden $f) use ($yo, $nombres) {
             $que = match (true) {
-                $estado === PreordenDelChat::CONFIRMADA => 'por_pagar',
-                $estado === PreordenDelChat::PAGADA && $this->esperandoPago($t) => 'por_pagar',
-                $estado === PreordenDelChat::PENDIENTE && ! $suya => 'por_confirmar',
-                $estado === PreordenDelChat::PENDIENTE && $suya => 'esperando_al_negocio',
+                $f->status === PreordenDelChat::CONFIRMADA => 'por_pagar',
+                $f->status === PreordenDelChat::PAGADA && $this->esperandoPago($f) => 'por_pagar',
+                $f->status === PreordenDelChat::PENDIENTE && (int) $f->created_by !== $yo => 'por_confirmar',
+                $f->status === PreordenDelChat::PENDIENTE => 'esperando_al_negocio',
                 default => null,
             };
-            if ($que === null) {
-                return null;
-            }
 
-            return $this->forma($fila, $que, [
-                'business_id' => (int) $chats[$fila->chat_id],
-                'nombre' => $nombres[$chats[$fila->chat_id]] ?? 'El negocio',
+            return $que === null ? null : $this->forma($f, $que, [
+                'business_id' => (int) $f->busines_id,
+                'nombre' => $nombres[$f->busines_id] ?? 'El negocio',
             ]);
         })->filter()->take(self::TOPE)->values();
 
@@ -59,68 +51,44 @@ class PreordenesPendientesController extends Controller
 
     public function delNegocio(Request $request)
     {
-        $negocioId = (int) $request->attributes->get('busines_id');
+        $filas = Preorden::where('busines_id', (int) $request->attributes->get('busines_id'))
+            ->where('status', PreordenDelChat::PENDIENTE)
+            ->where('de', 'cliente')
+            ->where('updated_at', '>', now()->subDays(self::DIAS))
+            ->orderBy('id')
+            ->limit(self::TOPE)
+            ->get();
 
-        $chats = DB::table('chats')->where('busines_id', $negocioId)->pluck('chat_id');
-        $tarjetas = $this->tarjetasDe($chats);
-        $clientes = DB::table('user')->whereIn('user_id', $tarjetas->pluck('user_id'))->pluck('name', 'user_id');
+        $clientes = DB::table('user')->whereIn('user_id', $filas->pluck('buyer_user_id')->filter())->pluck('name', 'user_id');
 
-        $lista = $tarjetas
-            ->filter(fn ($f) => PreordenDelChat::deQuien($f->tarjeta) === 'cliente'
-                && ($f->tarjeta['status'] ?? PreordenDelChat::PENDIENTE) === PreordenDelChat::PENDIENTE)
-            ->map(fn ($f) => $this->forma($f, 'por_confirmar', [
-                'user_id' => (int) $f->user_id,
-                'nombre' => $clientes[$f->user_id] ?? 'Un cliente',
-            ]))
-            ->take(self::TOPE)
-            ->values();
+        $lista = $filas->map(fn (Preorden $f) => $this->forma($f, 'por_confirmar', [
+            'user_id' => (int) $f->buyer_user_id,
+            'nombre' => $clientes[$f->buyer_user_id] ?? 'Un cliente',
+        ]))->values();
 
         return response()->json(['data' => $lista]);
     }
 
-    /** @param  Collection<int, mixed>  $chatIds */
-    private function tarjetasDe(Collection $chatIds): Collection
+    private function esperandoPago(Preorden $f): bool
     {
-        if ($chatIds->isEmpty()) {
-            return collect();
-        }
-
-        return DB::table('messages')
-            ->whereIn('chat_id', $chatIds)
-            ->where('content', 'like', '%"type":"preorder"%')
-            ->orderByDesc('message_id')
-            ->limit(200)
-            ->get(['message_id', 'chat_id', 'user_id', 'content', 'created_at'])
-            ->map(function ($f) {
-                $f->tarjeta = PreordenDelChat::tarjeta((string) $f->content);
-
-                return $f;
-            })
-            // Solo el formato nuevo y reciente: las viejas se pagaban sin quedar ligadas a su pedido.
-            ->filter(fn ($f) => $f->tarjeta !== null && isset($f->tarjeta['de'])
-                && Carbon::parse($f->created_at)->gt(now()->subDays(self::DIAS)));
-    }
-
-    /** @param  array<string, mixed>  $t */
-    private function esperandoPago(array $t): bool
-    {
-        return isset($t['order_id']) && (bool) OrdersSales::find((int) $t['order_id'])?->esperandoPago();
+        return $f->order_id !== null && (bool) OrdersSales::find($f->order_id)?->esperandoPago();
     }
 
     /** @param  array<string, mixed>  $con */
-    private function forma(object $fila, string $que, array $con): array
+    private function forma(Preorden $f, string $que, array $con): array
     {
-        $t = $fila->tarjeta;
+        $tarjeta = PreordenDelChat::tarjeta((string) DB::table('messages')->where('message_id', $f->message_id)->value('content'));
 
         return [
-            'chat_id' => (int) $fila->chat_id,
-            'message_id' => (int) $fila->message_id,
+            'chat_id' => (int) $f->chat_id,
+            'message_id' => (int) $f->message_id,
+            'preorden_id' => $f->id,
             'que' => $que,
             'con' => $con,
-            'productos' => count($t['items'] ?? []),
-            'total' => (float) ($t['total'] ?? PreordenDelChat::total($t['items'] ?? [])),
-            'tarjeta' => $t,
-            'created_at' => $fila->created_at,
+            'productos' => count($f->items),
+            'total' => (float) $f->total,
+            'tarjeta' => $tarjeta ?? ['type' => 'preorder', 'items' => $f->items, 'total' => (float) $f->total],
+            'created_at' => $f->created_at?->toIso8601String(),
         ];
     }
 }
