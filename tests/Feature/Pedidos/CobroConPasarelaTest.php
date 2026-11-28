@@ -478,3 +478,23 @@ test('la caducidad del QR se LEE, no se inventan 10 minutos', function () {
 
     expect($e['pago']->fresh()->qr_expires_at->timestamp)->toBe($caducidad->timestamp);
 });
+
+test('al recoger en el negocio también se puede pagar en línea, sin dirección del pedido', function () {
+    $order = pedidoListoParaCobrar();
+    $negocio = DB::table('business')->insertGetId([
+        'name' => 'Droguería', 'qualification' => 0, 'state' => 1, 'address' => 'Carrera 68 #9-60',
+    ], 'busines_id');
+    DB::table('orderssales')->where('orderSales_id', $order->orderSales_id)
+        ->update(['address_id' => null, 'busines_id' => $negocio]);
+
+    $cobro = app(PagoEnLinea::class)->cobrar(
+        $order->fresh(),
+        [['product_id' => 1, 'amount' => 5]],
+        [1 => 2500],
+        peticionDeQr(),
+        boldQueDevuelveQr(),
+    );
+
+    expect($cobro->payment->qr_payload)->toBe('iVBORw0KGgoAAAA')
+        ->and($cobro->intent->response)->not->toBeNull();
+});
