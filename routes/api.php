@@ -1254,6 +1254,7 @@ Route::middleware(['auth:sanctum', 'cuenta.habilitada', 'audit.api'])->group(fun
         Route::put('owners/{id}', [PropietariosApiController::class, 'updateOwner'])->middleware('modulo:propietarios,gestionar');
 
         Route::get('chats', [ChatsApiController::class, 'chats'])->middleware('modulo:chats');
+        Route::get('preordenes/resumen', [ChatsApiController::class, 'preordenes'])->middleware('modulo:chats');
         Route::get('chats/{chatId}/messages', [ChatsApiController::class, 'chatMessages'])->middleware('modulo:chats');
 
         Route::get('audits', [AuditoriaApiController::class, 'audits'])->middleware('modulo:auditoria');

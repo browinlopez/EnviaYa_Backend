@@ -1182,6 +1182,19 @@
     },
     {
         "verbo": "GET",
+        "uri": "v1/admin/preordenes/resumen",
+        "nombre": null,
+        "middleware": [
+            "admin",
+            "api",
+            "audit.api",
+            "auth:sanctum",
+            "cuenta.habilitada",
+            "modulo:chats"
+        ]
+    },
+    {
+        "verbo": "GET",
         "uri": "v1/admin/products",
         "nombre": null,
         "middleware": [
